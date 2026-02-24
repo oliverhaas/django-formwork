@@ -1,0 +1,18 @@
+/*
+ * formwork.css — Minimal bridge styles for django-formwork.
+ *
+ * DaisyUI handles all component styling. This file only covers
+ * Django-specific elements that DaisyUI doesn't know about.
+ */
+
+/* Django renders errors as <ul class="errorlist"> in some contexts. */
+.errorlist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Hidden inputs should not take up space. */
+input[type="hidden"] {
+    display: none;
+}
