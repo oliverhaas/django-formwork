@@ -2,7 +2,7 @@ import pytest
 from django import forms
 
 from django_formwork.forms import FormworkForm
-from django_formwork.widgets import RangeInput, RatingInput, ToggleInput
+from django_formwork.widgets import MultiSelectInput, RangeInput, RatingInput, ToggleInput
 
 
 class SimpleForm(forms.Form):
@@ -31,6 +31,19 @@ class AllWidgetsForm(FormworkForm):
     date = forms.DateField()
     file = forms.FileField(required=False)
     hidden = forms.CharField(widget=forms.HiddenInput)
+    color = forms.CharField(widget=forms.ColorInput, required=False)
+    phone = forms.CharField(widget=forms.TelInput, required=False)
+    search = forms.CharField(widget=forms.SearchInput, required=False)
+    select_multiple = forms.MultipleChoiceField(
+        choices=[("a", "A"), ("b", "B")],
+        widget=forms.SelectMultiple,
+        required=False,
+    )
+    multi_select_dropdown = forms.MultipleChoiceField(
+        choices=[("a", "A"), ("b", "B")],
+        widget=MultiSelectInput,
+        required=False,
+    )
 
 
 class CustomWidgetsForm(FormworkForm):

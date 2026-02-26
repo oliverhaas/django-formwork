@@ -3,6 +3,7 @@ from django import forms
 
 from django_formwork.widgets import (
     DAISY_CLASSES,
+    MultiSelectInput,
     PasswordRevealInput,
     RangeInput,
     RatingInput,
@@ -235,3 +236,164 @@ class TestPasswordRevealInput:
         soup = render_widget(PasswordRevealInput())
         inp = soup.find("input")
         assert "grow" in inp.get("class", [])
+
+
+class TestRadioSelectTemplate:
+    """RadioSelect gets a custom template that doesn't put class on wrapper."""
+
+    def test_template_overridden(self):
+        class F(forms.Form):
+            choice = forms.ChoiceField(
+                choices=[("a", "A"), ("b", "B")],
+                widget=forms.RadioSelect,
+            )
+
+        form = F()
+        apply_daisy_classes(form)
+        assert form.fields["choice"].widget.template_name == "formwork/widgets/radio.html"
+
+    def test_wrapper_div_has_no_daisy_class(self):
+        class F(forms.Form):
+            choice = forms.ChoiceField(
+                choices=[("a", "A"), ("b", "B")],
+                widget=forms.RadioSelect,
+            )
+
+        form = F()
+        apply_daisy_classes(form)
+        soup = render_widget(form.fields["choice"].widget, name="choice", value="a")
+        wrapper = soup.find("div", recursive=False)
+        assert "radio" not in wrapper.get("class", [])
+
+    def test_individual_inputs_have_daisy_class(self):
+        class F(forms.Form):
+            choice = forms.ChoiceField(
+                choices=[("a", "A"), ("b", "B")],
+                widget=forms.RadioSelect,
+            )
+
+        form = F()
+        apply_daisy_classes(form)
+        soup = render_widget(form.fields["choice"].widget, name="choice", value="a")
+        radios = soup.find_all("input", {"type": "radio"})
+        assert len(radios) == 2
+        for radio in radios:
+            assert "radio" in radio.get("class", [])
+
+
+class TestCheckboxSelectMultipleTemplate:
+    """CheckboxSelectMultiple gets a custom template."""
+
+    def test_template_overridden(self):
+        class F(forms.Form):
+            multi = forms.MultipleChoiceField(
+                choices=[("a", "A"), ("b", "B")],
+                widget=forms.CheckboxSelectMultiple,
+            )
+
+        form = F()
+        apply_daisy_classes(form)
+        assert form.fields["multi"].widget.template_name == "formwork/widgets/checkbox_select.html"
+
+    def test_wrapper_div_has_no_daisy_class(self):
+        class F(forms.Form):
+            multi = forms.MultipleChoiceField(
+                choices=[("a", "A"), ("b", "B")],
+                widget=forms.CheckboxSelectMultiple,
+            )
+
+        form = F()
+        apply_daisy_classes(form)
+        soup = render_widget(form.fields["multi"].widget, name="multi", value=["a"])
+        wrapper = soup.find("div", recursive=False)
+        assert "checkbox" not in wrapper.get("class", [])
+
+    def test_individual_inputs_have_daisy_class(self):
+        class F(forms.Form):
+            multi = forms.MultipleChoiceField(
+                choices=[("a", "A"), ("b", "B")],
+                widget=forms.CheckboxSelectMultiple,
+            )
+
+        form = F()
+        apply_daisy_classes(form)
+        soup = render_widget(form.fields["multi"].widget, name="multi", value=["a"])
+        checkboxes = soup.find_all("input", {"type": "checkbox"})
+        assert len(checkboxes) == 2
+        for cb in checkboxes:
+            assert "checkbox" in cb.get("class", [])
+
+
+class TestMultiSelectInput:
+    def test_renders_details_dropdown(self):
+        widget = MultiSelectInput(choices=[("a", "A"), ("b", "B")])
+        soup = render_widget(widget, name="test")
+        details = soup.find("details", class_="dropdown")
+        assert details is not None
+
+    def test_renders_summary_trigger(self):
+        widget = MultiSelectInput(choices=[("a", "A"), ("b", "B")])
+        soup = render_widget(widget, name="test")
+        summary = soup.find("summary")
+        assert summary is not None
+        assert "select" in summary.get("class", [])
+
+    def test_dropdown_uses_menu(self):
+        widget = MultiSelectInput(choices=[("a", "A")])
+        soup = render_widget(widget, name="test")
+        menu = soup.find("ul", class_="menu")
+        assert menu is not None
+
+    def test_options_in_list_items(self):
+        widget = MultiSelectInput(choices=[("a", "A"), ("b", "B")])
+        soup = render_widget(widget, name="test")
+        items = soup.find("ul", class_="menu").find_all("li")
+        assert len(items) == 2
+
+    def test_renders_hidden_checkboxes(self):
+        widget = MultiSelectInput(choices=[("a", "A"), ("b", "B"), ("c", "C")])
+        soup = render_widget(widget, name="test")
+        checkboxes = soup.find_all("input", {"type": "checkbox"})
+        assert len(checkboxes) == 3
+        for cb in checkboxes:
+            assert "hidden" in cb.get("class", [])
+
+    def test_checkbox_values(self):
+        widget = MultiSelectInput(choices=[("py", "Python"), ("js", "JS")])
+        soup = render_widget(widget, name="lang")
+        checkboxes = soup.find_all("input", {"type": "checkbox"})
+        values = [cb["value"] for cb in checkboxes]
+        assert values == ["py", "js"]
+
+    def test_checkbox_name(self):
+        widget = MultiSelectInput(choices=[("a", "A")])
+        soup = render_widget(widget, name="field")
+        cb = soup.find("input", {"type": "checkbox"})
+        assert cb["name"] == "field"
+
+    def test_selected_values_checked(self):
+        widget = MultiSelectInput(choices=[("a", "A"), ("b", "B"), ("c", "C")])
+        soup = render_widget(widget, name="test", value=["a", "c"])
+        checkboxes = soup.find_all("input", {"type": "checkbox"})
+        checked = [cb["value"] for cb in checkboxes if cb.has_attr("checked")]
+        assert checked == ["a", "c"]
+
+    def test_checkmark_svg_present(self):
+        widget = MultiSelectInput(choices=[("a", "A")])
+        soup = render_widget(widget, name="test")
+        svg = soup.find("svg")
+        assert svg is not None
+
+    def test_alpine_x_data(self):
+        widget = MultiSelectInput(choices=[("a", "A")])
+        soup = render_widget(widget, name="test")
+        wrapper = soup.find("details", attrs={"x-data": True})
+        assert wrapper is not None
+
+    def test_labels_for_options(self):
+        widget = MultiSelectInput(choices=[("a", "Alpha"), ("b", "Beta")])
+        soup = render_widget(widget, name="test")
+        labels = soup.find_all("label")
+        texts = [lab.get_text(strip=True) for lab in labels]
+        assert "Alpha" in texts
+        assert "Beta" in texts

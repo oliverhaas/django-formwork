@@ -1,0 +1,20 @@
+{% with id=widget.attrs.id %}<details class="dropdown w-full" x-data="{
+  get displayText() {
+    const checked = [...this.$refs.options.querySelectorAll('input:checked')];
+    if (!checked.length) return '';
+    const labels = checked.map(el => el.parentElement.querySelector('span').textContent.trim());
+    return labels.length <= 3 ? labels.join(', ') : checked.length + ' selected';
+  }
+}">
+  <summary{% if id %} id="{{ id }}"{% endif %} class="select w-full text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}">
+    <span x-text="displayText || 'Select\u2026'">Select&#x2026;</span>
+  </summary>
+  <ul x-ref="options" class="dropdown-content menu bg-base-100 rounded-box z-50 w-full shadow-lg border border-base-300 max-h-60 overflow-y-auto mt-1 p-1">
+    {% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title">{{ group }}</li>{% endif %}{% for option in options %}
+    <li><label class="flex items-center justify-between gap-2"{% if option.attrs.id %} for="{{ option.attrs.id }}"{% endif %}>
+      <input type="checkbox" name="{{ widget.name }}" value="{{ option.value|stringformat:'s' }}"{% if option.attrs.id %} id="{{ option.attrs.id }}"{% endif %} class="hidden"{% if option.selected %} checked{% endif %}>
+      <span class="select-none">{{ option.label }}</span>
+      <svg class="hidden size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>
+    </label></li>{% endfor %}{% endfor %}
+  </ul>
+</details>{% endwith %}
