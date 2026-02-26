@@ -26,6 +26,8 @@ class FormworkBoundField(BoundField):
     widget's rendered attributes.
     """
 
+    template_name = "formwork/field.html"
+
     def build_widget_attrs(
         self,
         attrs: dict[str, Any],
@@ -51,6 +53,8 @@ class FormworkForm(Form):
             message = forms.CharField(widget=forms.Textarea)
     """
 
+    template_name = "formwork/form.html"
+    template_name_div = "formwork/form.html"
     bound_field_class = FormworkBoundField
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -61,6 +65,8 @@ class FormworkForm(Form):
 class FormworkModelForm(ModelForm):
     """ModelForm base class with DaisyUI styling."""
 
+    template_name = "formwork/form.html"
+    template_name_div = "formwork/form.html"
     bound_field_class = FormworkBoundField
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

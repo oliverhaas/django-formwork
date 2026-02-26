@@ -1,0 +1,11 @@
+{% if field.is_hidden %}{{ field }}{% elif field.use_fieldset %}<fieldset class="fieldset"{% if field.aria_describedby %} aria-describedby="{{ field.aria_describedby }}"{% endif %}>
+  {% if field.label %}<legend class="fieldset-legend"><span>{{ field.label }}{% if field.field.required %} <span class="text-error">*</span>{% endif %}</span></legend>{% endif %}
+  {{ field }}
+  {% for error in field.errors %}<p class="label text-error">{{ error }}</p>{% endfor %}
+  {% if field.help_text %}<p class="label"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</p>{% endif %}
+</fieldset>{% else %}<fieldset class="fieldset">
+  {% if field.label %}<label class="fieldset-legend"{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}><span>{{ field.label }}{% if field.field.required %} <span class="text-error">*</span>{% endif %}</span></label>{% endif %}
+  {{ field }}
+  {% for error in field.errors %}<p class="label text-error">{{ error }}</p>{% endfor %}
+  {% if field.help_text %}<p class="label"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</p>{% endif %}
+</fieldset>{% endif %}

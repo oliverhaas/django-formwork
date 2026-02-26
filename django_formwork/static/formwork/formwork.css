@@ -16,3 +16,22 @@
 input[type="hidden"] {
     display: none;
 }
+
+/* MultiSelectInput: close <details> dropdown on outside click.
+   An invisible full-page overlay on <summary> captures the click,
+   which toggles the <details> closed. Pure CSS, no JS needed. */
+details.dropdown[open] > summary::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    cursor: default;
+    z-index: 998;
+}
+
+/* MultiSelectInput: show checkmark for selected options. */
+label:has(> input.hidden:checked) > svg {
+    display: block;
+}
+label:has(> input.hidden:checked) {
+    font-weight: 600;
+}

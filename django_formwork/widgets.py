@@ -42,6 +42,8 @@ DAISY_CLASSES: dict[type[forms.Widget], str] = {
     forms.TimeInput: "input",
     forms.DateTimeInput: "input",
     forms.SearchInput: "input",
+    forms.ColorInput: "input",
+    forms.TelInput: "input",
     forms.Textarea: "textarea",
     forms.Select: "select",
     forms.SelectMultiple: "select",
@@ -84,6 +86,14 @@ def _get_error_class(widget: forms.Widget) -> str | None:
     return None
 
 
+#: Widgets that need custom formwork templates to avoid leaking
+#: DaisyUI classes onto the wrapper ``<div>``.
+_TEMPLATE_OVERRIDES: dict[type[forms.Widget], str] = {
+    forms.RadioSelect: "formwork/widgets/radio.html",
+    forms.CheckboxSelectMultiple: "formwork/widgets/checkbox_select.html",
+}
+
+
 def apply_daisy_classes(form: BaseForm) -> None:
     """Add DaisyUI CSS classes to all widgets in *form*.
 
@@ -94,6 +104,11 @@ def apply_daisy_classes(form: BaseForm) -> None:
         css_class = _get_daisy_class(widget)
         if css_class:
             _add_css_class(widget.attrs, css_class)
+        # Override templates for multi-input widgets so the DaisyUI class
+        # is only applied to individual <input> elements, not the wrapper div.
+        template = _TEMPLATE_OVERRIDES.get(type(widget))
+        if template:
+            widget.template_name = template
 
 
 # ---------------------------------------------------------------------------
@@ -190,3 +205,22 @@ class PasswordRevealInput(forms.PasswordInput):
 
     def __init__(self, attrs: dict[str, Any] | None = None) -> None:
         super().__init__(attrs=attrs, render_value=False)
+
+
+class MultiSelectInput(forms.SelectMultiple):
+    """Multi-select dropdown with checkboxes.
+
+    Renders a DaisyUI-styled dropdown button that opens a panel of checkboxes.
+    Uses Alpine.js for open/close state and selected-count display.
+
+    Usage::
+
+        languages = forms.MultipleChoiceField(
+            choices=[("py", "Python"), ("js", "JavaScript")],
+            widget=MultiSelectInput,
+        )
+    """
+
+    template_name = "formwork/widgets/multi_select.html"
+    _daisy_class = "select"
+    option_inherits_attrs = False
