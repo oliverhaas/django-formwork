@@ -107,7 +107,7 @@ class TestFieldOrdering:
         form = F(data={"name": ""})
         form.is_valid()
         soup = render_html(form)
-        error_div = soup.find("div", class_="formwork-errors")
+        error_div = soup.find("div", class_="tooltip-content")
         helptext = soup.find("p", attrs={"id": "id_name_helptext"})
         assert error_div is not None
         assert helptext is not None
@@ -116,7 +116,7 @@ class TestFieldOrdering:
 
 
 class TestErrorRendering:
-    """Errors render inside a .formwork-errors tooltip container."""
+    """Errors render as DaisyUI tooltip on the fieldset."""
 
     def test_errors_rendered_in_container(self):
         class F(FormworkForm):
@@ -125,7 +125,7 @@ class TestErrorRendering:
         form = F(data={"name": ""})
         form.is_valid()
         soup = render_html(form)
-        error_div = soup.find("div", class_="formwork-errors")
+        error_div = soup.find("div", class_="tooltip-content")
         assert error_div is not None
         assert error_div.find("p") is not None
 
@@ -136,8 +136,32 @@ class TestErrorRendering:
         form = F(data={"name": ""})
         form.is_valid()
         soup = render_html(form)
-        error_div = soup.find("div", class_="formwork-errors")
+        error_div = soup.find("div", class_="tooltip-content")
         assert error_div["role"] == "alert"
+
+    def test_fieldset_has_tooltip_classes_on_error(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": ""})
+        form.is_valid()
+        soup = render_html(form)
+        fieldset = soup.find("fieldset", class_="fieldset")
+        classes = fieldset.get("class", [])
+        assert "tooltip" in classes
+        assert "tooltip-error" in classes
+        assert "tooltip-bottom" in classes
+
+    def test_no_tooltip_classes_when_valid(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": "test"})
+        form.is_valid()
+        soup = render_html(form)
+        fieldset = soup.find("fieldset", class_="fieldset")
+        classes = fieldset.get("class", [])
+        assert "tooltip" not in classes
 
     def test_no_errors_when_valid(self):
         class F(FormworkForm):
@@ -146,7 +170,7 @@ class TestErrorRendering:
         form = F(data={"name": "test"})
         form.is_valid()
         soup = render_html(form)
-        error_div = soup.find("div", class_="formwork-errors")
+        error_div = soup.find("div", class_="tooltip-content")
         assert error_div is None
 
     def test_multiple_errors_in_single_container(self):
@@ -156,7 +180,7 @@ class TestErrorRendering:
         form = F(data={"email": "bad"})
         form.is_valid()
         soup = render_html(form)
-        error_div = soup.find("div", class_="formwork-errors")
+        error_div = soup.find("div", class_="tooltip-content")
         errors = error_div.find_all("p")
         assert len(errors) >= 2
 
