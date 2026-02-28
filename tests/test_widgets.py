@@ -16,9 +16,9 @@ def render_widget(widget, name="test", value=None, attrs=None):
 
 
 class TestToggleInput:
-    def test_has_data_formwork_toggle(self):
+    def test_has_toggle_class(self):
         widget = ToggleInput()
-        assert widget.attrs.get("data-formwork") == "toggle"
+        assert "toggle" in widget.attrs.get("class", "")
 
     def test_renders_checkbox(self):
         soup = render_widget(ToggleInput())
@@ -26,15 +26,16 @@ class TestToggleInput:
         assert inp is not None
         assert inp["type"] == "checkbox"
 
-    def test_data_formwork_in_output(self):
+    def test_toggle_class_in_output(self):
         soup = render_widget(ToggleInput())
         inp = soup.find("input")
-        assert inp.get("data-formwork") == "toggle"
+        assert "toggle" in inp.get("class", [])
 
     def test_preserves_user_attrs(self):
         widget = ToggleInput(attrs={"class": "my-toggle"})
-        assert widget.attrs.get("data-formwork") == "toggle"
-        assert "my-toggle" in widget.attrs.get("class", "")
+        cls = widget.attrs.get("class", "")
+        assert "toggle" in cls
+        assert "my-toggle" in cls
 
 
 class TestRangeInput:
@@ -96,7 +97,7 @@ class TestRatingInput:
         widget = RatingInput(star_class="mask-heart")
         widget.choices = [("1", "1 star")]
         soup = render_widget(widget, value="1")
-        radio = soup.find("input", {"type": "radio", "data-formwork": "rating"})
+        radio = soup.find("input", {"type": "radio", "class": "mask"})
         assert "mask-heart" in radio.get("class", [])
 
     def test_choices_helper(self):
@@ -105,13 +106,13 @@ class TestRatingInput:
         assert choices[0] == ("1", "1 star")
         assert choices[4] == ("5", "5 stars")
 
-    def test_data_formwork_rating_on_inputs(self):
+    def test_mask_class_on_star_inputs(self):
         widget = RatingInput()
         widget.choices = [("1", "1 star"), ("2", "2 stars")]
         soup = render_widget(widget, value="1")
         radios = soup.find_all("input", {"type": "radio"})
         for radio in radios:
-            assert radio.get("data-formwork") == "rating"
+            assert "mask" in radio.get("class", [])
 
 
 class TestPasswordRevealInput:
@@ -147,10 +148,13 @@ class TestPasswordRevealInput:
         inp = soup.find("input")
         assert "grow" in inp.get("class", [])
 
-    def test_data_formwork_password_reveal(self):
+    def test_input_inside_label_wrapper(self):
+        """Input is inside <label class="input">, not a direct child of fieldset."""
         soup = render_widget(PasswordRevealInput())
-        inp = soup.find("input")
-        assert inp.get("data-formwork") == "password-reveal"
+        label = soup.find("label", class_="input")
+        assert label is not None
+        inp = label.find("input")
+        assert inp is not None
 
 
 class TestMultiSelectInput:
@@ -167,16 +171,16 @@ class TestMultiSelectInput:
         assert summary is not None
         assert "select" in summary.get("class", [])
 
-    def test_dropdown_uses_menu(self):
+    def test_dropdown_content(self):
         widget = MultiSelectInput(choices=[("a", "A")])
         soup = render_widget(widget, name="test")
-        menu = soup.find("ul", class_="menu")
-        assert menu is not None
+        dropdown = soup.find("ul", class_="dropdown-content")
+        assert dropdown is not None
 
     def test_options_in_list_items(self):
         widget = MultiSelectInput(choices=[("a", "A"), ("b", "B")])
         soup = render_widget(widget, name="test")
-        items = soup.find("ul", class_="menu").find_all("li")
+        items = soup.find("ul", class_="dropdown-content").find_all("li")
         assert len(items) == 2
 
     def test_renders_hidden_checkboxes(self):
@@ -237,9 +241,9 @@ class TestMultiSelectInput:
         assert "Alpha" in texts
         assert "Beta" in texts
 
-    def test_data_formwork_multiselect_on_checkboxes(self):
+    def test_multiselect_class_on_checkboxes(self):
         widget = MultiSelectInput(choices=[("a", "A"), ("b", "B")])
         soup = render_widget(widget, name="test")
         checkboxes = soup.find_all("input", {"type": "checkbox"})
         for cb in checkboxes:
-            assert cb.get("data-formwork") == "multiselect"
+            assert "multiselect" in cb.get("class", [])

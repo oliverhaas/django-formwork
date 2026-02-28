@@ -11,8 +11,8 @@ Django's built-in widget templates offer:
 
 All DaisyUI component classes (``input``, ``select``, etc.) are applied
 via CSS selectors in ``formwork.css``, not in Python.  Custom widgets use
-``data-formwork`` attributes so CSS can distinguish them from standard
-Django widgets.
+CSS classes or structural selectors so they can be styled independently
+from standard Django widgets.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from django import forms
 class ToggleInput(forms.CheckboxInput):
     """Checkbox rendered as a DaisyUI toggle switch.
 
-    Adds ``data-formwork="toggle"`` so CSS applies the ``toggle`` class
+    Adds the ``toggle`` class so CSS applies the DaisyUI toggle styling
     instead of ``checkbox``.
 
     Usage::
@@ -38,9 +38,11 @@ class ToggleInput(forms.CheckboxInput):
     """
 
     def __init__(self, attrs: dict[str, Any] | None = None) -> None:
-        defaults: dict[str, Any] = {"data-formwork": "toggle"}
+        defaults: dict[str, Any] = {}
         if attrs:
             defaults.update(attrs)
+        cls = defaults.get("class", "")
+        defaults["class"] = f"toggle {cls}".strip()
         super().__init__(defaults)
 
 
@@ -62,8 +64,8 @@ class RatingInput(forms.RadioSelect):
     """Star-rating widget using DaisyUI's rating component.
 
     Renders a ``<div class="rating">`` containing radio inputs styled as
-    stars.  The template adds ``data-formwork="rating"`` on each radio
-    so CSS doesn't apply the default ``radio`` class.
+    stars.  The existing ``mask`` and ``rating-hidden`` classes on the radios
+    exclude them from the default ``radio`` CSS rule.
 
     Usage::
 
@@ -104,8 +106,8 @@ class PasswordRevealInput(forms.PasswordInput):
 
     Wraps the input in a DaisyUI ``<label class="input">`` container with a
     toggle button.  Uses Alpine.js for the reveal functionality.  The
-    template adds ``data-formwork="password-reveal"`` so CSS doesn't
-    double-apply the ``input`` class.
+    template wraps the input inside ``<label class="input">``, so the
+    direct-child CSS selector for text inputs doesn't match it.
 
     Usage::
 
@@ -123,7 +125,7 @@ class MultiSelectInput(forms.SelectMultiple):
 
     Renders a DaisyUI-styled dropdown button that opens a panel of checkboxes.
     Uses Alpine.js for open/close state and selected-count display.
-    The template adds ``data-formwork="multiselect"`` on checkboxes so
+    The template adds the ``multiselect`` class on checkboxes so
     CSS doesn't apply the default ``checkbox`` class.
 
     Usage::

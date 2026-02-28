@@ -9,8 +9,9 @@
  * The CSS selectors target elements inside formwork's
  * <fieldset class="fieldset"> field wrapper.
  *
- * Custom formwork widgets use data-formwork="<type>" attributes so
- * they can be styled independently from standard Django widgets.
+ * Custom formwork widgets are excluded from the base selectors using
+ * classes already present on those elements (e.g. .toggle, .mask,
+ * .hidden) or the direct-child combinator (>).
  */
 
 
@@ -19,8 +20,10 @@
    ================================================================ */
 
 /* Text-like inputs: text, email, url, number, password, date, time,
-   datetime-local, search, color, tel. */
-fieldset.fieldset input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not([data-formwork]) {
+   datetime-local, search, color, tel.
+   Uses > (direct child) so inputs wrapped in a compound widget
+   (e.g. PasswordRevealInput's <label class="input">) are excluded. */
+fieldset.fieldset > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]) {
     @apply input;
 }
 
@@ -32,11 +35,11 @@ fieldset.fieldset select {
     @apply select;
 }
 
-fieldset.fieldset input[type="checkbox"]:not([data-formwork]) {
+fieldset.fieldset input[type="checkbox"]:not(.toggle):not(.hidden) {
     @apply checkbox;
 }
 
-fieldset.fieldset input[type="radio"]:not([data-formwork]) {
+fieldset.fieldset input[type="radio"]:not(.mask):not(.rating-hidden) {
     @apply radio;
 }
 
@@ -49,7 +52,7 @@ fieldset.fieldset input[type="range"] {
 }
 
 /* Custom widget: toggle switch */
-input[data-formwork="toggle"] {
+input.toggle {
     @apply toggle;
 }
 
@@ -59,7 +62,7 @@ input[data-formwork="toggle"] {
    Django adds aria-invalid="true" on widgets with validation errors.
    ================================================================ */
 
-fieldset.fieldset input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([data-formwork]) {
+fieldset.fieldset > input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]) {
     @apply input-error;
 }
 
@@ -72,14 +75,14 @@ fieldset.fieldset select[aria-invalid="true"] {
 }
 
 /* Single checkbox (direct child) or checkbox inside a group wrapper. */
-fieldset.fieldset input[type="checkbox"][aria-invalid="true"]:not([data-formwork]),
-[aria-invalid="true"] input[type="checkbox"]:not([data-formwork]) {
+fieldset.fieldset input[type="checkbox"][aria-invalid="true"]:not(.toggle):not(.hidden),
+[aria-invalid="true"] input[type="checkbox"]:not(.toggle):not(.hidden) {
     @apply checkbox-error;
 }
 
 /* Single radio or radio inside a group wrapper. */
-fieldset.fieldset input[type="radio"][aria-invalid="true"]:not([data-formwork]),
-[aria-invalid="true"] input[type="radio"]:not([data-formwork]) {
+fieldset.fieldset input[type="radio"][aria-invalid="true"]:not(.mask):not(.rating-hidden),
+[aria-invalid="true"] input[type="radio"]:not(.mask):not(.rating-hidden) {
     @apply radio-error;
 }
 
@@ -91,7 +94,7 @@ fieldset.fieldset input[type="range"][aria-invalid="true"] {
     @apply range-error;
 }
 
-input[data-formwork="toggle"][aria-invalid="true"] {
+input.toggle[aria-invalid="true"] {
     @apply toggle-error;
 }
 
@@ -121,6 +124,17 @@ details.dropdown[open] > summary::before {
     inset: 0;
     cursor: default;
     z-index: 998;
+}
+
+/* MultiSelectInput: constrain <details> width to match a native
+   <select> (DaisyUI's select uses this exact clamp value).
+   Without this, the fieldset grid stretches the details to 1fr. */
+details.dropdown:has(.multiselect) {
+    width: clamp(3rem, 20rem, 100%);
+}
+
+details.dropdown:has(.multiselect) > .dropdown-content {
+    width: 100%;
 }
 
 /* MultiSelectInput: show checkmark when option is selected. */

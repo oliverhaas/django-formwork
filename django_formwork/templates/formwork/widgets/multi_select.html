@@ -1,4 +1,4 @@
-{% with id=widget.attrs.id %}<details class="dropdown block w-full" x-data="{
+{% with id=widget.attrs.id %}<details class="dropdown" x-data="{
   get displayText() {
     const checked = [...this.$refs.options.querySelectorAll('input:checked')];
     if (!checked.length) return '';
@@ -6,13 +6,13 @@
     return labels.length <= 3 ? labels.join(', ') : checked.length + ' selected';
   }
 }">
-  <summary{% if id %} id="{{ id }}"{% endif %} class="select w-full text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}">
+  <summary{% if id %} id="{{ id }}"{% endif %} class="select text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}">
     <span x-text="displayText || 'Select\u2026'">Select&#x2026;</span>
   </summary>
-  <ul x-ref="options" class="dropdown-content menu bg-base-100 rounded-box w-full shadow-lg border border-base-300 max-h-60 overflow-y-auto mt-1 p-1">
+  <ul x-ref="options" class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 max-h-60 overflow-y-auto mt-1 p-1 text-sm">
     {% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title">{{ group }}</li>{% endif %}{% for option in options %}
-    <li><label class="flex items-center gap-2"{% if option.attrs.id %} for="{{ option.attrs.id }}"{% endif %}>
-      <input type="checkbox" data-formwork="multiselect" name="{{ widget.name }}" value="{{ option.value|stringformat:'s' }}"{% if option.attrs.id %} id="{{ option.attrs.id }}"{% endif %} class="hidden"{% if option.selected %} checked{% endif %}>
+    <li><label class="flex items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200"{% if option.attrs.id %} for="{{ option.attrs.id }}"{% endif %}>
+      <input type="checkbox" name="{{ widget.name }}" value="{{ option.value|stringformat:'s' }}"{% if option.attrs.id %} id="{{ option.attrs.id }}"{% endif %} class="multiselect hidden"{% if option.selected %} checked{% endif %}>
       <span class="formwork-check shrink-0 opacity-0" aria-hidden="true">&#x2713;</span>
       <span class="select-none">{{ option.label }}</span>
     </label></li>{% endfor %}{% endfor %}
