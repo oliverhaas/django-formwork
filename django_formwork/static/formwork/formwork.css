@@ -1,9 +1,104 @@
 /*
- * formwork.css — Minimal bridge styles for django-formwork.
+ * formwork.css — DaisyUI styling for django-formwork.
  *
- * DaisyUI handles all component styling. This file only covers
- * Django-specific elements that DaisyUI doesn't know about.
+ * This is a Tailwind CSS source file.  It must be processed by the
+ * Tailwind compiler (CLI or PostCSS plugin) as part of your build.
+ *
+ * All DaisyUI component classes are applied via @apply so that
+ * Django's standard widget templates can be used without modification.
+ * The CSS selectors target elements inside formwork's
+ * <fieldset class="fieldset"> field wrapper.
+ *
+ * Custom formwork widgets use data-formwork="<type>" attributes so
+ * they can be styled independently from standard Django widgets.
  */
+
+
+/* ================================================================
+   Base component styling
+   ================================================================ */
+
+/* Text-like inputs: text, email, url, number, password, date, time,
+   datetime-local, search, color, tel. */
+fieldset.fieldset input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not([data-formwork]) {
+    @apply input;
+}
+
+fieldset.fieldset textarea {
+    @apply textarea;
+}
+
+fieldset.fieldset select {
+    @apply select;
+}
+
+fieldset.fieldset input[type="checkbox"]:not([data-formwork]) {
+    @apply checkbox;
+}
+
+fieldset.fieldset input[type="radio"]:not([data-formwork]) {
+    @apply radio;
+}
+
+fieldset.fieldset input[type="file"] {
+    @apply file-input;
+}
+
+fieldset.fieldset input[type="range"] {
+    @apply range;
+}
+
+/* Custom widget: toggle switch */
+input[data-formwork="toggle"] {
+    @apply toggle;
+}
+
+
+/* ================================================================
+   Error states
+   Django adds aria-invalid="true" on widgets with validation errors.
+   ================================================================ */
+
+fieldset.fieldset input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([data-formwork]) {
+    @apply input-error;
+}
+
+fieldset.fieldset textarea[aria-invalid="true"] {
+    @apply textarea-error;
+}
+
+fieldset.fieldset select[aria-invalid="true"] {
+    @apply select-error;
+}
+
+/* Single checkbox (direct child) or checkbox inside a group wrapper. */
+fieldset.fieldset input[type="checkbox"][aria-invalid="true"]:not([data-formwork]),
+[aria-invalid="true"] input[type="checkbox"]:not([data-formwork]) {
+    @apply checkbox-error;
+}
+
+/* Single radio or radio inside a group wrapper. */
+fieldset.fieldset input[type="radio"][aria-invalid="true"]:not([data-formwork]),
+[aria-invalid="true"] input[type="radio"]:not([data-formwork]) {
+    @apply radio-error;
+}
+
+fieldset.fieldset input[type="file"][aria-invalid="true"] {
+    @apply file-input-error;
+}
+
+fieldset.fieldset input[type="range"][aria-invalid="true"] {
+    @apply range-error;
+}
+
+input[data-formwork="toggle"][aria-invalid="true"] {
+    @apply toggle-error;
+}
+
+
+/* ================================================================
+   Bridge styles (plain CSS — no @apply needed)
+   ================================================================ */
 
 /* Django renders errors as <ul class="errorlist"> in some contexts. */
 .errorlist {
@@ -19,7 +114,7 @@ input[type="hidden"] {
 
 /* MultiSelectInput: close <details> dropdown on outside click.
    An invisible full-page overlay on <summary> captures the click,
-   which toggles the <details> closed. Pure CSS, no JS needed. */
+   which toggles the <details> closed.  Pure CSS, no JS needed. */
 details.dropdown[open] > summary::before {
     content: "";
     position: fixed;
@@ -28,10 +123,7 @@ details.dropdown[open] > summary::before {
     z-index: 998;
 }
 
-/* MultiSelectInput: show checkmark for selected options. */
-label:has(> input.hidden:checked) > svg {
-    display: block;
-}
-label:has(> input.hidden:checked) {
-    font-weight: 600;
+/* MultiSelectInput: show checkmark when option is selected. */
+label:has(> input.hidden:checked) > .formwork-check {
+    opacity: 1;
 }
