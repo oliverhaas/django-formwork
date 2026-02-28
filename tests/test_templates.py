@@ -107,27 +107,37 @@ class TestFieldOrdering:
         form = F(data={"name": ""})
         form.is_valid()
         soup = render_html(form)
-        error_p = soup.find("p", class_="text-error")
+        error_div = soup.find("div", class_="formwork-errors")
         helptext = soup.find("p", attrs={"id": "id_name_helptext"})
-        assert error_p is not None
+        assert error_div is not None
         assert helptext is not None
         all_elements = list(soup.descendants)
-        assert all_elements.index(error_p) < all_elements.index(helptext)
+        assert all_elements.index(error_div) < all_elements.index(helptext)
 
 
 class TestErrorRendering:
-    """Errors render as <p class="label text-error">."""
+    """Errors render inside a .formwork-errors tooltip container."""
 
-    def test_errors_rendered(self):
+    def test_errors_rendered_in_container(self):
         class F(FormworkForm):
             name = forms.CharField()
 
         form = F(data={"name": ""})
         form.is_valid()
         soup = render_html(form)
-        error_p = soup.find("p", class_="text-error")
-        assert error_p is not None
-        assert "label" in error_p.get("class", [])
+        error_div = soup.find("div", class_="formwork-errors")
+        assert error_div is not None
+        assert error_div.find("p") is not None
+
+    def test_error_container_has_role_alert(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": ""})
+        form.is_valid()
+        soup = render_html(form)
+        error_div = soup.find("div", class_="formwork-errors")
+        assert error_div["role"] == "alert"
 
     def test_no_errors_when_valid(self):
         class F(FormworkForm):
@@ -136,8 +146,19 @@ class TestErrorRendering:
         form = F(data={"name": "test"})
         form.is_valid()
         soup = render_html(form)
-        error_p = soup.find("p", class_="text-error")
-        assert error_p is None
+        error_div = soup.find("div", class_="formwork-errors")
+        assert error_div is None
+
+    def test_multiple_errors_in_single_container(self):
+        class F(FormworkForm):
+            email = forms.EmailField(min_length=20)
+
+        form = F(data={"email": "bad"})
+        form.is_valid()
+        soup = render_html(form)
+        error_div = soup.find("div", class_="formwork-errors")
+        errors = error_div.find_all("p")
+        assert len(errors) >= 2
 
 
 class TestNonFieldErrors:

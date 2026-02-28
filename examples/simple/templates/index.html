@@ -50,6 +50,16 @@
         </form>
       </div>
     </div>
+
+    <div class="card bg-base-100 shadow border-error/20 border-2">
+      <div class="card-body">
+        <h2 class="card-title text-error">Error States (server-side validation)</h2>
+        <p class="text-sm text-base-content/60">All fields below are required but submitted empty, showing Django's server-side validation errors.</p>
+        <form>
+          {{ error_form.as_div }}
+        </form>
+      </div>
+    </div>
   </div>
 </body>
 </html>

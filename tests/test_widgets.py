@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
 
 from django_formwork.widgets import (
+    ComboBoxInput,
+    DataListInput,
     MultiSelectInput,
     PasswordRevealInput,
     RangeInput,
@@ -174,14 +176,27 @@ class TestMultiSelectInput:
     def test_dropdown_content(self):
         widget = MultiSelectInput(choices=[("a", "A")])
         soup = render_widget(widget, name="test")
-        dropdown = soup.find("ul", class_="dropdown-content")
+        dropdown = soup.find("div", class_="dropdown-content")
         assert dropdown is not None
 
     def test_options_in_list_items(self):
         widget = MultiSelectInput(choices=[("a", "A"), ("b", "B")])
         soup = render_widget(widget, name="test")
-        items = soup.find("ul", class_="dropdown-content").find_all("li")
+        items = soup.find("div", class_="dropdown-content").find("ul").find_all("li")
         assert len(items) == 2
+
+    def test_search_hidden_for_few_choices(self):
+        widget = MultiSelectInput(choices=[("a", "A"), ("b", "B")])
+        soup = render_widget(widget, name="test")
+        search = soup.find("input", {"type": "text", "x-model": "search"})
+        assert search is None
+
+    def test_search_shown_for_many_choices(self):
+        choices = [(str(i), f"Option {i}") for i in range(21)]
+        widget = MultiSelectInput(choices=choices)
+        soup = render_widget(widget, name="test")
+        search = soup.find("input", {"type": "text", "x-model": "search"})
+        assert search is not None
 
     def test_renders_hidden_checkboxes(self):
         widget = MultiSelectInput(choices=[("a", "A"), ("b", "B"), ("c", "C")])
@@ -241,9 +256,226 @@ class TestMultiSelectInput:
         assert "Alpha" in texts
         assert "Beta" in texts
 
+    def test_no_results_element(self):
+        choices = [(str(i), f"Option {i}") for i in range(21)]
+        widget = MultiSelectInput(choices=choices)
+        soup = render_widget(widget, name="test")
+        no_results = soup.find("p", string="No results")
+        assert no_results is not None
+        assert no_results.get("x-show") == "noResults"
+
+    def test_no_results_hidden_for_few_choices(self):
+        widget = MultiSelectInput(choices=[("a", "A")])
+        soup = render_widget(widget, name="test")
+        no_results = soup.find("p", string="No results")
+        assert no_results is None
+
+    def test_aria_invalid_on_summary(self):
+        widget = MultiSelectInput(choices=[("a", "A")])
+        soup = render_widget(widget, name="test", attrs={"id": "id_test", "aria-invalid": "true"})
+        summary = soup.find("summary")
+        assert summary["aria-invalid"] == "true"
+
+    def test_no_aria_invalid_when_valid(self):
+        widget = MultiSelectInput(choices=[("a", "A")])
+        soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+        summary = soup.find("summary")
+        assert not summary.has_attr("aria-invalid")
+
     def test_multiselect_class_on_checkboxes(self):
         widget = MultiSelectInput(choices=[("a", "A"), ("b", "B")])
         soup = render_widget(widget, name="test")
         checkboxes = soup.find_all("input", {"type": "checkbox"})
         for cb in checkboxes:
             assert "multiselect" in cb.get("class", [])
+
+
+class TestComboBoxInput:
+    def test_renders_dropdown_wrapper(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha"), ("b", "Beta")])
+        soup = render_widget(widget, name="test")
+        wrapper = soup.find("div", class_="dropdown")
+        assert wrapper is not None
+
+    def test_combobox_class_on_wrapper(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test")
+        wrapper = soup.find("div", class_="combobox")
+        assert wrapper is not None
+
+    def test_renders_text_input_trigger(self):
+        """The trigger is a text input, not a summary/select."""
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test")
+        trigger = soup.find("input", class_="combobox-input")
+        assert trigger is not None
+        assert trigger["type"] == "text"
+
+    def test_combobox_role_on_input(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test")
+        trigger = soup.find("input", class_="combobox-input")
+        assert trigger["role"] == "combobox"
+        assert trigger["aria-autocomplete"] == "list"
+
+    def test_renders_hidden_value_input(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha"), ("b", "Beta")])
+        soup = render_widget(widget, name="test")
+        hidden = soup.find("input", {"type": "hidden"})
+        assert hidden is not None
+        assert hidden["name"] == "test"
+
+    def test_dropdown_content(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test")
+        dropdown = soup.find("div", class_="dropdown-content")
+        assert dropdown is not None
+
+    def test_no_search_input_in_dropdown(self):
+        """Search is the trigger input itself, not inside the dropdown."""
+        widget = ComboBoxInput(choices=[("a", "Alpha"), ("b", "Beta")])
+        soup = render_widget(widget, name="test")
+        dropdown = soup.find("div", class_="dropdown-content")
+        search = dropdown.find("input", {"type": "text"})
+        assert search is None
+
+    def test_options_as_buttons(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha"), ("b", "Beta")])
+        soup = render_widget(widget, name="test")
+        buttons = soup.find_all("button", {"type": "button"})
+        assert len(buttons) == 2
+
+    def test_option_labels(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha"), ("b", "Beta")])
+        soup = render_widget(widget, name="test")
+        spans = soup.find_all("span", class_="select-none")
+        texts = [s.get_text(strip=True) for s in spans]
+        assert "Alpha" in texts
+        assert "Beta" in texts
+
+    def test_empty_option_excluded(self):
+        """The empty option (value='') is excluded from the dropdown list."""
+        widget = ComboBoxInput(choices=[("", "Select..."), ("a", "Alpha")])
+        soup = render_widget(widget, name="test")
+        buttons = soup.find_all("button", {"type": "button"})
+        assert len(buttons) == 1
+
+    def test_alpine_x_data(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test")
+        wrapper = soup.find("div", attrs={"x-data": True})
+        assert wrapper is not None
+
+    def test_selected_label_shown_as_text(self):
+        """When a value is selected, its label is shown as real input text."""
+        widget = ComboBoxInput(choices=[("a", "Alpha"), ("b", "Beta")])
+        # Alpine sets :value="search" where search starts with selected_label
+        # We verify the x-data initializes search with the label
+        soup = render_widget(widget, name="test", value="b")
+        wrapper = soup.find("div", attrs={"x-data": True})
+        x_data = wrapper["x-data"]
+        assert "search: 'Beta'" in x_data
+
+    def test_no_results_element(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test")
+        no_results = soup.find("p", string="No results")
+        assert no_results is not None
+        assert no_results.get("x-show") == "noResults"
+
+    def test_listbox_role(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test")
+        listbox = soup.find("ul", {"role": "listbox"})
+        assert listbox is not None
+
+    def test_id_on_hidden_input(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test", attrs={"id": "id_city"})
+        hidden = soup.find("input", {"type": "hidden"})
+        assert hidden["id"] == "id_city"
+
+    def test_selected_label_context(self):
+        """get_context returns the label for the selected value."""
+        widget = ComboBoxInput(choices=[("a", "Alpha"), ("b", "Beta")])
+        ctx = widget.get_context("test", "a", {})
+        assert ctx["widget"]["selected_label"] == "Alpha"
+
+    def test_selected_label_empty_when_no_value(self):
+        widget = ComboBoxInput(choices=[("", ""), ("a", "Alpha")])
+        ctx = widget.get_context("test", "", {})
+        # Empty option label should not be shown as selected label
+        assert ctx["widget"]["selected_label"] == ""
+
+    def test_aria_invalid_on_input(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test", attrs={"id": "id_test", "aria-invalid": "true"})
+        trigger = soup.find("input", class_="combobox-input")
+        assert trigger["aria-invalid"] == "true"
+
+    def test_no_aria_invalid_when_valid(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+        trigger = soup.find("input", class_="combobox-input")
+        assert not trigger.has_attr("aria-invalid")
+
+    def test_aria_controls_links_to_listbox(self):
+        widget = ComboBoxInput(choices=[("a", "Alpha")])
+        soup = render_widget(widget, name="test", attrs={"id": "id_city"})
+        trigger = soup.find("input", class_="combobox-input")
+        assert trigger["aria-controls"] == "id_city_listbox"
+
+
+class TestDataListInput:
+    def test_renders_text_input(self):
+        widget = DataListInput(datalist=["A", "B"])
+        soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+        inp = soup.find("input")
+        assert inp is not None
+        assert inp.get("type") == "text"
+
+    def test_list_attribute_set(self):
+        widget = DataListInput(datalist=["A"])
+        soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+        inp = soup.find("input")
+        assert inp["list"] == "id_test_list"
+
+    def test_datalist_element_rendered(self):
+        widget = DataListInput(datalist=["Chrome", "Firefox"])
+        soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+        datalist = soup.find("datalist")
+        assert datalist is not None
+        assert datalist["id"] == "id_test_list"
+
+    def test_datalist_options(self):
+        widget = DataListInput(datalist=["Chrome", "Firefox", "Safari"])
+        soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+        options = soup.find("datalist").find_all("option")
+        assert len(options) == 3
+        values = [o["value"] for o in options]
+        assert values == ["Chrome", "Firefox", "Safari"]
+
+    def test_empty_datalist(self):
+        widget = DataListInput()
+        soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+        options = soup.find("datalist").find_all("option")
+        assert len(options) == 0
+
+    def test_no_datalist_without_id(self):
+        """Without an id, no datalist or list attr is rendered."""
+        widget = DataListInput(datalist=["A"])
+        soup = render_widget(widget, name="test")
+        datalist = soup.find("datalist")
+        assert datalist is None
+
+    def test_preserves_value(self):
+        widget = DataListInput(datalist=["A", "B"])
+        soup = render_widget(widget, name="test", value="hello", attrs={"id": "id_test"})
+        inp = soup.find("input")
+        assert inp["value"] == "hello"
+
+    def test_preserves_placeholder(self):
+        widget = DataListInput(datalist=["A"], attrs={"placeholder": "Pick one"})
+        soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+        inp = soup.find("input")
+        assert inp["placeholder"] == "Pick one"
