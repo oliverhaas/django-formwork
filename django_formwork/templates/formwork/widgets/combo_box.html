@@ -1,0 +1,33 @@
+{% with id=widget.attrs.id %}<div class="dropdown combobox" x-data="{
+  open: false,
+  search: '{{ widget.selected_label|escapejs }}',
+  value: '{{ widget.value|default:""|escapejs }}',
+  get noResults() {
+    if (!this.search) return false;
+    const q = this.search.toLowerCase();
+    return ![...this.$refs.options.querySelectorAll('.select-none')].some(
+      s => s.textContent.trim().toLowerCase().includes(q)
+    );
+  },
+  pick(val, lbl) {
+    this.value = val;
+    this.search = lbl;
+    this.open = false;
+  },
+  clear() {
+    this.value = '';
+    this.search = '';
+  }
+}" :class="open && 'dropdown-open'" @click.outside="open = false" @keydown.escape.prevent="open = false">
+  <input x-ref="search" type="text" :value="search" @input="search = $event.target.value; value = ''; open = true" @focus="open = true; $event.target.select()"{% if id %} id="{{ id }}_input"{% endif %} class="combobox-input{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}" placeholder="Search&#x2026;"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %} autocomplete="off" role="combobox" aria-autocomplete="list"{% if id %} aria-controls="{{ id }}_listbox"{% endif %} :aria-expanded="open">
+  <input type="hidden" name="{{ widget.name }}" :value="value"{% if id %} id="{{ id }}"{% endif %}>
+  <div x-show="open" x-cloak class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
+    <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1">
+      {% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title">{{ group }}</li>{% endif %}{% for option in options %}{% if option.value != "" %}
+      <li x-show="!search || value || '{{ option.label|escapejs }}'.toLowerCase().includes(search.toLowerCase())" role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" @click="pick('{{ option.value|escapejs }}', '{{ option.label|escapejs }}')">
+        <span class="select-none">{{ option.label }}</span>
+      </button></li>{% endif %}{% endfor %}{% endfor %}
+    </ul>
+    <p x-show="noResults" x-cloak class="px-3 py-2 text-base-content/50">No results</p>
+  </div>
+</div>{% endwith %}

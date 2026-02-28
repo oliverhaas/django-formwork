@@ -8,6 +8,8 @@ Django's built-in widget templates offer:
 - :class:`RatingInput` — star-rating using radio inputs
 - :class:`PasswordRevealInput` — password input with show/hide toggle
 - :class:`MultiSelectInput` — dropdown with checkboxes
+- :class:`ComboBoxInput` — single-select with search/autocomplete
+- :class:`DataListInput` — text input with native ``<datalist>`` suggestions
 
 All DaisyUI component classes (``input``, ``select``, etc.) are applied
 via CSS selectors in ``formwork.css``, not in Python.  Custom widgets use
@@ -138,3 +140,75 @@ class MultiSelectInput(forms.SelectMultiple):
 
     template_name = "formwork/widgets/multi_select.html"
     option_inherits_attrs = False
+    search_threshold = 20
+
+    def get_context(self, name: str, value: list[str] | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        total = sum(len(options) for _, options, _ in context["widget"]["optgroups"])
+        context["widget"]["show_search"] = total > self.search_threshold
+        context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
+        return context
+
+
+class ComboBoxInput(forms.Select):
+    """Single-select dropdown with text search/autocomplete.
+
+    Renders a DaisyUI-styled dropdown with a text input for filtering
+    options.  Submits a single value via a hidden ``<input>`` element.
+    Uses Alpine.js for filtering, keyboard navigation, and selection.
+
+    Usage::
+
+        city = forms.ChoiceField(
+            choices=[("nyc", "New York"), ("ldn", "London"), ...],
+            widget=ComboBoxInput,
+        )
+    """
+
+    template_name = "formwork/widgets/combo_box.html"
+    option_inherits_attrs = False
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        # Find the label for the currently selected value.
+        selected_label = ""
+        for _group, options, _index in context["widget"]["optgroups"]:
+            for option in options:
+                if option["selected"]:
+                    selected_label = str(option["label"])
+                    break
+        context["widget"]["selected_label"] = selected_label
+        context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
+        return context
+
+
+class DataListInput(forms.TextInput):
+    """Text input with native ``<datalist>`` browser suggestions.
+
+    Renders an ``<input>`` with a ``list`` attribute pointing to a
+    ``<datalist>`` containing the provided suggestions.  No JavaScript
+    required — the browser provides the autocomplete dropdown natively.
+
+    Note: the submitted value is whatever the user typed (free text),
+    not a key from a choices list.
+
+    Usage::
+
+        browser = forms.CharField(
+            widget=DataListInput(datalist=["Chrome", "Firefox", "Safari"]),
+        )
+    """
+
+    template_name = "formwork/widgets/datalist.html"
+
+    def __init__(self, *, datalist: list[str] | None = None, attrs: dict[str, Any] | None = None) -> None:
+        super().__init__(attrs)
+        self.datalist = datalist or []
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        widget_id = context["widget"]["attrs"].get("id")
+        if widget_id:
+            context["widget"]["attrs"]["list"] = f"{widget_id}_list"
+        context["widget"]["datalist"] = self.datalist
+        return context

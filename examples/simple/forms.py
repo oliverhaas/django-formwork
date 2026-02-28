@@ -2,6 +2,8 @@ from django import forms
 
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import (
+    ComboBoxInput,
+    DataListInput,
     MultiSelectInput,
     PasswordRevealInput,
     RangeInput,
@@ -25,7 +27,7 @@ class ContactForm(FormworkForm):
         help_text="What can we help you with?",
     )
     priority = forms.ChoiceField(
-        choices=[("", "Select priority..."), ("low", "Low"), ("medium", "Medium"), ("high", "High")],
+        choices=[("", "Select\u2026"), ("low", "Low"), ("medium", "Medium"), ("high", "High")],
     )
 
 
@@ -116,10 +118,90 @@ class AllWidgetsForm(FormworkForm):
         choices=[("", "Select\u2026"), ("a", "Option A"), ("b", "Option B"), ("c", "Option C")],
         help_text="Single select dropdown",
     )
+    datalist = forms.CharField(
+        widget=DataListInput(
+            datalist=["Chrome", "Firefox", "Safari", "Edge", "Opera", "Brave", "Vivaldi", "Arc"],
+            attrs={"placeholder": "Type or pick a browser"},
+        ),
+        help_text="Text input with native browser suggestions",
+        required=False,
+    )
+    combo_box = forms.ChoiceField(
+        choices=[
+            ("", ""),
+            ("nyc", "New York"),
+            ("ldn", "London"),
+            ("tyo", "Tokyo"),
+            ("par", "Paris"),
+            ("ber", "Berlin"),
+            ("syd", "Sydney"),
+            ("tor", "Toronto"),
+            ("mum", "Mumbai"),
+            ("sao", "S\u00e3o Paulo"),
+            ("sin", "Singapore"),
+            ("hkg", "Hong Kong"),
+            ("dxb", "Dubai"),
+        ],
+        widget=ComboBoxInput,
+        help_text="Single select with search",
+        required=False,
+    )
     select_multiple = forms.MultipleChoiceField(
         choices=[("python", "Python"), ("js", "JavaScript"), ("go", "Go"), ("rust", "Rust")],
         widget=MultiSelectInput,
         help_text="Multi-select dropdown with checkboxes",
+        required=False,
+    )
+    country = forms.MultipleChoiceField(
+        choices=[
+            ("af", "Afghanistan"),
+            ("al", "Albania"),
+            ("dz", "Algeria"),
+            ("ar", "Argentina"),
+            ("au", "Australia"),
+            ("at", "Austria"),
+            ("be", "Belgium"),
+            ("br", "Brazil"),
+            ("ca", "Canada"),
+            ("cl", "Chile"),
+            ("cn", "China"),
+            ("co", "Colombia"),
+            ("hr", "Croatia"),
+            ("cz", "Czech Republic"),
+            ("dk", "Denmark"),
+            ("eg", "Egypt"),
+            ("fi", "Finland"),
+            ("fr", "France"),
+            ("de", "Germany"),
+            ("gr", "Greece"),
+            ("hu", "Hungary"),
+            ("in", "India"),
+            ("id", "Indonesia"),
+            ("ie", "Ireland"),
+            ("il", "Israel"),
+            ("it", "Italy"),
+            ("jp", "Japan"),
+            ("mx", "Mexico"),
+            ("nl", "Netherlands"),
+            ("nz", "New Zealand"),
+            ("no", "Norway"),
+            ("pl", "Poland"),
+            ("pt", "Portugal"),
+            ("ro", "Romania"),
+            ("ru", "Russia"),
+            ("za", "South Africa"),
+            ("kr", "South Korea"),
+            ("es", "Spain"),
+            ("se", "Sweden"),
+            ("ch", "Switzerland"),
+            ("th", "Thailand"),
+            ("tr", "Turkey"),
+            ("ua", "Ukraine"),
+            ("gb", "United Kingdom"),
+            ("us", "United States"),
+        ],
+        widget=MultiSelectInput,
+        help_text="Multi-select with search (30+ options)",
         required=False,
     )
 
@@ -165,4 +247,53 @@ class AllWidgetsForm(FormworkForm):
     password_reveal = forms.CharField(
         widget=PasswordRevealInput(attrs={"placeholder": "Reveal me"}),
         help_text="Password with reveal toggle",
+    )
+
+
+class ErrorStatesForm(FormworkForm):
+    """Shows every widget type in its error state (server-side validation)."""
+
+    text = forms.CharField(help_text="Required text input")
+    email = forms.EmailField(help_text="Must be a valid email")
+    textarea = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}), help_text="Required textarea")
+    select = forms.ChoiceField(
+        choices=[("", "Select\u2026"), ("a", "A"), ("b", "B")],
+        help_text="Required select",
+    )
+    combo_box = forms.ChoiceField(
+        choices=[("", ""), ("a", "Alpha"), ("b", "Beta")],
+        widget=ComboBoxInput,
+        help_text="Required combo box",
+    )
+    select_multiple = forms.MultipleChoiceField(
+        choices=[("a", "A"), ("b", "B"), ("c", "C")],
+        widget=MultiSelectInput,
+        help_text="Required multi-select",
+    )
+    radio = forms.ChoiceField(
+        choices=[("a", "A"), ("b", "B")],
+        widget=forms.RadioSelect,
+        help_text="Required radio group",
+    )
+    checkbox = forms.BooleanField(help_text="Must be checked")
+    checkbox_multiple = forms.MultipleChoiceField(
+        choices=[("a", "A"), ("b", "B")],
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Required checkbox group",
+    )
+    file = forms.FileField(help_text="Required file")
+    toggle = forms.BooleanField(widget=ToggleInput, help_text="Must be toggled on")
+    range_slider = forms.IntegerField(
+        widget=RangeInput(attrs={"min": "0", "max": "100"}),
+        help_text="Required range",
+    )
+    star_rating = forms.TypedChoiceField(
+        choices=RatingInput.make_choices(5),
+        coerce=int,
+        widget=RatingInput,
+        help_text="Required rating",
+    )
+    password_reveal = forms.CharField(
+        widget=PasswordRevealInput,
+        help_text="Required password",
     )
