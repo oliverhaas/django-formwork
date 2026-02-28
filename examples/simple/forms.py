@@ -113,7 +113,7 @@ class AllWidgetsForm(FormworkForm):
 
     # Select widgets
     select = forms.ChoiceField(
-        choices=[("", "Choose..."), ("a", "Option A"), ("b", "Option B"), ("c", "Option C")],
+        choices=[("", "Select\u2026"), ("a", "Option A"), ("b", "Option B"), ("c", "Option C")],
         help_text="Single select dropdown",
     )
     select_multiple = forms.MultipleChoiceField(

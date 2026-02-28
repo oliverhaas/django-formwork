@@ -1,15 +1,11 @@
 from bs4 import BeautifulSoup
-from django import forms
 
 from django_formwork.widgets import (
-    DAISY_CLASSES,
     MultiSelectInput,
     PasswordRevealInput,
     RangeInput,
     RatingInput,
     ToggleInput,
-    _add_css_class,
-    apply_daisy_classes,
 )
 
 
@@ -19,105 +15,10 @@ def render_widget(widget, name="test", value=None, attrs=None):
     return BeautifulSoup(html, "html.parser")
 
 
-class TestAddCssClass:
-    def test_adds_to_empty(self):
-        attrs = {}
-        _add_css_class(attrs, "input")
-        assert attrs["class"] == "input"
-
-    def test_appends(self):
-        attrs = {"class": "custom"}
-        _add_css_class(attrs, "input")
-        assert attrs["class"] == "custom input"
-
-    def test_no_duplicate(self):
-        attrs = {"class": "input"}
-        _add_css_class(attrs, "input")
-        assert attrs["class"] == "input"
-
-
-class TestApplyDaisyClasses:
-    def test_text_input(self):
-        class F(forms.Form):
-            name = forms.CharField()
-
-        form = F()
-        apply_daisy_classes(form)
-        assert "input" in form.fields["name"].widget.attrs["class"]
-
-    def test_textarea(self):
-        class F(forms.Form):
-            bio = forms.CharField(widget=forms.Textarea)
-
-        form = F()
-        apply_daisy_classes(form)
-        assert "textarea" in form.fields["bio"].widget.attrs["class"]
-
-    def test_select(self):
-        class F(forms.Form):
-            choice = forms.ChoiceField(choices=[("a", "A")])
-
-        form = F()
-        apply_daisy_classes(form)
-        assert "select" in form.fields["choice"].widget.attrs["class"]
-
-    def test_checkbox(self):
-        class F(forms.Form):
-            agree = forms.BooleanField()
-
-        form = F()
-        apply_daisy_classes(form)
-        assert "checkbox" in form.fields["agree"].widget.attrs["class"]
-
-    def test_radio(self):
-        class F(forms.Form):
-            choice = forms.ChoiceField(
-                choices=[("a", "A"), ("b", "B")],
-                widget=forms.RadioSelect,
-            )
-
-        form = F()
-        apply_daisy_classes(form)
-        assert "radio" in form.fields["choice"].widget.attrs["class"]
-
-    def test_file_input(self):
-        class F(forms.Form):
-            doc = forms.FileField()
-
-        form = F()
-        apply_daisy_classes(form)
-        assert "file-input" in form.fields["doc"].widget.attrs["class"]
-
-    def test_preserves_existing_classes(self):
-        class F(forms.Form):
-            name = forms.CharField(widget=forms.TextInput(attrs={"class": "my-class"}))
-
-        form = F()
-        apply_daisy_classes(form)
-        css = form.fields["name"].widget.attrs["class"]
-        assert "my-class" in css
-        assert "input" in css
-
-    def test_all_mapped_widgets_covered(self):
-        """All widgets in DAISY_CLASSES should get their class applied."""
-        for widget_class, css_class in DAISY_CLASSES.items():
-            widget = widget_class()
-            form_field = forms.CharField(widget=widget)
-
-            class F(forms.Form):
-                field = form_field
-
-            form = F()
-            apply_daisy_classes(form)
-            assert css_class in form.fields["field"].widget.attrs.get("class", ""), (
-                f"{widget_class.__name__} should get '{css_class}'"
-            )
-
-
 class TestToggleInput:
-    def test_has_toggle_class(self):
+    def test_has_data_formwork_toggle(self):
         widget = ToggleInput()
-        assert "toggle" in widget.attrs["class"]
+        assert widget.attrs.get("data-formwork") == "toggle"
 
     def test_renders_checkbox(self):
         soup = render_widget(ToggleInput())
@@ -125,17 +26,18 @@ class TestToggleInput:
         assert inp is not None
         assert inp["type"] == "checkbox"
 
-    def test_toggle_class_in_output(self):
+    def test_data_formwork_in_output(self):
         soup = render_widget(ToggleInput())
         inp = soup.find("input")
-        assert "toggle" in inp.get("class", [])
+        assert inp.get("data-formwork") == "toggle"
+
+    def test_preserves_user_attrs(self):
+        widget = ToggleInput(attrs={"class": "my-toggle"})
+        assert widget.attrs.get("data-formwork") == "toggle"
+        assert "my-toggle" in widget.attrs.get("class", "")
 
 
 class TestRangeInput:
-    def test_has_range_class(self):
-        widget = RangeInput()
-        assert "range" in widget.attrs["class"]
-
     def test_renders_range_type(self):
         soup = render_widget(RangeInput())
         inp = soup.find("input")
@@ -194,7 +96,7 @@ class TestRatingInput:
         widget = RatingInput(star_class="mask-heart")
         widget.choices = [("1", "1 star")]
         soup = render_widget(widget, value="1")
-        radio = soup.find("input", {"type": "radio"})
+        radio = soup.find("input", {"type": "radio", "data-formwork": "rating"})
         assert "mask-heart" in radio.get("class", [])
 
     def test_choices_helper(self):
@@ -202,6 +104,14 @@ class TestRatingInput:
         assert len(choices) == 5
         assert choices[0] == ("1", "1 star")
         assert choices[4] == ("5", "5 stars")
+
+    def test_data_formwork_rating_on_inputs(self):
+        widget = RatingInput()
+        widget.choices = [("1", "1 star"), ("2", "2 stars")]
+        soup = render_widget(widget, value="1")
+        radios = soup.find_all("input", {"type": "radio"})
+        for radio in radios:
+            assert radio.get("data-formwork") == "rating"
 
 
 class TestPasswordRevealInput:
@@ -237,91 +147,10 @@ class TestPasswordRevealInput:
         inp = soup.find("input")
         assert "grow" in inp.get("class", [])
 
-
-class TestRadioSelectTemplate:
-    """RadioSelect gets a custom template that doesn't put class on wrapper."""
-
-    def test_template_overridden(self):
-        class F(forms.Form):
-            choice = forms.ChoiceField(
-                choices=[("a", "A"), ("b", "B")],
-                widget=forms.RadioSelect,
-            )
-
-        form = F()
-        apply_daisy_classes(form)
-        assert form.fields["choice"].widget.template_name == "formwork/widgets/radio.html"
-
-    def test_wrapper_div_has_no_daisy_class(self):
-        class F(forms.Form):
-            choice = forms.ChoiceField(
-                choices=[("a", "A"), ("b", "B")],
-                widget=forms.RadioSelect,
-            )
-
-        form = F()
-        apply_daisy_classes(form)
-        soup = render_widget(form.fields["choice"].widget, name="choice", value="a")
-        wrapper = soup.find("div", recursive=False)
-        assert "radio" not in wrapper.get("class", [])
-
-    def test_individual_inputs_have_daisy_class(self):
-        class F(forms.Form):
-            choice = forms.ChoiceField(
-                choices=[("a", "A"), ("b", "B")],
-                widget=forms.RadioSelect,
-            )
-
-        form = F()
-        apply_daisy_classes(form)
-        soup = render_widget(form.fields["choice"].widget, name="choice", value="a")
-        radios = soup.find_all("input", {"type": "radio"})
-        assert len(radios) == 2
-        for radio in radios:
-            assert "radio" in radio.get("class", [])
-
-
-class TestCheckboxSelectMultipleTemplate:
-    """CheckboxSelectMultiple gets a custom template."""
-
-    def test_template_overridden(self):
-        class F(forms.Form):
-            multi = forms.MultipleChoiceField(
-                choices=[("a", "A"), ("b", "B")],
-                widget=forms.CheckboxSelectMultiple,
-            )
-
-        form = F()
-        apply_daisy_classes(form)
-        assert form.fields["multi"].widget.template_name == "formwork/widgets/checkbox_select.html"
-
-    def test_wrapper_div_has_no_daisy_class(self):
-        class F(forms.Form):
-            multi = forms.MultipleChoiceField(
-                choices=[("a", "A"), ("b", "B")],
-                widget=forms.CheckboxSelectMultiple,
-            )
-
-        form = F()
-        apply_daisy_classes(form)
-        soup = render_widget(form.fields["multi"].widget, name="multi", value=["a"])
-        wrapper = soup.find("div", recursive=False)
-        assert "checkbox" not in wrapper.get("class", [])
-
-    def test_individual_inputs_have_daisy_class(self):
-        class F(forms.Form):
-            multi = forms.MultipleChoiceField(
-                choices=[("a", "A"), ("b", "B")],
-                widget=forms.CheckboxSelectMultiple,
-            )
-
-        form = F()
-        apply_daisy_classes(form)
-        soup = render_widget(form.fields["multi"].widget, name="multi", value=["a"])
-        checkboxes = soup.find_all("input", {"type": "checkbox"})
-        assert len(checkboxes) == 2
-        for cb in checkboxes:
-            assert "checkbox" in cb.get("class", [])
+    def test_data_formwork_password_reveal(self):
+        soup = render_widget(PasswordRevealInput())
+        inp = soup.find("input")
+        assert inp.get("data-formwork") == "password-reveal"
 
 
 class TestMultiSelectInput:
@@ -378,11 +207,21 @@ class TestMultiSelectInput:
         checked = [cb["value"] for cb in checkboxes if cb.has_attr("checked")]
         assert checked == ["a", "c"]
 
-    def test_checkmark_svg_present(self):
+    def test_checkmark_present(self):
         widget = MultiSelectInput(choices=[("a", "A")])
         soup = render_widget(widget, name="test")
-        svg = soup.find("svg")
-        assert svg is not None
+        check = soup.find("span", class_="formwork-check")
+        assert check is not None
+        assert "opacity-0" in check.get("class", [])
+
+    def test_checkmark_before_label_text(self):
+        """Checkmark span comes before the text span, like a native select."""
+        widget = MultiSelectInput(choices=[("a", "A")])
+        soup = render_widget(widget, name="test")
+        label = soup.find("label")
+        children = [c for c in label.children if getattr(c, "name", None)]
+        names = [c.name for c in children]
+        assert names == ["input", "span", "span"]
 
     def test_alpine_x_data(self):
         widget = MultiSelectInput(choices=[("a", "A")])
@@ -393,7 +232,14 @@ class TestMultiSelectInput:
     def test_labels_for_options(self):
         widget = MultiSelectInput(choices=[("a", "Alpha"), ("b", "Beta")])
         soup = render_widget(widget, name="test")
-        labels = soup.find_all("label")
-        texts = [lab.get_text(strip=True) for lab in labels]
+        spans = soup.find_all("span", class_="select-none")
+        texts = [s.get_text(strip=True) for s in spans]
         assert "Alpha" in texts
         assert "Beta" in texts
+
+    def test_data_formwork_multiselect_on_checkboxes(self):
+        widget = MultiSelectInput(choices=[("a", "A"), ("b", "B")])
+        soup = render_widget(widget, name="test")
+        checkboxes = soup.find_all("input", {"type": "checkbox"})
+        for cb in checkboxes:
+            assert cb.get("data-formwork") == "multiselect"

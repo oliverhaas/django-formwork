@@ -1,115 +1,25 @@
-"""DaisyUI-aware form widgets for Django.
+"""Custom form widgets for django-formwork.
 
-Provides:
-- ``apply_daisy_classes()`` to auto-add DaisyUI CSS classes to standard widgets
-- Custom widgets: ``ToggleInput``, ``RangeInput``, ``RatingInput``,
-  ``PasswordRevealInput``
+Provides widgets that require custom HTML structure beyond what
+Django's built-in widget templates offer:
+
+- :class:`ToggleInput` — checkbox rendered as a DaisyUI toggle switch
+- :class:`RangeInput` — HTML5 range slider
+- :class:`RatingInput` — star-rating using radio inputs
+- :class:`PasswordRevealInput` — password input with show/hide toggle
+- :class:`MultiSelectInput` — dropdown with checkboxes
+
+All DaisyUI component classes (``input``, ``select``, etc.) are applied
+via CSS selectors in ``formwork.css``, not in Python.  Custom widgets use
+``data-formwork`` attributes so CSS can distinguish them from standard
+Django widgets.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from django import forms
-
-if TYPE_CHECKING:
-    from django.forms import BaseForm
-
-# ---------------------------------------------------------------------------
-# CSS class helpers
-# ---------------------------------------------------------------------------
-
-
-def _add_css_class(attrs: dict[str, Any], css_class: str) -> None:
-    """Append *css_class* to ``attrs["class"]`` if not already present."""
-    existing = attrs.get("class", "")
-    if css_class not in existing.split():
-        attrs["class"] = f"{existing} {css_class}".strip()
-
-
-# ---------------------------------------------------------------------------
-# DaisyUI class mappings
-# ---------------------------------------------------------------------------
-
-#: Map Django widget type → DaisyUI component class.
-DAISY_CLASSES: dict[type[forms.Widget], str] = {
-    forms.TextInput: "input",
-    forms.EmailInput: "input",
-    forms.URLInput: "input",
-    forms.NumberInput: "input",
-    forms.PasswordInput: "input",
-    forms.DateInput: "input",
-    forms.TimeInput: "input",
-    forms.DateTimeInput: "input",
-    forms.SearchInput: "input",
-    forms.ColorInput: "input",
-    forms.TelInput: "input",
-    forms.Textarea: "textarea",
-    forms.Select: "select",
-    forms.SelectMultiple: "select",
-    forms.CheckboxInput: "checkbox",
-    forms.RadioSelect: "radio",
-    forms.CheckboxSelectMultiple: "checkbox",
-    forms.FileInput: "file-input",
-    forms.ClearableFileInput: "file-input",
-}
-
-#: Map DaisyUI component class → error modifier class.
-DAISY_ERROR_CLASSES: dict[str, str] = {
-    "input": "input-error",
-    "textarea": "textarea-error",
-    "select": "select-error",
-    "checkbox": "checkbox-error",
-    "radio": "radio-error",
-    "toggle": "toggle-error",
-    "file-input": "file-input-error",
-    "range": "range-error",
-}
-
-
-def _get_daisy_class(widget: forms.Widget) -> str | None:
-    """Return the DaisyUI class for *widget*, or ``None``."""
-    return DAISY_CLASSES.get(type(widget))
-
-
-def _get_error_class(widget: forms.Widget) -> str | None:
-    """Return the DaisyUI error class for *widget*, or ``None``."""
-    daisy_class = _get_daisy_class(widget)
-    if daisy_class is None:
-        # Check custom widgets
-        for attr_name in ("_daisy_class",):
-            daisy_class = getattr(widget, attr_name, None)
-            if daisy_class:
-                break
-    if daisy_class:
-        return DAISY_ERROR_CLASSES.get(daisy_class)
-    return None
-
-
-#: Widgets that need custom formwork templates to avoid leaking
-#: DaisyUI classes onto the wrapper ``<div>``.
-_TEMPLATE_OVERRIDES: dict[type[forms.Widget], str] = {
-    forms.RadioSelect: "formwork/widgets/radio.html",
-    forms.CheckboxSelectMultiple: "formwork/widgets/checkbox_select.html",
-}
-
-
-def apply_daisy_classes(form: BaseForm) -> None:
-    """Add DaisyUI CSS classes to all widgets in *form*.
-
-    Called automatically by :class:`~django_formwork.forms.FormworkForm`.
-    """
-    for field in form.fields.values():
-        widget = field.widget
-        css_class = _get_daisy_class(widget)
-        if css_class:
-            _add_css_class(widget.attrs, css_class)
-        # Override templates for multi-input widgets so the DaisyUI class
-        # is only applied to individual <input> elements, not the wrapper div.
-        template = _TEMPLATE_OVERRIDES.get(type(widget))
-        if template:
-            widget.template_name = template
-
 
 # ---------------------------------------------------------------------------
 # Custom widgets
@@ -119,20 +29,26 @@ def apply_daisy_classes(form: BaseForm) -> None:
 class ToggleInput(forms.CheckboxInput):
     """Checkbox rendered as a DaisyUI toggle switch.
 
+    Adds ``data-formwork="toggle"`` so CSS applies the ``toggle`` class
+    instead of ``checkbox``.
+
     Usage::
 
         agree = forms.BooleanField(widget=ToggleInput)
     """
 
-    _daisy_class = "toggle"
-
     def __init__(self, attrs: dict[str, Any] | None = None) -> None:
-        super().__init__(attrs)
-        _add_css_class(self.attrs, "toggle")
+        defaults: dict[str, Any] = {"data-formwork": "toggle"}
+        if attrs:
+            defaults.update(attrs)
+        super().__init__(defaults)
 
 
 class RangeInput(forms.NumberInput):
     """HTML5 range slider styled with DaisyUI.
+
+    CSS targets ``input[type="range"]`` directly — no extra attributes
+    needed.
 
     Usage::
 
@@ -140,19 +56,14 @@ class RangeInput(forms.NumberInput):
     """
 
     input_type = "range"
-    _daisy_class = "range"
-
-    def __init__(self, attrs: dict[str, Any] | None = None) -> None:
-        super().__init__(attrs)
-        _add_css_class(self.attrs, "range")
 
 
 class RatingInput(forms.RadioSelect):
     """Star-rating widget using DaisyUI's rating component.
 
     Renders a ``<div class="rating">`` containing radio inputs styled as
-    stars.  Works with :class:`~django.forms.ChoiceField` or
-    :class:`~django.forms.TypedChoiceField`.
+    stars.  The template adds ``data-formwork="rating"`` on each radio
+    so CSS doesn't apply the default ``radio`` class.
 
     Usage::
 
@@ -164,7 +75,6 @@ class RatingInput(forms.RadioSelect):
     """
 
     template_name = "formwork/widgets/rating.html"
-    _daisy_class = "rating"
 
     def __init__(
         self,
@@ -193,7 +103,9 @@ class PasswordRevealInput(forms.PasswordInput):
     """Password input with a show/hide toggle button.
 
     Wraps the input in a DaisyUI ``<label class="input">`` container with a
-    toggle button.  Uses Alpine.js for the reveal functionality.
+    toggle button.  Uses Alpine.js for the reveal functionality.  The
+    template adds ``data-formwork="password-reveal"`` so CSS doesn't
+    double-apply the ``input`` class.
 
     Usage::
 
@@ -201,7 +113,6 @@ class PasswordRevealInput(forms.PasswordInput):
     """
 
     template_name = "formwork/widgets/password_reveal.html"
-    _daisy_class = "input"
 
     def __init__(self, attrs: dict[str, Any] | None = None) -> None:
         super().__init__(attrs=attrs, render_value=False)
@@ -212,6 +123,8 @@ class MultiSelectInput(forms.SelectMultiple):
 
     Renders a DaisyUI-styled dropdown button that opens a panel of checkboxes.
     Uses Alpine.js for open/close state and selected-count display.
+    The template adds ``data-formwork="multiselect"`` on checkboxes so
+    CSS doesn't apply the default ``checkbox`` class.
 
     Usage::
 
@@ -222,5 +135,4 @@ class MultiSelectInput(forms.SelectMultiple):
     """
 
     template_name = "formwork/widgets/multi_select.html"
-    _daisy_class = "select"
     option_inherits_attrs = False
