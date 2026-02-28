@@ -19,9 +19,9 @@
    Base component styling
    ================================================================ */
 
-/* Fieldset needs relative positioning for error tooltip placement. */
-fieldset.fieldset {
-    position: relative;
+/* DaisyUI tooltip uses inline-block; fieldsets need block display. */
+fieldset.fieldset.tooltip {
+    display: block;
 }
 
 /* Text-like inputs: text, email, url, number, password, date, time,
@@ -215,55 +215,12 @@ label:has(> input.hidden:checked) > .formwork-check {
 
 /* ================================================================
    Error tooltips
-   Field errors are hidden by default and shown on hover/focus.
-   The widget's error border (via aria-invalid) remains always visible.
+   DaisyUI tooltip component handles positioning and visibility.
+   The fieldset gets tooltip/tooltip-error/tooltip-bottom classes
+   when field errors exist (added by the form template).
    ================================================================ */
 
-.formwork-errors {
-    position: absolute;
-    z-index: 10;
-    bottom: 0;
-    left: 0;
-    transform: translateY(100%);
-    @apply bg-base-100 text-error text-sm rounded-box;
-    padding: 0.375rem 0.75rem;
-    border: 1px solid var(--color-error);
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    width: max-content;
-    max-width: 100%;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s ease;
-}
-
-/* Small caret pointing up to the field. */
-.formwork-errors::before {
-    content: "";
-    position: absolute;
-    bottom: 100%;
-    left: 1rem;
-    border: 6px solid transparent;
-    border-bottom-color: var(--color-error);
-}
-
-/* Fill the caret interior with the tooltip background. */
-.formwork-errors::after {
-    content: "";
-    position: absolute;
-    bottom: calc(100% - 1px);
-    left: 1rem;
-    border: 6px solid transparent;
-    border-bottom-color: var(--color-base-100);
-}
-
-/* Show on hover or keyboard focus. */
-fieldset.fieldset:hover > .formwork-errors,
-fieldset.fieldset:focus-within > .formwork-errors {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-/* Spacing between multiple error messages. */
+/* Spacing between multiple error messages inside tooltip. */
 .formwork-errors > p + p {
     margin-top: 0.125rem;
 }
