@@ -19,9 +19,9 @@
    Base component styling
    ================================================================ */
 
-/* DaisyUI tooltip uses inline-block; fieldsets need block display. */
+/* DaisyUI tooltip sets inline-block; restore fieldset's grid layout. */
 fieldset.fieldset.tooltip {
-    display: block;
+    display: grid;
 }
 
 /* Text-like inputs: text, email, url, number, password, date, time,
@@ -171,6 +171,11 @@ details.dropdown[open] > summary.select {
     outline-offset: 2px;
 }
 
+details.dropdown[open] > summary.select[aria-invalid="true"] {
+    border-color: var(--color-error);
+    outline-color: var(--color-error);
+}
+
 /* Dropdown widgets: close <details> on outside click.
    An invisible full-page overlay on <summary> captures the click,
    which toggles the <details> closed.  Pure CSS, no JS needed. */
@@ -215,10 +220,23 @@ label:has(> input.hidden:checked) > .formwork-check {
 
 /* ================================================================
    Error tooltips
-   DaisyUI tooltip component handles positioning and visibility.
-   The fieldset gets tooltip/tooltip-error/tooltip-bottom classes
-   when field errors exist (added by the form template).
+   DaisyUI tooltip component handles show/hide (hover + focus-visible)
+   and error colour.  We override placement so the tooltip appears
+   just below the fieldset instead of centred below the whole wrapper
+   (which DaisyUI tooltip-bottom does).
    ================================================================ */
+
+/* Position: bottom-left of fieldset, shifted down by own height. */
+fieldset.fieldset.tooltip > .tooltip-content {
+    inset: auto auto 0 0;
+    transform: translateY(calc(100% + 0.25rem));
+    text-align: left;
+}
+
+/* Hide DaisyUI's default tail — position won't match ours. */
+fieldset.fieldset.tooltip::after {
+    display: none;
+}
 
 /* Spacing between multiple error messages inside tooltip. */
 .formwork-errors > p + p {
