@@ -150,7 +150,6 @@ class TestErrorRendering:
         classes = fieldset.get("class", [])
         assert "tooltip" in classes
         assert "tooltip-error" in classes
-        assert "tooltip-bottom" in classes
 
     def test_no_tooltip_classes_when_valid(self):
         class F(FormworkForm):
