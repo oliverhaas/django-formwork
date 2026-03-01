@@ -7,15 +7,14 @@
   {% for field in hidden_fields %}{{ field }}{% endfor %}
 {% endif %}
 {% for field, errors in fields %}
-{% if field.is_hidden %}{{ field }}{% elif field.use_fieldset %}<fieldset class="fieldset{% if field.errors %} tooltip tooltip-error{% endif %}"{% if field.aria_describedby %} aria-describedby="{{ field.aria_describedby }}"{% endif %}>
-  {% if field.errors %}<div class="tooltip-content formwork-errors" role="alert">{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
+{% if field.is_hidden %}{{ field }}{% elif field.use_fieldset %}<fieldset class="fieldset"{% if field.aria_describedby %} aria-describedby="{{ field.aria_describedby }}"{% endif %}>
   {% if field.label %}<legend class="fieldset-legend"><span>{{ field.label }}{% if field.field.required %} <span class="text-error">*</span>{% endif %}</span></legend>{% endif %}
-  {{ field }}
+  {% if field.errors %}<div class="tooltip tooltip-error tooltip-bottom"><div class="tooltip-content formwork-errors" role="alert">{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}{{ field }}{% if field.errors %}</div>{% endif %}
   {% if field.help_text %}<p class="label"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</p>{% endif %}
-</fieldset>{% else %}<fieldset class="fieldset{% if field.errors %} tooltip tooltip-error{% endif %}">
-  {% if field.errors %}<div class="tooltip-content formwork-errors" role="alert">{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
+</fieldset>{% else %}<fieldset class="fieldset">
+  {% if field.errors %}<div class="tooltip tooltip-error tooltip-bottom"><div class="tooltip-content formwork-errors" role="alert">{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
   {% if field.label %}<label class="fieldset-legend"{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}><span>{{ field.label }}{% if field.field.required %} <span class="text-error">*</span>{% endif %}</span></label>{% endif %}
-  {{ field }}
+  {{ field }}{% if field.errors %}</div>{% endif %}
   {% if field.help_text %}<p class="label"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</p>{% endif %}
 </fieldset>{% endif %}
 {% if forloop.last %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}

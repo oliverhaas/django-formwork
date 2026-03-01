@@ -250,6 +250,33 @@ class AllWidgetsForm(FormworkForm):
     )
 
 
+class RegistrationForm(FormworkForm):
+    """Two-column layout demo — rendered with grid grid-cols-2 on the <form>."""
+
+    first_name = forms.CharField(
+        widget=forms.TextInput(attrs={"placeholder": "Jane"}),
+    )
+    last_name = forms.CharField(
+        widget=forms.TextInput(attrs={"placeholder": "Doe"}),
+    )
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"placeholder": "jane@example.com"}),
+        help_text="We'll send a confirmation link",
+    )
+    phone = forms.CharField(
+        widget=forms.TelInput(attrs={"placeholder": "+1 (555) 000-0000"}),
+        required=False,
+        help_text="Optional, for account recovery",
+    )
+    password = forms.CharField(
+        widget=PasswordRevealInput(attrs={"placeholder": "Min. 8 characters"}),
+        help_text="At least 8 characters",
+    )
+    confirm_password = forms.CharField(
+        widget=PasswordRevealInput(attrs={"placeholder": "Repeat password"}),
+    )
+
+
 class ErrorStatesForm(FormworkForm):
     """Shows every widget type in its error state (server-side validation)."""
 

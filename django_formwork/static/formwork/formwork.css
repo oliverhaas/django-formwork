@@ -17,27 +17,33 @@
 
 /* ================================================================
    Base component styling
-   ================================================================ */
 
-/* DaisyUI tooltip sets inline-block; restore fieldset's grid layout. */
-fieldset.fieldset.tooltip {
-    display: grid;
-}
+   DaisyUI form components default to width: clamp(3rem, 20rem, 100%).
+   Formwork overrides this to width: 100% so that inputs fill their
+   fieldset and form layout is controlled at the <form> element level
+   (e.g. max-w-sm for a narrow form, grid grid-cols-2 for multi-column).
+   ================================================================ */
 
 /* Text-like inputs: text, email, url, number, password, date, time,
    datetime-local, search, color, tel.
    Uses > (direct child) so inputs wrapped in a compound widget
-   (e.g. PasswordRevealInput's <label class="input">) are excluded. */
-fieldset.fieldset > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]) {
+   (e.g. PasswordRevealInput's <label class="input">) are excluded.
+   The .tooltip variant matches when the error tooltip wraps the widget. */
+fieldset.fieldset > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]),
+fieldset.fieldset > .tooltip > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]) {
     @apply input;
+    width: 100%;
 }
 
 fieldset.fieldset textarea {
     @apply textarea;
+    width: 100%;
 }
 
-fieldset.fieldset select {
+fieldset.fieldset select,
+fieldset.fieldset summary.select {
     @apply select;
+    width: 100%;
 }
 
 /* Show placeholder-style color when the empty option is selected. */
@@ -59,19 +65,30 @@ fieldset.fieldset input[type="radio"]:not(.mask):not(.rating-hidden) {
 
 fieldset.fieldset input[type="file"] {
     @apply file-input;
+    width: 100%;
 }
 
 fieldset.fieldset input[type="range"] {
     @apply range;
+    width: 100%;
 }
 
 /* Radio and checkbox groups: add vertical spacing between options.
-   Django wraps each option in a <div> inside a parent <div id="...">. */
+   Django wraps each option in a <div> inside a parent <div id="...">.
+   The .tooltip variant matches when the error tooltip wraps the widget. */
 fieldset.fieldset > div:has(> div > label > input[type="radio"]),
-fieldset.fieldset > div:has(> div > label > input[type="checkbox"]:not(.toggle):not(.hidden)) {
+fieldset.fieldset > div:has(> div > label > input[type="checkbox"]:not(.toggle):not(.hidden)),
+fieldset.fieldset > .tooltip > div:has(> div > label > input[type="radio"]),
+fieldset.fieldset > .tooltip > div:has(> div > label > input[type="checkbox"]:not(.toggle):not(.hidden)) {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+}
+
+/* PasswordRevealInput: the <input> is inside <label class="input">.
+   The label gets DaisyUI's .input class directly; override its width. */
+fieldset.fieldset label.input {
+    width: 100%;
 }
 
 /* Custom widget: toggle switch */
@@ -82,6 +99,7 @@ input.toggle {
 /* Custom widget: combobox text input trigger */
 input.combobox-input {
     @apply input;
+    width: 100%;
 }
 
 
@@ -90,7 +108,8 @@ input.combobox-input {
    Django adds aria-invalid="true" on widgets with validation errors.
    ================================================================ */
 
-fieldset.fieldset > input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]) {
+fieldset.fieldset > input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+fieldset.fieldset > .tooltip > input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]) {
     @apply input-error;
 }
 
@@ -187,12 +206,10 @@ details.dropdown[open] > summary::before {
     z-index: 998;
 }
 
-/* Dropdown widgets: constrain width to match a native <select>
-   (DaisyUI's select uses this exact clamp value).
-   Without this, the fieldset grid stretches the container to 1fr. */
+/* Dropdown widgets: fill fieldset like other form elements. */
 details.dropdown:has(.multiselect),
 .dropdown.combobox {
-    width: clamp(3rem, 20rem, 100%);
+    width: 100%;
 }
 
 details.dropdown:has(.multiselect) > .dropdown-content,
@@ -220,22 +237,19 @@ label:has(> input.hidden:checked) > .formwork-check {
 
 /* ================================================================
    Error tooltips
-   DaisyUI tooltip component handles show/hide (hover + focus-visible)
-   and error colour.  We override placement so the tooltip appears
-   just below the fieldset instead of centred below the whole wrapper
-   (which DaisyUI tooltip-bottom does).
+   DaisyUI tooltip component wraps the widget when errors are present.
+   The tooltip-content (error message) uses DaisyUI's built-in
+   tooltip-error + tooltip-bottom positioning and styling.
    ================================================================ */
 
-/* Position: bottom-left of fieldset, shifted down by own height. */
-fieldset.fieldset.tooltip > .tooltip-content {
-    inset: auto auto 0 0;
-    transform: translateY(calc(100% + 0.25rem));
-    text-align: left;
+/* Tooltip wrapper fills the fieldset like other form elements. */
+fieldset.fieldset > .tooltip {
+    width: 100%;
 }
 
-/* Hide DaisyUI's default tail — position won't match ours. */
-fieldset.fieldset.tooltip::after {
-    display: none;
+/* Left-align error text (DaisyUI tooltip defaults to center). */
+fieldset.fieldset > .tooltip > .tooltip-content {
+    text-align: left;
 }
 
 /* Spacing between multiple error messages inside tooltip. */
