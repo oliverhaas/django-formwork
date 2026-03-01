@@ -27,6 +27,18 @@
 
     <div class="card bg-base-100 shadow">
       <div class="card-body">
+        <h2 class="card-title">Two-Column Layout</h2>
+        <p class="text-sm text-base-content/60">CSS grid on the &lt;form&gt;: <code class="text-xs">grid grid-cols-2 gap-4</code></p>
+        <form method="post" class="grid grid-cols-2 gap-4">
+          {% csrf_token %}
+          {{ registration_form.as_div }}
+          <button type="submit" class="btn btn-primary col-span-full">Register</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
         <h2 class="card-title">Custom Widgets</h2>
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}

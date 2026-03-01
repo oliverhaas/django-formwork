@@ -139,28 +139,29 @@ class TestErrorRendering:
         error_div = soup.find("div", class_="tooltip-content")
         assert error_div["role"] == "alert"
 
-    def test_fieldset_has_tooltip_classes_on_error(self):
+    def test_tooltip_wrapper_around_widget_on_error(self):
         class F(FormworkForm):
             name = forms.CharField()
 
         form = F(data={"name": ""})
         form.is_valid()
         soup = render_html(form)
-        fieldset = soup.find("fieldset", class_="fieldset")
-        classes = fieldset.get("class", [])
-        assert "tooltip" in classes
-        assert "tooltip-error" in classes
+        wrapper = soup.find("div", class_="tooltip")
+        assert wrapper is not None
+        assert "tooltip-error" in wrapper.get("class", [])
+        assert "tooltip-bottom" in wrapper.get("class", [])
+        # Widget is inside the tooltip wrapper
+        assert wrapper.find("input") is not None
 
-    def test_no_tooltip_classes_when_valid(self):
+    def test_no_tooltip_wrapper_when_valid(self):
         class F(FormworkForm):
             name = forms.CharField()
 
         form = F(data={"name": "test"})
         form.is_valid()
         soup = render_html(form)
-        fieldset = soup.find("fieldset", class_="fieldset")
-        classes = fieldset.get("class", [])
-        assert "tooltip" not in classes
+        wrapper = soup.find("div", class_="tooltip")
+        assert wrapper is None
 
     def test_no_errors_when_valid(self):
         class F(FormworkForm):
