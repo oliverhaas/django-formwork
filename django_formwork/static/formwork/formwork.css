@@ -27,7 +27,7 @@
 /* Text-like inputs: text, email, url, number, password, date, time,
    datetime-local, search, color, tel.
    Uses > (direct child) so inputs wrapped in a compound widget
-   (e.g. PasswordRevealInput's <label class="input">) are excluded.
+   (e.g. PasswordReveal's <label class="input">) are excluded.
    The .tooltip variant matches when the error tooltip wraps the widget. */
 fieldset.fieldset > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]),
 fieldset.fieldset > .tooltip > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]) {
@@ -63,7 +63,10 @@ fieldset.fieldset input[type="radio"]:not(.mask):not(.rating-hidden) {
     @apply radio;
 }
 
-fieldset.fieldset input[type="file"] {
+/* Uses > (direct child) so file inputs nested inside custom upload
+   widgets (DropZone, ImageUpload) are excluded. */
+fieldset.fieldset > input[type="file"],
+fieldset.fieldset > .tooltip > input[type="file"] {
     @apply file-input;
     width: 100%;
 }
@@ -85,7 +88,7 @@ fieldset.fieldset > .tooltip > div:has(> div > label > input[type="checkbox"]:no
     gap: 0.25rem;
 }
 
-/* PasswordRevealInput: the <input> is inside <label class="input">.
+/* PasswordReveal: the <input> is inside <label class="input">.
    The label gets DaisyUI's .input class directly; override its width. */
 fieldset.fieldset label.input {
     width: 100%;
@@ -100,6 +103,104 @@ input.toggle {
 input.combobox-input {
     @apply input;
     width: 100%;
+}
+
+/* Custom widget: drop zone / image upload — fill fieldset width */
+fieldset.fieldset .dropzone,
+fieldset.fieldset .image-upload {
+    width: 100%;
+}
+
+/* Hide file inputs inside upload widgets (they use JS to trigger). */
+.dropzone input[type="file"],
+.image-upload input[type="file"] {
+    display: none;
+}
+
+/* Drop area: dashed border, centered content */
+.dropzone-area,
+.image-upload-area {
+    @apply rounded-box;
+    border: 2px dashed var(--color-base-300);
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition-property: border-color, background-color;
+    transition-duration: 150ms;
+}
+
+/* ImageUpload: fixed height so the layout doesn't shift when a preview loads. */
+.image-upload-area {
+    height: 10rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dropzone-area:hover,
+.image-upload-area:hover {
+    border-color: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+}
+
+/* Active drag-over state (Alpine.js toggles this class). */
+.dropzone-area.dragging,
+.image-upload-area.dragging {
+    border-color: var(--color-primary);
+    background-color: color-mix(in oklab, var(--color-primary) 5%, transparent);
+}
+
+/* Upload prompt icon */
+.dropzone-prompt-icon,
+.image-upload-prompt-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-inline: auto;
+    color: color-mix(in oklab, var(--color-base-content) 40%, var(--color-base-100));
+}
+
+/* Upload prompt text */
+.dropzone-prompt-text,
+.image-upload-prompt-text {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+}
+
+/* Browse link */
+.dropzone-browse,
+.image-upload-browse {
+    color: var(--color-primary);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* File list (DropZone) */
+.dropzone-file {
+    font-size: 0.875rem;
+    padding-block: 0.125rem;
+}
+
+/* Image preview area — fills the fixed-height upload area. */
+.image-upload-preview-area {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: 100%;
+}
+
+.image-upload-preview {
+    max-height: 100%;
+    object-fit: contain;
+    @apply rounded-box;
+}
+
+.image-upload-remove {
+    @apply btn btn-ghost btn-xs;
+}
+
+/* Alpine.js: hide elements until Alpine initializes */
+[x-cloak] {
+    display: none !important;
 }
 
 
@@ -133,7 +234,8 @@ fieldset.fieldset input[type="radio"][aria-invalid="true"]:not(.mask):not(.ratin
     @apply radio-error;
 }
 
-fieldset.fieldset input[type="file"][aria-invalid="true"] {
+fieldset.fieldset > input[type="file"][aria-invalid="true"],
+fieldset.fieldset > .tooltip > input[type="file"][aria-invalid="true"] {
     @apply file-input-error;
 }
 
@@ -145,19 +247,19 @@ input.toggle[aria-invalid="true"] {
     @apply toggle-error;
 }
 
-/* PasswordRevealInput: the <input> is inside <label class="input">,
+/* PasswordReveal: the <input> is inside <label class="input">,
    so the direct-child selector above doesn't match.
    Style the wrapper label based on the inner input's state. */
 fieldset.fieldset label.input:has(> input[aria-invalid="true"]) {
     @apply input-error;
 }
 
-/* MultiSelectInput: aria-invalid is rendered on the <summary> trigger. */
+/* MultiSelect / SearchSelect: aria-invalid is rendered on the <summary> trigger. */
 summary.select[aria-invalid="true"] {
     @apply select-error;
 }
 
-/* ComboBoxInput: the text input trigger has aria-invalid directly. */
+/* ComboBox: the text input trigger has aria-invalid. */
 input.combobox-input[aria-invalid="true"] {
     @apply input-error;
 }
@@ -179,7 +281,7 @@ input[type="hidden"] {
     display: none;
 }
 
-/* Dropdown widgets (MultiSelectInput, ComboBoxInput):
+/* Dropdown widgets (MultiSelect, SearchSelect):
    match DaisyUI select focus styling when open.
    The summary already has class="select" for base styling;
    this adds the focus outline and pins the border color so it
@@ -207,17 +309,19 @@ details.dropdown[open] > summary::before {
 }
 
 /* Dropdown widgets: fill fieldset like other form elements. */
-details.dropdown:has(.multiselect),
+details.dropdown.multiselect,
+details.dropdown.search-select,
 .dropdown.combobox {
     width: 100%;
 }
 
-details.dropdown:has(.multiselect) > .dropdown-content,
+details.dropdown.multiselect > .dropdown-content,
+details.dropdown.search-select > .dropdown-content,
 .dropdown.combobox > .dropdown-content {
     width: 100%;
 }
 
-/* ComboBoxInput: position the dropdown below the input.
+/* ComboBox: position the dropdown below the input.
    DaisyUI's .dropdown class sets position:relative on the wrapper.
    The .dropdown-content inside uses absolute positioning. */
 .dropdown.combobox {
@@ -229,7 +333,14 @@ details.dropdown:has(.multiselect) > .dropdown-content,
     z-index: 999;
 }
 
-/* MultiSelectInput: show checkmark when option is selected. */
+/* MultiSelect / SearchSelect: dropdown-content must be above summary::before overlay. */
+details.dropdown.multiselect > .dropdown-content,
+details.dropdown.search-select > .dropdown-content {
+    position: absolute;
+    z-index: 999;
+}
+
+/* MultiSelect: show checkmark when option is selected. */
 label:has(> input.hidden:checked) > .formwork-check {
     opacity: 1;
 }
@@ -255,4 +366,76 @@ fieldset.fieldset > .tooltip > .tooltip-content {
 /* Spacing between multiple error messages inside tooltip. */
 .formwork-errors > p + p {
     margin-top: 0.125rem;
+}
+
+
+/* ================================================================
+   ValidatedTextarea overlay
+   Transparent textarea stacked over a highlights div that shows
+   marked-up text with <mark> tags.  Both share identical sizing
+   via CSS Grid cell stacking.
+   ================================================================ */
+
+/* Container: stack textarea and highlights in the same grid cell */
+.validated-textarea {
+    display: grid;
+    width: 100%;
+}
+
+.validated-textarea > textarea,
+.validated-textarea > .validated-textarea-highlights {
+    grid-area: 1 / 1;
+}
+
+/* Textarea: transparent text + background, visible caret and border */
+.validated-textarea > textarea {
+    background: transparent !important;
+    color: transparent !important;
+    caret-color: var(--color-base-content);
+    z-index: 1;
+    resize: none;
+}
+
+/* Highlights div: mirrors textarea appearance, no visible border */
+.validated-textarea > .validated-textarea-highlights {
+    @apply textarea;
+    width: 100%;
+    border-color: transparent;
+    pointer-events: none;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    overflow: hidden;
+}
+
+/* Error highlights inside the overlay */
+.validated-textarea-highlights mark {
+    background-color: color-mix(in oklab, var(--color-error) 20%, transparent);
+    border-radius: 2px;
+    color: inherit;
+}
+
+/* Inline validation tooltip: hidden when the errors div is empty. */
+.validated-textarea-tooltip {
+    width: 100%;
+}
+
+.validated-textarea-tooltip:not(:has(.formwork-errors:not(:empty))) {
+    display: none;
+}
+
+/* Spacer: zero-height anchor so DaisyUI positions the tooltip below. */
+.validated-textarea-spacer {
+    width: 100%;
+    height: 0;
+}
+
+/* Left-align error text (consistent with form-level error tooltips). */
+.validated-textarea-tooltip > .tooltip-content {
+    text-align: left;
+}
+
+/* Error border on textarea when inline validation errors exist.
+   The tooltip wrapper is the next sibling of the grid container. */
+.validated-textarea:has(+ .validated-textarea-tooltip .formwork-errors:not(:empty)) > textarea {
+    @apply textarea-error;
 }

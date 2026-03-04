@@ -1,33 +1,55 @@
-{% with id=widget.attrs.id %}<div class="dropdown combobox" x-data="{
+{% with id=widget.attrs.id %}<div class="dropdown combobox"{% if id %} id="{{ id }}_combobox"{% endif %} x-data="{
   open: false,
-  search: '{{ widget.selected_label|escapejs }}',
-  value: '{{ widget.value|default:""|escapejs }}',
+  _v: 0,
   get noResults() {
-    if (!this.search) return false;
-    const q = this.search.toLowerCase();
+    this._v;
+    const q = this.currentSegment;
+    if (!q) return false;
     return ![...this.$refs.options.querySelectorAll('.select-none')].some(
       s => s.textContent.trim().toLowerCase().includes(q)
     );
   },
-  pick(val, lbl) {
-    this.value = val;
-    this.search = lbl;
-    this.open = false;
+  get currentSegment() {
+    this._v;
+    const v = $refs.input.value || '';
+    {% if widget.multiple %}const parts = v.split(',');
+    return parts[parts.length - 1].trim().toLowerCase();{% else %}return v.toLowerCase();{% endif %}
   },
-  clear() {
-    this.value = '';
-    this.search = '';
+  matches(label) {
+    const q = this.currentSegment;
+    return !q || label.toLowerCase().includes(q);
+  },
+  {% if widget.multiple %}isSelected(text) {
+    this._v;
+    const v = $refs.input?.value || '';
+    const all = v.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const sep = v.endsWith(',') || v.endsWith(', ') || !all.length;
+    return (sep ? all : all.slice(0, -1)).includes(text.toLowerCase());
+  },{% endif %}
+  pick(text) {
+    {% if widget.multiple %}const v = $refs.input.value || '';
+    const all = v.split(',').map(s => s.trim()).filter(Boolean);
+    const sep = v.endsWith(',') || v.endsWith(', ') || !all.length;
+    const confirmed = sep ? [...all] : all.slice(0, -1);
+    const idx = confirmed.findIndex(c => c.toLowerCase() === text.toLowerCase());
+    if (idx >= 0) confirmed.splice(idx, 1);
+    else confirmed.push(text);
+    $refs.input.value = confirmed.length ? confirmed.join(', ') + ', ' : '';
+    this._v++;
+    $refs.input.focus();
+    $refs.input.dispatchEvent(new Event('input', {bubbles: true}));{% else %}$refs.input.value = text;
+    this.open = false;{% endif %}
   }
 }" :class="open && 'dropdown-open'" @click.outside="open = false" @keydown.escape.prevent="open = false">
-  <input x-ref="search" type="text" :value="search" @input="search = $event.target.value; value = ''; open = true" @focus="open = true; $event.target.select()"{% if id %} id="{{ id }}_input"{% endif %} class="combobox-input{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}" placeholder="Search&#x2026;"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %} autocomplete="off" role="combobox" aria-autocomplete="list"{% if id %} aria-controls="{{ id }}_listbox"{% endif %} :aria-expanded="open">
-  <input type="hidden" name="{{ widget.name }}" :value="value"{% if id %} id="{{ id }}"{% endif %}>
+  <input x-ref="input" type="text" name="{{ widget.name }}" value="{{ widget.value|default:"" }}" @input="open = true; _v++" @focus="open = true"{% if id %} id="{{ id }}"{% endif %} class="combobox-input{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.attrs.placeholder %} placeholder="{{ widget.attrs.placeholder }}"{% else %} placeholder="Type to search&#x2026;"{% endif %}{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %} autocomplete="off" role="combobox" aria-autocomplete="list"{% if id %} aria-controls="{{ id }}_listbox"{% endif %} :aria-expanded="open"{% if widget.attrs.required %} required{% endif %}{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config-request="var v = this.value || ''; var p = v.split(','); event.detail.parameters.q = p[p.length-1].trim(); event.detail.parameters.type = 'combobox'"{% endif %}>
   <div x-show="open" x-cloak class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
-    <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1">
-      {% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title">{{ group }}</li>{% endif %}{% for option in options %}{% if option.value != "" %}
-      <li x-show="!search || value || '{{ option.label|escapejs }}'.toLowerCase().includes(search.toLowerCase())" role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" @click="pick('{{ option.value|escapejs }}', '{{ option.label|escapejs }}')">
-        <span class="select-none">{{ option.label }}</span>
-      </button></li>{% endif %}{% endfor %}{% endfor %}
+    <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1" @click="const btn = $event.target.closest('[data-suggestion]'); if (btn) pick(btn.dataset.suggestion)">
+      {% if not widget.search_url %}{% for suggestion in widget.suggestions %}
+      <li x-show="matches('{{ suggestion.text|escapejs }}')" role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ suggestion.text|escapejs }}">
+        {% if widget.multiple %}<span class="formwork-check shrink-0" :class="isSelected('{{ suggestion.text|escapejs }}') ? 'opacity-100' : 'opacity-0'" aria-hidden="true">&#x2713;</span>{% endif %}
+        {% if suggestion.icon %}<span class="shrink-0">{{ suggestion.icon|safe }}</span>{% endif %}<span class="select-none">{{ suggestion.text }}</span>
+      </button></li>{% endfor %}{% endif %}
     </ul>
-    <p x-show="noResults" x-cloak class="px-3 py-2 text-base-content/50">No results</p>
+    {% if not widget.search_url %}<p x-show="noResults" x-cloak class="px-3 py-2 text-base-content/50">No results</p>{% endif %}
   </div>
 </div>{% endwith %}

@@ -3,13 +3,14 @@
 Provides widgets that require custom HTML structure beyond what
 Django's built-in widget templates offer:
 
-- :class:`ToggleInput` — checkbox rendered as a DaisyUI toggle switch
-- :class:`RangeInput` — HTML5 range slider
-- :class:`RatingInput` — star-rating using radio inputs
-- :class:`PasswordRevealInput` — password input with show/hide toggle
-- :class:`MultiSelectInput` — dropdown with checkboxes
-- :class:`ComboBoxInput` — single-select with search/autocomplete
-- :class:`DataListInput` — text input with native ``<datalist>`` suggestions
+- :class:`Toggle` — checkbox rendered as a DaisyUI toggle switch
+- :class:`Range` — HTML5 range slider
+- :class:`Rating` — star-rating using radio inputs
+- :class:`PasswordReveal` — password input with show/hide toggle
+- :class:`MultiSelect` — dropdown with checkboxes
+- :class:`SearchSelect` — single-select dropdown with text search
+- :class:`ComboBox` — text input with autocomplete suggestions
+- :class:`DataList` — text input with native ``<datalist>`` suggestions
 
 All DaisyUI component classes (``input``, ``select``, etc.) are applied
 via CSS selectors in ``formwork.css``, not in Python.  Custom widgets use
@@ -19,6 +20,7 @@ from standard Django widgets.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from django import forms
@@ -28,7 +30,7 @@ from django import forms
 # ---------------------------------------------------------------------------
 
 
-class ToggleInput(forms.CheckboxInput):
+class Toggle(forms.CheckboxInput):
     """Checkbox rendered as a DaisyUI toggle switch.
 
     Adds the ``toggle`` class so CSS applies the DaisyUI toggle styling
@@ -36,7 +38,7 @@ class ToggleInput(forms.CheckboxInput):
 
     Usage::
 
-        agree = forms.BooleanField(widget=ToggleInput)
+        agree = forms.BooleanField(widget=Toggle)
     """
 
     def __init__(self, attrs: dict[str, Any] | None = None) -> None:
@@ -48,7 +50,7 @@ class ToggleInput(forms.CheckboxInput):
         super().__init__(defaults)
 
 
-class RangeInput(forms.NumberInput):
+class Range(forms.NumberInput):
     """HTML5 range slider styled with DaisyUI.
 
     CSS targets ``input[type="range"]`` directly — no extra attributes
@@ -56,13 +58,13 @@ class RangeInput(forms.NumberInput):
 
     Usage::
 
-        volume = forms.IntegerField(widget=RangeInput(attrs={"min": 0, "max": 100}))
+        volume = forms.IntegerField(widget=Range(attrs={"min": 0, "max": 100}))
     """
 
     input_type = "range"
 
 
-class RatingInput(forms.RadioSelect):
+class Rating(forms.RadioSelect):
     """Star-rating widget using DaisyUI's rating component.
 
     Renders a ``<div class="rating">`` containing radio inputs styled as
@@ -72,9 +74,9 @@ class RatingInput(forms.RadioSelect):
     Usage::
 
         rating = forms.TypedChoiceField(
-            choices=RatingInput.make_choices(5),
+            choices=Rating.make_choices(5),
             coerce=int,
-            widget=RatingInput,
+            widget=Rating,
         )
     """
 
@@ -103,7 +105,7 @@ class RatingInput(forms.RadioSelect):
         return context
 
 
-class PasswordRevealInput(forms.PasswordInput):
+class PasswordReveal(forms.PasswordInput):
     """Password input with a show/hide toggle button.
 
     Wraps the input in a DaisyUI ``<label class="input">`` container with a
@@ -113,7 +115,7 @@ class PasswordRevealInput(forms.PasswordInput):
 
     Usage::
 
-        password = forms.CharField(widget=PasswordRevealInput)
+        password = forms.CharField(widget=PasswordReveal)
     """
 
     template_name = "formwork/widgets/password_reveal.html"
@@ -122,7 +124,7 @@ class PasswordRevealInput(forms.PasswordInput):
         super().__init__(attrs=attrs, render_value=False)
 
 
-class MultiSelectInput(forms.SelectMultiple):
+class MultiSelect(forms.SelectMultiple):
     """Multi-select dropdown with checkboxes.
 
     Renders a DaisyUI-styled dropdown button that opens a panel of checkboxes.
@@ -130,11 +132,20 @@ class MultiSelectInput(forms.SelectMultiple):
     The template adds the ``multiselect`` class on checkboxes so
     CSS doesn't apply the default ``checkbox`` class.
 
+    When ``search_url`` is provided, the search input uses htmx to fetch
+    options from the server.  Selected values are tracked in Alpine state
+    and submitted via hidden inputs (not the visible checkboxes).
+
     Usage::
 
         languages = forms.MultipleChoiceField(
             choices=[("py", "Python"), ("js", "JavaScript")],
-            widget=MultiSelectInput,
+            widget=MultiSelect,
+        )
+
+        # With server-side search:
+        languages = forms.MultipleChoiceField(
+            widget=MultiSelect(search_url=reverse_lazy("lang-search")),
         )
     """
 
@@ -142,47 +153,232 @@ class MultiSelectInput(forms.SelectMultiple):
     option_inherits_attrs = False
     search_threshold = 20
 
+    def __init__(
+        self,
+        attrs: dict[str, Any] | None = None,
+        choices: tuple = (),
+        *,
+        search_url: str | None = None,
+        icons: dict[str, str] | None = None,
+    ) -> None:
+        super().__init__(attrs=attrs, choices=choices)
+        self.search_url = search_url
+        self.icons = icons or {}
+
     def get_context(self, name: str, value: list[str] | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         total = sum(len(options) for _, options, _ in context["widget"]["optgroups"])
-        context["widget"]["show_search"] = total > self.search_threshold
+        context["widget"]["show_search"] = total > self.search_threshold or bool(self.search_url)
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
+        context["widget"]["search_url"] = self.search_url
+        # Inject icons into option data.
+        for _group, options, _index in context["widget"]["optgroups"]:
+            for option in options:
+                option["icon"] = self.icons.get(str(option["value"]), "")
+        if self.search_url:
+            # Build initial selected map for Alpine: [[value, label], ...]
+            selected_values = set(value or [])
+            initial_selected = [
+                [str(option["value"]), str(option["label"])]
+                for _group, options, _index in context["widget"]["optgroups"]
+                for option in options
+                if str(option["value"]) in selected_values
+            ]
+            context["widget"]["initial_selected_json"] = json.dumps(initial_selected)
         return context
 
 
-class ComboBoxInput(forms.Select):
-    """Single-select dropdown with text search/autocomplete.
+class SearchSelect(forms.Select):
+    """Single-select dropdown with text search/filter.
 
     Renders a DaisyUI-styled dropdown with a text input for filtering
-    options.  Submits a single value via a hidden ``<input>`` element.
+    options.  Submits a single key value via a hidden ``<input>`` element.
     Uses Alpine.js for filtering, keyboard navigation, and selection.
+
+    This is a ``<select>`` replacement — the submitted value is a key
+    from the choices list, not free text.
+
+    When ``search_url`` is provided, the text input uses htmx to fetch
+    matching options from the server instead of client-side filtering.
 
     Usage::
 
         city = forms.ChoiceField(
             choices=[("nyc", "New York"), ("ldn", "London"), ...],
-            widget=ComboBoxInput,
+            widget=SearchSelect,
+        )
+
+        # With server-side search:
+        city = forms.ChoiceField(
+            widget=SearchSelect(search_url=reverse_lazy("city-search")),
         )
     """
 
-    template_name = "formwork/widgets/combo_box.html"
+    template_name = "formwork/widgets/search_select.html"
     option_inherits_attrs = False
+
+    def __init__(
+        self,
+        attrs: dict[str, Any] | None = None,
+        choices: tuple = (),
+        *,
+        search_url: str | None = None,
+        icons: dict[str, str] | None = None,
+    ) -> None:
+        super().__init__(attrs=attrs, choices=choices)
+        self.search_url = search_url
+        self.icons = icons or {}
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
-        # Find the label for the currently selected value.
+        # Select.format_value() wraps value in a list — unwrap for template.
+        fmt_value = context["widget"]["value"]
+        if isinstance(fmt_value, (list, tuple)):
+            context["widget"]["value"] = fmt_value[0] if fmt_value else ""
+        # Find the label and icon for the currently selected value.
         selected_label = ""
+        selected_icon = ""
         for _group, options, _index in context["widget"]["optgroups"]:
             for option in options:
                 if option["selected"]:
                     selected_label = str(option["label"])
+                    selected_icon = self.icons.get(str(option["value"]), "")
                     break
         context["widget"]["selected_label"] = selected_label
+        context["widget"]["selected_icon"] = selected_icon
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
+        context["widget"]["search_url"] = self.search_url
+        # Inject icons into option data.
+        for _group, options, _index in context["widget"]["optgroups"]:
+            for option in options:
+                option["icon"] = self.icons.get(str(option["value"]), "")
         return context
 
 
-class DataListInput(forms.TextInput):
+class ComboBox(forms.TextInput):
+    """Text input with autocomplete suggestions.
+
+    Renders a text input with a dropdown of suggestions that appear as the
+    user types.  The submitted value is whatever the user typed (free text),
+    not a key from a choices list.  Suggestions are just hints.
+
+    In multiple mode (``multiple=True``), accepts comma-separated values.
+    Suggestions appear for the segment currently being typed.
+
+    Usage::
+
+        tags = forms.CharField(
+            widget=ComboBox(suggestions=["Python", "JavaScript", "Go"]),
+        )
+
+        # Multiple mode:
+        tags = forms.CharField(
+            widget=ComboBox(
+                suggestions=["pizza", "pasta", "sushi"],
+                multiple=True,
+            ),
+        )
+    """
+
+    template_name = "formwork/widgets/combo_box.html"
+
+    def __init__(
+        self,
+        *,
+        suggestions: list[str] | None = None,
+        multiple: bool = False,
+        search_url: str | None = None,
+        icons: dict[str, str] | None = None,
+        attrs: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(attrs)
+        self.suggestions = suggestions or []
+        self.multiple = multiple
+        self.search_url = search_url
+        self.icons = icons or {}
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        context["widget"]["suggestions"] = [{"text": s, "icon": self.icons.get(s, "")} for s in self.suggestions]
+        context["widget"]["multiple"] = self.multiple
+        context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
+        context["widget"]["search_url"] = self.search_url
+        return context
+
+
+class DropZone(forms.FileInput):
+    """Drag-and-drop file upload zone.
+
+    Replaces the standard file input with a styled drop zone that accepts
+    dragged files or click-to-browse.  Uses Alpine.js for drag state and
+    file list display.
+
+    Usage::
+
+        attachment = forms.FileField(widget=DropZone)
+
+        # Multiple files:
+        attachments = forms.FileField(
+            widget=DropZone(attrs={"multiple": True}),
+        )
+    """
+
+    template_name = "formwork/widgets/drop_zone.html"
+    allow_multiple_selected = True
+
+
+class ImageUpload(forms.FileInput):
+    """Drag-and-drop image upload with preview.
+
+    Like :class:`DropZone` but restricted to images and shows a
+    thumbnail preview after selection.  Uses Alpine.js for drag state,
+    preview via ``FileReader``, and a remove button.
+
+    Usage::
+
+        avatar = forms.ImageField(widget=ImageUpload)
+    """
+
+    template_name = "formwork/widgets/image_upload.html"
+
+    def __init__(self, attrs: dict[str, Any] | None = None) -> None:
+        defaults: dict[str, Any] = {"accept": "image/*"}
+        if attrs:
+            defaults.update(attrs)
+        super().__init__(defaults)
+
+
+class ValidatedTextarea(forms.Textarea):
+    """Textarea with server-side validation and word highlighting.
+
+    Renders a textarea with a highlight overlay.  When ``validate_url``
+    is provided, htmx sends the text to the server after a debounce.
+    The server returns highlighted HTML (with ``<mark>`` tags around
+    errors) that displays beneath the transparent textarea, plus error
+    messages via out-of-band swap.
+
+    Without ``validate_url``, renders as a normal textarea.
+
+    Usage::
+
+        content = forms.CharField(
+            widget=ValidatedTextarea(validate_url=reverse_lazy("validate-text")),
+        )
+    """
+
+    template_name = "formwork/widgets/validated_textarea.html"
+
+    def __init__(self, attrs: dict[str, Any] | None = None, *, validate_url: str | None = None) -> None:
+        super().__init__(attrs)
+        self.validate_url = validate_url
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        context["widget"]["validate_url"] = self.validate_url
+        return context
+
+
+class DataList(forms.TextInput):
     """Text input with native ``<datalist>`` browser suggestions.
 
     Renders an ``<input>`` with a ``list`` attribute pointing to a
@@ -195,7 +391,7 @@ class DataListInput(forms.TextInput):
     Usage::
 
         browser = forms.CharField(
-            widget=DataListInput(datalist=["Chrome", "Firefox", "Safari"]),
+            widget=DataList(datalist=["Chrome", "Firefox", "Safari"]),
         )
     """
 
@@ -212,3 +408,18 @@ class DataListInput(forms.TextInput):
             context["widget"]["attrs"]["list"] = f"{widget_id}_list"
         context["widget"]["datalist"] = self.datalist
         return context
+
+
+# ---------------------------------------------------------------------------
+# Backward-compatible aliases (deprecated — use the short names above)
+# ---------------------------------------------------------------------------
+ToggleInput = Toggle
+RangeInput = Range
+RatingInput = Rating
+PasswordRevealInput = PasswordReveal
+MultiSelectInput = MultiSelect
+SearchSelectInput = SearchSelect
+ComboBoxInput = ComboBox
+DropZoneInput = DropZone
+ImageUploadInput = ImageUpload
+DataListInput = DataList

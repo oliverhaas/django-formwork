@@ -1,4 +1,37 @@
-{% with id=widget.attrs.id %}<details class="dropdown" x-data="{
+{% with id=widget.attrs.id %}{% if widget.search_url %}<details class="dropdown multiselect"{% if id %} id="{{ id }}_multiselect"{% endif %} x-data="{
+  _v: 0,
+  search: '',
+  selected: new Map({{ widget.initial_selected_json|safe }}),
+  toggle(value, label) {
+    if (this.selected.has(value)) this.selected.delete(value);
+    else this.selected.set(value, label);
+    this._v++;
+  },
+  get noResults() {
+    if (!this.search) return false;
+    return !this.$refs.options.querySelector('.select-none');
+  },
+  get displayText() {
+    this._v;
+    if (!this.selected.size) return '';
+    const labels = [...this.selected.values()];
+    return labels.length <= 3 ? labels.join(', ') : this.selected.size + ' selected';
+  }
+}" @toggle="if ($el.open) $nextTick(() => $refs.search.focus())">
+  <summary{% if id %} id="{{ id }}"{% endif %} class="select text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
+    <span x-text="displayText || 'Select\u2026'" :class="!displayText && 'opacity-50'">Select&#x2026;</span>
+  </summary>
+  <div class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
+    <template x-for="[val] in [...selected]" :key="val">
+      <input type="hidden" name="{{ widget.name }}" :value="val">
+    </template>
+    <div class="p-1.5 border-b border-base-300">
+      <input x-ref="search" x-model="search" type="text" class="w-full bg-transparent outline-none px-2 py-1" placeholder="Search&#x2026;" @click.stop hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_options" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'multiselect'; event.detail.parameters.name = '{{ widget.name }}'">
+    </div>
+    <ul x-ref="options" id="{{ id }}_options" @change="_v++" class="max-h-60 overflow-y-auto p-1">
+    </ul>
+  </div>
+</details>{% else %}<details class="dropdown multiselect"{% if id %} id="{{ id }}_multiselect"{% endif %} x-data="{
   _v: 0,
   search: '',
   get noResults() {
@@ -28,9 +61,9 @@
       <li{% if widget.show_search %} x-show="!search || '{{ option.label|escapejs }}'.toLowerCase().includes(search.toLowerCase())"{% endif %}><label class="flex items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200"{% if option.attrs.id %} for="{{ option.attrs.id }}"{% endif %}>
         <input type="checkbox" name="{{ widget.name }}" value="{{ option.value|stringformat:'s' }}"{% if option.attrs.id %} id="{{ option.attrs.id }}"{% endif %} class="multiselect hidden"{% if option.selected %} checked{% endif %}>
         <span class="formwork-check shrink-0 opacity-0" aria-hidden="true">&#x2713;</span>
-        <span class="select-none">{{ option.label }}</span>
+        {% if option.icon %}<span class="shrink-0">{{ option.icon|safe }}</span>{% endif %}<span class="select-none">{{ option.label }}</span>
       </label></li>{% endfor %}{% endfor %}
     </ul>
     {% if widget.show_search %}<p x-show="noResults" x-cloak class="px-3 py-2 text-base-content/50">No results</p>{% endif %}
   </div>
-</details>{% endwith %}
+</details>{% endif %}{% endwith %}

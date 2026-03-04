@@ -16,3 +16,16 @@ def formwork_css() -> str:
     """
     url = static("formwork/formwork.css")
     return mark_safe(f'<link rel="stylesheet" href="{url}">')  # noqa: S308
+
+
+@register.simple_tag
+def formwork_js() -> str:
+    """Output a ``<script>`` tag for the formwork idiomorph helper.
+
+    Usage::
+
+        {% load formwork %}
+        {% formwork_js %}
+    """
+    url = static("formwork/formwork.js")
+    return mark_safe(f'<script src="{url}"></script>')  # noqa: S308
