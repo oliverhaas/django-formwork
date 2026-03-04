@@ -1,0 +1,89 @@
+{% with id=widget.attrs.id %}{% if widget.search_url %}<details class="dropdown search-select"{% if id %} id="{{ id }}_searchselect"{% endif %} x-data="{
+  _v: 0,
+  search: '',
+  value: '{{ widget.value|default:""|escapejs }}',
+  label: '{{ widget.selected_label|escapejs }}',
+  icon: '{{ widget.selected_icon|escapejs }}',
+  get displayText() {
+    this._v;
+    return this.label || '';
+  },
+  pick(val, lbl, ic) {
+    this.value = val;
+    this.label = lbl;
+    this.icon = ic || '';
+    this.search = '';
+    this._v++;
+    this.$root.open = false;
+  },
+  clear() {
+    this.value = '';
+    this.label = '';
+    this.icon = '';
+    this.search = '';
+    this._v++;
+  }
+}" @toggle="if ($el.open) $nextTick(() => $refs.search.focus())">
+  <summary{% if id %} id="{{ id }}_trigger"{% endif %} class="select text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
+    <span x-show="icon" x-html="icon" x-cloak class="shrink-0"></span>
+    <span x-text="displayText || 'Select\u2026'" :class="!displayText && 'opacity-50'">{% if widget.selected_label %}{{ widget.selected_label }}{% else %}Select&#x2026;{% endif %}</span>
+  </summary>
+  <input type="hidden" name="{{ widget.name }}" value="{{ widget.value|default:"" }}" :value="value"{% if id %} id="{{ id }}"{% endif %}>
+  <div class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
+    <div class="p-1.5 border-b border-base-300">
+      <input x-ref="search" x-model="search" type="text" class="w-full bg-transparent outline-none px-2 py-1" placeholder="Search&#x2026;" @click.stop hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'search_select'; event.detail.parameters.name = '{{ widget.name }}'">
+    </div>
+    <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1" @click="const btn = $event.target.closest('[data-value]'); if (btn) pick(btn.dataset.value, btn.dataset.label, btn.dataset.icon || '')">
+    </ul>
+  </div>
+</details>{% else %}<details class="dropdown search-select"{% if id %} id="{{ id }}_searchselect"{% endif %} x-data="{
+  _v: 0,
+  search: '',
+  value: '{{ widget.value|default:""|escapejs }}',
+  label: '{{ widget.selected_label|escapejs }}',
+  icon: '{{ widget.selected_icon|escapejs }}',
+  get noResults() {
+    if (!this.search) return false;
+    const q = this.search.toLowerCase();
+    return ![...this.$refs.options.querySelectorAll('.select-none')].some(
+      s => s.textContent.trim().toLowerCase().includes(q)
+    );
+  },
+  get displayText() {
+    this._v;
+    return this.label || '';
+  },
+  pick(val, lbl, ic) {
+    this.value = val;
+    this.label = lbl;
+    this.icon = ic || '';
+    this.search = '';
+    this._v++;
+    this.$root.open = false;
+  },
+  clear() {
+    this.value = '';
+    this.label = '';
+    this.icon = '';
+    this.search = '';
+    this._v++;
+  }
+}" @toggle="if ($el.open) $nextTick(() => $refs.search.focus())">
+  <summary{% if id %} id="{{ id }}_trigger"{% endif %} class="select text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
+    <span x-show="icon" x-html="icon" x-cloak class="shrink-0"></span>
+    <span x-text="displayText || 'Select\u2026'" :class="!displayText && 'opacity-50'">{% if widget.selected_label %}{{ widget.selected_label }}{% else %}Select&#x2026;{% endif %}</span>
+  </summary>
+  <input type="hidden" name="{{ widget.name }}" value="{{ widget.value|default:"" }}" :value="value"{% if id %} id="{{ id }}"{% endif %}>
+  <div class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
+    <div class="p-1.5 border-b border-base-300">
+      <input x-ref="search" x-model="search" type="text" class="w-full bg-transparent outline-none px-2 py-1" placeholder="Search&#x2026;" @click.stop>
+    </div>
+    <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1" @click="const btn = $event.target.closest('[data-value]'); if (btn) pick(btn.dataset.value, btn.dataset.label, btn.dataset.icon || '')">
+      {% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title">{{ group }}</li>{% endif %}{% for option in options %}{% if option.value != "" %}
+      <li x-show="!search || '{{ option.label|escapejs }}'.toLowerCase().includes(search.toLowerCase())" role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ option.value|escapejs }}" data-label="{{ option.label|escapejs }}"{% if option.icon %} data-icon="{{ option.icon }}"{% endif %}>
+        {% if option.icon %}<span class="shrink-0">{{ option.icon|safe }}</span>{% endif %}<span class="select-none">{{ option.label }}</span>
+      </button></li>{% endif %}{% endfor %}{% endfor %}
+    </ul>
+    <p x-show="noResults" x-cloak class="px-3 py-2 text-base-content/50">No results</p>
+  </div>
+</details>{% endif %}{% endwith %}

@@ -9,6 +9,14 @@ INSTALLED_APPS = [
 
 STATIC_URL = "/static/"
 
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+    },
+]
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",

@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from django import forms
+from django.template import Context, Template
 
 from django_formwork.forms import FormworkForm
 
@@ -307,3 +308,109 @@ class TestRequiredFieldAsterisk:
         legend = soup.find("legend", class_="fieldset-legend")
         asterisk = legend.find("span", class_="text-error")
         assert asterisk is None
+
+
+class TestMorphingIds:
+    """All elements have stable IDs for idiomorph matching."""
+
+    def test_fieldset_has_id(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        soup = render_html(F())
+        fieldset = soup.find("fieldset", class_="fieldset")
+        assert fieldset["id"] == "id_name_field"
+
+    def test_fieldset_id_uses_auto_id(self):
+        class F(FormworkForm):
+            email = forms.EmailField()
+
+        soup = render_html(F())
+        fieldset = soup.find("fieldset", class_="fieldset")
+        assert fieldset["id"] == "id_email_field"
+
+    def test_fieldset_id_with_prefix(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        soup = render_html(F(prefix="contact"))
+        fieldset = soup.find("fieldset", class_="fieldset")
+        assert fieldset["id"] == "id_contact-name_field"
+
+    def test_tooltip_has_id_on_error(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": ""})
+        form.is_valid()
+        soup = render_html(form)
+        tooltip = soup.find("div", class_="tooltip")
+        assert tooltip["id"] == "id_name_tooltip"
+
+    def test_errors_div_has_id_on_error(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": ""})
+        form.is_valid()
+        soup = render_html(form)
+        errors = soup.find("div", class_="tooltip-content")
+        assert errors["id"] == "id_name_errors"
+
+    def test_non_field_errors_has_id(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+            def clean(self):
+                raise forms.ValidationError("Form-level error")
+
+        form = F(data={"name": "test"})
+        form.is_valid()
+        soup = render_html(form)
+        alert = soup.find("div", class_="alert")
+        assert alert["id"] == "formwork-non-field-errors"
+
+    def test_use_fieldset_branch_has_ids(self):
+        """RadioSelect fields use <legend> and use_fieldset=True branch."""
+
+        class F(FormworkForm):
+            choice = forms.ChoiceField(
+                choices=[("a", "A"), ("b", "B")],
+                widget=forms.RadioSelect,
+            )
+
+        form = F(data={})
+        form.is_valid()
+        soup = render_html(form)
+        fieldset = soup.find("fieldset", class_="fieldset")
+        assert fieldset["id"] == "id_choice_field"
+        tooltip = soup.find("div", class_="tooltip")
+        assert tooltip["id"] == "id_choice_tooltip"
+        errors = soup.find("div", class_="tooltip-content")
+        assert errors["id"] == "id_choice_errors"
+
+    def test_no_tooltip_id_when_valid(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": "test"})
+        form.is_valid()
+        soup = render_html(form)
+        tooltip = soup.find("div", class_="tooltip")
+        assert tooltip is None
+
+
+class TestTemplateTags:
+    """The formwork_css and formwork_js template tags output correct HTML."""
+
+    def test_formwork_css_tag(self):
+        template = Template("{% load formwork %}{% formwork_css %}")
+        html = template.render(Context())
+        assert "<link" in html
+        assert "formwork/formwork.css" in html
+
+    def test_formwork_js_tag(self):
+        template = Template("{% load formwork %}{% formwork_js %}")
+        html = template.render(Context())
+        assert "<script" in html
+        assert "formwork/formwork.js" in html

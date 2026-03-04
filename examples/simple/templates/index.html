@@ -1,4 +1,4 @@
-{% load static %}
+{% load static formwork %}
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>django-formwork example</title>
   <link rel="stylesheet" href="{% static 'dist/styles.css' %}">
+  <script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>
+  <script src="https://unpkg.com/idiomorph@0.7/dist/idiomorph-ext.min.js"></script>
+  {% formwork_js %}
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 </head>
 <body class="min-h-screen bg-base-200 p-8">
@@ -15,13 +18,8 @@
     <div class="card bg-base-100 shadow">
       <div class="card-body">
         <h2 class="card-title">Contact Form</h2>
-        <form method="post">
-          {% csrf_token %}
-          {{ contact_form.as_div }}
-          <div class="mt-4">
-            <button type="submit" class="btn btn-primary">Send</button>
-          </div>
-        </form>
+        <p class="text-sm text-base-content/60">Uses htmx + idiomorph to morph in validation errors without full page reload.</p>
+        {% include "partials/contact_form.html" %}
       </div>
     </div>
 
@@ -58,6 +56,20 @@
           {{ all_widgets_form.as_div }}
           <div class="mt-4">
             <button type="submit" class="btn btn-accent">Submit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
+        <h2 class="card-title">Advanced Widgets</h2>
+        <p class="text-sm text-base-content/60">Server-side search (htmx), drag-and-drop uploads, validated textarea with highlighting.</p>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {{ advanced_form.as_div }}
+          <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Submit</button>
           </div>
         </form>
       </div>

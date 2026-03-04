@@ -2,7 +2,7 @@ import pytest
 from django import forms
 
 from django_formwork.forms import FormworkForm
-from django_formwork.widgets import MultiSelectInput, RangeInput, RatingInput, ToggleInput
+from django_formwork.widgets import MultiSelect, Range, Rating, Toggle
 
 
 class SimpleForm(forms.Form):
@@ -41,18 +41,18 @@ class AllWidgetsForm(FormworkForm):
     )
     multi_select_dropdown = forms.MultipleChoiceField(
         choices=[("a", "A"), ("b", "B")],
-        widget=MultiSelectInput,
+        widget=MultiSelect,
         required=False,
     )
 
 
 class CustomWidgetsForm(FormworkForm):
-    toggle = forms.BooleanField(widget=ToggleInput, required=False)
-    volume = forms.IntegerField(widget=RangeInput(attrs={"min": "0", "max": "100"}))
+    toggle = forms.BooleanField(widget=Toggle, required=False)
+    volume = forms.IntegerField(widget=Range(attrs={"min": "0", "max": "100"}))
     rating = forms.TypedChoiceField(
-        choices=RatingInput.make_choices(5),
+        choices=Rating.make_choices(5),
         coerce=int,
-        widget=RatingInput,
+        widget=Rating,
     )
 
 

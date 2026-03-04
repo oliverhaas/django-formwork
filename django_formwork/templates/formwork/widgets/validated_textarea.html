@@ -1,0 +1,8 @@
+{% with id=widget.attrs.id %}{% if widget.validate_url %}<div class="validated-textarea"{% if id %} id="{{ id }}_vtextarea"{% endif %} x-data>
+  <div x-ref="backdrop" id="{{ id }}_highlights" class="validated-textarea-highlights" aria-hidden="true">{% if widget.value %}{{ widget.value }}{% endif %}</div>
+  <textarea x-ref="textarea" name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %}{% for name, value in widget.attrs.items %}{% if value is not False and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %} @input="$refs.backdrop.textContent = $el.value" @scroll="$refs.backdrop.scrollTop = $el.scrollTop" hx-post="{{ widget.validate_url }}" hx-trigger="input changed delay:500ms" hx-target="#{{ id }}_highlights" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.text = this.value; event.detail.parameters.field_name = '{{ widget.name }}'; event.detail.parameters.errors_id = '{{ id }}_errors'">{% if widget.value %}{{ widget.value }}{% endif %}</textarea>
+</div>
+<div class="tooltip tooltip-error tooltip-bottom tooltip-open validated-textarea-tooltip"{% if id %} id="{{ id }}_vttooltip"{% endif %}>
+  <div class="validated-textarea-spacer"></div>
+  <div class="tooltip-content formwork-errors"{% if id %} id="{{ id }}_errors"{% endif %} role="alert"></div>
+</div>{% else %}<textarea name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %}{% for name, value in widget.attrs.items %}{% if value is not False and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>{% if widget.value %}{{ widget.value }}{% endif %}</textarea>{% endif %}{% endwith %}
