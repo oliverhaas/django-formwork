@@ -14,6 +14,13 @@ import pytest
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 
+def submit(page):
+    """Submit the form via htmx morph and wait for completion."""
+    page.evaluate("document.querySelector('#widget-form').noValidate = true")
+    page.locator("#widget-form button[type='submit']").click()
+    page.wait_for_timeout(500)
+
+
 @pytest.fixture(autouse=True)
 def _e2e_settings(settings):
     """Override Django settings for e2e tests."""
@@ -32,26 +39,9 @@ def _e2e_settings(settings):
 
 
 @pytest.fixture
-def form_page(page, live_server):
-    """Navigate to the main e2e test page and wait for it to load."""
+def widget_page(page, live_server):
+    """Navigate to the widget test page and wait for Alpine + htmx init."""
     page.goto(f"{live_server.url}/")
     page.wait_for_load_state("domcontentloaded")
-    return page
-
-
-@pytest.fixture
-def error_page(page, live_server):
-    """Navigate to the error states page."""
-    page.goto(f"{live_server.url}/errors/")
-    page.wait_for_load_state("domcontentloaded")
-    return page
-
-
-@pytest.fixture
-def morph_page(page, live_server):
-    """Navigate to the morph test page and wait for Alpine + htmx init."""
-    page.goto(f"{live_server.url}/morph/")
-    page.wait_for_load_state("domcontentloaded")
-    # Wait for Alpine.js to initialise
-    page.wait_for_timeout(300)
+    page.wait_for_timeout(300)  # Alpine.js init
     return page
