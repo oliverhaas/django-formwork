@@ -368,6 +368,16 @@ fieldset.fieldset > .tooltip > .tooltip-content {
     margin-top: 0.125rem;
 }
 
+/* Intrinsic-width widgets: shrink tooltip wrapper to content so
+   DaisyUI's centered tooltip-bottom aligns with the actual widget,
+   not the full fieldset width. */
+fieldset.fieldset > .tooltip:has(> input[type="checkbox"]),
+fieldset.fieldset > .tooltip:has(> div > div > label > input[type="checkbox"]:not(.toggle):not(.hidden)),
+fieldset.fieldset > .tooltip:has(> div > div > label > input[type="radio"]:not(.mask):not(.rating-hidden)),
+fieldset.fieldset > .tooltip:has(> .rating) {
+    width: fit-content;
+}
+
 
 /* ================================================================
    ValidatedTextarea overlay
