@@ -9,8 +9,8 @@ from django_formwork.views import FormworkSearchView, FormworkValidateView
 from django_formwork.widgets import (
     ComboBox,
     DataList,
-    DropZone,
-    ImageUpload,
+    FileDropZone,
+    ImageDropZone,
     MultiSelect,
     PasswordReveal,
     Range,
@@ -123,11 +123,11 @@ class WidgetForm(FormworkForm):
 
     # Upload widgets
     dropzone = forms.FileField(
-        widget=DropZone(attrs={"multiple": True}),
+        widget=FileDropZone(attrs={"multiple": True}),
         required=False,
     )
     avatar = forms.ImageField(
-        widget=ImageUpload,
+        widget=ImageDropZone,
         required=False,
     )
 
