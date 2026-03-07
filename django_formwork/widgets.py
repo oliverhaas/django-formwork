@@ -497,20 +497,3 @@ class DataList(forms.TextInput):
             context["widget"]["attrs"]["list"] = f"{widget_id}_list"
         context["widget"]["datalist"] = self.datalist
         return context
-
-
-# ---------------------------------------------------------------------------
-# Backward-compatible aliases (deprecated — use the short names above)
-# ---------------------------------------------------------------------------
-ToggleInput = Toggle
-RangeInput = Range
-RatingInput = Rating
-PasswordRevealInput = PasswordReveal
-MultiSelectInput = MultiSelect
-SearchSelectInput = SearchSelect
-ComboBoxInput = ComboBox
-DropZone = FileDropZone
-DropZoneInput = FileDropZone
-ImageUpload = ImageDropZone
-ImageUploadInput = ImageDropZone
-DataListInput = DataList
