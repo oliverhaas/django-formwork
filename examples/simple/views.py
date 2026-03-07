@@ -98,6 +98,46 @@ class BioValidateView(FormworkValidateView):
 
 
 # ---------------------------------------------------------------------------
+# DaisyUI themes
+# ---------------------------------------------------------------------------
+
+DAISYUI_THEMES = [
+    ("light", "Light"),
+    ("dark", "Dark"),
+    ("cupcake", "Cupcake"),
+    ("bumblebee", "Bumblebee"),
+    ("emerald", "Emerald"),
+    ("corporate", "Corporate"),
+    ("synthwave", "Synthwave"),
+    ("retro", "Retro"),
+    ("cyberpunk", "Cyberpunk"),
+    ("valentine", "Valentine"),
+    ("halloween", "Halloween"),
+    ("garden", "Garden"),
+    ("forest", "Forest"),
+    ("aqua", "Aqua"),
+    ("lofi", "Lo-fi"),
+    ("pastel", "Pastel"),
+    ("fantasy", "Fantasy"),
+    ("wireframe", "Wireframe"),
+    ("black", "Black"),
+    ("luxury", "Luxury"),
+    ("dracula", "Dracula"),
+    ("cmyk", "CMYK"),
+    ("autumn", "Autumn"),
+    ("business", "Business"),
+    ("acid", "Acid"),
+    ("lemonade", "Lemonade"),
+    ("night", "Night"),
+    ("coffee", "Coffee"),
+    ("winter", "Winter"),
+    ("dim", "Dim"),
+    ("nord", "Nord"),
+    ("sunset", "Sunset"),
+]
+
+
+# ---------------------------------------------------------------------------
 # Main page view
 # ---------------------------------------------------------------------------
 
@@ -145,5 +185,6 @@ def index(request):
             "registration_form": registration_form,
             "advanced_form": advanced_form,
             "error_form": error_form,
+            "themes": DAISYUI_THEMES,
         },
     )
