@@ -2,9 +2,9 @@
   _v: 0,
   search: '',
   selected: new Map({{ widget.initial_selected_json|safe }}),
-  toggle(value, label) {
+  toggle(value, label, icon) {
     if (this.selected.has(value)) this.selected.delete(value);
-    else this.selected.set(value, label);
+    else this.selected.set(value, [label, icon || '']);
     this._v++;
   },
   get noResults() {
@@ -14,8 +14,10 @@
   get displayText() {
     this._v;
     if (!this.selected.size) return '';
-    const labels = [...this.selected.values()];
-    return labels.length <= 3 ? labels.join(', ') : this.selected.size + ' selected';
+    if (this.selected.size > 3) return this.selected.size + ' selected';
+    return [...this.selected.values()].map(([lbl, ic]) =>
+      ic ? ic + '\u00a0' + lbl : lbl
+    ).join(', ');
   }
 }" @toggle="if ($el.open) $nextTick(() => $refs.search.focus())">
   <summary{% if id %} id="{{ id }}"{% endif %} class="select text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
@@ -45,8 +47,13 @@
     this._v;
     const checked = [...this.$refs.options.querySelectorAll('input:checked')];
     if (!checked.length) return '';
-    const labels = checked.map(el => el.parentElement.querySelector('.select-none').textContent.trim());
-    return labels.length <= 3 ? labels.join(', ') : checked.length + ' selected';
+    if (checked.length > 3) return checked.length + ' selected';
+    return checked.map(el => {
+      const lbl = el.parentElement;
+      const ic = lbl.querySelector('.shrink-0:not(.formwork-check)');
+      const text = lbl.querySelector('.select-none').textContent.trim();
+      return ic ? ic.textContent.trim() + '\u00a0' + text : text;
+    }).join(', ');
   }
 }"{% if widget.show_search %} @toggle="if ($el.open) $nextTick(() => $refs.search.focus())"{% endif %}>
   <summary{% if id %} id="{{ id }}"{% endif %} class="select text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
