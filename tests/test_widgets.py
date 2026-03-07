@@ -3,8 +3,8 @@ from bs4 import BeautifulSoup
 from django_formwork.widgets import (
     ComboBox,
     DataList,
-    DropZone,
-    ImageUpload,
+    FileDropZone,
+    ImageDropZone,
     MultiSelect,
     PasswordReveal,
     Range,
@@ -883,147 +883,147 @@ class TestDataList:
 
 class TestDropZone:
     def test_renders_dropzone_wrapper(self):
-        soup = render_widget(DropZone())
+        soup = render_widget(FileDropZone())
         wrapper = soup.find("div", class_="dropzone")
         assert wrapper is not None
 
     def test_file_input(self):
-        soup = render_widget(DropZone(), name="file")
+        soup = render_widget(FileDropZone(), name="file")
         inp = soup.find("input", {"type": "file"})
         assert inp is not None
         assert inp["name"] == "file"
 
     def test_alpine_x_data(self):
-        soup = render_widget(DropZone())
+        soup = render_widget(FileDropZone())
         wrapper = soup.find("div", attrs={"x-data": True})
         assert wrapper is not None
         assert "files:" in wrapper["x-data"]
         assert "dragging:" in wrapper["x-data"]
 
     def test_drag_event_handlers(self):
-        soup = render_widget(DropZone())
+        soup = render_widget(FileDropZone())
         wrapper = soup.find("div", attrs={"x-data": True})
         assert wrapper.has_attr("@dragover.prevent")
         assert wrapper.has_attr("@dragleave.prevent")
         assert wrapper.has_attr("@drop.prevent")
 
     def test_drop_area(self):
-        soup = render_widget(DropZone())
+        soup = render_widget(FileDropZone())
         zone = soup.find("div", class_="dropzone-area")
         assert zone is not None
 
     def test_click_to_browse(self):
-        soup = render_widget(DropZone())
+        soup = render_widget(FileDropZone())
         zone = soup.find("div", class_="dropzone-area")
         assert "@click" in str(zone)
 
     def test_file_input_change_handler(self):
-        soup = render_widget(DropZone())
+        soup = render_widget(FileDropZone())
         inp = soup.find("input", {"type": "file"})
         assert inp.has_attr("@change")
 
     def test_upload_icon(self):
-        soup = render_widget(DropZone())
+        soup = render_widget(FileDropZone())
         svg = soup.find("svg")
         assert svg is not None
 
     def test_browse_text(self):
-        soup = render_widget(DropZone())
+        soup = render_widget(FileDropZone())
         text = soup.get_text()
         assert "browse" in text.lower()
 
     def test_multiple_attr_passthrough(self):
-        widget = DropZone(attrs={"multiple": True})
+        widget = FileDropZone(attrs={"multiple": True})
         soup = render_widget(widget, name="files")
         inp = soup.find("input", {"type": "file"})
         assert inp.has_attr("multiple")
 
     def test_id_on_input(self):
-        soup = render_widget(DropZone(), name="file", attrs={"id": "id_file"})
+        soup = render_widget(FileDropZone(), name="file", attrs={"id": "id_file"})
         inp = soup.find("input", {"type": "file"})
         assert inp["id"] == "id_file"
 
     def test_wrapper_has_id(self):
-        soup = render_widget(DropZone(), attrs={"id": "id_file"})
+        soup = render_widget(FileDropZone(), attrs={"id": "id_file"})
         wrapper = soup.find("div", class_="dropzone")
         assert wrapper["id"] == "id_file_dropzone"
 
     def test_no_wrapper_id_without_id(self):
-        soup = render_widget(DropZone())
+        soup = render_widget(FileDropZone())
         wrapper = soup.find("div", class_="dropzone")
         assert not wrapper.has_attr("id")
 
 
 class TestImageUpload:
     def test_renders_image_upload_wrapper(self):
-        soup = render_widget(ImageUpload())
+        soup = render_widget(ImageDropZone())
         wrapper = soup.find("div", class_="image-upload")
         assert wrapper is not None
 
     def test_file_input(self):
-        soup = render_widget(ImageUpload(), name="avatar")
+        soup = render_widget(ImageDropZone(), name="avatar")
         inp = soup.find("input", {"type": "file"})
         assert inp is not None
         assert inp["name"] == "avatar"
 
     def test_accept_image(self):
-        soup = render_widget(ImageUpload(), name="avatar")
+        soup = render_widget(ImageDropZone(), name="avatar")
         inp = soup.find("input", {"type": "file"})
         assert inp["accept"] == "image/*"
 
     def test_alpine_x_data(self):
-        soup = render_widget(ImageUpload())
+        soup = render_widget(ImageDropZone())
         wrapper = soup.find("div", attrs={"x-data": True})
         assert wrapper is not None
         assert "preview:" in wrapper["x-data"]
         assert "dragging:" in wrapper["x-data"]
 
     def test_drag_event_handlers(self):
-        soup = render_widget(ImageUpload())
+        soup = render_widget(ImageDropZone())
         wrapper = soup.find("div", attrs={"x-data": True})
         assert wrapper.has_attr("@dragover.prevent")
         assert wrapper.has_attr("@dragleave.prevent")
         assert wrapper.has_attr("@drop.prevent")
 
     def test_image_preview_element(self):
-        soup = render_widget(ImageUpload())
+        soup = render_widget(ImageDropZone())
         img = soup.find("img", {":src": "preview"})
         assert img is not None
 
     def test_remove_button(self):
-        soup = render_widget(ImageUpload())
+        soup = render_widget(ImageDropZone())
         btn = soup.find("button", string="Remove")
         assert btn is not None
         assert btn["type"] == "button"
 
     def test_image_icon(self):
-        soup = render_widget(ImageUpload())
+        soup = render_widget(ImageDropZone())
         svg = soup.find("svg")
         assert svg is not None
 
     def test_browse_text(self):
-        soup = render_widget(ImageUpload())
+        soup = render_widget(ImageDropZone())
         text = soup.get_text()
         assert "browse" in text.lower()
 
     def test_id_on_input(self):
-        soup = render_widget(ImageUpload(), name="img", attrs={"id": "id_img"})
+        soup = render_widget(ImageDropZone(), name="img", attrs={"id": "id_img"})
         inp = soup.find("input", {"type": "file"})
         assert inp["id"] == "id_img"
 
     def test_custom_accept_override(self):
-        widget = ImageUpload(attrs={"accept": ".png,.jpg"})
+        widget = ImageDropZone(attrs={"accept": ".png,.jpg"})
         soup = render_widget(widget, name="img")
         inp = soup.find("input", {"type": "file"})
         assert inp["accept"] == ".png,.jpg"
 
     def test_wrapper_has_id(self):
-        soup = render_widget(ImageUpload(), attrs={"id": "id_avatar"})
+        soup = render_widget(ImageDropZone(), attrs={"id": "id_avatar"})
         wrapper = soup.find("div", class_="image-upload")
         assert wrapper["id"] == "id_avatar_upload"
 
     def test_no_wrapper_id_without_id(self):
-        soup = render_widget(ImageUpload())
+        soup = render_widget(ImageDropZone())
         wrapper = soup.find("div", class_="image-upload")
         assert not wrapper.has_attr("id")
 

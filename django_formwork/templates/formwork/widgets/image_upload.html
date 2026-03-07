@@ -2,6 +2,7 @@
   preview: null,
   dragging: false,
   error: '',
+  maxSize: {{ widget.max_size|default:"0" }},
   isAccepted(file) {
     const accept = $refs.input.accept;
     if (!accept) return true;
@@ -23,18 +24,21 @@
     this.error = '';
     const file = e.dataTransfer.files[0];
     if (!file) return;
-    if (!this.isAccepted(file)) {
-      this.error = 'File type not accepted';
-      return;
-    }
+    if (!this.isAccepted(file)) { this.error = 'File type not accepted'; return; }
+    if (this.maxSize && file.size > this.maxSize) { this.error = 'File too large'; return; }
     this.$refs.input.files = e.dataTransfer.files;
     this.loadPreview(file);
   },
   handleChange(e) {
     this.error = '';
     const file = e.target.files[0];
-    if (file) this.loadPreview(file);
-    else this.preview = null;
+    if (!file) { this.preview = null; return; }
+    if (this.maxSize && file.size > this.maxSize) {
+      this.error = 'File too large';
+      e.target.value = '';
+      return;
+    }
+    this.loadPreview(file);
   },
   clear() {
     this.preview = null;
@@ -47,11 +51,11 @@
     <div x-show="!preview && !error" @click="$refs.input.click()">
       <svg class="image-upload-prompt-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21"/><path d="m14 19.5 3-3 3 3"/><path d="M17 22v-5.5"/><circle cx="9" cy="9" r="2"/></svg>
       <p class="image-upload-prompt-text">Drop an image or <span class="image-upload-browse">browse</span></p>
-      {% if widget.accept_display %}<p class="image-upload-accept-text">{{ widget.accept_display }}</p>{% endif %}
+      {% if widget.accept_display or widget.max_size_display %}<p class="image-upload-accept-text">{% if widget.accept_display %}{{ widget.accept_display }}{% endif %}{% if widget.accept_display and widget.max_size_display %} · {% endif %}{% if widget.max_size_display %}Max {{ widget.max_size_display }}{% endif %}</p>{% endif %}
     </div>
     <div x-show="error && !preview" x-cloak @click="error = ''; $refs.input.click()">
       <p class="image-upload-error" x-text="error"></p>
-      {% if widget.accept_display %}<p class="image-upload-accept-text">{{ widget.accept_display }}</p>{% endif %}
+      {% if widget.accept_display or widget.max_size_display %}<p class="image-upload-accept-text">{% if widget.accept_display %}{{ widget.accept_display }}{% endif %}{% if widget.accept_display and widget.max_size_display %} · {% endif %}{% if widget.max_size_display %}Max {{ widget.max_size_display }}{% endif %}</p>{% endif %}
     </div>
     <div x-show="preview" x-cloak class="image-upload-preview-area">
       <img :src="preview" class="image-upload-preview">

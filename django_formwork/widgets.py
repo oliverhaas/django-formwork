@@ -306,6 +306,31 @@ class ComboBox(forms.TextInput):
         return context
 
 
+_KB = 1024
+_MB = 1024 * 1024
+
+
+def _format_size(size: int) -> str:
+    """Format a byte count for human-readable display.
+
+    Examples::
+
+        >>> _format_size(500)
+        '500 B'
+        >>> _format_size(1024)
+        '1 KB'
+        >>> _format_size(5 * 1024 * 1024)
+        '5 MB'
+    """
+    if size < _KB:
+        return f"{size} B"
+    if size < _MB:
+        kb = size / _KB
+        return f"{kb:.0f} KB" if kb == int(kb) else f"{kb:.1f} KB"
+    mb = size / _MB
+    return f"{mb:.0f} MB" if mb == int(mb) else f"{mb:.1f} MB"
+
+
 def _format_accept(accept: str) -> str:
     """Format an HTML ``accept`` attribute value for human-readable display.
 
@@ -332,7 +357,7 @@ def _format_accept(accept: str) -> str:
     return ", ".join(labels)
 
 
-class DropZone(forms.FileInput):
+class FileDropZone(forms.FileInput):
     """Drag-and-drop file upload zone.
 
     Replaces the standard file input with a styled drop zone that accepts
@@ -341,55 +366,74 @@ class DropZone(forms.FileInput):
 
     Usage::
 
-        attachment = forms.FileField(widget=DropZone)
+        attachment = forms.FileField(widget=FileDropZone)
 
-        # Multiple files:
-        attachments = forms.FileField(
-            widget=DropZone(attrs={"multiple": True}),
-        )
-
-        # Restrict to PDF/Word:
+        # Multiple files with type and size restrictions:
         docs = forms.FileField(
-            widget=DropZone(attrs={"accept": ".pdf,.doc,.docx"}),
+            widget=FileDropZone(
+                attrs={"multiple": True, "accept": ".pdf,.doc,.docx"},
+                max_size=10 * 1024 * 1024,  # 10 MB
+            ),
         )
     """
 
     template_name = "formwork/widgets/drop_zone.html"
     allow_multiple_selected = True
 
+    def __init__(
+        self,
+        attrs: dict[str, Any] | None = None,
+        *,
+        max_size: int | None = None,
+    ) -> None:
+        super().__init__(attrs)
+        self.max_size = max_size
+
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         accept = context["widget"]["attrs"].get("accept", "")
         if accept:
             context["widget"]["accept_display"] = _format_accept(accept)
+        if self.max_size:
+            context["widget"]["max_size"] = self.max_size
+            context["widget"]["max_size_display"] = _format_size(self.max_size)
         return context
 
 
-class ImageUpload(forms.FileInput):
+class ImageDropZone(forms.FileInput):
     """Drag-and-drop image upload with preview.
 
-    Like :class:`DropZone` but restricted to images and shows a
+    Like :class:`FileDropZone` but restricted to images and shows a
     thumbnail preview after selection.  Uses Alpine.js for drag state,
     preview via ``FileReader``, and a remove button.
 
     Usage::
 
-        avatar = forms.ImageField(widget=ImageUpload)
+        avatar = forms.ImageField(widget=ImageDropZone)
     """
 
     template_name = "formwork/widgets/image_upload.html"
 
-    def __init__(self, attrs: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        attrs: dict[str, Any] | None = None,
+        *,
+        max_size: int | None = None,
+    ) -> None:
         defaults: dict[str, Any] = {"accept": "image/*"}
         if attrs:
             defaults.update(attrs)
         super().__init__(defaults)
+        self.max_size = max_size
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         accept = context["widget"]["attrs"].get("accept", "")
         if accept:
             context["widget"]["accept_display"] = _format_accept(accept)
+        if self.max_size:
+            context["widget"]["max_size"] = self.max_size
+            context["widget"]["max_size_display"] = _format_size(self.max_size)
         return context
 
 
@@ -465,6 +509,8 @@ PasswordRevealInput = PasswordReveal
 MultiSelectInput = MultiSelect
 SearchSelectInput = SearchSelect
 ComboBoxInput = ComboBox
-DropZoneInput = DropZone
-ImageUploadInput = ImageUpload
+DropZone = FileDropZone
+DropZoneInput = FileDropZone
+ImageUpload = ImageDropZone
+ImageUploadInput = ImageDropZone
 DataListInput = DataList

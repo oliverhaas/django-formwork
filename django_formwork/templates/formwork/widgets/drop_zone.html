@@ -2,6 +2,7 @@
   files: [],
   dragging: false,
   error: '',
+  maxSize: {{ widget.max_size|default:"0" }},
   isAccepted(file) {
     const accept = $refs.input.accept;
     if (!accept) return true;
@@ -12,16 +13,35 @@
       return file.type === p;
     });
   },
+  validate(files) {
+    this.error = '';
+    const all = [...files];
+    let valid = all.filter(f => this.isAccepted(f));
+    const typeRejected = all.length - valid.length;
+    if (this.maxSize) {
+      const oversized = valid.filter(f => f.size > this.maxSize);
+      valid = valid.filter(f => f.size <= this.maxSize);
+      if (oversized.length) this.error = oversized.length + ' file(s) too large';
+    }
+    if (typeRejected) this.error = (this.error ? this.error + ', ' : '') + typeRejected + ' file(s) wrong type';
+    return valid;
+  },
   handleDrop(e) {
     this.dragging = false;
-    this.error = '';
-    const all = [...e.dataTransfer.files];
-    const valid = all.filter(f => this.isAccepted(f));
-    if (valid.length < all.length) this.error = (all.length - valid.length) + ' file(s) rejected';
+    const valid = this.validate(e.dataTransfer.files);
     if (!valid.length) return;
     const dt = new DataTransfer();
     valid.forEach(f => dt.items.add(f));
     this.$refs.input.files = dt.files;
+    this.files = valid;
+  },
+  handleChange(e) {
+    const valid = this.validate(e.target.files);
+    if (valid.length < e.target.files.length) {
+      const dt = new DataTransfer();
+      valid.forEach(f => dt.items.add(f));
+      e.target.files = dt.files;
+    }
     this.files = valid;
   },
   formatSize(bytes) {
@@ -31,11 +51,11 @@
   }
 }" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop($event)">
   <div class="dropzone-area" :class="dragging && 'dragging'" @click="$refs.input.click()">
-    <input x-ref="input" type="file" name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %} @change="error = ''; files = [...$event.target.files]"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
+    <input x-ref="input" type="file" name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %} @change="handleChange($event)"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
     <div x-show="!files.length">
       <svg class="dropzone-prompt-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m8 17 4-4 4 4"/></svg>
       <p class="dropzone-prompt-text">Drag and drop files here or <span class="dropzone-browse">browse</span></p>
-      {% if widget.accept_display %}<p class="dropzone-accept-text">{{ widget.accept_display }}</p>{% endif %}
+      {% if widget.accept_display or widget.max_size_display %}<p class="dropzone-accept-text">{% if widget.accept_display %}{{ widget.accept_display }}{% endif %}{% if widget.accept_display and widget.max_size_display %} · {% endif %}{% if widget.max_size_display %}Max {{ widget.max_size_display }}{% endif %}</p>{% endif %}
     </div>
     <div x-show="files.length" x-cloak>
       <template x-for="file in files" :key="file.name">

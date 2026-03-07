@@ -1,8 +1,8 @@
-"""E2e tests for upload widgets: DropZone, ImageUpload."""
+"""E2e tests for upload widgets: FileDropZone, ImageDropZone."""
 
 
-class TestDropZone:
-    """DropZone drag-and-drop file upload widget."""
+class TestFileDropZone:
+    """FileDropZone drag-and-drop file upload widget."""
 
     def test_renders(self, widget_page):
         zone = widget_page.locator(".dropzone")
@@ -21,8 +21,8 @@ class TestDropZone:
         assert area.is_visible()
 
 
-class TestImageUpload:
-    """ImageUpload with preview widget."""
+class TestImageDropZone:
+    """ImageDropZone with preview widget."""
 
     def test_renders(self, widget_page):
         zone = widget_page.locator(".image-upload")

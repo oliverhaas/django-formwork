@@ -5,8 +5,8 @@ from django_formwork.forms import FormworkForm
 from django_formwork.widgets import (
     ComboBox,
     DataList,
-    DropZone,
-    ImageUpload,
+    FileDropZone,
+    ImageDropZone,
     MultiSelect,
     PasswordReveal,
     Range,
@@ -423,13 +423,19 @@ class AdvancedWidgetsForm(FormworkForm):
         required=False,
     )
     documents = forms.FileField(
-        widget=DropZone(attrs={"multiple": True, "accept": ".pdf,.doc,.docx"}),
-        help_text="DropZone — drag-and-drop, multiple files, accept validation (.pdf, .doc, .docx)",
+        widget=FileDropZone(
+            attrs={"multiple": True, "accept": ".pdf,.doc,.docx"},
+            max_size=10 * 1024 * 1024,
+        ),
+        help_text="FileDropZone — drag-and-drop, multiple files, type + size validation (10 MB limit)",
         required=False,
     )
     avatar = forms.ImageField(
-        widget=ImageUpload(attrs={"accept": "image/png,image/jpeg"}),
-        help_text="ImageUpload — drag-and-drop image, PNG and JPEG only, with preview",
+        widget=ImageDropZone(
+            attrs={"accept": "image/png,image/jpeg"},
+            max_size=5 * 1024 * 1024,
+        ),
+        help_text="ImageDropZone — drag-and-drop image, PNG/JPEG only, 5 MB limit, with preview",
         required=False,
     )
     bio = forms.CharField(
