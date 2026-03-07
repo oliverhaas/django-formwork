@@ -30,8 +30,9 @@
   </summary>
   <input type="hidden" name="{{ widget.name }}" value="{{ widget.value|default:"" }}" :value="value"{% if id %} id="{{ id }}"{% endif %}>
   <div class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
-    <div class="p-1.5 border-b border-base-300">
-      <input x-ref="search" x-model="search" type="text" class="w-full bg-transparent outline-none px-2 py-1" placeholder="Search&#x2026;" @click.stop hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'search_select'; event.detail.parameters.name = '{{ widget.name }}'">
+    <div class="p-1.5 border-b border-base-300 flex items-center gap-1">
+      <input x-ref="search" x-model="search" type="text" class="grow bg-transparent outline-none px-2 py-1" placeholder="Search&#x2026;" @click.stop hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'search_select'; event.detail.parameters.name = '{{ widget.name }}'" hx-indicator="#{{ id }}_spinner">
+      <span{% if id %} id="{{ id }}_spinner"{% endif %} class="htmx-indicator"><span class="loading loading-spinner loading-xs"></span></span>
     </div>
     <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1" @click="const btn = $event.target.closest('[data-value]'); if (btn) pick(btn.dataset.value, btn.dataset.label, btn.dataset.icon || '')">
     </ul>

@@ -27,8 +27,9 @@
     <template x-for="[val] in [...selected]" :key="val">
       <input type="hidden" name="{{ widget.name }}" :value="val">
     </template>
-    <div class="p-1.5 border-b border-base-300">
-      <input x-ref="search" x-model="search" type="text" class="w-full bg-transparent outline-none px-2 py-1" placeholder="Search&#x2026;" @click.stop hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_options" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'multiselect'; event.detail.parameters.name = '{{ widget.name }}'">
+    <div class="p-1.5 border-b border-base-300 flex items-center gap-1">
+      <input x-ref="search" x-model="search" type="text" class="grow bg-transparent outline-none px-2 py-1" placeholder="Search&#x2026;" @click.stop hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_options" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'multiselect'; event.detail.parameters.name = '{{ widget.name }}'" hx-indicator="#{{ id }}_spinner">
+      <span{% if id %} id="{{ id }}_spinner"{% endif %} class="htmx-indicator"><span class="loading loading-spinner loading-xs"></span></span>
     </div>
     <ul x-ref="options" id="{{ id }}_options" @change="_v++" class="max-h-60 overflow-y-auto p-1">
     </ul>

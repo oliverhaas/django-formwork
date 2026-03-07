@@ -198,6 +198,21 @@ fieldset.fieldset .image-upload {
     @apply btn btn-ghost btn-xs;
 }
 
+/* Accepted file types hint text */
+.dropzone-accept-text,
+.image-upload-accept-text {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+}
+
+/* Client-side file rejection error */
+.dropzone-error,
+.image-upload-error {
+    font-size: 0.875rem;
+    color: var(--color-error);
+}
+
 /* Alpine.js: hide elements until Alpine initializes */
 [x-cloak] {
     display: none !important;
@@ -313,6 +328,16 @@ details.dropdown.multiselect,
 details.dropdown.search-select,
 .dropdown.combobox {
     width: 100%;
+}
+
+/* ComboBox: loading spinner overlays the right side of the input. */
+.formwork-search-spinner {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
 }
 
 details.dropdown.multiselect > .dropdown-content,

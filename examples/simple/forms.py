@@ -423,13 +423,13 @@ class AdvancedWidgetsForm(FormworkForm):
         required=False,
     )
     documents = forms.FileField(
-        widget=DropZone(attrs={"multiple": True}),
-        help_text="DropZone — drag-and-drop file upload, multiple files via attrs",
+        widget=DropZone(attrs={"multiple": True, "accept": ".pdf,.doc,.docx"}),
+        help_text="DropZone — drag-and-drop, multiple files, accept validation (.pdf, .doc, .docx)",
         required=False,
     )
     avatar = forms.ImageField(
-        widget=ImageUpload,
-        help_text="ImageUpload — drag-and-drop image upload, single file with preview",
+        widget=ImageUpload(attrs={"accept": "image/png,image/jpeg"}),
+        help_text="ImageUpload — drag-and-drop image, PNG and JPEG only, with preview",
         required=False,
     )
     bio = forms.CharField(
