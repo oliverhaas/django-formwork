@@ -365,7 +365,7 @@ class TestMultiSelect:
         import json
 
         initial = json.loads(ctx["widget"]["initial_selected_json"])
-        assert initial == [["a", "Alpha"]]
+        assert initial == [["a", ["Alpha", ""]]]
 
     def test_initial_selected_json_empty(self):
         widget = MultiSelect(search_url="/search/", choices=[("a", "Alpha")])

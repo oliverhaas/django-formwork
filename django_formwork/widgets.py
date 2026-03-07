@@ -176,10 +176,10 @@ class MultiSelect(forms.SelectMultiple):
             for option in options:
                 option["icon"] = self.icons.get(str(option["value"]), "")
         if self.search_url:
-            # Build initial selected map for Alpine: [[value, label], ...]
+            # Build initial selected map for Alpine: [[value, [label, icon]], ...]
             selected_values = set(value or [])
             initial_selected = [
-                [str(option["value"]), str(option["label"])]
+                [str(option["value"]), [str(option["label"]), option.get("icon", "")]]
                 for _group, options, _index in context["widget"]["optgroups"]
                 for option in options
                 if str(option["value"]) in selected_values
