@@ -476,6 +476,9 @@ class TestComboBoxMultiple:
         widget_page.wait_for_timeout(100)
         combo.locator("button", has_text="Sushi").click()
         widget_page.wait_for_timeout(100)
+        # Blur strips trailing comma; capture value after blur settles.
+        inp.blur()
+        widget_page.wait_for_timeout(50)
         val_before = inp.input_value()
         submit(widget_page)
         assert inp.input_value() == val_before
