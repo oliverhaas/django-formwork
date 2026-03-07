@@ -203,7 +203,7 @@ fieldset.fieldset .image-upload {
 .image-upload-accept-text {
     margin-top: 0.25rem;
     font-size: 0.75rem;
-    color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+    color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
 }
 
 /* Client-side file rejection error */
