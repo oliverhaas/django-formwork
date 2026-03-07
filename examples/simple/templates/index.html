@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('formwork-theme') || 'light')</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>django-formwork example</title>
@@ -13,7 +14,46 @@
 </head>
 <body class="min-h-screen bg-base-200 p-8">
   <div class="max-w-xl mx-auto space-y-8">
-    <h1 class="text-3xl font-bold">django-formwork example</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-3xl font-bold">django-formwork example</h1>
+      <div x-data="{ theme: localStorage.getItem('formwork-theme') || 'light' }" class="flex items-center gap-2">
+        <span class="text-sm text-base-content/60">Theme</span>
+        <select class="select select-sm" x-model="theme" @change="document.documentElement.setAttribute('data-theme', theme); localStorage.setItem('formwork-theme', theme)">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="cupcake">Cupcake</option>
+          <option value="bumblebee">Bumblebee</option>
+          <option value="emerald">Emerald</option>
+          <option value="corporate">Corporate</option>
+          <option value="synthwave">Synthwave</option>
+          <option value="retro">Retro</option>
+          <option value="cyberpunk">Cyberpunk</option>
+          <option value="valentine">Valentine</option>
+          <option value="halloween">Halloween</option>
+          <option value="garden">Garden</option>
+          <option value="forest">Forest</option>
+          <option value="aqua">Aqua</option>
+          <option value="lofi">Lo-fi</option>
+          <option value="pastel">Pastel</option>
+          <option value="fantasy">Fantasy</option>
+          <option value="wireframe">Wireframe</option>
+          <option value="black">Black</option>
+          <option value="luxury">Luxury</option>
+          <option value="dracula">Dracula</option>
+          <option value="cmyk">CMYK</option>
+          <option value="autumn">Autumn</option>
+          <option value="business">Business</option>
+          <option value="acid">Acid</option>
+          <option value="lemonade">Lemonade</option>
+          <option value="night">Night</option>
+          <option value="coffee">Coffee</option>
+          <option value="winter">Winter</option>
+          <option value="dim">Dim</option>
+          <option value="nord">Nord</option>
+          <option value="sunset">Sunset</option>
+        </select>
+      </div>
+    </div>
 
     <div class="card bg-base-100 shadow">
       <div class="card-body">
