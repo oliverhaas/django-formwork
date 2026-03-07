@@ -1,10 +1,28 @@
 {% with id=widget.attrs.id %}<div class="dropzone"{% if id %} id="{{ id }}_dropzone"{% endif %} x-data="{
   files: [],
   dragging: false,
+  error: '',
+  isAccepted(file) {
+    const accept = $refs.input.accept;
+    if (!accept) return true;
+    return accept.split(',').some(p => {
+      p = p.trim();
+      if (p.endsWith('/*')) return file.type.startsWith(p.replace('/*', '/'));
+      if (p.startsWith('.')) return file.name.toLowerCase().endsWith(p.toLowerCase());
+      return file.type === p;
+    });
+  },
   handleDrop(e) {
     this.dragging = false;
-    this.$refs.input.files = e.dataTransfer.files;
-    this.files = [...e.dataTransfer.files];
+    this.error = '';
+    const all = [...e.dataTransfer.files];
+    const valid = all.filter(f => this.isAccepted(f));
+    if (valid.length < all.length) this.error = (all.length - valid.length) + ' file(s) rejected';
+    if (!valid.length) return;
+    const dt = new DataTransfer();
+    valid.forEach(f => dt.items.add(f));
+    this.$refs.input.files = dt.files;
+    this.files = valid;
   },
   formatSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
@@ -13,15 +31,17 @@
   }
 }" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop($event)">
   <div class="dropzone-area" :class="dragging && 'dragging'" @click="$refs.input.click()">
-    <input x-ref="input" type="file" name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %} @change="files = [...$event.target.files]"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
+    <input x-ref="input" type="file" name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %} @change="error = ''; files = [...$event.target.files]"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
     <div x-show="!files.length">
       <svg class="dropzone-prompt-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m8 17 4-4 4 4"/></svg>
       <p class="dropzone-prompt-text">Drag and drop files here or <span class="dropzone-browse">browse</span></p>
+      {% if widget.accept_display %}<p class="dropzone-accept-text">{{ widget.accept_display }}</p>{% endif %}
     </div>
     <div x-show="files.length" x-cloak>
       <template x-for="file in files" :key="file.name">
         <p class="dropzone-file" x-text="file.name + ' (' + formatSize(file.size) + ')'"></p>
       </template>
     </div>
+    <p x-show="error" x-text="error" x-cloak class="dropzone-error"></p>
   </div>
 </div>{% endwith %}

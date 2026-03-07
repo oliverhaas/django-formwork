@@ -306,6 +306,32 @@ class ComboBox(forms.TextInput):
         return context
 
 
+def _format_accept(accept: str) -> str:
+    """Format an HTML ``accept`` attribute value for human-readable display.
+
+    Examples::
+
+        >>> _format_accept("image/*")
+        'Images'
+        >>> _format_accept(".png,.jpg,.jpeg")
+        'PNG, JPG, JPEG'
+        >>> _format_accept("application/pdf")
+        'PDF'
+    """
+    parts = [p.strip() for p in accept.split(",") if p.strip()]
+    labels: list[str] = []
+    for part in parts:
+        if part.endswith("/*"):
+            labels.append(part.split("/")[0].capitalize() + "s")
+        elif part.startswith("."):
+            labels.append(part[1:].upper())
+        elif "/" in part:
+            labels.append(part.split("/")[1].upper())
+        else:
+            labels.append(part.upper())
+    return ", ".join(labels)
+
+
 class DropZone(forms.FileInput):
     """Drag-and-drop file upload zone.
 
@@ -321,10 +347,22 @@ class DropZone(forms.FileInput):
         attachments = forms.FileField(
             widget=DropZone(attrs={"multiple": True}),
         )
+
+        # Restrict to PDF/Word:
+        docs = forms.FileField(
+            widget=DropZone(attrs={"accept": ".pdf,.doc,.docx"}),
+        )
     """
 
     template_name = "formwork/widgets/drop_zone.html"
     allow_multiple_selected = True
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        accept = context["widget"]["attrs"].get("accept", "")
+        if accept:
+            context["widget"]["accept_display"] = _format_accept(accept)
+        return context
 
 
 class ImageUpload(forms.FileInput):
@@ -346,6 +384,13 @@ class ImageUpload(forms.FileInput):
         if attrs:
             defaults.update(attrs)
         super().__init__(defaults)
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        accept = context["widget"]["attrs"].get("accept", "")
+        if accept:
+            context["widget"]["accept_display"] = _format_accept(accept)
+        return context
 
 
 class ValidatedTextarea(forms.Textarea):
