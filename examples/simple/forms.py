@@ -1,7 +1,6 @@
 from django import forms
 from django.urls import reverse_lazy
 
-from django_formwork.forms import FormworkForm
 from django_formwork.widgets import (
     ComboBox,
     DataList,
@@ -17,7 +16,7 @@ from django_formwork.widgets import (
 )
 
 
-class ContactForm(FormworkForm):
+class ContactForm(forms.Form):
     name = forms.CharField(
         max_length=100,
         help_text="Your full name",
@@ -36,7 +35,7 @@ class ContactForm(FormworkForm):
     )
 
 
-class WidgetShowcaseForm(FormworkForm):
+class WidgetShowcaseForm(forms.Form):
     password = forms.CharField(
         widget=PasswordReveal(attrs={"placeholder": "Enter your password"}),
         help_text="PasswordReveal — password field with show/hide toggle button",
@@ -59,7 +58,7 @@ class WidgetShowcaseForm(FormworkForm):
     file_upload = forms.FileField(required=False, help_text="Standard Django FileInput")
 
 
-class AllWidgetsForm(FormworkForm):
+class AllWidgetsForm(forms.Form):
     """Demonstrates all Django widget types with DaisyUI styling."""
 
     # Text-like inputs — all styled via CSS @apply input
@@ -307,7 +306,7 @@ class AllWidgetsForm(FormworkForm):
     )
 
 
-class RegistrationForm(FormworkForm):
+class RegistrationForm(forms.Form):
     """Two-column layout demo — rendered with grid grid-cols-2 on the <form>."""
 
     first_name = forms.CharField(
@@ -334,7 +333,7 @@ class RegistrationForm(FormworkForm):
     )
 
 
-class ErrorStatesForm(FormworkForm):
+class ErrorStatesForm(forms.Form):
     """Shows every widget type in its error state (server-side validation)."""
 
     text = forms.CharField(help_text="Required text input")
@@ -383,7 +382,7 @@ class ErrorStatesForm(FormworkForm):
     )
 
 
-class AdvancedWidgetsForm(FormworkForm):
+class AdvancedWidgetsForm(forms.Form):
     """Demonstrates new formwork widgets: uploads, combobox, validated textarea."""
 
     favorite_language = forms.CharField(

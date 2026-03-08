@@ -6,12 +6,11 @@
  *
  * All DaisyUI component classes are applied via @apply so that
  * Django's standard widget templates can be used without modification.
- * The CSS selectors target elements inside formwork's
- * <fieldset class="fieldset"> field wrapper.
  *
  * Custom formwork widgets are excluded from the base selectors using
- * classes already present on those elements (e.g. .toggle, .mask,
- * .hidden) or the direct-child combinator (>).
+ * :not() with classes already present on those elements (e.g. .toggle,
+ * .mask, .hidden) or structural context (e.g. label.input,
+ * .dropdown-content).
  *
  * Everything lives in @layer components so that users can override
  * any formwork style with utility classes or unlayered CSS.
@@ -24,70 +23,65 @@
 
    DaisyUI form components default to width: clamp(3rem, 20rem, 100%).
    Formwork overrides this to width: 100% so that inputs fill their
-   fieldset and form layout is controlled at the <form> element level
+   container and form layout is controlled at the <form> element level
    (e.g. max-w-sm for a narrow form, grid grid-cols-2 for multi-column).
    ================================================================ */
 
 /* Text-like inputs: text, email, url, number, password, date, time,
    datetime-local, search, color, tel.
-   Uses > (direct child) so inputs wrapped in a compound widget
-   (e.g. PasswordReveal's <label class="input">) are excluded.
-   The .tooltip variant matches when the error tooltip wraps the widget. */
-fieldset.fieldset > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]),
-fieldset.fieldset > .tooltip > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]) {
+   Excludes inputs inside compound widgets (PasswordReveal's <label
+   class="input">, dropdown search inputs) and ComboBox (own rule). */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(label.input *):not(.dropdown-content *) {
     @apply input w-full;
 }
 
-fieldset.fieldset textarea {
+textarea {
     @apply textarea w-full;
 }
 
-fieldset.fieldset select,
-fieldset.fieldset summary.select {
+select,
+summary.select {
     @apply select w-full;
 }
 
 /* Show placeholder-style color when the empty option is selected. */
-fieldset.fieldset select:has(> option[value=""]:checked) {
+select:has(> option[value=""]:checked) {
     color: color-mix(in oklab, currentColor 50%, transparent);
 }
 
-fieldset.fieldset select:has(> option[value=""]:checked) > option {
+select:has(> option[value=""]:checked) > option {
     @apply text-base-content;
 }
 
-fieldset.fieldset input[type="checkbox"]:not(.toggle):not(.hidden) {
+input[type="checkbox"]:not(.toggle):not(.hidden) {
     @apply checkbox;
 }
 
-fieldset.fieldset input[type="radio"]:not(.mask):not(.rating-hidden) {
+input[type="radio"]:not(.mask):not(.rating-hidden) {
     @apply radio;
 }
 
-/* Uses > (direct child) so file inputs nested inside custom upload
-   widgets (DropZone, ImageUpload) are excluded. */
-fieldset.fieldset > input[type="file"],
-fieldset.fieldset > .tooltip > input[type="file"] {
+/* File inputs — excludes those inside upload widgets (DropZone,
+   ImageUpload) which are hidden and triggered via JS. */
+input[type="file"]:not(.dropzone *):not(.image-upload *) {
     @apply file-input w-full;
 }
 
-fieldset.fieldset input[type="range"] {
+input[type="range"] {
     @apply range w-full;
 }
 
 /* Radio and checkbox groups: add vertical spacing between options.
    Django wraps each option in a <div> inside a parent <div id="...">.
-   The .tooltip variant matches when the error tooltip wraps the widget. */
-fieldset.fieldset > div:has(> div > label > input[type="radio"]),
-fieldset.fieldset > div:has(> div > label > input[type="checkbox"]:not(.toggle):not(.hidden)),
-fieldset.fieldset > .tooltip > div:has(> div > label > input[type="radio"]),
-fieldset.fieldset > .tooltip > div:has(> div > label > input[type="checkbox"]:not(.toggle):not(.hidden)) {
+   The :has() chain is specific enough to only match Django's structure. */
+div:has(> div > label > input[type="radio"]),
+div:has(> div > label > input[type="checkbox"]:not(.toggle):not(.hidden)) {
     @apply flex flex-col gap-1;
 }
 
 /* PasswordReveal: the <input> is inside <label class="input">.
    The label gets DaisyUI's .input class directly; override its width. */
-fieldset.fieldset label.input {
+label.input {
     @apply w-full;
 }
 
@@ -101,9 +95,9 @@ input.combobox-input {
     @apply input w-full;
 }
 
-/* Custom widget: drop zone / image upload — fill fieldset width */
-fieldset.fieldset .dropzone,
-fieldset.fieldset .image-upload {
+/* Custom widget: drop zone / image upload — fill container width */
+.dropzone,
+.image-upload {
     @apply w-full;
 }
 
@@ -195,37 +189,35 @@ fieldset.fieldset .image-upload {
    Django adds aria-invalid="true" on widgets with validation errors.
    ================================================================ */
 
-fieldset.fieldset > input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
-fieldset.fieldset > .tooltip > input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]) {
+input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(label.input *):not(.dropdown-content *) {
     @apply input-error;
 }
 
-fieldset.fieldset textarea[aria-invalid="true"] {
+textarea[aria-invalid="true"] {
     @apply textarea-error;
 }
 
-fieldset.fieldset select[aria-invalid="true"] {
+select[aria-invalid="true"] {
     @apply select-error;
 }
 
-/* Single checkbox (direct child) or checkbox inside a group wrapper. */
-fieldset.fieldset input[type="checkbox"][aria-invalid="true"]:not(.toggle):not(.hidden),
+/* Single checkbox or checkbox inside a group wrapper. */
+input[type="checkbox"][aria-invalid="true"]:not(.toggle):not(.hidden),
 [aria-invalid="true"] input[type="checkbox"]:not(.toggle):not(.hidden) {
     @apply checkbox-error;
 }
 
 /* Single radio or radio inside a group wrapper. */
-fieldset.fieldset input[type="radio"][aria-invalid="true"]:not(.mask):not(.rating-hidden),
+input[type="radio"][aria-invalid="true"]:not(.mask):not(.rating-hidden),
 [aria-invalid="true"] input[type="radio"]:not(.mask):not(.rating-hidden) {
     @apply radio-error;
 }
 
-fieldset.fieldset > input[type="file"][aria-invalid="true"],
-fieldset.fieldset > .tooltip > input[type="file"][aria-invalid="true"] {
+input[type="file"][aria-invalid="true"]:not(.dropzone *):not(.image-upload *) {
     @apply file-input-error;
 }
 
-fieldset.fieldset input[type="range"][aria-invalid="true"] {
+input[type="range"][aria-invalid="true"] {
     @apply range-error;
 }
 
@@ -233,10 +225,8 @@ input.toggle[aria-invalid="true"] {
     @apply toggle-error;
 }
 
-/* PasswordReveal: the <input> is inside <label class="input">,
-   so the direct-child selector above doesn't match.
-   Style the wrapper label based on the inner input's state. */
-fieldset.fieldset label.input:has(> input[aria-invalid="true"]) {
+/* PasswordReveal: style the wrapper label based on the inner input's state. */
+label.input:has(> input[aria-invalid="true"]) {
     @apply input-error;
 }
 
@@ -286,7 +276,7 @@ details.dropdown[open] > summary::before {
     @apply fixed inset-0 cursor-default;
 }
 
-/* Dropdown widgets: fill fieldset like other form elements. */
+/* Dropdown widgets: fill container like other form elements. */
 details.dropdown.multiselect,
 details.dropdown.search-select,
 .dropdown.combobox {
@@ -334,13 +324,14 @@ label:has(> input.hidden:checked) > .formwork-check {
    tooltip-error + tooltip-bottom positioning and styling.
    ================================================================ */
 
-/* Tooltip wrapper fills the fieldset like other form elements. */
-fieldset.fieldset > .tooltip {
+/* Tooltip wrapper fills the container like other form elements.
+   Scoped to formwork error tooltips via :has(> .formwork-errors). */
+.tooltip:has(> .formwork-errors) {
     @apply w-full;
 }
 
 /* Left-align error text (DaisyUI tooltip defaults to center). */
-fieldset.fieldset > .tooltip > .tooltip-content {
+.tooltip > .tooltip-content.formwork-errors {
     @apply text-left;
 }
 
@@ -351,11 +342,11 @@ fieldset.fieldset > .tooltip > .tooltip-content {
 
 /* Intrinsic-width widgets: shrink tooltip wrapper to content so
    DaisyUI's centered tooltip-bottom aligns with the actual widget,
-   not the full fieldset width. */
-fieldset.fieldset > .tooltip:has(> input[type="checkbox"]),
-fieldset.fieldset > .tooltip:has(> div > div > label > input[type="checkbox"]:not(.toggle):not(.hidden)),
-fieldset.fieldset > .tooltip:has(> div > div > label > input[type="radio"]:not(.mask):not(.rating-hidden)),
-fieldset.fieldset > .tooltip:has(> .rating) {
+   not the full container width. */
+.tooltip:has(> .formwork-errors):has(> input[type="checkbox"]),
+.tooltip:has(> .formwork-errors):has(> div > div > label > input[type="checkbox"]:not(.toggle):not(.hidden)),
+.tooltip:has(> .formwork-errors):has(> div > div > label > input[type="radio"]:not(.mask):not(.rating-hidden)),
+.tooltip:has(> .formwork-errors):has(> .rating) {
     @apply w-fit;
 }
 
