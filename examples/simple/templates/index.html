@@ -49,7 +49,7 @@
         <p class="text-sm text-base-content/60">CSS grid on the &lt;form&gt;: <code class="text-xs">grid grid-cols-2 gap-4</code></p>
         <form method="post" class="grid grid-cols-2 gap-4">
           {% csrf_token %}
-          {{ registration_form.as_div }}
+          {{ registration_form }}
           <button type="submit" class="btn btn-primary col-span-full">Register</button>
         </form>
       </div>
@@ -60,7 +60,7 @@
         <h2 class="card-title">Custom Widgets</h2>
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
-          {{ showcase_form.as_div }}
+          {{ showcase_form }}
           <div class="mt-4">
             <button type="submit" class="btn btn-secondary">Submit</button>
           </div>
@@ -73,7 +73,7 @@
         <h2 class="card-title">All DaisyUI Components</h2>
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
-          {{ all_widgets_form.as_div }}
+          {{ all_widgets_form }}
           <div class="mt-4">
             <button type="submit" class="btn btn-accent">Submit</button>
           </div>
@@ -87,11 +87,29 @@
         <p class="text-sm text-base-content/60">Server-side search (htmx), drag-and-drop uploads, validated textarea with highlighting.</p>
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
-          {{ advanced_form.as_div }}
+          {{ advanced_form }}
           <div class="mt-4">
             <button type="submit" class="btn btn-primary">Submit</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
+        <h2 class="card-title">Standalone Elements</h2>
+        <p class="text-sm text-base-content/60">Bare form elements outside <code class="text-xs">&lcub;&lcub; form &rcub;&rcub;</code> — styled automatically.</p>
+        <div class="space-y-4">
+          <input type="text" placeholder="A plain text input">
+          <select>
+            <option value="">Select something…</option>
+            <option>Option A</option>
+            <option>Option B</option>
+          </select>
+          <textarea rows="2" placeholder="A plain textarea"></textarea>
+          <label><input type="checkbox"> A checkbox</label>
+          <div><input type="file"></div>
+        </div>
       </div>
     </div>
 
@@ -100,7 +118,7 @@
         <h2 class="card-title text-error">Error States (server-side validation)</h2>
         <p class="text-sm text-base-content/60">All fields below are required but submitted empty, showing Django's server-side validation errors.</p>
         <form>
-          {{ error_form.as_div }}
+          {{ error_form }}
         </form>
       </div>
     </div>

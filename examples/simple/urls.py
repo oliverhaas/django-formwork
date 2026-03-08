@@ -1,7 +1,9 @@
+from django.contrib import admin
 from django.urls import path
 from views import BioValidateView, CitySearchView, LanguageSearchView, index
 
 urlpatterns = [
+    path("admin/", admin.site.urls),
     path("", index),
     path("search/cities/", CitySearchView.as_view(), name="city-search"),
     path("search/languages/", LanguageSearchView.as_view(), name="language-search"),
