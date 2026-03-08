@@ -12,8 +12,12 @@
  * Custom formwork widgets are excluded from the base selectors using
  * classes already present on those elements (e.g. .toggle, .mask,
  * .hidden) or the direct-child combinator (>).
+ *
+ * Everything lives in @layer components so that users can override
+ * any formwork style with utility classes or unlayered CSS.
  */
 
+@layer components {
 
 /* ================================================================
    Base component styling
@@ -31,19 +35,16 @@
    The .tooltip variant matches when the error tooltip wraps the widget. */
 fieldset.fieldset > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]),
 fieldset.fieldset > .tooltip > input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]) {
-    @apply input;
-    width: 100%;
+    @apply input w-full;
 }
 
 fieldset.fieldset textarea {
-    @apply textarea;
-    width: 100%;
+    @apply textarea w-full;
 }
 
 fieldset.fieldset select,
 fieldset.fieldset summary.select {
-    @apply select;
-    width: 100%;
+    @apply select w-full;
 }
 
 /* Show placeholder-style color when the empty option is selected. */
@@ -52,7 +53,7 @@ fieldset.fieldset select:has(> option[value=""]:checked) {
 }
 
 fieldset.fieldset select:has(> option[value=""]:checked) > option {
-    color: var(--color-base-content);
+    @apply text-base-content;
 }
 
 fieldset.fieldset input[type="checkbox"]:not(.toggle):not(.hidden) {
@@ -67,13 +68,11 @@ fieldset.fieldset input[type="radio"]:not(.mask):not(.rating-hidden) {
    widgets (DropZone, ImageUpload) are excluded. */
 fieldset.fieldset > input[type="file"],
 fieldset.fieldset > .tooltip > input[type="file"] {
-    @apply file-input;
-    width: 100%;
+    @apply file-input w-full;
 }
 
 fieldset.fieldset input[type="range"] {
-    @apply range;
-    width: 100%;
+    @apply range w-full;
 }
 
 /* Radio and checkbox groups: add vertical spacing between options.
@@ -83,15 +82,13 @@ fieldset.fieldset > div:has(> div > label > input[type="radio"]),
 fieldset.fieldset > div:has(> div > label > input[type="checkbox"]:not(.toggle):not(.hidden)),
 fieldset.fieldset > .tooltip > div:has(> div > label > input[type="radio"]),
 fieldset.fieldset > .tooltip > div:has(> div > label > input[type="checkbox"]:not(.toggle):not(.hidden)) {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    @apply flex flex-col gap-1;
 }
 
 /* PasswordReveal: the <input> is inside <label class="input">.
    The label gets DaisyUI's .input class directly; override its width. */
 fieldset.fieldset label.input {
-    width: 100%;
+    @apply w-full;
 }
 
 /* Custom widget: toggle switch */
@@ -101,97 +98,74 @@ input.toggle {
 
 /* Custom widget: combobox text input trigger */
 input.combobox-input {
-    @apply input;
-    width: 100%;
+    @apply input w-full;
 }
 
 /* Custom widget: drop zone / image upload — fill fieldset width */
 fieldset.fieldset .dropzone,
 fieldset.fieldset .image-upload {
-    width: 100%;
+    @apply w-full;
 }
 
 /* Hide file inputs inside upload widgets (they use JS to trigger). */
 .dropzone input[type="file"],
 .image-upload input[type="file"] {
-    display: none;
+    @apply hidden;
 }
 
 /* Drop area: dashed border, centered content */
 .dropzone-area,
 .image-upload-area {
-    @apply rounded-box;
-    border: 2px dashed var(--color-base-300);
-    padding: 1.5rem;
-    text-align: center;
-    cursor: pointer;
-    transition-property: border-color, background-color;
-    transition-duration: 150ms;
+    @apply rounded-box border-2 border-dashed border-base-300 p-6 text-center cursor-pointer transition-colors duration-150;
 }
 
 /* ImageUpload: fixed height so the layout doesn't shift when a preview loads. */
 .image-upload-area {
-    height: 10rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    @apply h-40 flex items-center justify-center;
 }
 
 .dropzone-area:hover,
 .image-upload-area:hover {
-    border-color: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+    @apply border-base-content/30;
 }
 
 /* Active drag-over state (Alpine.js toggles this class). */
 .dropzone-area.dragging,
 .image-upload-area.dragging {
-    border-color: var(--color-primary);
-    background-color: color-mix(in oklab, var(--color-primary) 5%, transparent);
+    @apply border-primary bg-primary/5;
 }
 
 /* Upload prompt icon */
 .dropzone-prompt-icon,
 .image-upload-prompt-icon {
-    width: 2.5rem;
-    height: 2.5rem;
-    margin-inline: auto;
+    @apply w-10 h-10 mx-auto;
     color: color-mix(in oklab, var(--color-base-content) 40%, var(--color-base-100));
 }
 
 /* Upload prompt text */
 .dropzone-prompt-text,
 .image-upload-prompt-text {
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+    @apply mt-2 text-sm text-base-content/50;
 }
 
 /* Browse link */
 .dropzone-browse,
 .image-upload-browse {
-    color: var(--color-primary);
-    text-decoration: underline;
-    cursor: pointer;
+    @apply text-primary underline cursor-pointer;
 }
 
 /* File list (DropZone) */
 .dropzone-file {
-    font-size: 0.875rem;
-    padding-block: 0.125rem;
+    @apply text-sm py-0.5;
 }
 
 /* Image preview area — fills the fixed-height upload area. */
 .image-upload-preview-area {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    height: 100%;
+    @apply flex items-center gap-3 h-full;
 }
 
 .image-upload-preview {
-    max-height: 100%;
-    object-fit: contain;
-    @apply rounded-box;
+    @apply max-h-full object-contain rounded-box;
 }
 
 .image-upload-remove {
@@ -201,21 +175,18 @@ fieldset.fieldset .image-upload {
 /* Accepted file types hint text */
 .dropzone-accept-text,
 .image-upload-accept-text {
-    margin-top: 0.25rem;
-    font-size: 0.75rem;
-    color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+    @apply mt-1 text-xs text-base-content/50;
 }
 
 /* Client-side file rejection error */
 .dropzone-error,
 .image-upload-error {
-    font-size: 0.875rem;
-    color: var(--color-error);
+    @apply text-sm text-error;
 }
 
 /* Alpine.js: hide elements until Alpine initializes */
 [x-cloak] {
-    display: none !important;
+    @apply !hidden;
 }
 
 
@@ -281,19 +252,17 @@ input.combobox-input[aria-invalid="true"] {
 
 
 /* ================================================================
-   Bridge styles (plain CSS — no @apply needed)
+   Bridge styles
    ================================================================ */
 
 /* Django renders errors as <ul class="errorlist"> in some contexts. */
 .errorlist {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+    @apply list-none p-0 m-0;
 }
 
 /* Hidden inputs should not take up space. */
 input[type="hidden"] {
-    display: none;
+    @apply hidden;
 }
 
 /* Dropdown widgets (MultiSelect, SearchSelect):
@@ -302,14 +271,11 @@ input[type="hidden"] {
    this adds the focus outline and pins the border color so it
    doesn't revert to gray when clicking inside the dropdown. */
 details.dropdown[open] > summary.select {
-    border-color: var(--color-base-content);
-    outline: 2px solid var(--color-base-content);
-    outline-offset: 2px;
+    @apply border-base-content outline-2 outline-offset-2 outline-base-content;
 }
 
 details.dropdown[open] > summary.select[aria-invalid="true"] {
-    border-color: var(--color-error);
-    outline-color: var(--color-error);
+    @apply border-error outline-error;
 }
 
 /* Dropdown widgets: close <details> on outside click.
@@ -317,57 +283,47 @@ details.dropdown[open] > summary.select[aria-invalid="true"] {
    which toggles the <details> closed.  Pure CSS, no JS needed. */
 details.dropdown[open] > summary::before {
     content: "";
-    position: fixed;
-    inset: 0;
-    cursor: default;
-    z-index: 998;
+    @apply fixed inset-0 cursor-default;
 }
 
 /* Dropdown widgets: fill fieldset like other form elements. */
 details.dropdown.multiselect,
 details.dropdown.search-select,
 .dropdown.combobox {
-    width: 100%;
+    @apply w-full;
 }
 
 /* ComboBox: loading spinner overlays the right side of the input. */
 .formwork-search-spinner {
-    position: absolute;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none;
-    z-index: 1;
+    @apply absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none z-1;
 }
 
 details.dropdown.multiselect > .dropdown-content,
 details.dropdown.search-select > .dropdown-content,
 .dropdown.combobox > .dropdown-content {
-    width: 100%;
+    @apply w-full;
 }
 
 /* ComboBox: position the dropdown below the input.
    DaisyUI's .dropdown class sets position:relative on the wrapper.
    The .dropdown-content inside uses absolute positioning. */
 .dropdown.combobox {
-    position: relative;
+    @apply relative;
 }
 
 .dropdown.combobox > .dropdown-content {
-    position: absolute;
-    z-index: 999;
+    @apply absolute z-1;
 }
 
 /* MultiSelect / SearchSelect: dropdown-content must be above summary::before overlay. */
 details.dropdown.multiselect > .dropdown-content,
 details.dropdown.search-select > .dropdown-content {
-    position: absolute;
-    z-index: 999;
+    @apply absolute z-1;
 }
 
 /* MultiSelect: show checkmark when option is selected. */
 label:has(> input.hidden:checked) > .formwork-check {
-    opacity: 1;
+    @apply opacity-100;
 }
 
 
@@ -380,17 +336,17 @@ label:has(> input.hidden:checked) > .formwork-check {
 
 /* Tooltip wrapper fills the fieldset like other form elements. */
 fieldset.fieldset > .tooltip {
-    width: 100%;
+    @apply w-full;
 }
 
 /* Left-align error text (DaisyUI tooltip defaults to center). */
 fieldset.fieldset > .tooltip > .tooltip-content {
-    text-align: left;
+    @apply text-left;
 }
 
 /* Spacing between multiple error messages inside tooltip. */
 .formwork-errors > p + p {
-    margin-top: 0.125rem;
+    @apply mt-0.5;
 }
 
 /* Intrinsic-width widgets: shrink tooltip wrapper to content so
@@ -400,7 +356,7 @@ fieldset.fieldset > .tooltip:has(> input[type="checkbox"]),
 fieldset.fieldset > .tooltip:has(> div > div > label > input[type="checkbox"]:not(.toggle):not(.hidden)),
 fieldset.fieldset > .tooltip:has(> div > div > label > input[type="radio"]:not(.mask):not(.rating-hidden)),
 fieldset.fieldset > .tooltip:has(> .rating) {
-    width: fit-content;
+    @apply w-fit;
 }
 
 
@@ -415,9 +371,7 @@ fieldset.fieldset > .tooltip:has(> .rating) {
    position:relative anchors the inline-validation tooltip so it
    doesn't create an extra row in the fieldset's CSS Grid. */
 .validated-textarea {
-    display: grid;
-    width: 100%;
-    position: relative;
+    @apply grid w-full relative;
 }
 
 .validated-textarea > textarea,
@@ -427,29 +381,18 @@ fieldset.fieldset > .tooltip:has(> .rating) {
 
 /* Textarea: transparent text + background, visible caret and border */
 .validated-textarea > textarea {
-    background: transparent !important;
-    color: transparent !important;
-    caret-color: var(--color-base-content);
-    z-index: 1;
-    resize: none;
+    @apply !bg-transparent !text-transparent caret-base-content z-1 resize-none;
 }
 
 /* Highlights div: mirrors textarea appearance, no visible border */
 .validated-textarea > .validated-textarea-highlights {
-    @apply textarea;
-    width: 100%;
-    border-color: transparent;
-    pointer-events: none;
-    white-space: pre-wrap;
-    overflow-wrap: break-word;
-    overflow: hidden;
+    @apply textarea w-full border-transparent pointer-events-none whitespace-pre-wrap break-words overflow-hidden;
 }
 
 /* Error highlights inside the overlay */
 .validated-textarea-highlights mark {
+    @apply rounded-sm text-inherit;
     background-color: color-mix(in oklab, var(--color-error) 20%, transparent);
-    border-radius: 2px;
-    color: inherit;
 }
 
 /* Inline validation tooltip: positioned absolutely so it never creates
@@ -457,27 +400,21 @@ fieldset.fieldset > .tooltip:has(> .rating) {
    Anchored to the bottom of .validated-textarea via top:100%.
    overflow:visible keeps the absolutely-positioned tooltip-content visible. */
 .validated-textarea-tooltip {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    height: 0;
-    overflow: visible;
+    @apply absolute top-full left-0 w-full h-0 overflow-visible;
 }
 
 .validated-textarea-tooltip:not(:has(.formwork-errors:not(:empty))) {
-    display: none;
+    @apply hidden;
 }
 
 /* Spacer: zero-height anchor so DaisyUI positions the tooltip below. */
 .validated-textarea-spacer {
-    width: 100%;
-    height: 0;
+    @apply w-full h-0;
 }
 
 /* Left-align error text (consistent with form-level error tooltips). */
 .validated-textarea-tooltip > .tooltip-content {
-    text-align: left;
+    @apply text-left;
 }
 
 /* Error border on textarea when inline validation errors exist.
@@ -485,3 +422,5 @@ fieldset.fieldset > .tooltip:has(> .rating) {
 .validated-textarea:has(.formwork-errors:not(:empty)) > textarea {
     @apply textarea-error;
 }
+
+} /* @layer components */
