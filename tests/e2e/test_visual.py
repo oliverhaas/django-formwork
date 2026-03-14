@@ -4,9 +4,12 @@ percy_snapshot() is a no-op when not running under ``npx percy exec``,
 so these tests run harmlessly in the regular test suite.
 """
 
+import pytest
 from percy import percy_snapshot
 
 from .conftest import submit
+
+pytestmark = pytest.mark.screenshot
 
 
 class TestVisualDefault:
