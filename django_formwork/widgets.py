@@ -108,9 +108,9 @@ class Rating(forms.RadioSelect):
 class PasswordReveal(forms.PasswordInput):
     """Password input with a show/hide toggle button.
 
-    Wraps the input in a DaisyUI ``<label class="input">`` container with a
-    toggle button.  Uses Alpine.js for the reveal functionality.  The
-    template wraps the input inside ``<label class="input">``, so the
+    Wraps the input in a ``<label class="password-reveal">`` container with
+    a toggle button.  Uses Alpine.js for the reveal functionality.  DaisyUI's
+    ``.input`` styling is applied via CSS ``@apply`` on the label, so the
     direct-child CSS selector for text inputs doesn't match it.
 
     Usage::

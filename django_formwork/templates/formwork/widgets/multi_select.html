@@ -20,7 +20,7 @@
     ).join(', ');
   }
 }" @toggle="if ($el.open) $nextTick(() => $refs.search.focus())">
-  <summary{% if id %} id="{{ id }}"{% endif %} class="select text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
+  <summary{% if id %} id="{{ id }}"{% endif %} class="text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
     <span x-text="displayText || 'Select\u2026'" :class="!displayText && 'opacity-50'">Select&#x2026;</span>
   </summary>
   <div class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
@@ -57,7 +57,7 @@
     }).join(', ');
   }
 }"{% if widget.show_search %} @toggle="if ($el.open) $nextTick(() => $refs.search.focus())"{% endif %}>
-  <summary{% if id %} id="{{ id }}"{% endif %} class="select text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
+  <summary{% if id %} id="{{ id }}"{% endif %} class="text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
     <span x-text="displayText || 'Select\u2026'" :class="!displayText && 'opacity-50'">Select&#x2026;</span>
   </summary>
   <div class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">

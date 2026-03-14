@@ -175,14 +175,19 @@ def index(request):
     error_form = ErrorStatesForm(data={}, prefix="err")
     error_form.is_valid()
 
+    field_group_form = ContactForm(prefix="fg")
+    mixed_form = ContactForm(prefix="mix")
+
     return render(
         request,
         "index.html",
         {
             "contact_form": contact_form,
+            "field_group_form": field_group_form,
+            "registration_form": registration_form,
+            "mixed_form": mixed_form,
             "showcase_form": showcase_form,
             "all_widgets_form": all_widgets_form,
-            "registration_form": registration_form,
             "advanced_form": advanced_form,
             "error_form": error_form,
             "themes": DAISYUI_THEMES,
