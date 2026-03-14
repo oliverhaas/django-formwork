@@ -102,11 +102,11 @@ class TestPasswordReveal:
         inp = widget_page.locator('input[name="password"]')
         assert inp.get_attribute("type") == "password"
         # Click reveal button
-        widget_page.locator("label.input button").click()
+        widget_page.locator("label.password-reveal button").click()
         widget_page.wait_for_timeout(100)
         assert inp.get_attribute("type") == "text"
         # Click again to hide
-        widget_page.locator("label.input button").click()
+        widget_page.locator("label.password-reveal button").click()
         widget_page.wait_for_timeout(100)
         assert inp.get_attribute("type") == "password"
 
@@ -122,7 +122,7 @@ class TestPasswordReveal:
         inp = widget_page.locator('input[name="password"]')
         inp.fill("secret")
         # Toggle to show
-        widget_page.locator("label.input button").click()
+        widget_page.locator("label.password-reveal button").click()
         widget_page.wait_for_timeout(200)
         assert (
             widget_page.evaluate(
@@ -140,7 +140,7 @@ class TestPasswordReveal:
         )
 
     def test_wrapper_has_id(self, widget_page):
-        wrapper = widget_page.locator("label.input")
+        wrapper = widget_page.locator("label.password-reveal")
         assert wrapper.get_attribute("id") is not None
         assert "_wrapper" in wrapper.get_attribute("id")
 

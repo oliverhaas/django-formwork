@@ -24,7 +24,7 @@
     this._v++;
   }
 }" @toggle="if ($el.open) $nextTick(() => $refs.search.focus())">
-  <summary{% if id %} id="{{ id }}_trigger"{% endif %} class="select text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
+  <summary{% if id %} id="{{ id }}_trigger"{% endif %} class="text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
     <span x-show="icon" x-html="icon" x-cloak class="shrink-0"></span>
     <span x-text="displayText || 'Select\u2026'" :class="!displayText && 'opacity-50'">{% if widget.selected_label %}{{ widget.selected_label }}{% else %}Select&#x2026;{% endif %}</span>
   </summary>
@@ -70,7 +70,7 @@
     this._v++;
   }
 }" @toggle="if ($el.open) $nextTick(() => $refs.search.focus())">
-  <summary{% if id %} id="{{ id }}_trigger"{% endif %} class="select text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
+  <summary{% if id %} id="{{ id }}_trigger"{% endif %} class="text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
     <span x-show="icon" x-html="icon" x-cloak class="shrink-0"></span>
     <span x-text="displayText || 'Select\u2026'" :class="!displayText && 'opacity-50'">{% if widget.selected_label %}{{ widget.selected_label }}{% else %}Select&#x2026;{% endif %}</span>
   </summary>

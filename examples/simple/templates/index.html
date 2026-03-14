@@ -45,12 +45,47 @@
 
     <div class="card bg-base-100 shadow">
       <div class="card-body">
+        <h2 class="card-title">Field Groups</h2>
+        <p class="text-sm text-base-content/60"><code class="text-xs">field.as_field_group</code> — render individual fields, styled by the renderer.</p>
+        <form method="post">
+          {% csrf_token %}
+          {{ field_group_form.name.as_field_group }}
+          {{ field_group_form.email.as_field_group }}
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
         <h2 class="card-title">Two-Column Layout</h2>
-        <p class="text-sm text-base-content/60">CSS grid on the &lt;form&gt;: <code class="text-xs">grid grid-cols-2 gap-4</code></p>
+        <p class="text-sm text-base-content/60">CSS grid + <code class="text-xs">as_field_group</code> for explicit field placement.</p>
         <form method="post" class="grid grid-cols-2 gap-4">
           {% csrf_token %}
-          {{ registration_form }}
+          {{ registration_form.first_name.as_field_group }}
+          {{ registration_form.last_name.as_field_group }}
+          <div class="col-span-full">{{ registration_form.email.as_field_group }}</div>
+          <div class="col-span-full">{{ registration_form.phone.as_field_group }}</div>
+          {{ registration_form.password.as_field_group }}
+          {{ registration_form.confirm_password.as_field_group }}
           <button type="submit" class="btn btn-primary col-span-full">Register</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
+        <h2 class="card-title">Mixed Layout</h2>
+        <p class="text-sm text-base-content/60">Custom HTML between <code class="text-xs">as_field_group</code> fields — dividers, sections, etc.</p>
+        <form method="post">
+          {% csrf_token %}
+          {{ mixed_form.name.as_field_group }}
+          <div class="divider text-sm">Contact Details</div>
+          {{ mixed_form.email.as_field_group }}
+          {{ mixed_form.priority.as_field_group }}
+          <div class="divider text-sm">Your Message</div>
+          {{ mixed_form.message.as_field_group }}
+          <button type="submit" class="btn btn-primary">Submit</button>
         </form>
       </div>
     </div>
@@ -99,7 +134,7 @@
       <div class="card-body">
         <h2 class="card-title">Standalone Elements</h2>
         <p class="text-sm text-base-content/60">Bare form elements outside <code class="text-xs">&lcub;&lcub; form &rcub;&rcub;</code> — styled automatically.</p>
-        <div class="space-y-4">
+        <div class="flex flex-col gap-4">
           <input type="text" placeholder="A plain text input">
           <select>
             <option value="">Select something…</option>
@@ -108,7 +143,7 @@
           </select>
           <textarea rows="2" placeholder="A plain textarea"></textarea>
           <label><input type="checkbox"> A checkbox</label>
-          <div><input type="file"></div>
+          <input type="file">
         </div>
       </div>
     </div>

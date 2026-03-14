@@ -145,7 +145,7 @@ class TestPasswordReveal:
 
     def test_wrapped_in_label(self):
         soup = render_widget(PasswordReveal())
-        label = soup.find("label", class_="input")
+        label = soup.find("label", class_="password-reveal")
         assert label is not None
         assert label.find("input") is not None
 
@@ -155,21 +155,21 @@ class TestPasswordReveal:
         assert "grow" in inp.get("class", [])
 
     def test_input_inside_label_wrapper(self):
-        """Input is inside <label class="input">, not a direct child of fieldset."""
+        """Input is inside <label class="password-reveal">, not a direct child of fieldset."""
         soup = render_widget(PasswordReveal())
-        label = soup.find("label", class_="input")
+        label = soup.find("label", class_="password-reveal")
         assert label is not None
         inp = label.find("input")
         assert inp is not None
 
     def test_wrapper_has_id(self):
         soup = render_widget(PasswordReveal(), attrs={"id": "id_pw"})
-        label = soup.find("label", class_="input")
+        label = soup.find("label", class_="password-reveal")
         assert label["id"] == "id_pw_wrapper"
 
     def test_no_wrapper_id_without_id(self):
         soup = render_widget(PasswordReveal())
-        label = soup.find("label", class_="input")
+        label = soup.find("label", class_="password-reveal")
         assert not label.has_attr("id")
 
 
@@ -185,7 +185,8 @@ class TestMultiSelect:
         soup = render_widget(widget, name="test")
         summary = soup.find("summary")
         assert summary is not None
-        assert "select" in summary.get("class", [])
+        # DaisyUI .select class is applied via CSS @apply, not in HTML
+        assert "text-left" in summary.get("class", [])
 
     def test_dropdown_content(self):
         widget = MultiSelect(choices=[("a", "A")])
@@ -436,12 +437,13 @@ class TestSearchSelect:
         assert wrapper is not None
 
     def test_renders_summary_trigger(self):
-        """The trigger is a summary element with class 'select'."""
+        """The trigger is a summary element styled as DaisyUI .select via CSS @apply."""
         widget = SearchSelect(choices=[("a", "Alpha")])
         soup = render_widget(widget, name="test")
         summary = soup.find("summary")
         assert summary is not None
-        assert "select" in summary.get("class", [])
+        # DaisyUI .select class is applied via CSS @apply, not in HTML
+        assert "text-left" in summary.get("class", [])
 
     def test_search_input_inside_dropdown(self):
         """Search input is inside the dropdown content, not the trigger."""

@@ -9,11 +9,20 @@
  *
  * Custom formwork widgets are excluded from the base selectors using
  * :not() with classes already present on those elements (e.g. .toggle,
- * .mask, .hidden) or structural context (e.g. label.input,
+ * .mask, .hidden) or structural context (e.g. .password-reveal,
  * .dropdown-content).
  *
- * Everything lives in @layer components so that users can override
- * any formwork style with utility classes or unlayered CSS.
+ * All rules live in @layer components so that:
+ *   - Tailwind utility classes in HTML always win (utilities > components)
+ *   - Users can override with unlayered CSS or higher-priority layers
+ *
+ * We cannot use @layer base because DaisyUI's @apply expansions create
+ * nested sub-layers (e.g. base > daisyui.l1.l2.l3).  Sub-layers have
+ * lower priority than direct parent-layer styles, so Tailwind's preflight
+ * (also in @layer base) would beat the expanded DaisyUI properties.
+ *
+ * @layer components avoids this: components > base in the cascade, so
+ * even sub-layers like components > daisyui.l1.l2.l3 outrank preflight.
  */
 
 @layer components {
@@ -29,9 +38,9 @@
 
 /* Text-like inputs: text, email, url, number, password, date, time,
    datetime-local, search, color, tel.
-   Excludes inputs inside compound widgets (PasswordReveal's <label
-   class="input">, dropdown search inputs) and ComboBox (own rule). */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(label.input *):not(.dropdown-content *) {
+   Excludes inputs inside compound widgets (PasswordReveal's
+   <label class="password-reveal">, dropdown search inputs) and ComboBox. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *) {
     @apply input w-full;
 }
 
@@ -39,9 +48,15 @@ textarea {
     @apply textarea w-full;
 }
 
-select,
-summary.select {
+select {
     @apply select w-full;
+}
+
+/* MultiSelect / SearchSelect summary triggers — DaisyUI .select
+   applied via @apply to avoid @layer utilities conflict. */
+details.search-select > summary,
+details.multiselect > summary {
+    @apply select w-full text-left;
 }
 
 /* Show placeholder-style color when the empty option is selected. */
@@ -79,10 +94,10 @@ div:has(> div > label > input[type="checkbox"]:not(.toggle):not(.hidden)) {
     @apply flex flex-col gap-1;
 }
 
-/* PasswordReveal: the <input> is inside <label class="input">.
-   The label gets DaisyUI's .input class directly; override its width. */
-label.input {
-    @apply w-full;
+/* PasswordReveal wrapper label — DaisyUI .input applied via @apply
+   to avoid @layer utilities conflict. */
+label.password-reveal {
+    @apply input w-full;
 }
 
 /* Custom widget: toggle switch */
@@ -189,7 +204,7 @@ input.combobox-input {
    Django adds aria-invalid="true" on widgets with validation errors.
    ================================================================ */
 
-input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(label.input *):not(.dropdown-content *) {
+input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *) {
     @apply input-error;
 }
 
@@ -226,12 +241,13 @@ input.toggle[aria-invalid="true"] {
 }
 
 /* PasswordReveal: style the wrapper label based on the inner input's state. */
-label.input:has(> input[aria-invalid="true"]) {
+label.password-reveal:has(> input[aria-invalid="true"]) {
     @apply input-error;
 }
 
 /* MultiSelect / SearchSelect: aria-invalid is rendered on the <summary> trigger. */
-summary.select[aria-invalid="true"] {
+details.search-select > summary[aria-invalid="true"],
+details.multiselect > summary[aria-invalid="true"] {
     @apply select-error;
 }
 
@@ -256,15 +272,15 @@ input[type="hidden"] {
 }
 
 /* Dropdown widgets (MultiSelect, SearchSelect):
-   match DaisyUI select focus styling when open.
-   The summary already has class="select" for base styling;
-   this adds the focus outline and pins the border color so it
-   doesn't revert to gray when clicking inside the dropdown. */
-details.dropdown[open] > summary.select {
+   match DaisyUI select focus styling when open — pins the border
+   color so it doesn't revert to gray when clicking inside. */
+details.search-select[open] > summary,
+details.multiselect[open] > summary {
     @apply border-base-content outline-2 outline-offset-2 outline-base-content;
 }
 
-details.dropdown[open] > summary.select[aria-invalid="true"] {
+details.search-select[open] > summary[aria-invalid="true"],
+details.multiselect[open] > summary[aria-invalid="true"] {
     @apply border-error outline-error;
 }
 

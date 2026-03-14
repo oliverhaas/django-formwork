@@ -1,15 +1,21 @@
 """Convenience form base classes with DaisyUI integration.
 
-:class:`FormworkForm` and :class:`FormworkModelForm` use formwork's
-form template to render fields with DaisyUI-styled markup.  All
-component styling (``input``, ``select``, ``textarea``, …) is handled
-by the formwork CSS file via ``@apply`` — no widget attributes are
-mutated in Python.
+:class:`FormworkForm` and :class:`FormworkModelForm` use
+:class:`~django_formwork.renderers.FormworkRenderer` so that both
+``{{ form }}`` and ``{{ field.as_field_group }}`` produce DaisyUI-styled
+markup.  All component styling is handled by the formwork CSS file via
+``@apply`` — no widget attributes are mutated in Python.
+
+Using ``FORM_RENDERER = "django_formwork.FormworkRenderer"`` in settings
+is preferred over these base classes (it applies to *all* forms), but
+these are useful when you want formwork styling on specific forms only.
 """
 
 from __future__ import annotations
 
 from django.forms import Form, ModelForm
+
+from django_formwork.renderers import FormworkRenderer
 
 
 class FormworkForm(Form):
@@ -23,12 +29,10 @@ class FormworkForm(Form):
             message = forms.CharField(widget=forms.Textarea)
     """
 
-    template_name = "django/forms/formwork.html"
-    template_name_div = "django/forms/formwork.html"
+    default_renderer = FormworkRenderer
 
 
 class FormworkModelForm(ModelForm):
     """ModelForm base class with DaisyUI styling."""
 
-    template_name = "django/forms/formwork.html"
-    template_name_div = "django/forms/formwork.html"
+    default_renderer = FormworkRenderer
