@@ -214,7 +214,7 @@ PAGE_TEMPLATE = (
 <head>
   <meta charset="utf-8">
   <title>e2e test</title>
-  <link rel="stylesheet" href="/static/formwork/formwork.css">
+  <link rel="stylesheet" href="/static/formwork/formwork-dist.css">
   <script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>
   <script src="https://unpkg.com/idiomorph@0.7/dist/idiomorph-ext.min.js"></script>
   <script src="/static/formwork/formwork.js"></script>

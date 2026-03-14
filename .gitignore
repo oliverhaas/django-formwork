@@ -6,6 +6,8 @@ __pycache__/
 *~
 *.log
 *.json
+!package.json
+!package-lock.json
 *.wsgi
 local_settings.py
 development_settings.py
@@ -32,3 +34,5 @@ CLAUDE.md
 site/
 *.sqlite3
 .playwright-mcp/
+node_modules/
+formwork-dist.css

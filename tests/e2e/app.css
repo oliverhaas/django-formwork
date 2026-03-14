@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: light;
+}
+@source "../../django_formwork/";
+@import "../../django_formwork/static/formwork/formwork.css";
