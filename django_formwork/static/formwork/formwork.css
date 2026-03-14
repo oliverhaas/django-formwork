@@ -59,12 +59,23 @@ details.multiselect > summary {
     @apply select w-full text-left;
 }
 
-/* Show placeholder-style color when the empty option is selected. */
-select:has(> option[value=""]:checked) {
+/* Show placeholder-style color when no value is selected.
+   Native <select>: detected via the empty-value option being :checked.
+   SearchSelect / MultiSelect: Alpine toggles .formwork-placeholder on the summary. */
+select:has(> option[value=""]:checked),
+.formwork-placeholder {
     color: color-mix(in oklab, currentColor 50%, transparent);
 }
 
-select:has(> option[value=""]:checked) > option {
+/* Placeholder option in the native dropdown — explicit color so the
+   browser renders it gray (options don't inherit from <select>). */
+select > option[value=""] {
+    color: color-mix(in oklab, currentColor 50%, transparent);
+}
+
+/* Non-placeholder options: restore full color so they aren't affected
+   by the grayed-out select trigger. */
+select:has(> option[value=""]:checked) > option:not([value=""]) {
     @apply text-base-content;
 }
 
