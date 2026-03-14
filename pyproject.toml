@@ -98,11 +98,6 @@ suppress-none-returning = true
   "S101",    # assert in tests
   "S105",    # Hardcoded passwords in test settings
 ]
-"examples/**" = [
-  "ANN",    # Type annotations not needed in examples
-  "INP001", # Examples are not packages
-  "S105",   # Hardcoded secrets fine in examples
-]
 
 [tool.mypy]
 python_version = "3.13"
@@ -134,7 +129,6 @@ DJANGO_SETTINGS_MODULE = "settings.base"
 addopts = "--cov=django_formwork --cov-report=term-missing --cov-report=xml --no-cov-on-fail"
 pythonpath = ["tests"]
 testpaths = ["tests"]
-markers = ["screenshot: Percy visual regression tests"]
 xfail_strict = true
 
 [tool.coverage.run]

@@ -1,7 +1,0 @@
-{% load formwork %}<form id="contact-form" method="post" hx-post="" hx-swap="morph:outerHTML" hx-target="#contact-form" hx-ext="morph">
-  {% csrf_token %}
-  {{ contact_form }}
-  <div class="mt-4">
-    <button type="submit" class="btn btn-primary">Send</button>
-  </div>
-</form>

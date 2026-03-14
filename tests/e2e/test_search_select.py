@@ -1,0 +1,213 @@
+"""E2e tests for SearchSelect widget: plain, with icons, and htmx."""
+
+from percy import percy_snapshot
+from playwright.sync_api import expect
+
+from .conftest import submit
+
+
+class TestSearchSelectPlain:
+    """SearchSelect with static choices, no icons."""
+
+    def _get(self, page):
+        return page.locator("details.dropdown.search-select").first
+
+    def test_renders(self, search_select_page):
+        sel = self._get(search_select_page)
+        assert sel.is_visible()
+        percy_snapshot(search_select_page, "SearchSelect - Default")
+
+    def test_open_close_dropdown(self, search_select_page):
+        sel = self._get(search_select_page)
+        summary = sel.locator("summary")
+        summary.click()
+        search_select_page.wait_for_timeout(200)
+        assert sel.get_attribute("open") is not None
+        percy_snapshot(search_select_page, "SearchSelect Plain - Open")
+        summary.click()
+        search_select_page.wait_for_timeout(200)
+
+    def test_search_filters_options(self, search_select_page):
+        sel = self._get(search_select_page)
+        search_select_page.evaluate("""() => {
+            const dd = document.querySelector('details.dropdown.search-select');
+            dd.open = true;
+            dd.dispatchEvent(new Event('toggle'));
+        }""")
+        search_select_page.wait_for_timeout(200)
+        search = sel.locator('.dropdown-content input[type="text"]')
+        search.fill("Tok")
+        search_select_page.wait_for_timeout(100)
+        assert sel.locator("button", has_text="Tokyo").is_visible()
+        assert not sel.locator("button", has_text="London").is_visible()
+
+    def test_pick_option_sets_value(self, search_select_page):
+        sel = self._get(search_select_page)
+        hidden = sel.locator('input[type="hidden"]')
+        search_select_page.evaluate("""() => {
+            const dd = document.querySelector('details.dropdown.search-select');
+            dd.open = true;
+            dd.dispatchEvent(new Event('toggle'));
+        }""")
+        search_select_page.wait_for_timeout(200)
+        sel.locator("button", has_text="London").click()
+        search_select_page.wait_for_timeout(100)
+        assert hidden.input_value() == "ldn"
+
+    def test_pick_closes_dropdown(self, search_select_page):
+        sel = self._get(search_select_page)
+        summary = sel.locator("summary")
+        summary.click()
+        search_select_page.wait_for_timeout(200)
+        sel.locator("button", has_text="London").click()
+        search_select_page.wait_for_timeout(200)
+        assert sel.get_attribute("open") is None
+        assert "London" in summary.text_content()
+
+    def test_morph_preserves_value(self, search_select_page):
+        sel = self._get(search_select_page)
+        search_select_page.evaluate("""
+            document.querySelector('details.dropdown.search-select').open = true;
+        """)
+        search_select_page.wait_for_timeout(200)
+        sel.locator("button", has_text="London").click()
+        search_select_page.wait_for_timeout(200)
+        hidden = sel.locator('input[type="hidden"]')
+        assert hidden.input_value() == "ldn"
+        submit(search_select_page)
+        hidden = search_select_page.locator(
+            "details.dropdown.search-select input[type='hidden']",
+        ).first
+        assert hidden.input_value() == "ldn"
+        summary = search_select_page.locator(
+            "details.dropdown.search-select summary",
+        ).first
+        assert "London" in summary.text_content()
+
+    def test_morph_preserves_dropdown_closed(self, search_select_page):
+        sel = self._get(search_select_page)
+        search_select_page.evaluate("""
+            document.querySelector('details.dropdown.search-select').open = true;
+        """)
+        search_select_page.wait_for_timeout(200)
+        sel.locator("button", has_text="Tokyo").click()
+        search_select_page.wait_for_timeout(200)
+        assert sel.get_attribute("open") is None
+        submit(search_select_page)
+        assert sel.get_attribute("open") is None
+
+    def test_morph_preserves_dropdown_open(self, search_select_page):
+        search_select_page.evaluate("""
+            document.querySelector('details.dropdown.search-select').open = true;
+        """)
+        search_select_page.wait_for_timeout(200)
+        search_select_page.evaluate("""
+            document.querySelector('#widget-form').noValidate = true;
+            document.querySelector('#widget-form button[type="submit"]').click();
+        """)
+        search_select_page.wait_for_timeout(500)
+        sel = self._get(search_select_page)
+        assert sel.get_attribute("open") is not None
+
+    def test_wrapper_has_id(self, search_select_page):
+        sel = self._get(search_select_page)
+        assert sel.get_attribute("id") is not None
+        assert "_searchselect" in sel.get_attribute("id")
+
+
+class TestSearchSelectIcons:
+    """SearchSelect with icons in choices."""
+
+    def _get(self, page):
+        return page.locator("details.dropdown.search-select").nth(1)
+
+    def test_renders(self, search_select_page):
+        sel = self._get(search_select_page)
+        assert sel.is_visible()
+
+    def test_pick_shows_icon_in_summary(self, search_select_page):
+        sel = self._get(search_select_page)
+        summary = sel.locator("summary")
+        search_select_page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            dds[1].open = true;
+            dds[1].dispatchEvent(new Event('toggle'));
+        }""")
+        search_select_page.wait_for_timeout(200)
+        sel.locator("button", has_text="New York").click()
+        search_select_page.wait_for_timeout(100)
+        assert "New York" in summary.text_content()
+        percy_snapshot(search_select_page, "SearchSelect Icons - Selected")
+
+
+class TestSearchSelectHtmx:
+    """SearchSelect with server-side search via htmx."""
+
+    def _get(self, page):
+        return page.locator("details.dropdown.search-select").nth(2)
+
+    def _open_and_load(self, page):
+        sel = self._get(page)
+        page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            dds[2].open = true;
+            dds[2].dispatchEvent(new Event('toggle'));
+        }""")
+        page.wait_for_timeout(200)
+        page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            const search = dds[2].querySelector('.dropdown-content input[type="text"]');
+            search.focus();
+            search.dispatchEvent(new Event('focus'));
+        }""")
+        page.wait_for_timeout(1000)
+        return sel
+
+    def test_renders(self, search_select_page):
+        sel = self._get(search_select_page)
+        assert sel.is_visible()
+
+    def test_open_loads_results(self, search_select_page):
+        sel = self._open_and_load(search_select_page)
+        buttons = sel.locator("ul button")
+        assert buttons.count() >= 1
+
+    def test_search_filters_via_htmx(self, search_select_page):
+        sel = self._open_and_load(search_select_page)
+        expect(sel.locator("ul button")).to_have_count(4, timeout=3000)
+        search_select_page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            const search = dds[2].querySelector('.dropdown-content input[type="text"]');
+            search.value = 'Tok';
+            search.dispatchEvent(new Event('input', {bubbles: true}));
+        }""")
+        expect(sel.locator("ul button")).to_have_count(1, timeout=3000)
+        assert "Tokyo" in sel.locator("ul button").first.text_content()
+
+    def test_pick_sets_value(self, search_select_page):
+        sel = self._open_and_load(search_select_page)
+        hidden = sel.locator('input[type="hidden"]')
+        search_select_page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            const search = dds[2].querySelector('.dropdown-content input[type="text"]');
+            search.value = 'Lon';
+            search.dispatchEvent(new Event('input', {bubbles: true}));
+        }""")
+        search_select_page.wait_for_timeout(1000)
+        sel.locator("ul button", has_text="London").click()
+        search_select_page.wait_for_timeout(200)
+        assert hidden.input_value() == "ldn"
+
+    def test_no_results_message(self, search_select_page):
+        sel = self._open_and_load(search_select_page)
+        expect(sel.locator("ul button")).to_have_count(4, timeout=3000)
+        search_select_page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            const search = dds[2].querySelector('.dropdown-content input[type="text"]');
+            htmx.ajax('GET', search.getAttribute('hx-get') + '?q=zzzzz&type=search_select', {
+                target: search.getAttribute('hx-target'),
+                swap: 'innerHTML',
+            });
+        }""")
+        no_results = sel.locator("li", has_text="No results")
+        expect(no_results).to_be_visible(timeout=3000)

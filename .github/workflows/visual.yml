@@ -36,6 +36,6 @@ jobs:
         run: npx @tailwindcss/cli -i tests/e2e/app.css -o django_formwork/static/formwork/formwork-dist.css
 
       - name: Run Percy visual tests
-        run: npx percy exec -- uv run pytest tests/ -m screenshot -x
+        run: npx percy exec -- uv run pytest tests/e2e/ -x
         env:
           PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}

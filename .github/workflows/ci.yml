@@ -75,7 +75,7 @@ jobs:
         run: uv run playwright install --with-deps chromium
 
       - name: Run tests
-        run: uv run pytest tests/ -n auto -m "not screenshot"
+        run: uv run pytest tests/ -n auto
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.13' && matrix.django-version == '5.2'
