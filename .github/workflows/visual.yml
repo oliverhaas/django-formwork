@@ -1,0 +1,41 @@
+name: Visual Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  percy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Python dependencies
+        run: uv sync --group dev
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: uv run playwright install --with-deps chromium
+
+      - name: Build CSS
+        run: npx @tailwindcss/cli -i tests/e2e/app.css -o django_formwork/static/formwork/formwork-dist.css
+
+      - name: Run Percy visual tests
+        run: npx percy exec -- uv run pytest tests/e2e/test_visual.py -x
+        env:
+          PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}

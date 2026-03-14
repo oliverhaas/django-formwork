@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "devDependencies": {
+    "@percy/cli": "^1",
+    "@tailwindcss/cli": "^4",
+    "tailwindcss": "^4",
+    "daisyui": "^5"
+  }
+}

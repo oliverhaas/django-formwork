@@ -43,6 +43,7 @@ dev = [
   "pytest-asyncio==1.3.0",
   "pytest-cov==7.0.0",
   "pytest-django==4.12.0",
+  "percy-playwright==1.0.1",
   "pytest-playwright==0.7.2",
   "pytest-xdist==3.8.0",
   "pytest==9.0.2",

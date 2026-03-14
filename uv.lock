@@ -263,6 +263,7 @@ dev = [
     { name = "beautifulsoup4" },
     { name = "django-stubs" },
     { name = "mypy" },
+    { name = "percy-playwright" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -287,6 +288,7 @@ dev = [
     { name = "beautifulsoup4", specifier = "==4.14.3" },
     { name = "django-stubs", specifier = "==5.2.9" },
     { name = "mypy", specifier = "==1.19.1" },
+    { name = "percy-playwright", specifier = "==1.0.1" },
     { name = "pre-commit", specifier = "==4.5.1" },
     { name = "pytest", specifier = "==9.0.2" },
     { name = "pytest-asyncio", specifier = "==1.3.0" },
@@ -746,6 +748,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/fa/36/e27608899f9b8d4dff0617b2d9ab17ca5608956ca44461ac14ac48b44015/pathspec-1.0.4.tar.gz", hash = "sha256:0210e2ae8a21a9137c0d470578cb0e595af87edaa6ebf12ff176f14a02e0e645", size = 131200, upload-time = "2026-01-27T03:59:46.938Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ef/3c/2c197d226f9ea224a9ab8d197933f9da0ae0aac5b6e0f884e2b8d9c8e9f7/pathspec-1.0.4-py3-none-any.whl", hash = "sha256:fb6ae2fd4e7c921a165808a552060e722767cfa526f99ca5156ed2ce45a5c723", size = 55206, upload-time = "2026-01-27T03:59:45.137Z" },
+]
+
+[[package]]
+name = "percy-playwright"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "playwright" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/4d/cae2a2e5533f82a5a289721e17e30b5bf5ae3941da4e267857a8f438876b/percy_playwright-1.0.1.tar.gz", hash = "sha256:08ad5640c033eb0bdbce56de1bccd28055b4713cf6358ae228864cd8e8f0d6a6", size = 14757, upload-time = "2025-04-16T06:48:51.091Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/33/7d/f90af8c77fe37886bade7504ba59c26b4aef15b88ec275e32739f0203861/percy_playwright-1.0.1-py3-none-any.whl", hash = "sha256:94a5426ef44075c6b6cc1087f45b39edd7239c1f9213e7959c1d1892340ffea7", size = 8810, upload-time = "2025-04-16T06:48:50.204Z" },
 ]
 
 [[package]]
