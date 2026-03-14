@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i app.css -o static/dist/styles.css --minify",
+    "watch:css": "tailwindcss -i app.css -o static/dist/styles.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4",
+    "tailwindcss": "^4",
+    "daisyui": "^5"
+  }
+}
