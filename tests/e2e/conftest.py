@@ -21,6 +21,14 @@ def submit(page):
     page.wait_for_timeout(500)
 
 
+def _navigate(page, live_server, path):
+    """Navigate to a page and wait for Alpine + htmx init."""
+    page.goto(f"{live_server.url}{path}")
+    page.wait_for_load_state("domcontentloaded")
+    page.wait_for_timeout(300)  # Alpine.js init
+    return page
+
+
 @pytest.fixture(autouse=True)
 def _e2e_settings(settings):
     """Override Django settings for e2e tests."""
@@ -39,9 +47,60 @@ def _e2e_settings(settings):
 
 
 @pytest.fixture
-def widget_page(page, live_server):
-    """Navigate to the widget test page and wait for Alpine + htmx init."""
-    page.goto(f"{live_server.url}/")
-    page.wait_for_load_state("domcontentloaded")
-    page.wait_for_timeout(300)  # Alpine.js init
-    return page
+def basic_page(page, live_server):
+    """Navigate to the basic forms page."""
+    return _navigate(page, live_server, "/basic/")
+
+
+@pytest.fixture
+def elements_page(page, live_server):
+    """Navigate to the standalone elements page."""
+    return _navigate(page, live_server, "/elements/")
+
+
+@pytest.fixture
+def simple_page(page, live_server):
+    """Navigate to the simple custom widgets page."""
+    return _navigate(page, live_server, "/simple/")
+
+
+@pytest.fixture
+def search_select_page(page, live_server):
+    """Navigate to the SearchSelect page."""
+    return _navigate(page, live_server, "/search-select/")
+
+
+@pytest.fixture
+def multi_select_page(page, live_server):
+    """Navigate to the MultiSelect page."""
+    return _navigate(page, live_server, "/multi-select/")
+
+
+@pytest.fixture
+def combobox_page(page, live_server):
+    """Navigate to the ComboBox page."""
+    return _navigate(page, live_server, "/combobox/")
+
+
+@pytest.fixture
+def rating_page(page, live_server):
+    """Navigate to the Rating page."""
+    return _navigate(page, live_server, "/rating/")
+
+
+@pytest.fixture
+def uploads_page(page, live_server):
+    """Navigate to the file uploads page."""
+    return _navigate(page, live_server, "/uploads/")
+
+
+@pytest.fixture
+def textarea_page(page, live_server):
+    """Navigate to the ValidatedTextarea page."""
+    return _navigate(page, live_server, "/textarea/")
+
+
+@pytest.fixture
+def complex_page(page, live_server):
+    """Navigate to the complex forms page."""
+    return _navigate(page, live_server, "/complex/")
