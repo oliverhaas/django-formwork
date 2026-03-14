@@ -134,6 +134,7 @@ DJANGO_SETTINGS_MODULE = "settings.base"
 addopts = "--cov=django_formwork --cov-report=term-missing --cov-report=xml --no-cov-on-fail"
 pythonpath = ["tests"]
 testpaths = ["tests"]
+markers = ["screenshot: Percy visual regression tests"]
 xfail_strict = true
 
 [tool.coverage.run]

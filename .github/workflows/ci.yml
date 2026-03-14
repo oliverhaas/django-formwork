@@ -71,8 +71,11 @@ jobs:
             uv pip install "Django~=${{ matrix.django-version }}.0"
           fi
 
+      - name: Install Playwright browsers
+        run: uv run playwright install --with-deps chromium
+
       - name: Run tests
-        run: uv run pytest tests/ -n auto --ignore=tests/e2e/
+        run: uv run pytest tests/ -n auto -m "not screenshot"
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.13' && matrix.django-version == '5.2'
