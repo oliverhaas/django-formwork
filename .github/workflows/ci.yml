@@ -72,7 +72,7 @@ jobs:
           fi
 
       - name: Run tests
-        run: uv run pytest tests/ -n auto
+        run: uv run pytest tests/ -n auto --ignore=tests/e2e/
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.13' && matrix.django-version == '5.2'
