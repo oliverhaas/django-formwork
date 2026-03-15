@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://oliverhaas.github.io/django-formwork/main/reference/changelog/">
       
       
-        <link rel="prev" href="../../getting-started/quickstart/">
+        <link rel="prev" href="../../architecture/">
       
       
       
@@ -457,6 +457,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -468,6 +496,24 @@
       
         
       
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
         
@@ -485,6 +531,53 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#010a1-2026-03-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0a1 (2026-03-15)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0a1 (2026-03-15)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -518,6 +611,42 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#010a1-2026-03-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0a1 (2026-03-15)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0a1 (2026-03-15)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -537,7 +666,38 @@
 
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
-<p><em>No releases yet.</em></p>
+<h2 id="010a1-2026-03-15">0.1.0a1 (2026-03-15)<a class="headerlink" href="#010a1-2026-03-15" title="Permanent link">&para;</a></h2>
+<p>First alpha release.</p>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>FormworkRenderer</strong> — Custom form renderer that applies DaisyUI-styled templates to all forms via <code>FORM_RENDERER</code> setting</li>
+<li><strong>FormworkForm / FormworkModelForm</strong> — Convenience base classes for per-form styling</li>
+<li><strong>Form template</strong> (<code>formwork.html</code>) — Renders each field inside <code>&lt;fieldset class="fieldset"&gt;</code> with labels, help text, and error tooltips</li>
+<li><strong>Field template</strong> (<code>formwork_field.html</code>) — Single source of truth for field rendering with DaisyUI tooltip errors</li>
+<li><strong>CSS architecture</strong> — All DaisyUI classes applied via <code>@apply</code> in <code>formwork.css</code> (inside <code>@layer components</code>), not in Python or templates</li>
+<li><strong>Template tags</strong> — <code>{% formwork_css %}</code> and <code>{% formwork_js %}</code> for including static assets</li>
+<li><strong>Custom widgets:</strong><ul>
+<li><code>Toggle</code> — Checkbox as DaisyUI toggle switch</li>
+<li><code>Range</code> — HTML5 range slider</li>
+<li><code>Rating</code> — Star rating with radio inputs (with optional clear button)</li>
+<li><code>PasswordReveal</code> — Password input with show/hide toggle (Alpine.js)</li>
+<li><code>SearchSelect</code> — Single-select dropdown with text search (static or htmx)</li>
+<li><code>MultiSelect</code> — Multi-select dropdown with checkboxes (static or htmx)</li>
+<li><code>ComboBox</code> — Text input with autocomplete suggestions (static or htmx, single or multiple)</li>
+<li><code>DataList</code> — Text input with native <code>&lt;datalist&gt;</code> suggestions</li>
+<li><code>FileDropZone</code> — Drag-and-drop file upload with size/type validation</li>
+<li><code>ImageDropZone</code> — Drag-and-drop image upload with preview</li>
+<li><code>ValidatedTextarea</code> — Textarea with server-side validation and word highlighting</li>
+</ul>
+</li>
+<li><strong>Server-side views:</strong><ul>
+<li><code>FormworkSearchView</code> — Base view for dropdown search endpoints</li>
+<li><code>FormworkValidateView</code> — Base view for textarea validation with <code>&lt;mark&gt;</code> highlighting</li>
+</ul>
+</li>
+<li><strong>Idiomorph integration</strong> (<code>formwork.js</code>) — Preserves Alpine.js state, <code>&lt;details&gt;</code> open state, <code>x-text</code>/<code>x-html</code> content, and <code>x-for</code>/<code>x-if</code> generated nodes during htmx morph swaps</li>
+<li>Django 5.2, 6.0 support; Python 3.12, 3.13, 3.14</li>
+</ul>
 
 
 

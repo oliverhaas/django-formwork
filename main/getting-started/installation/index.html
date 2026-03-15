@@ -354,6 +354,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -370,6 +388,86 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#install-the-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install the package
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configure-django" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Django
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frontend-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend dependencies
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Frontend dependencies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tailwind-css-daisyui-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tailwind CSS + DaisyUI setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#htmx-alpinejs-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        htmx + Alpine.js (optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -472,6 +570,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/changelog/" class="md-nav__link">
         
   
@@ -520,6 +646,75 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#install-the-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install the package
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configure-django" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Django
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frontend-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend dependencies
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Frontend dependencies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tailwind-css-daisyui-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tailwind CSS + DaisyUI setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#htmx-alpinejs-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        htmx + Alpine.js (optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -539,7 +734,47 @@
 
 
 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
-<p><em>Coming soon.</em></p>
+<h2 id="install-the-package">Install the package<a class="headerlink" href="#install-the-package" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>django-formwork
+</span></code></pre></div>
+<p>Or with uv:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>add<span class="w"> </span>django-formwork
+</span></code></pre></div>
+<h2 id="configure-django">Configure Django<a class="headerlink" href="#configure-django" title="Permanent link">&para;</a></h2>
+<p>Add <code>django_formwork</code> to your installed apps and set the form renderer:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># settings.py</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="o">...</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="s2">&quot;django_formwork&quot;</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">]</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Makes ALL forms use formwork templates automatically</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">FORM_RENDERER</span> <span class="o">=</span> <span class="s2">&quot;django_formwork.FormworkRenderer&quot;</span>
+</span></code></pre></div>
+<h2 id="frontend-dependencies">Frontend dependencies<a class="headerlink" href="#frontend-dependencies" title="Permanent link">&para;</a></h2>
+<p>Formwork uses <a href="https://daisyui.com/">DaisyUI</a> 5 for component styling and <a href="https://tailwindcss.com/">Tailwind CSS</a> 4+ for the build step. You need to include these in your project.</p>
+<h3 id="tailwind-css-daisyui-setup">Tailwind CSS + DaisyUI setup<a class="headerlink" href="#tailwind-css-daisyui-setup" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>npm<span class="w"> </span>install<span class="w"> </span>-D<span class="w"> </span>tailwindcss<span class="w"> </span>@tailwindcss/cli<span class="w"> </span>daisyui@5
+</span></code></pre></div>
+<p>In your main CSS file, import Tailwind and DaisyUI, then import formwork's CSS:</p>
+<div class="language-css highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">&quot;tailwindcss&quot;</span><span class="p">;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">&quot;daisyui&quot;</span><span class="p">;</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">&quot;../../path/to/site-packages/django_formwork/static/formwork/formwork.css&quot;</span><span class="p">;</span>
+</span></code></pre></div>
+<h3 id="htmx-alpinejs-optional">htmx + Alpine.js (optional)<a class="headerlink" href="#htmx-alpinejs-optional" title="Permanent link">&para;</a></h3>
+<p>For dynamic widgets (server-side search, password reveal, combo boxes, etc.):</p>
+<div class="language-html highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;https://cdn.jsdelivr.net/npm/htmx.org@2&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;https://cdn.jsdelivr.net/npm/idiomorph@0.7&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">defer</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;https://cdn.jsdelivr.net/npm/alpinejs@3&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>{% load formwork %}
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>{% formwork_js %}
+</span></code></pre></div>
+<ul>
+<li><strong>htmx</strong> — Powers server-side search and validation</li>
+<li><strong>idiomorph</strong> — DOM morphing for htmx responses (preserves form state)</li>
+<li><strong>Alpine.js</strong> — Client-side interactivity for custom widgets</li>
+<li><strong>formwork.js</strong> — Configures idiomorph to preserve Alpine state during morphs</li>
+</ul>
 
 
 
