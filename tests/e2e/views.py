@@ -234,14 +234,25 @@ class SearchSelectForm(FormworkForm):
                 "tyo": "\U0001f5fc",
                 "par": "\U0001f1eb\U0001f1f7",
             },
+            descriptions={
+                "nyc": "The Big Apple",
+                "ldn": "Capital of England",
+                "tyo": "Capital of Japan",
+                "par": "City of Light",
+            },
         ),
         required=False,
-        label="City (with icons)",
+        label="City (icons + descriptions)",
     )
     city_htmx = forms.ChoiceField(
         widget=SearchSelect(search_url="/e2e/search/cities/"),
         required=False,
         label="City (server-side search)",
+    )
+    country_htmx_icons = forms.ChoiceField(
+        widget=SearchSelect(search_url="/e2e/search/countries/"),
+        required=False,
+        label="Country (server search, icons + descriptions)",
     )
 
 
@@ -490,6 +501,58 @@ class E2ELanguageSearchView(FormworkSearchView):
         return [lang for lang in E2E_LANGUAGES if query.lower() in lang["label"].lower()]
 
 
+_COUNTRY_DESCRIPTIONS = {
+    "ar": "South America",
+    "au": "Oceania",
+    "br": "South America",
+    "ca": "North America",
+    "cn": "East Asia",
+    "de": "Central Europe",
+    "eg": "North Africa",
+    "es": "Southern Europe",
+    "fr": "Western Europe",
+    "gb": "Northern Europe",
+    "gr": "Southern Europe",
+    "id": "Southeast Asia",
+    "il": "Middle East",
+    "in": "South Asia",
+    "it": "Southern Europe",
+    "jp": "East Asia",
+    "kr": "East Asia",
+    "mx": "North America",
+    "ng": "West Africa",
+    "nl": "Western Europe",
+    "no": "Northern Europe",
+    "nz": "Oceania",
+    "pe": "South America",
+    "ph": "Southeast Asia",
+    "pl": "Central Europe",
+    "pt": "Southern Europe",
+    "se": "Northern Europe",
+    "sg": "Southeast Asia",
+    "th": "Southeast Asia",
+    "tr": "Eurasia",
+    "us": "North America",
+}
+
+E2E_COUNTRIES_SEARCH = [
+    {
+        "value": code,
+        "label": name,
+        "icon": flag,
+        "description": _COUNTRY_DESCRIPTIONS.get(code, ""),
+    }
+    for code, flag, name in _COUNTRIES
+]
+
+
+class E2ECountrySearchView(FormworkSearchView):
+    def get_results(self, query, **kwargs):
+        if not query:
+            return E2E_COUNTRIES_SEARCH
+        return [c for c in E2E_COUNTRIES_SEARCH if query.lower() in c["label"].lower()]
+
+
 class E2EBioValidateView(FormworkValidateView):
     def get_errors(self, text, **kwargs):
         errors = []
@@ -573,16 +636,6 @@ def _form_html(url, form_id):
         f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
         f'hx-ext="morph">\n'
         "  {% csrf_token %}\n"
-        "  {% if success %}\n"
-        '  <div role="alert" class="alert alert-success">\n'
-        '    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" '
-        'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
-        'stroke-linecap="round" stroke-linejoin="round">'
-        '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>'
-        '<path d="m9 11 3 3L22 4"/></svg>\n'
-        "    <span>Saved.</span>\n"
-        "  </div>\n"
-        "  {% endif %}\n"
         "  {{ form }}\n"
         '  <div class="flex gap-2 mt-4">\n'
         '    <button type="submit" class="btn btn-primary">Submit</button>\n'
@@ -603,16 +656,6 @@ def _autosave_form_html(url, form_id):
         f'hx-ext="morph" '
         f'hx-trigger="input delay:500ms, change delay:200ms">\n'
         "  {% csrf_token %}\n"
-        "  {% if success %}\n"
-        '  <div role="alert" class="alert alert-success">\n'
-        '    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" '
-        'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
-        'stroke-linecap="round" stroke-linejoin="round">'
-        '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>'
-        '<path d="m9 11 3 3L22 4"/></svg>\n'
-        "    <span>Saved.</span>\n"
-        "  </div>\n"
-        "  {% endif %}\n"
         "  {{ form }}\n"
         '  <div class="flex gap-2 mt-4">\n'
         f'    <button type="submit" class="btn btn-primary" '
@@ -842,7 +885,7 @@ def _form_view(request: HttpRequest, form_class: type, key: str) -> HttpResponse
         valid = form.is_valid()
         if valid:
             request.session[session_key] = _to_session(form.cleaned_data)
-        ctx = {"form": form, "success": valid, "saved": valid}
+        ctx = {"form": form, "saved": valid}
         if is_htmx:
             template = engine.from_string(form_tmpl)
             return HttpResponse(template.render(ctx, request))
@@ -884,7 +927,7 @@ def basic_view(request: HttpRequest) -> HttpResponse:
         valid = form.is_valid()
         if valid:
             form.save()
-        ctx = {"form": form, "success": valid, "saved": valid}
+        ctx = {"form": form, "saved": valid}
         if is_htmx:
             template = engine.from_string(form_tmpl)
             return HttpResponse(template.render(ctx, request))
@@ -929,7 +972,6 @@ def autosave_view(request: HttpRequest) -> HttpResponse:
         ctx = {
             "form": form,
             "saved": valid or obj is not None,
-            "success": valid and is_submit,
         }
         template = engine.from_string(form_tmpl if is_htmx else page_tmpl)
         return HttpResponse(template.render(ctx, request))
