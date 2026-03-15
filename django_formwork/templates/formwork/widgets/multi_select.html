@@ -6,6 +6,7 @@
     if (this.selected.has(value)) this.selected.delete(value);
     else this.selected.set(value, [label, icon || '']);
     this._v++;
+    this.$nextTick(() => this.$root.dispatchEvent(new Event('change', {bubbles: true})));
   },
   get noResults() {
     if (!this.search) return false;

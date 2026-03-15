@@ -10,7 +10,6 @@ urlpatterns = [
     path("search-select/", views.search_select_view),
     path("multi-select/", views.multi_select_view),
     path("combobox/", views.combobox_view),
-    path("rating/", views.rating_view),
     path("uploads/", views.uploads_view),
     path("textarea/", views.textarea_view),
     path("complex/", views.complex_view),

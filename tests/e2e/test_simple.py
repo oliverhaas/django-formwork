@@ -1,4 +1,4 @@
-"""E2e tests for simple custom widgets: Toggle, Range, PasswordReveal, DataList."""
+"""E2e tests for simple custom widgets: Toggle, Range, PasswordReveal, DataList, Rating."""
 
 from percy import percy_snapshot
 
@@ -148,3 +148,72 @@ class TestDataList:
         inp.fill("Chrome")
         submit(simple_page)
         assert inp.input_value() == "Chrome"
+
+
+class TestRating:
+    """Star rating widget (5 stars, required)."""
+
+    def test_renders_5_stars(self, simple_page):
+        rating = simple_page.locator("#id_stars")
+        stars = rating.locator('input[type="radio"]')
+        assert stars.count() == 5
+        percy_snapshot(simple_page, "Rating - Default")
+
+    def test_click_selects_star(self, simple_page):
+        rating = simple_page.locator("#id_stars")
+        third_star = rating.locator('input[type="radio"]').nth(2)
+        third_star.click(force=True)
+        assert third_star.is_checked()
+
+    def test_has_mask_star_class(self, simple_page):
+        star = simple_page.locator('#id_stars input[type="radio"]').first
+        cls = star.get_attribute("class") or ""
+        assert "mask-star-2" in cls
+
+    def test_morph_preserves_value(self, simple_page):
+        simple_page.evaluate("""
+            const star = document.querySelector('#id_stars input[value="3"]');
+            star.checked = true;
+            star.dispatchEvent(new Event('change', {bubbles: true}));
+        """)
+        submit(simple_page)
+        checked = simple_page.evaluate(
+            "document.querySelector('#id_stars input:checked')?.value || ''",
+        )
+        assert checked == "3"
+
+
+class TestClearableRating:
+    """Clearable rating variant (required=False, allow_clear=True)."""
+
+    def test_renders_with_clear_button(self, simple_page):
+        rating = simple_page.locator("#id_clearable_rating")
+        stars = rating.locator('input[type="radio"]:not(.rating-hidden)')
+        assert stars.count() == 5
+        # Clear button is a sibling of the .rating div
+        clear_btn = simple_page.locator("#id_clearable_rating_wrapper .rating-clear")
+        assert clear_btn.is_visible()
+
+    def test_clear_button_clears_selection(self, simple_page):
+        # Select a star first
+        simple_page.evaluate("""
+            const star = document.querySelector('#id_clearable_rating input[value="3"]');
+            star.checked = true;
+            star.dispatchEvent(new Event('change', {bubbles: true}));
+        """)
+        checked = simple_page.evaluate(
+            "document.querySelector('#id_clearable_rating input:checked')?.value || ''",
+        )
+        assert checked == "3"
+        # Click clear button
+        simple_page.locator("#id_clearable_rating_wrapper .rating-clear").click()
+        checked = simple_page.evaluate(
+            "document.querySelector('#id_clearable_rating input:checked')?.value || ''",
+        )
+        assert checked == ""
+
+    def test_no_error_when_empty(self, simple_page):
+        """Clearable rating is not required — no error on empty submit."""
+        submit(simple_page)
+        tooltip = simple_page.locator("#id_clearable_rating_tooltip")
+        assert tooltip.count() == 0

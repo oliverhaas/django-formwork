@@ -185,6 +185,11 @@ label.password-reveal {
     @apply input w-full;
 }
 
+/* PasswordReveal: toggle button — subtle by default, more visible on hover. */
+.password-reveal-toggle {
+    @apply cursor-pointer opacity-40 hover:opacity-70 transition-opacity shrink-0;
+}
+
 /* Custom widget: toggle switch */
 input.toggle {
     @apply toggle;
@@ -281,6 +286,11 @@ input.combobox-input {
 .dropzone-error,
 .image-upload-error {
     @apply text-sm text-error;
+}
+
+/* Rating: clear button for clearable variant. */
+.rating-clear {
+    @apply text-lg leading-none opacity-30 hover:opacity-70 cursor-pointer transition-opacity;
 }
 
 /* Alpine.js: hide elements until Alpine initializes */
@@ -446,7 +456,8 @@ label:has(> input.hidden:checked) > .formwork-check {
 .tooltip:has(> .formwork-errors):has(> input[type="checkbox"]),
 .tooltip:has(> .formwork-errors):has(> div > div > label > input[type="checkbox"]:not(.toggle):not(.hidden)),
 .tooltip:has(> .formwork-errors):has(> div > div > label > input[type="radio"]:not(.mask):not(.rating-hidden)),
-.tooltip:has(> .formwork-errors):has(> .rating) {
+.tooltip:has(> .formwork-errors):has(> .rating),
+.tooltip:has(> .formwork-errors):has(> div > .rating) {
     @apply w-fit;
 }
 

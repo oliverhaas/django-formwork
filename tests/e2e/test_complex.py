@@ -1,10 +1,51 @@
-"""E2e tests for complex forms with cross-field validation."""
+"""E2e tests for complex forms with cross-field validation and morph resilience."""
+
+from playwright.sync_api import expect
 
 from .conftest import submit
 
 
-class TestComplexForm:
-    """ComplexForm with password confirmation, date range, and terms."""
+def _fill_base_fields(page):
+    """Fill all required base fields with valid data."""
+    page.locator('input[name="password"]').fill("abc123")
+    page.locator('input[name="confirm_password"]').fill("abc123")
+    page.locator('input[name="start_date"]').fill("2025-01-01")
+    page.locator('input[name="end_date"]').fill("2025-12-31")
+    page.locator('input[name="terms"]').check()
+
+
+def _pick_search_select(page, value, label):
+    """Open SearchSelect, load results via htmx, and pick an option."""
+    details = page.locator("details.search-select")
+    # Open the dropdown via JS (summary::before overlay blocks clicks)
+    page.evaluate("document.querySelector('details.search-select').open = true")
+    page.wait_for_timeout(300)
+    # Focus the search input to trigger htmx search
+    search = details.locator("input[type='text']")
+    search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
+    page.wait_for_timeout(800)  # wait for htmx debounce + response
+    # Click the matching option button
+    btn = details.locator(f'button[data-value="{value}"]')
+    btn.click()
+    page.wait_for_timeout(200)
+
+
+def _toggle_multiselect_option(page, value, label):
+    """Open MultiSelect and toggle an option via Alpine data store."""
+    # Use Alpine's toggle method directly — more reliable than clicking
+    # checkboxes injected by htmx (avoids timing issues with Alpine init).
+    page.evaluate(
+        f"""(() => {{
+            const ms = document.querySelector('details.multiselect');
+            const data = Alpine.$data(ms);
+            data.toggle('{value}', '{label}', '');
+        }})()""",
+    )
+    page.wait_for_timeout(200)
+
+
+class TestComplexFormStructure:
+    """Basic rendering and structure tests."""
 
     def test_page_loads(self, complex_page):
         assert complex_page.title() == "Complex Form"
@@ -17,6 +58,14 @@ class TestComplexForm:
         pw_labels = complex_page.locator("label.password-reveal")
         assert pw_labels.count() == 2
 
+    def test_has_search_select(self, complex_page):
+        details = complex_page.locator("details.search-select")
+        assert details.count() == 1
+
+    def test_has_multi_select(self, complex_page):
+        details = complex_page.locator("details.multiselect")
+        assert details.count() == 1
+
     def test_has_date_fields(self, complex_page):
         start = complex_page.locator('input[name="start_date"]')
         end = complex_page.locator('input[name="end_date"]')
@@ -26,6 +75,10 @@ class TestComplexForm:
     def test_has_terms_checkbox(self, complex_page):
         terms = complex_page.locator('input[name="terms"]')
         assert terms.count() == 1
+
+
+class TestComplexFormValidation:
+    """Cross-field validation tests."""
 
     def test_submit_empty_shows_errors(self, complex_page):
         submit(complex_page)
@@ -44,11 +97,7 @@ class TestComplexForm:
         assert "match" in errors.text_content().lower()
 
     def test_password_match_no_error(self, complex_page):
-        complex_page.locator('input[name="password"]').fill("abc123")
-        complex_page.locator('input[name="confirm_password"]').fill("abc123")
-        complex_page.locator('input[name="start_date"]').fill("2025-01-01")
-        complex_page.locator('input[name="end_date"]').fill("2025-12-31")
-        complex_page.locator('input[name="terms"]').check()
+        _fill_base_fields(complex_page)
         submit(complex_page)
         errors = complex_page.locator("#id_confirm_password_errors")
         assert errors.count() == 0
@@ -65,11 +114,7 @@ class TestComplexForm:
         assert "after" in errors.text_content().lower()
 
     def test_valid_date_range_no_error(self, complex_page):
-        complex_page.locator('input[name="password"]').fill("abc123")
-        complex_page.locator('input[name="confirm_password"]').fill("abc123")
-        complex_page.locator('input[name="start_date"]').fill("2025-01-01")
-        complex_page.locator('input[name="end_date"]').fill("2025-12-31")
-        complex_page.locator('input[name="terms"]').check()
+        _fill_base_fields(complex_page)
         submit(complex_page)
         errors = complex_page.locator("#id_end_date_errors")
         assert errors.count() == 0
@@ -83,3 +128,98 @@ class TestComplexForm:
         submit(complex_page)
         errors = complex_page.locator("#id_terms_errors")
         assert errors.count() == 1
+
+    def test_country_without_languages_error(self, complex_page):
+        """Selecting a country without languages shows cross-field error."""
+        _fill_base_fields(complex_page)
+        _pick_search_select(complex_page, "us", "United States")
+        submit(complex_page)
+        errors = complex_page.locator("#id_languages_errors")
+        assert errors.count() == 1
+        assert "language" in errors.text_content().lower()
+
+    def test_country_with_languages_no_error(self, complex_page):
+        """Selecting both country and languages passes cross-field validation."""
+        _fill_base_fields(complex_page)
+        _pick_search_select(complex_page, "us", "United States")
+        _toggle_multiselect_option(complex_page, "py", "Python")
+        submit(complex_page)
+        errors = complex_page.locator("#id_languages_errors")
+        assert errors.count() == 0
+
+
+class TestComplexFormMorphResilience:
+    """Morph resilience tests — client-side state survives server-side morphing."""
+
+    def test_search_select_value_survives_morph(self, complex_page):
+        """SearchSelect selected value persists through morph."""
+        _pick_search_select(complex_page, "us", "United States")
+        # Verify selection is visible
+        summary = complex_page.locator("details.search-select summary")
+        expect(summary).to_contain_text("United States", timeout=2000)
+        submit(complex_page)
+        # Verify selection persisted
+        hidden = complex_page.locator('input[name="country"]')
+        assert hidden.input_value() == "us"
+        summary = complex_page.locator("details.search-select summary")
+        expect(summary).to_contain_text("United States", timeout=2000)
+
+    def test_multiselect_value_survives_morph(self, complex_page):
+        """MultiSelect selected values persist through morph."""
+        _toggle_multiselect_option(complex_page, "py", "Python")
+        submit(complex_page)
+        # Verify hidden inputs still present
+        hidden = complex_page.locator('input[type="hidden"][name="languages"]')
+        values = [hidden.nth(i).input_value() for i in range(hidden.count())]
+        assert "py" in values
+
+    def test_password_reveal_state_survives_morph(self, complex_page):
+        """PasswordReveal show/hide state persists through morph."""
+        inp = complex_page.locator('input[name="password"]')
+        inp.fill("secret")
+        complex_page.locator("label.password-reveal button").first.click()
+        complex_page.wait_for_timeout(200)
+        assert (
+            complex_page.evaluate(
+                "document.querySelector('input[name=\"password\"]').type",
+            )
+            == "text"
+        )
+        submit(complex_page)
+        # Reveal state preserved (x-data not overwritten)
+        assert (
+            complex_page.evaluate(
+                "document.querySelector('input[name=\"password\"]').type",
+            )
+            == "text"
+        )
+
+    def test_search_select_dropdown_state_survives_morph(self, complex_page):
+        """Open SearchSelect dropdown stays open through morph."""
+        page = complex_page
+        page.evaluate("document.querySelector('details.search-select').open = true")
+        page.wait_for_timeout(300)
+        assert page.evaluate("document.querySelector('details.search-select').open")
+        # Submit via JS — open dropdown's summary::before overlay blocks clicks
+        page.evaluate(
+            """(() => {
+            const form = document.querySelector('form[hx-post]');
+            form.noValidate = true;
+            document.querySelector('button[type=\"submit\"]').click();
+        })()""",
+        )
+        page.wait_for_timeout(500)
+        # Idiomorph preserves open attribute on <details>
+        assert page.evaluate("document.querySelector('details.search-select').open")
+
+    def test_auto_validate_shows_error_without_submit(self, complex_page):
+        """Auto-validation shows cross-field errors without explicit submit."""
+        page = complex_page
+        # Pick a country via SearchSelect (triggers change)
+        _pick_search_select(page, "us", "United States")
+        # Wait for auto-validate debounce (1500ms input + processing)
+        page.wait_for_timeout(2500)
+        # Cross-field error: country without languages
+        errors = page.locator("#id_languages_errors")
+        expect(errors).to_have_count(1, timeout=3000)
+        assert "language" in errors.text_content().lower()

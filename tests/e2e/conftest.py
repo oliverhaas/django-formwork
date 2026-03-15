@@ -83,12 +83,6 @@ def combobox_page(page, live_server):
 
 
 @pytest.fixture
-def rating_page(page, live_server):
-    """Navigate to the Rating page."""
-    return _navigate(page, live_server, "/rating/")
-
-
-@pytest.fixture
 def uploads_page(page, live_server):
     """Navigate to the file uploads page."""
     return _navigate(page, live_server, "/uploads/")

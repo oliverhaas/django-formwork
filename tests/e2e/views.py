@@ -185,7 +185,7 @@ class AutoSaveForm(FormworkModelForm):
 
 
 class SimpleForm(FormworkForm):
-    """Toggle, range slider, password reveal, datalist."""
+    """Toggle, range slider, password reveal, datalist, rating."""
 
     toggle = forms.BooleanField(widget=Toggle, required=False)
     volume = forms.IntegerField(
@@ -200,6 +200,19 @@ class SimpleForm(FormworkForm):
             attrs={"placeholder": "Type or pick"},
         ),
         required=False,
+    )
+    stars = forms.TypedChoiceField(
+        choices=Rating.make_choices(5),
+        coerce=int,
+        widget=Rating,
+        label="Rating",
+    )
+    clearable_rating = forms.TypedChoiceField(
+        choices=Rating.make_choices(5),
+        coerce=int,
+        widget=Rating(allow_clear=True),
+        required=False,
+        label="Clearable rating",
     )
 
 
@@ -394,36 +407,6 @@ class ComboBoxForm(FormworkForm):
     )
 
 
-class RatingForm(FormworkForm):
-    """Rating \u2014 5 stars, 3 stars, hearts, clearable."""
-
-    stars_5 = forms.TypedChoiceField(
-        choices=Rating.make_choices(5),
-        coerce=int,
-        widget=Rating,
-        label="5 stars (classic)",
-    )
-    stars_3 = forms.TypedChoiceField(
-        choices=Rating.make_choices(3),
-        coerce=int,
-        widget=Rating,
-        label="3 stars",
-    )
-    hearts = forms.TypedChoiceField(
-        choices=Rating.make_choices(5),
-        coerce=int,
-        widget=Rating(star_class="mask-heart"),
-        label="Hearts",
-    )
-    clearable = forms.TypedChoiceField(
-        choices=Rating.make_choices(5),
-        coerce=int,
-        widget=Rating(allow_clear=True),
-        required=False,
-        label="Clearable",
-    )
-
-
 class UploadsForm(FormworkForm):
     """File upload widgets with variations."""
 
@@ -460,20 +443,43 @@ class TextareaForm(FormworkForm):
     bio = forms.CharField(
         widget=ValidatedTextarea(
             validate_url="/e2e/validate/bio/",
-            attrs={"rows": "4", "placeholder": "Try typing 'badword' or 'spam'..."},
+            attrs={"rows": "4", "placeholder": "Write something\u2026"},
         ),
         required=False,
+        help_text=(
+            "Server-side validated textarea \u2014 try typing "
+            "\u201cbadword\u201d or \u201cspam\u201d to see "
+            "inline error highlighting."
+        ),
     )
 
 
 class ComplexForm(FormworkForm):
-    """Cross-field validation: password confirmation, date ranges, terms."""
+    """Cross-field validation with dropdowns, auto-validated on every change."""
 
     password = forms.CharField(
         widget=PasswordReveal(attrs={"placeholder": "Password"}),
     )
     confirm_password = forms.CharField(
         widget=PasswordReveal(attrs={"placeholder": "Confirm password"}),
+    )
+    country = forms.CharField(
+        widget=SearchSelect(search_url="/e2e/search/countries/"),
+        required=False,
+        label="Country",
+    )
+    languages = forms.MultipleChoiceField(
+        choices=[
+            ("py", "Python"),
+            ("js", "JavaScript"),
+            ("go", "Go"),
+            ("rs", "Rust"),
+            ("ts", "TypeScript"),
+            ("rb", "Ruby"),
+        ],
+        widget=MultiSelect(search_url="/e2e/search/languages/"),
+        required=False,
+        label="Languages",
     )
     start_date = forms.DateField(
         widget=forms.DateInput(attrs={"type": "date"}),
@@ -482,6 +488,26 @@ class ComplexForm(FormworkForm):
         widget=forms.DateInput(attrs={"type": "date"}),
     )
     terms = forms.BooleanField(label="I accept the terms and conditions")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Strip HTML required so auto-validate POSTs don't trigger native
+        # validation.  field.required stays True for the asterisk.
+        for field in self.fields.values():
+            field.widget.use_required_attribute = lambda *_a: False
+
+    def _clean_fields(self):
+        """Suppress 'required' errors for empty fields during auto-validation."""
+        super()._clean_fields()
+        if self.data.get("_submit"):
+            return  # full validation on explicit submit
+        for name in list(self._errors):
+            field = self.fields[name]
+            if not field.required:
+                continue
+            raw = self.data.get(self.add_prefix(name), "")
+            if not raw:
+                del self._errors[name]
 
     def clean(self):
         cleaned = super().clean()
@@ -493,6 +519,10 @@ class ComplexForm(FormworkForm):
         end = cleaned.get("end_date")
         if start and end and start >= end:
             self.add_error("end_date", "End date must be after start date.")
+        country = cleaned.get("country")
+        languages = cleaned.get("languages", [])
+        if country and not languages:
+            self.add_error("languages", "Select at least one language when a country is chosen.")
         return cleaned
 
 
@@ -695,6 +725,26 @@ def _form_html(url, form_id):
     )
 
 
+def _complex_form_html(url, form_id):
+    return (
+        f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate '
+        f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
+        f'hx-ext="morph" hx-sync="this:replace" '
+        f'hx-trigger="input delay:1500ms, change delay:300ms, submit">\n'
+        "  {% csrf_token %}\n"
+        "  {{ form }}\n"
+        '  <div class="flex gap-2 mt-4">\n'
+        f'    <button type="submit" name="_submit" value="1" class="btn btn-primary">Submit</button>\n'
+        "    {% if saved %}\n"
+        f'    <button type="button" class="btn btn-error ml-auto" '
+        f'hx-delete="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
+        f'hx-ext="morph">Delete</button>\n'
+        "    {% endif %}\n"
+        "  </div>\n"
+        "</form>"
+    )
+
+
 def _autosave_form_html(url, form_id):
     return (
         f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate '
@@ -800,7 +850,7 @@ _PAGES = [
         "Standalone Elements",
         "Raw HTML inputs without a Django form \u2014 auto-styled by formwork.css",
     ),
-    ("simple", "/simple/", "Simple Custom Widgets", "Toggle, range slider, password reveal, and datalist"),
+    ("simple", "/simple/", "Simple Custom Widgets", "Toggle, range slider, password reveal, datalist, and star rating"),
     (
         "search-select",
         "/search-select/",
@@ -819,14 +869,13 @@ _PAGES = [
         "ComboBox",
         "Filterable text input \u2014 single, multiple, with icons, and server-side via htmx",
     ),
-    ("rating", "/rating/", "Rating", "Star rating \u2014 5 stars, 3 stars, hearts, and clearable"),
     ("uploads", "/uploads/", "File Uploads", "Drag-and-drop file and image uploads with size and type restrictions"),
     ("textarea", "/textarea/", "ValidatedTextarea", "Server-side validation with inline word highlighting via htmx"),
     (
         "complex",
         "/complex/",
         "Complex Form",
-        "Cross-field validation \u2014 password confirmation, date range, and required terms",
+        "Auto-validated cross-field form \u2014 passwords, dates, SearchSelect, MultiSelect with morph resilience",
     ),
     (
         "autosave",
@@ -898,7 +947,7 @@ _ELEMENTS_CARD = _card_body(
 )
 _ELEMENTS_HTML = _page_html("Standalone Elements", _ELEMENTS_BODY)
 
-_FORM_HTML_FNS = {"autosave": _autosave_form_html}
+_FORM_HTML_FNS = {"complex": _complex_form_html, "autosave": _autosave_form_html}
 
 _TEMPLATES = {
     key: _build_templates(key, url, title, desc, _FORM_HTML_FNS.get(key))
@@ -1051,10 +1100,6 @@ def combobox_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, ComboBoxForm, "combobox")
 
 
-def rating_view(request: HttpRequest) -> HttpResponse:
-    return _form_view(request, RatingForm, "rating")
-
-
 def uploads_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, UploadsForm, "uploads")
 
@@ -1064,4 +1109,30 @@ def textarea_view(request: HttpRequest) -> HttpResponse:
 
 
 def complex_view(request: HttpRequest) -> HttpResponse:
-    return _form_view(request, ComplexForm, "complex")
+    """Complex form: auto-validates on change, saves only on explicit submit."""
+    engine = engines["django"]
+    form_tmpl, card_tmpl, page_tmpl = _TEMPLATES["complex"]
+    is_htmx = request.headers.get("HX-Request") == "true"
+    session_key = "formwork:complex"
+
+    if request.method == "DELETE":
+        request.session.pop(session_key, None)
+        form = ComplexForm()
+        template = engine.from_string(form_tmpl)
+        return HttpResponse(template.render({"form": form, "saved": False}, request))
+
+    if request.method == "POST":
+        is_submit = request.POST.get("_submit") == "1"
+        form = ComplexForm(request.POST, request.FILES)
+        valid = form.is_valid()
+        if is_submit and valid:
+            request.session[session_key] = _to_session(form.cleaned_data)
+        ctx = {"form": form, "saved": is_submit and valid}
+        template = engine.from_string(form_tmpl if is_htmx else page_tmpl)
+        return HttpResponse(template.render(ctx, request))
+
+    saved = request.session.get(session_key)
+    form = ComplexForm(initial=saved) if saved else ComplexForm()
+    ctx = {"form": form, "saved": bool(saved)}
+    template = engine.from_string(card_tmpl if is_htmx else page_tmpl)
+    return HttpResponse(template.render(ctx, request))
