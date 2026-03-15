@@ -55,4 +55,5 @@ nav:
       - Installation: getting-started/installation.md
       - Quick Start: getting-started/quickstart.md
   - Reference:
+      - Architecture: architecture.md
       - Changelog: reference/changelog.md
