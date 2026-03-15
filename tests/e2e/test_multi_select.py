@@ -89,8 +89,8 @@ class TestMultiSelectPlain:
         """)
         multi_select_page.wait_for_timeout(200)
         multi_select_page.evaluate("""
-            document.querySelector('#widget-form').noValidate = true;
-            document.querySelector('#widget-form button[type="submit"]').click();
+            document.querySelector('form[hx-post]').noValidate = true;
+            document.querySelector('form[hx-post] button[type="submit"]').click();
         """)
         multi_select_page.wait_for_timeout(500)
         multi = self._get(multi_select_page)

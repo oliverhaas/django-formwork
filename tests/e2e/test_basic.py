@@ -1,4 +1,4 @@
-"""E2e tests for standard Django widgets on the Basic Forms page."""
+"""E2e tests for standard Django widgets on the Basic Form page."""
 
 from percy import percy_snapshot
 
@@ -76,11 +76,6 @@ class TestTextarea:
         ta.fill("Multiline\ntext")
         assert ta.input_value() == "Multiline\ntext"
 
-    def test_submit_empty_shows_error(self, basic_page):
-        submit(basic_page)
-        errors = basic_page.locator("#id_message_errors")
-        assert errors.count() == 1
-
     def test_morph_preserves_value(self, basic_page):
         ta = basic_page.locator('textarea[name="message"]')
         ta.fill("Multiline\ntext content")
@@ -95,17 +90,16 @@ class TestSelect:
         sel = basic_page.locator('select[name="priority"]')
         assert sel.is_visible()
         options = sel.locator("option")
-        assert options.count() == 4  # empty + 3 choices
+        assert options.count() == 3  # low, medium, high
+
+    def test_default_value(self, basic_page):
+        sel = basic_page.locator('select[name="priority"]')
+        assert sel.input_value() == "low"
 
     def test_select_option(self, basic_page):
         sel = basic_page.locator('select[name="priority"]')
         sel.select_option("medium")
         assert sel.input_value() == "medium"
-
-    def test_submit_empty_shows_error(self, basic_page):
-        submit(basic_page)
-        errors = basic_page.locator("#id_priority_errors")
-        assert errors.count() == 1
 
     def test_morph_preserves_value(self, basic_page):
         sel = basic_page.locator('select[name="priority"]')
@@ -121,15 +115,14 @@ class TestRadioSelect:
         radios = basic_page.locator('input[name="notify"]')
         assert radios.count() == 3
 
+    def test_email_preselected(self, basic_page):
+        radio = basic_page.locator('input[name="notify"][value="email"]')
+        assert radio.is_checked()
+
     def test_select_option(self, basic_page):
         radio = basic_page.locator('input[name="notify"][value="sms"]')
         radio.click(force=True)
         assert radio.is_checked()
-
-    def test_submit_empty_shows_error(self, basic_page):
-        submit(basic_page)
-        invalid = basic_page.locator('input[name="notify"][aria-invalid="true"]')
-        assert invalid.count() >= 1
 
     def test_morph_preserves_value(self, basic_page):
         basic_page.evaluate("""

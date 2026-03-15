@@ -14,6 +14,7 @@ urlpatterns = [
     path("uploads/", views.uploads_view),
     path("textarea/", views.textarea_view),
     path("complex/", views.complex_view),
+    path("autosave/", views.autosave_view),
     path("e2e/search/cities/", views.E2ECitySearchView.as_view(), name="e2e-city-search"),
     path("e2e/search/languages/", views.E2ELanguageSearchView.as_view(), name="e2e-lang-search"),
     path("e2e/validate/bio/", views.E2EBioValidateView.as_view(), name="e2e-validate-bio"),

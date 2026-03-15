@@ -1,3 +1,9 @@
+"""Settings for mypy type checking (excludes e2e app).
+
+mypy runs from the project root where the e2e package isn't importable,
+so we duplicate base settings without the e2e app.
+"""
+
 SECRET_KEY = "django-formwork-test-secret-key"
 
 MIDDLEWARE = ["django.contrib.sessions.middleware.SessionMiddleware"]
@@ -8,7 +14,6 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.staticfiles",
     "django_formwork",
-    "e2e",
 ]
 
 STATIC_URL = "/static/"

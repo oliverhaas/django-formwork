@@ -25,6 +25,36 @@
  * even sub-layers like components > daisyui.l1.l2.l3 outrank preflight.
  */
 
+/* DaisyUI's .fieldset uses display:grid.  The UA default min-width:min-content
+   on <fieldset> means grid items (inputs, labels) can push the fieldset wider
+   than its container.  Override to 0 so fieldsets respect the form width.
+
+   DaisyUI's .label sets white-space:nowrap, preventing help text from wrapping.
+   Override to normal so long help text wraps within the fieldset.
+
+   Both MUST be unlayered: these classes live in @layer utilities, so
+   @layer components would lose in the cascade. */
+.fieldset {
+    min-width: 0;
+}
+
+.fieldset .label {
+    white-space: normal;
+}
+
+/* Error tooltip wrapper: when DaisyUI's tooltip wraps the label + widget,
+   it collapses two grid items into one, losing a row-gap (6px shift).
+   Use display:grid with the same row-gap as .fieldset (gap-y-1.5 = 6px)
+   so the internal spacing matches the fieldset grid.
+
+   MUST be unlayered: DaisyUI's .tooltip sets display in @layer utilities,
+   which beats @layer components. */
+.tooltip:has(> .formwork-errors) {
+    display: grid;
+    row-gap: 6px;
+    width: 100%;
+}
+
 @layer components {
 
 /* ================================================================
@@ -350,12 +380,6 @@ label:has(> input.hidden:checked) > .formwork-check {
    The tooltip-content (error message) uses DaisyUI's built-in
    tooltip-error + tooltip-bottom positioning and styling.
    ================================================================ */
-
-/* Tooltip wrapper fills the container like other form elements.
-   Scoped to formwork error tooltips via :has(> .formwork-errors). */
-.tooltip:has(> .formwork-errors) {
-    @apply w-full;
-}
 
 /* Left-align error text (DaisyUI tooltip defaults to center). */
 .tooltip > .tooltip-content.formwork-errors {
