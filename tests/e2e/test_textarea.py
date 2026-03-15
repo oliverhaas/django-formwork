@@ -85,6 +85,29 @@ class TestValidatedTextarea:
             timeout=3000,
         )
 
+    def test_errors_clear_on_input(self, textarea_page):
+        """Error messages clear immediately when user starts typing."""
+        self._trigger_validation(textarea_page, "badword")
+        textarea_page.wait_for_timeout(500)
+        errors = textarea_page.locator(".validated-textarea-tooltip .formwork-errors")
+        expect(errors.locator("p")).to_have_count(1, timeout=3000)
+        # Simulate typing — fires @input which clears errors immediately
+        textarea_page.evaluate("""
+            const ta = document.querySelector('textarea[name="bio"]');
+            ta.value = 'fixing the text';
+            ta.dispatchEvent(new Event('input', {bubbles: true}));
+        """)
+        textarea_page.wait_for_timeout(100)
+        # Errors should be cleared immediately (not waiting for htmx debounce)
+        assert errors.inner_html().strip() == ""
+
+    def test_has_help_text(self, textarea_page):
+        """Help text mentions the invalid words."""
+        label = textarea_page.locator("fieldset:has(textarea) .label")
+        text = label.text_content()
+        assert "badword" in text
+        assert "spam" in text
+
     def test_morph_preserves_value(self, textarea_page):
         ta = textarea_page.locator('textarea[name="bio"]')
         ta.fill("Some bio text")
