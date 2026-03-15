@@ -812,8 +812,8 @@ class TestComboBox:
         widget = ComboBox(suggestions=["A", "B"], icons={"A": "<svg/>"})
         ctx = widget.get_context("test", "", {})
         sugs = ctx["widget"]["suggestions"]
-        assert sugs[0] == {"text": "A", "icon": "<svg/>"}
-        assert sugs[1] == {"text": "B", "icon": ""}
+        assert sugs[0] == {"text": "A", "icon": "<svg/>", "description": ""}
+        assert sugs[1] == {"text": "B", "icon": "", "description": ""}
 
     def test_wrapper_has_id(self):
         widget = ComboBox(suggestions=["A"])

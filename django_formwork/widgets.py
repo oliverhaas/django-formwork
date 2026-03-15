@@ -285,13 +285,14 @@ class ComboBox(forms.TextInput):
 
     template_name = "formwork/widgets/combo_box.html"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         suggestions: list[str] | None = None,
         multiple: bool = False,
         search_url: str | None = None,
         icons: dict[str, str] | None = None,
+        descriptions: dict[str, str] | None = None,
         attrs: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(attrs)
@@ -299,13 +300,22 @@ class ComboBox(forms.TextInput):
         self.multiple = multiple
         self.search_url = search_url
         self.icons = icons or {}
+        self.descriptions = descriptions or {}
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
-        context["widget"]["suggestions"] = [{"text": s, "icon": self.icons.get(s, "")} for s in self.suggestions]
+        context["widget"]["suggestions"] = [
+            {"text": s, "icon": self.icons.get(s, ""), "description": self.descriptions.get(s, "")}
+            for s in self.suggestions
+        ]
         context["widget"]["multiple"] = self.multiple
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         context["widget"]["search_url"] = self.search_url
+        # Build initial icon map from current value for unfocused display.
+        context["widget"]["icons_json"] = json.dumps(
+            {s: self.icons[s] for s in self.suggestions if s in self.icons},
+            ensure_ascii=False,
+        )
         return context
 
 

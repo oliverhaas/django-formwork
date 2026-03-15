@@ -195,6 +195,11 @@ input.combobox-input {
     @apply input w-full;
 }
 
+/* ComboBox: icon display overlay (shown when input is not focused) */
+.combobox-display {
+    @apply input w-full;
+}
+
 /* Custom widget: drop zone / image upload — fill container width */
 .dropzone,
 .image-upload {
