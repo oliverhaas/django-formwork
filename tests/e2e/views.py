@@ -362,6 +362,36 @@ class ComboBoxForm(FormworkForm):
         required=False,
         label="Language (server-side)",
     )
+    language_htmx_icons = forms.CharField(
+        widget=ComboBox(
+            search_url="/e2e/search/languages-icons/",
+            attrs={"placeholder": "Server search with icons"},
+        ),
+        required=False,
+        label="Language (server search + icons)",
+    )
+    food_descriptions = forms.CharField(
+        widget=ComboBox(
+            suggestions=["Pizza", "Sushi", "Tacos", "Curry", "Ramen"],
+            icons={
+                "Pizza": "\U0001f355",
+                "Sushi": "\U0001f363",
+                "Tacos": "\U0001f32e",
+                "Curry": "\U0001f35b",
+                "Ramen": "\U0001f35c",
+            },
+            descriptions={
+                "Pizza": "Italian classic",
+                "Sushi": "Japanese delicacy",
+                "Tacos": "Mexican street food",
+                "Curry": "Indian comfort food",
+                "Ramen": "Japanese noodle soup",
+            },
+            attrs={"placeholder": "Pick a food"},
+        ),
+        required=False,
+        label="Food (icons + descriptions)",
+    )
 
 
 class RatingForm(FormworkForm):
@@ -486,6 +516,15 @@ E2E_LANGUAGES = [
     {"value": "rb", "label": "Ruby"},
 ]
 
+E2E_LANGUAGES_ICONS = [
+    {"label": "Python", "icon": "\U0001f40d"},
+    {"label": "JavaScript", "icon": "\U0001f7e8"},
+    {"label": "Go", "icon": "\U0001f439"},
+    {"label": "Rust", "icon": "\U0001f980"},
+    {"label": "TypeScript", "icon": "\U0001f535"},
+    {"label": "Ruby", "icon": "\U0001f48e"},
+]
+
 
 class E2ECitySearchView(FormworkSearchView):
     def get_results(self, query, **kwargs):
@@ -499,6 +538,13 @@ class E2ELanguageSearchView(FormworkSearchView):
         if not query:
             return E2E_LANGUAGES
         return [lang for lang in E2E_LANGUAGES if query.lower() in lang["label"].lower()]
+
+
+class E2ELanguageIconsSearchView(FormworkSearchView):
+    def get_results(self, query, **kwargs):
+        if not query:
+            return E2E_LANGUAGES_ICONS
+        return [lang for lang in E2E_LANGUAGES_ICONS if query.lower() in lang["label"].lower()]
 
 
 _COUNTRY_DESCRIPTIONS = {
