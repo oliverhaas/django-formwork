@@ -7,10 +7,10 @@ class TestComplexForm:
     """ComplexForm with password confirmation, date range, and terms."""
 
     def test_page_loads(self, complex_page):
-        assert complex_page.title() == "Complex Forms"
+        assert complex_page.title() == "Complex Form"
 
     def test_form_renders(self, complex_page):
-        form = complex_page.locator("#widget-form")
+        form = complex_page.locator("#complex-form")
         assert form.is_visible()
 
     def test_has_two_password_fields(self, complex_page):
@@ -29,7 +29,7 @@ class TestComplexForm:
 
     def test_submit_empty_shows_errors(self, complex_page):
         submit(complex_page)
-        tooltips = complex_page.locator("#widget-form .tooltip-error")
+        tooltips = complex_page.locator("#complex-form .tooltip-error")
         assert tooltips.count() >= 3
 
     def test_password_mismatch_error(self, complex_page):

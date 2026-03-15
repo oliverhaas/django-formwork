@@ -110,7 +110,7 @@ warn_unused_ignores = true
 warn_unreachable = false
 
 [tool.django-stubs]
-django_settings_module = "tests.settings.base"
+django_settings_module = "tests.settings.mypy"
 
 [tool.ty.environment]
 python-version = "3.13"

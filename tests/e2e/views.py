@@ -3,8 +3,9 @@
 from django import forms
 from django.http import HttpRequest, HttpResponse
 from django.template import engines
+from e2e.models import AutoSaveFormData, BasicFormData
 
-from django_formwork.forms import FormworkForm
+from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkSearchView, FormworkValidateView
 from django_formwork.widgets import (
     ComboBox,
@@ -25,33 +26,144 @@ from django_formwork.widgets import (
 # ---------------------------------------------------------------------------
 
 
-class BasicForm(FormworkForm):
-    """Contact form using only Django's built-in widgets."""
+PRIORITY_CHOICES = [("low", "Low"), ("medium", "Medium"), ("high", "High")]
+NOTIFY_CHOICES = [("email", "Email"), ("sms", "SMS"), ("none", "None")]
 
-    name = forms.CharField(
-        widget=forms.TextInput(attrs={"placeholder": "Your name"}),
-        help_text="Enter your full name",
-    )
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={"placeholder": "you@example.com"}),
-    )
-    message = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Your message..."}),
-    )
+
+class BasicForm(FormworkModelForm):
+    """Contact form backed by BasicFormData model."""
+
     priority = forms.ChoiceField(
-        choices=[
-            ("", "Select\u2026"),
-            ("low", "Low"),
-            ("medium", "Medium"),
-            ("high", "High"),
-        ],
+        choices=PRIORITY_CHOICES,
+        help_text=(
+            "Required ChoiceField \u2014 rendered as a DaisyUI select dropdown. "
+            "Defaults to \u201cLow\u201d, validated against the choice list server-side."
+        ),
     )
     notify = forms.ChoiceField(
-        choices=[("email", "Email"), ("sms", "SMS"), ("none", "None")],
+        choices=NOTIFY_CHOICES,
         widget=forms.RadioSelect,
+        initial="email",
+        help_text=(
+            "Required ChoiceField with RadioSelect \u2014 each option is a "
+            "DaisyUI radio. Pre-selects \u201cEmail\u201d via initial."
+        ),
     )
-    agree = forms.BooleanField(label="I agree to the terms")
-    attachment = forms.FileField(required=False)
+    agree = forms.BooleanField(
+        label="I agree to the terms",
+        help_text=(
+            "Required BooleanField \u2014 DaisyUI checkbox. Must be checked "
+            "to submit; enforced client-side and server-side."
+        ),
+    )
+
+    class Meta:
+        model = BasicFormData
+        fields = "__all__"
+        widgets = {
+            "name": forms.TextInput(attrs={"placeholder": "Your name"}),
+            "email": forms.EmailInput(attrs={"placeholder": "you@example.com"}),
+            "message": forms.Textarea(
+                attrs={"rows": 3, "placeholder": "Your message..."},
+            ),
+        }
+        help_texts = {
+            "name": (
+                "Required CharField \u2014 TextInput styled as a DaisyUI input. "
+                "Validates non-empty on both client and server side."
+            ),
+            "email": (
+                "Required EmailField \u2014 EmailInput with type=email for native "
+                "browser validation. Server-side format check via Django."
+            ),
+            "message": ("Optional CharField \u2014 Textarea styled as a DaisyUI textarea. No validation required."),
+            "attachment": (
+                "Optional FileField \u2014 standard file input with DaisyUI "
+                "file-input styling. No type or size restrictions."
+            ),
+        }
+
+
+class AutoSaveForm(FormworkModelForm):
+    """Auto-save form: validates on every change, suppresses required errors."""
+
+    priority = forms.ChoiceField(
+        choices=PRIORITY_CHOICES,
+        initial="low",
+        help_text=(
+            "Required ChoiceField \u2014 DaisyUI select. Auto-saves on change, "
+            "validated server-side against the choice list."
+        ),
+    )
+    notify = forms.ChoiceField(
+        choices=NOTIFY_CHOICES,
+        widget=forms.RadioSelect,
+        initial="email",
+        help_text=("Required ChoiceField with RadioSelect \u2014 DaisyUI radios. Auto-saves on change."),
+    )
+    agree = forms.BooleanField(
+        label="I agree to the terms",
+        help_text=("Required BooleanField \u2014 DaisyUI checkbox. Must be checked; validated server-side only."),
+    )
+
+    class Meta:
+        model = AutoSaveFormData
+        fields = "__all__"
+        widgets = {
+            "name": forms.TextInput(attrs={"placeholder": "Your name"}),
+            "email": forms.EmailInput(attrs={"placeholder": "you@example.com"}),
+            "message": forms.Textarea(
+                attrs={"rows": 3, "placeholder": "Your message..."},
+            ),
+        }
+        help_texts = {
+            "name": (
+                "Required CharField \u2014 DaisyUI input. Auto-saves after "
+                "you stop typing. Required error suppressed until all fields filled."
+            ),
+            "email": (
+                "Required EmailField \u2014 DaisyUI input with type=email. "
+                "Format validated server-side on every change."
+            ),
+            "message": ("Optional CharField \u2014 DaisyUI textarea. Auto-saves after you stop typing."),
+            "attachment": ("Optional FileField \u2014 DaisyUI file-input. Auto-saves on file selection."),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Model has blank=True (allows partial saves) but visually these
+        # fields are required — set required=True for the asterisk.
+        self.fields["name"].required = True
+        self.fields["email"].required = True
+        # Strip the HTML required attribute so native validation doesn't
+        # fire — keep field.required=True for the template asterisk.
+        for field in self.fields.values():
+            field.widget.use_required_attribute = lambda *_a: False
+
+    def _clean_fields(self):
+        """Suppress 'required' errors for empty fields (auto-save UX).
+
+        On explicit submit (_submit in POST data), validate everything.
+        """
+        super()._clean_fields()
+        if self.data.get("_submit"):
+            return  # full validation on explicit submit
+        for name in list(self._errors):
+            field = self.fields[name]
+            if not field.required:
+                continue
+            raw = self.data.get(self.add_prefix(name), "")
+            if not raw:
+                del self._errors[name]
+                if name not in self.cleaned_data:
+                    # BooleanField needs False (not "") or model validation
+                    # rejects it with "must be either True or False".
+                    if isinstance(field, forms.BooleanField):
+                        self.cleaned_data[name] = False
+                    elif field.initial is not None:
+                        self.cleaned_data[name] = field.initial
+                    else:
+                        self.cleaned_data[name] = ""
 
 
 class SimpleForm(FormworkForm):
@@ -437,129 +549,254 @@ _THEME_SWITCHER = (
 )
 
 
-def _form_html(url):
+def _form_html(url, form_id):
     return (
-        '<form id="widget-form" method="post" enctype="multipart/form-data" '
-        f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#widget-form" hx-ext="morph">\n'
+        f'<form id="{form_id}" method="post" enctype="multipart/form-data" '
+        f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
+        f'hx-ext="morph">\n'
         "  {% csrf_token %}\n"
+        "  {% if success %}\n"
+        '  <div role="alert" class="alert alert-success">\n'
+        '    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" '
+        'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+        'stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>'
+        '<path d="m9 11 3 3L22 4"/></svg>\n'
+        "    <span>Saved.</span>\n"
+        "  </div>\n"
+        "  {% endif %}\n"
         "  {{ form }}\n"
-        '  <button type="submit" class="btn btn-primary mt-4">Submit</button>\n'
+        '  <div class="flex gap-2 mt-4">\n'
+        '    <button type="submit" class="btn btn-primary">Submit</button>\n'
+        "    {% if saved %}\n"
+        f'    <button type="button" class="btn btn-error ml-auto" '
+        f'hx-delete="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
+        f'hx-ext="morph">Delete</button>\n'
+        "    {% endif %}\n"
+        "  </div>\n"
         "</form>"
     )
 
 
-def _page_html(url, title):
+def _autosave_form_html(url, form_id):
+    return (
+        f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate '
+        f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
+        f'hx-ext="morph" '
+        f'hx-trigger="input delay:1500ms, change delay:300ms">\n'
+        "  {% csrf_token %}\n"
+        "  {% if success %}\n"
+        '  <div role="alert" class="alert alert-success">\n'
+        '    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" '
+        'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+        'stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>'
+        '<path d="m9 11 3 3L22 4"/></svg>\n'
+        "    <span>Saved.</span>\n"
+        "  </div>\n"
+        "  {% endif %}\n"
+        "  {{ form }}\n"
+        '  <div class="flex gap-2 mt-4">\n'
+        f'    <button type="submit" class="btn btn-primary" '
+        f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
+        f"""hx-ext="morph" hx-vals='{{"_submit": "1"}}'>Submit</button>\n"""
+        "    {% if saved %}\n"
+        f'    <button type="button" class="btn" '
+        f'hx-delete="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
+        f'hx-ext="morph">Reset</button>\n'
+        f'    <button type="button" class="btn btn-error ml-auto" '
+        f'hx-delete="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
+        f'hx-ext="morph">Delete</button>\n'
+        "    {% endif %}\n"
+        "  </div>\n"
+        "</form>"
+    )
+
+
+def _card_body(title, inner_html, standalone_url=None, description=None):
+    link = ""
+    if standalone_url:
+        link = (
+            f' <a href="{standalone_url}" class="flex opacity-40 hover:opacity-70'
+            f' transition-opacity" title="Open standalone">'
+            '<svg xmlns="http://www.w3.org/2000/svg" class="size-4 mb-0.5" '
+            'viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M15 3h6v6"/><path d="M10 14 21 3"/>'
+            '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'
+            "</svg></a>"
+        )
+    desc = ""
+    if description:
+        desc = f'\n  <p class="text-sm text-base-content/60">{description}</p>'
+    return f'<div class="card-body">\n  <h2 class="card-title">{title}{link}</h2>{desc}\n  {inner_html}\n</div>'
+
+
+def _page_html(title, card_body_html):
     return (
         '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  '
         + _HEAD
         + f"\n  <title>{title}</title>\n</head>\n"
-        '<body class="p-8 bg-base-200">\n' + _THEME_SWITCHER + "\n"
+        '<body class="min-h-screen p-8 bg-base-200">\n' + _THEME_SWITCHER + "\n"
         '<div class="max-w-2xl mx-auto">\n'
         '  <div class="card bg-base-100 shadow-sm">\n'
-        '    <div class="card-body">\n'
-        f'      <h2 class="card-title">{title}</h2>\n'
-        "      " + _form_html(url) + "\n"
-        "    </div>\n"
+        f"    {card_body_html}\n"
         "  </div>\n"
         "</div>\n"
         "</body>\n</html>"
     )
 
 
+def _to_session(cleaned_data):
+    """Serialize cleaned_data for session storage (skip files)."""
+    result = {}
+    for key, val in cleaned_data.items():
+        if hasattr(val, "read"):
+            result[key] = val.name if hasattr(val, "name") else "[file]"
+        elif hasattr(val, "isoformat"):
+            result[key] = val.isoformat()
+        elif isinstance(val, (str, int, float, bool, list, type(None))):
+            result[key] = val
+        else:
+            result[key] = str(val)
+    return result
+
+
+def _build_templates(key, url, title, description=None, form_html_fn=None):
+    form_id = f"{key}-form"
+    fn = form_html_fn or _form_html
+    form_tmpl = fn(url, form_id)
+    card_tmpl = _card_body(
+        title,
+        form_tmpl,
+        standalone_url=url,
+        description=description,
+    )
+    page_tmpl = _page_html(
+        title,
+        _card_body(title, form_tmpl, description=description),
+    )
+    return form_tmpl, card_tmpl, page_tmpl
+
+
+# Page registry: (key, url, title, description)
 _PAGES = [
-    ("/basic/", "Basic Forms", "Contact form using Django\u2019s built-in widgets"),
-    ("/elements/", "Standalone Elements", "Raw HTML inputs auto-styled by formwork.css"),
-    ("/simple/", "Simple Custom Widgets", "Toggle, range slider, password reveal, datalist"),
-    ("/search-select/", "SearchSelect", "Static, with icons, and server-side search"),
-    ("/multi-select/", "MultiSelect", "Plain, icons with auto-search, and htmx"),
-    ("/combobox/", "ComboBox", "Single, multiple, with icons, and server-side"),
-    ("/rating/", "Rating", "Stars, hearts, and clearable variations"),
-    ("/uploads/", "File Uploads", "Drop zones and image uploads with restrictions"),
-    ("/textarea/", "ValidatedTextarea", "Server-side validation with word highlighting"),
-    ("/complex/", "Complex Forms", "Password confirmation, date ranges, and terms"),
+    (
+        "basic",
+        "/basic/",
+        "Basic Form",
+        "Contact form using only Django\u2019s built-in widgets, auto-styled by formwork.css with DaisyUI components",
+    ),
+    (
+        "elements",
+        "/elements/",
+        "Standalone Elements",
+        "Raw HTML inputs without a Django form \u2014 auto-styled by formwork.css",
+    ),
+    ("simple", "/simple/", "Simple Custom Widgets", "Toggle, range slider, password reveal, and datalist"),
+    (
+        "search-select",
+        "/search-select/",
+        "SearchSelect",
+        "Searchable dropdown \u2014 static, with icons, and server-side search via htmx",
+    ),
+    (
+        "multi-select",
+        "/multi-select/",
+        "MultiSelect",
+        "Multi-select dropdown \u2014 plain, with icons and auto-search, and server-side via htmx",
+    ),
+    (
+        "combobox",
+        "/combobox/",
+        "ComboBox",
+        "Filterable text input \u2014 single, multiple, with icons, and server-side via htmx",
+    ),
+    ("rating", "/rating/", "Rating", "Star rating \u2014 5 stars, 3 stars, hearts, and clearable"),
+    ("uploads", "/uploads/", "File Uploads", "Drag-and-drop file and image uploads with size and type restrictions"),
+    ("textarea", "/textarea/", "ValidatedTextarea", "Server-side validation with inline word highlighting via htmx"),
+    (
+        "complex",
+        "/complex/",
+        "Complex Form",
+        "Cross-field validation \u2014 password confirmation, date range, and required terms",
+    ),
+    (
+        "autosave",
+        "/autosave/",
+        "Auto-Save Form",
+        "Auto-saves on every field change \u2014 server-side validation with idiomorph morphing",
+    ),
 ]
 
-_CARD_GRID = "\n".join(
-    f'      <a href="{url}" class="card bg-base-100 shadow-sm'
-    f' hover:shadow-md transition-shadow">\n'
-    f'        <div class="card-body py-4">\n'
-    f'          <h3 class="card-title text-sm">{title}</h3>\n'
-    f'          <p class="text-xs text-base-content/60">{desc}</p>\n'
-    f"        </div>\n"
-    f"      </a>"
-    for url, title, desc in _PAGES
+# Lazy-loading cards for the combined overview page
+_LAZY_CARDS = "\n".join(
+    f'  <div id="card-{key}" class="card bg-base-100 shadow-sm"\n'
+    f'       hx-get="{url}" hx-trigger="load" hx-swap="innerHTML">\n'
+    f'    <div class="card-body">\n'
+    f'      <h2 class="card-title text-sm">{title}</h2>\n'
+    f'      <p class="text-xs text-base-content/60">{desc}</p>\n'
+    f'      <span class="loading loading-spinner loading-sm"></span>\n'
+    f"    </div>\n"
+    f"  </div>"
+    for key, url, title, desc in _PAGES
 )
 
 _INDEX_HTML = (
     '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  '
     + _HEAD
     + "\n  <title>Formwork Showcase</title>\n</head>\n"
-    '<body class="p-8 bg-base-200">\n' + _THEME_SWITCHER + "\n"
-    '<div class="max-w-2xl mx-auto">\n'
-    '  <h1 class="text-2xl font-bold mb-6">Formwork Showcase</h1>\n'
-    '  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">\n' + _CARD_GRID + "\n"
-    "  </div>\n"
-    "</div>\n"
+    '<body class="min-h-screen p-8 bg-base-200">\n' + _THEME_SWITCHER + "\n"
+    '<div class="max-w-2xl mx-auto flex flex-col gap-8">\n'
+    '  <h1 class="text-2xl font-bold">Formwork Showcase</h1>\n' + _LAZY_CARDS + "\n</div>\n"
+    "<script>\n"
+    '  document.body.addEventListener("htmx:afterSettle", function(e) {\n'
+    "    if (window.Alpine) Alpine.initTree(e.detail.target);\n"
+    "  });\n"
+    "</script>\n"
     "</body>\n</html>"
 )
 
-_ELEMENTS_HTML = (
-    '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  '
-    + _HEAD
-    + "\n  <title>Standalone Elements</title>\n</head>\n"
-    '<body class="p-8 bg-base-200">\n' + _THEME_SWITCHER + "\n"
-    '<div class="max-w-2xl mx-auto">\n'
-    '  <div class="card bg-base-100 shadow-sm">\n'
-    '    <div class="card-body">\n'
-    '      <h2 class="card-title">Standalone Elements</h2>\n'
-    '      <p class="text-sm text-base-content/60 mb-4">'
+_ELEMENTS_INNER = (
+    '<p class="text-sm text-base-content/60 mb-4">'
     "These raw HTML inputs are auto-styled by formwork.css \u2014"
     " no Django form needed.</p>\n"
-    '      <div class="grid gap-4">\n'
-    '        <input type="text" placeholder="Text input">\n'
-    '        <input type="email" placeholder="Email input">\n'
-    '        <input type="password" placeholder="Password input">\n'
-    "        <select>\n"
-    '          <option value="">Select\u2026</option>\n'
-    "          <option>Option A</option>\n"
-    "          <option>Option B</option>\n"
-    "          <option>Option C</option>\n"
-    "        </select>\n"
-    '        <textarea placeholder="Textarea" rows="3"></textarea>\n'
-    '        <label class="flex items-center gap-2">'
+    '<div class="grid gap-4">\n'
+    '  <input type="text" placeholder="Text input">\n'
+    '  <input type="email" placeholder="Email input">\n'
+    '  <input type="password" placeholder="Password input">\n'
+    "  <select>\n"
+    '    <option value="">Select\u2026</option>\n'
+    "    <option>Option A</option>\n"
+    "    <option>Option B</option>\n"
+    "    <option>Option C</option>\n"
+    "  </select>\n"
+    '  <textarea placeholder="Textarea" rows="3"></textarea>\n'
+    '  <label class="flex items-center gap-2">'
     '<input type="checkbox"> Checkbox</label>\n'
-    '        <label class="flex items-center gap-2">'
+    '  <label class="flex items-center gap-2">'
     '<input type="radio" name="radio-demo"> Radio A</label>\n'
-    '        <label class="flex items-center gap-2">'
+    '  <label class="flex items-center gap-2">'
     '<input type="radio" name="radio-demo"> Radio B</label>\n'
-    '        <input type="file">\n'
-    '        <input type="range" min="0" max="100">\n'
-    "      </div>\n"
-    "    </div>\n"
-    "  </div>\n"
-    "</div>\n"
-    "</body>\n</html>"
+    '  <input type="file">\n'
+    '  <input type="range" min="0" max="100">\n'
+    "</div>"
 )
 
+_ELEMENTS_BODY = _card_body("Standalone Elements", _ELEMENTS_INNER)
+_ELEMENTS_CARD = _card_body(
+    "Standalone Elements",
+    _ELEMENTS_INNER,
+    standalone_url="/elements/",
+)
+_ELEMENTS_HTML = _page_html("Standalone Elements", _ELEMENTS_BODY)
+
+_FORM_HTML_FNS = {"autosave": _autosave_form_html}
+
 _TEMPLATES = {
-    "basic": (_form_html("/basic/"), _page_html("/basic/", "Basic Forms")),
-    "simple": (_form_html("/simple/"), _page_html("/simple/", "Simple Custom Widgets")),
-    "search-select": (
-        _form_html("/search-select/"),
-        _page_html("/search-select/", "SearchSelect"),
-    ),
-    "multi-select": (
-        _form_html("/multi-select/"),
-        _page_html("/multi-select/", "MultiSelect"),
-    ),
-    "combobox": (_form_html("/combobox/"), _page_html("/combobox/", "ComboBox")),
-    "rating": (_form_html("/rating/"), _page_html("/rating/", "Rating")),
-    "uploads": (_form_html("/uploads/"), _page_html("/uploads/", "File Uploads")),
-    "textarea": (
-        _form_html("/textarea/"),
-        _page_html("/textarea/", "ValidatedTextarea"),
-    ),
-    "complex": (_form_html("/complex/"), _page_html("/complex/", "Complex Forms")),
+    key: _build_templates(key, url, title, desc, _FORM_HTML_FNS.get(key))
+    for key, url, title, desc in _PAGES
+    if key != "elements"
 }
 
 
@@ -571,20 +808,38 @@ _TEMPLATES = {
 def _form_view(request: HttpRequest, form_class: type, key: str) -> HttpResponse:
     """Generic form view: render page on GET, handle htmx morph on POST."""
     engine = engines["django"]
-    form_tmpl, page_tmpl = _TEMPLATES[key]
+    form_tmpl, card_tmpl, page_tmpl = _TEMPLATES[key]
     is_htmx = request.headers.get("HX-Request") == "true"
+    session_key = f"formwork:{key}"
+
+    if request.method == "DELETE":
+        request.session.pop(session_key, None)
+        form = form_class()
+        ctx = {"form": form, "saved": False}
+        template = engine.from_string(form_tmpl)
+        return HttpResponse(template.render(ctx, request))
 
     if request.method == "POST":
         form = form_class(request.POST, request.FILES)
-        form.is_valid()
+        valid = form.is_valid()
+        if valid:
+            request.session[session_key] = _to_session(form.cleaned_data)
+        ctx = {"form": form, "success": valid, "saved": valid}
         if is_htmx:
             template = engine.from_string(form_tmpl)
-            return HttpResponse(template.render({"form": form}, request))
-    else:
-        form = form_class()
+            return HttpResponse(template.render(ctx, request))
+        template = engine.from_string(page_tmpl)
+        return HttpResponse(template.render(ctx, request))
+
+    saved = request.session.get(session_key)
+    form = form_class(initial=saved) if saved else form_class()
+    ctx = {"form": form, "saved": bool(saved)}
+    if is_htmx:
+        template = engine.from_string(card_tmpl)
+        return HttpResponse(template.render(ctx, request))
 
     template = engine.from_string(page_tmpl)
-    return HttpResponse(template.render({"form": form}, request))
+    return HttpResponse(template.render(ctx, request))
 
 
 def index_view(request: HttpRequest) -> HttpResponse:
@@ -592,10 +847,81 @@ def index_view(request: HttpRequest) -> HttpResponse:
 
 
 def basic_view(request: HttpRequest) -> HttpResponse:
-    return _form_view(request, BasicForm, "basic")
+    """Model-backed basic form view — always reads/writes the first row."""
+    engine = engines["django"]
+    form_tmpl, card_tmpl, page_tmpl = _TEMPLATES["basic"]
+    is_htmx = request.headers.get("HX-Request") == "true"
+
+    obj = BasicFormData.objects.first()
+
+    if request.method == "DELETE":
+        if obj:
+            obj.delete()
+        form = BasicForm()
+        template = engine.from_string(form_tmpl)
+        return HttpResponse(template.render({"form": form, "saved": False}, request))
+
+    if request.method == "POST":
+        form = BasicForm(request.POST, request.FILES, instance=obj)
+        valid = form.is_valid()
+        if valid:
+            form.save()
+        ctx = {"form": form, "success": valid, "saved": valid}
+        if is_htmx:
+            template = engine.from_string(form_tmpl)
+            return HttpResponse(template.render(ctx, request))
+        template = engine.from_string(page_tmpl)
+        return HttpResponse(template.render(ctx, request))
+
+    # GET
+    form = BasicForm(instance=obj) if obj else BasicForm()
+    ctx = {"form": form, "saved": obj is not None}
+    if is_htmx:
+        template = engine.from_string(card_tmpl)
+        return HttpResponse(template.render(ctx, request))
+    template = engine.from_string(page_tmpl)
+    return HttpResponse(template.render(ctx, request))
+
+
+def autosave_view(request: HttpRequest) -> HttpResponse:
+    """Auto-save form view — saves on every field change with submit button."""
+    engine = engines["django"]
+    form_tmpl, card_tmpl, page_tmpl = _TEMPLATES["autosave"]
+    is_htmx = request.headers.get("HX-Request") == "true"
+
+    obj = AutoSaveFormData.objects.first()
+
+    if request.method == "DELETE":
+        if obj:
+            obj.delete()
+        form = AutoSaveForm()
+        template = engine.from_string(form_tmpl)
+        return HttpResponse(template.render({"form": form, "saved": False}, request))
+
+    if request.method == "POST":
+        is_submit = request.POST.get("_submit") == "1"
+        form = AutoSaveForm(request.POST, request.FILES, instance=obj)
+        valid = form.is_valid()
+        if valid:
+            obj = form.save()
+        ctx = {
+            "form": form,
+            "saved": valid or obj is not None,
+            "success": valid and is_submit,
+        }
+        template = engine.from_string(form_tmpl if is_htmx else page_tmpl)
+        return HttpResponse(template.render(ctx, request))
+
+    # GET
+    form = AutoSaveForm(instance=obj) if obj else AutoSaveForm()
+    ctx = {"form": form, "saved": obj is not None}
+    template = engine.from_string(card_tmpl if is_htmx else page_tmpl)
+    return HttpResponse(template.render(ctx, request))
 
 
 def elements_view(request: HttpRequest) -> HttpResponse:
+    if request.headers.get("HX-Request") == "true":
+        return HttpResponse(_ELEMENTS_CARD)
     return HttpResponse(_ELEMENTS_HTML)
 
 

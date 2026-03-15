@@ -1,5 +1,9 @@
 {
   "private": true,
+  "scripts": {
+    "css": "tailwindcss -i tests/e2e/app.css -o django_formwork/static/formwork/formwork-dist.css",
+    "dev": "tailwindcss -i tests/e2e/app.css -o django_formwork/static/formwork/formwork-dist.css --watch"
+  },
   "devDependencies": {
     "@percy/cli": "^1",
     "@tailwindcss/cli": "^4",

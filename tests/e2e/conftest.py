@@ -16,8 +16,8 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 def submit(page):
     """Submit the form via htmx morph and wait for completion."""
-    page.evaluate("document.querySelector('#widget-form').noValidate = true")
-    page.locator("#widget-form button[type='submit']").click()
+    page.evaluate("document.querySelector('form[hx-post]').noValidate = true")
+    page.locator("form[hx-post] button[type='submit']").click()
     page.wait_for_timeout(500)
 
 
@@ -104,3 +104,9 @@ def textarea_page(page, live_server):
 def complex_page(page, live_server):
     """Navigate to the complex forms page."""
     return _navigate(page, live_server, "/complex/")
+
+
+@pytest.fixture
+def autosave_page(page, live_server):
+    """Navigate to the auto-save form page."""
+    return _navigate(page, live_server, "/autosave/")
