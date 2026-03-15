@@ -224,10 +224,12 @@ class SearchSelect(forms.Select):
         *,
         search_url: str | None = None,
         icons: dict[str, str] | None = None,
+        descriptions: dict[str, str] | None = None,
     ) -> None:
         super().__init__(attrs=attrs, choices=choices)
         self.search_url = search_url
         self.icons = icons or {}
+        self.descriptions = descriptions or {}
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
@@ -248,10 +250,11 @@ class SearchSelect(forms.Select):
         context["widget"]["selected_icon"] = selected_icon
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         context["widget"]["search_url"] = self.search_url
-        # Inject icons into option data.
+        # Inject icons and descriptions into option data.
         for _group, options, _index in context["widget"]["optgroups"]:
             for option in options:
                 option["icon"] = self.icons.get(str(option["value"]), "")
+                option["description"] = self.descriptions.get(str(option["value"]), "")
         return context
 
 
