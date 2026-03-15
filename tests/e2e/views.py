@@ -1,6 +1,7 @@
 """Views for e2e testing — widget showcase with one page per topic."""
 
 from django import forms
+from django.forms.models import construct_instance
 from django.http import HttpRequest, HttpResponse
 from django.template import engines
 from e2e.models import AutoSaveFormData, BasicFormData
@@ -164,6 +165,23 @@ class AutoSaveForm(FormworkModelForm):
                         self.cleaned_data[name] = field.initial
                     else:
                         self.cleaned_data[name] = ""
+
+    def save(self, commit=True, partial=False):  # noqa: FBT002
+        """Save the form. With partial=True, save valid fields only."""
+        if not partial:
+            return super().save(commit=commit)
+        instance = construct_instance(
+            self,
+            self.instance,
+            self.fields,
+            self._meta.exclude,
+        )
+        if commit:
+            if instance.pk:
+                instance.save(update_fields=list(self.cleaned_data))
+            else:
+                instance.save()
+        return instance
 
 
 class SimpleForm(FormworkForm):
@@ -583,7 +601,7 @@ def _autosave_form_html(url, form_id):
         f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate '
         f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
         f'hx-ext="morph" '
-        f'hx-trigger="input delay:1500ms, change delay:300ms">\n'
+        f'hx-trigger="input delay:500ms, change delay:200ms">\n'
         "  {% csrf_token %}\n"
         "  {% if success %}\n"
         '  <div role="alert" class="alert alert-success">\n'
@@ -902,8 +920,12 @@ def autosave_view(request: HttpRequest) -> HttpResponse:
         is_submit = request.POST.get("_submit") == "1"
         form = AutoSaveForm(request.POST, request.FILES, instance=obj)
         valid = form.is_valid()
-        if valid:
-            obj = form.save()
+        if is_submit:
+            if valid:
+                obj = form.save()
+        else:
+            # Auto-save: save all valid fields even when some have errors
+            obj = form.save(partial=True)
         ctx = {
             "form": form,
             "saved": valid or obj is not None,
