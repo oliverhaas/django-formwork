@@ -1,6 +1,6 @@
 [project]
 name = "django-formwork"
-version = "0.1.0"
+version = "0.1.0a1"
 description = "Better Django forms — modern styling out of the box, then HTMX integration for dynamic behavior"
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
@@ -8,7 +8,7 @@ requires-python = ">=3.12"
 keywords = ["django", "forms", "widgets", "rendering", "htmx"]
 authors = [{ name = "Oliver Haas", email = "ohaas@e1plus.de" }]
 classifiers = [
-  "Development Status :: 1 - Planning",
+  "Development Status :: 3 - Alpha",
   "Environment :: Web Environment",
   "Framework :: Django",
   "Framework :: Django :: 5.2",
