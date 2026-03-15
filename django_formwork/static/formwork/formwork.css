@@ -96,6 +96,11 @@ fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidd
 
 @layer components {
 
+/* Vertical spacing between consecutive field groups. */
+.fieldset + .fieldset {
+    @apply mt-2;
+}
+
 /* ================================================================
    Base component styling
 
