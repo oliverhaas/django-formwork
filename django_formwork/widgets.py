@@ -237,24 +237,21 @@ class SearchSelect(forms.Select):
         fmt_value = context["widget"]["value"]
         if isinstance(fmt_value, (list, tuple)):
             context["widget"]["value"] = fmt_value[0] if fmt_value else ""
-        # Find the label and icon for the currently selected value.
+        # Single pass: find selected label/icon AND inject icons/descriptions.
         selected_label = ""
         selected_icon = ""
         for _group, options, _index in context["widget"]["optgroups"]:
             for option in options:
+                val_str = str(option["value"])
+                option["icon"] = self.icons.get(val_str, "")
+                option["description"] = self.descriptions.get(val_str, "")
                 if option["selected"]:
                     selected_label = str(option["label"])
-                    selected_icon = self.icons.get(str(option["value"]), "")
-                    break
+                    selected_icon = option["icon"]
         context["widget"]["selected_label"] = selected_label
         context["widget"]["selected_icon"] = selected_icon
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         context["widget"]["search_url"] = self.search_url
-        # Inject icons and descriptions into option data.
-        for _group, options, _index in context["widget"]["optgroups"]:
-            for option in options:
-                option["icon"] = self.icons.get(str(option["value"]), "")
-                option["description"] = self.descriptions.get(str(option["value"]), "")
         return context
 
 
@@ -407,7 +404,7 @@ class FileDropZone(forms.FileInput):
         accept = context["widget"]["attrs"].get("accept", "")
         if accept:
             context["widget"]["accept_display"] = _format_accept(accept)
-        if self.max_size:
+        if self.max_size is not None:
             context["widget"]["max_size"] = self.max_size
             context["widget"]["max_size_display"] = _format_size(self.max_size)
         return context
@@ -444,7 +441,7 @@ class ImageDropZone(forms.FileInput):
         accept = context["widget"]["attrs"].get("accept", "")
         if accept:
             context["widget"]["accept_display"] = _format_accept(accept)
-        if self.max_size:
+        if self.max_size is not None:
             context["widget"]["max_size"] = self.max_size
             context["widget"]["max_size_display"] = _format_size(self.max_size)
         return context

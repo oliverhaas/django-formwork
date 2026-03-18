@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from html import escape as html_escape
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from django.http import HttpRequest, HttpResponse
 from django.template import Context
@@ -15,6 +15,9 @@ from django.template.engine import Engine
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+
+if TYPE_CHECKING:
+    from django.template.base import Template
 
 
 class FormworkSearchView(View):
@@ -79,6 +82,23 @@ class FormworkSearchView(View):
     #: Which template to use.  Set by the widget type or override in subclass.
     widget_type: str = "search_select"
 
+    #: Cached template engine and compiled templates (class-level, shared).
+    _engine: Engine | None = None
+    _compiled_templates: dict[str, Template] | None = None
+
+    @classmethod
+    def _get_template(cls, widget_type: str) -> Template:
+        """Return a compiled template for the given widget type, using cache."""
+        if cls._engine is None:
+            cls._engine = Engine()
+        if cls._compiled_templates is None:
+            cls._compiled_templates = {
+                "search_select": cls._engine.from_string(cls.SEARCH_SELECT_TEMPLATE),
+                "combobox": cls._engine.from_string(cls.COMBOBOX_TEMPLATE),
+                "multiselect": cls._engine.from_string(cls.MULTISELECT_TEMPLATE),
+            }
+        return cls._compiled_templates[widget_type]
+
     def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:  # noqa: ARG002
         """Return search results for the given query.
 
@@ -94,21 +114,20 @@ class FormworkSearchView(View):
         """
         return []
 
+    #: Valid widget types for the ``type`` query parameter.
+    VALID_WIDGET_TYPES = frozenset({"search_select", "combobox", "multiselect"})
+
     def get(self, request: HttpRequest) -> HttpResponse:
         query = request.GET.get("q", "").strip()
         widget_type = request.GET.get("type", self.widget_type)
         field_name = request.GET.get("name", "")
 
+        if widget_type not in self.VALID_WIDGET_TYPES:
+            widget_type = self.widget_type
+
         results = self.get_results(query, request=request)
 
-        template_str = {
-            "search_select": self.SEARCH_SELECT_TEMPLATE,
-            "combobox": self.COMBOBOX_TEMPLATE,
-            "multiselect": self.MULTISELECT_TEMPLATE,
-        }.get(widget_type, self.SEARCH_SELECT_TEMPLATE)
-
-        engine = Engine()
-        template = engine.from_string(template_str)
+        template = self._get_template(widget_type)
         html = template.render(Context({"results": results, "field_name": field_name}))
         return HttpResponse(html.strip())
 
@@ -187,8 +206,13 @@ class FormworkValidateView(View):
     @staticmethod
     def _build_highlighted(text: str, errors: list[dict[str, Any]]) -> str:
         """Build HTML with ``<mark>`` tags around error spans."""
+        text_len = len(text)
         spans = sorted(
-            [(e["start"], e["end"]) for e in errors if "start" in e and "end" in e],
+            [
+                (max(0, e["start"]), min(text_len, e["end"]))
+                for e in errors
+                if "start" in e and "end" in e and e["start"] < e["end"]
+            ],
             key=lambda x: x[0],
         )
         if not spans:
