@@ -147,6 +147,9 @@ class MultiSelect(forms.SelectMultiple):
         languages = forms.MultipleChoiceField(
             widget=MultiSelect(search_url=reverse_lazy("lang-search")),
         )
+
+    ``icons`` values should be wrapped in ``mark_safe()`` — plain strings
+    are auto-escaped by the template engine.
     """
 
     template_name = "formwork/widgets/multi_select.html"

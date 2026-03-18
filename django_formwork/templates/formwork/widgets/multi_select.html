@@ -70,7 +70,7 @@
       <li{% if widget.show_search %} x-show="!search || '{{ option.label|escapejs }}'.toLowerCase().includes(search.toLowerCase())"{% endif %}><label class="flex items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200"{% if option.attrs.id %} for="{{ option.attrs.id }}"{% endif %}>
         <input type="checkbox" name="{{ widget.name }}" value="{{ option.value|stringformat:'s' }}"{% if option.attrs.id %} id="{{ option.attrs.id }}"{% endif %} class="multiselect hidden"{% if option.selected %} checked{% endif %}>
         <span class="formwork-check shrink-0 opacity-0" aria-hidden="true">&#x2713;</span>
-        {% if option.icon %}<span class="shrink-0">{{ option.icon|safe }}</span>{% endif %}<span class="select-none">{{ option.label }}</span>
+        {% if option.icon %}<span class="shrink-0">{{ option.icon }}</span>{% endif %}<span class="select-none">{{ option.label }}</span>
       </label></li>{% endfor %}{% endfor %}
     </ul>
     {% if widget.show_search %}<p x-show="noResults" x-cloak class="px-3 py-2 text-base-content/50">No results</p>{% endif %}

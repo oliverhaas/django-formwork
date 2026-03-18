@@ -50,20 +50,21 @@ class FormworkSearchView(View):
 
     - ``label`` (required): display text
     - ``value`` (optional): key value for SearchSelect, not used for ComboBox
-    - ``icon`` (optional): HTML string for icon (rendered before label)
+    - ``icon`` (optional): icon markup wrapped in ``mark_safe()``
+      (plain strings are auto-escaped)
     """
 
     #: Template for SearchSelect results (value + label, for select-style)
     SEARCH_SELECT_TEMPLATE = """{% for item in results %}
 <li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value }}" data-label="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon }}"{% endif %}>
-  <span class="formwork-check shrink-0 opacity-0" :class="value === '{{ item.value }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>{% if item.icon %}<span class="shrink-0">{{ item.icon|safe }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
+  <span class="formwork-check shrink-0 opacity-0" :class="value === '{{ item.value }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>{% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
 {% if not results %}<li class="px-3 py-2 text-base-content/50">No results</li>{% endif %}"""
 
     #: Template for ComboBox results (label only, for autocomplete-style)
     COMBOBOX_TEMPLATE = """{% for item in results %}
 <li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon }}"{% endif %}>
-  {% if item.icon %}<span class="shrink-0">{{ item.icon|safe }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
+  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
 {% if not results %}<li class="px-3 py-2 text-base-content/50">No results</li>{% endif %}"""
 
@@ -75,7 +76,7 @@ class FormworkSearchView(View):
 <li><label class="flex items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200">
   <input type="checkbox" value="{{ item.value }}" class="multiselect hidden" x-init="$el.checked = selected.has('{{ item.value|escapejs }}')" @change="toggle('{{ item.value|escapejs }}', '{{ item.label|escapejs }}', '{{ item.icon|escapejs }}')">
   <span class="formwork-check shrink-0 opacity-0" aria-hidden="true">&#x2713;</span>
-  {% if item.icon %}<span class="shrink-0">{{ item.icon|safe }}</span>{% endif %}<span class="select-none">{{ item.label }}</span>
+  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="select-none">{{ item.label }}</span>
 </label></li>{% endfor %}
 {% if not results %}<li class="px-3 py-2 text-base-content/50">No results</li>{% endif %}"""
 
@@ -104,6 +105,9 @@ class FormworkSearchView(View):
 
         Override this in your subclass.  Each result should be a dict with
         at least a ``label`` key, and optionally ``value`` and ``icon``.
+
+        ``icon`` values should be wrapped in ``mark_safe()`` — plain strings
+        are auto-escaped by the template engine.
 
         Args:
             query: The search string from the user's input.

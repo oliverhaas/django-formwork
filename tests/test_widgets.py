@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from django.utils.safestring import mark_safe
 
 from django_formwork.widgets import (
     ComboBox,
@@ -379,7 +380,7 @@ class TestMultiSelect:
     def test_icons_in_options(self):
         widget = MultiSelect(
             choices=[("a", "Alpha"), ("b", "Beta")],
-            icons={"a": '<img src="a.svg">'},
+            icons={"a": mark_safe('<img src="a.svg">')},
         )
         soup = render_widget(widget, name="test")
         icon = soup.find("img", {"src": "a.svg"})
@@ -394,7 +395,7 @@ class TestMultiSelect:
     def test_icon_in_context(self):
         widget = MultiSelect(
             choices=[("a", "Alpha"), ("b", "Beta")],
-            icons={"a": "<svg>icon</svg>"},
+            icons={"a": mark_safe("<svg>icon</svg>")},
         )
         ctx = widget.get_context("test", [], {})
         for _group, options, _index in ctx["widget"]["optgroups"]:
@@ -599,7 +600,7 @@ class TestSearchSelect:
     def test_icons_in_options(self):
         widget = SearchSelect(
             choices=[("a", "Alpha"), ("b", "Beta")],
-            icons={"a": '<img src="a.svg">'},
+            icons={"a": mark_safe('<img src="a.svg">')},
         )
         soup = render_widget(widget, name="test")
         icon = soup.find("img", {"src": "a.svg"})
@@ -614,7 +615,7 @@ class TestSearchSelect:
     def test_icon_in_context(self):
         widget = SearchSelect(
             choices=[("a", "Alpha"), ("b", "Beta")],
-            icons={"a": "<svg>icon</svg>"},
+            icons={"a": mark_safe("<svg>icon</svg>")},
         )
         ctx = widget.get_context("test", "", {})
         for _group, options, _index in ctx["widget"]["optgroups"]:
@@ -796,7 +797,7 @@ class TestComboBox:
     def test_icons_in_suggestions(self):
         widget = ComboBox(
             suggestions=["Python", "Go"],
-            icons={"Python": '<img src="py.svg">'},
+            icons={"Python": mark_safe('<img src="py.svg">')},
         )
         soup = render_widget(widget, name="test")
         icon = soup.find("img", {"src": "py.svg"})
@@ -809,10 +810,10 @@ class TestComboBox:
         assert len(icons) == 0
 
     def test_suggestions_context_as_dicts(self):
-        widget = ComboBox(suggestions=["A", "B"], icons={"A": "<svg/>"})
+        widget = ComboBox(suggestions=["A", "B"], icons={"A": mark_safe("<svg/>")})
         ctx = widget.get_context("test", "", {})
         sugs = ctx["widget"]["suggestions"]
-        assert sugs[0] == {"text": "A", "icon": "<svg/>", "description": ""}
+        assert sugs[0] == {"text": "A", "icon": mark_safe("<svg/>"), "description": ""}
         assert sugs[1] == {"text": "B", "icon": "", "description": ""}
 
     def test_wrapper_has_id(self):

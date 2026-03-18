@@ -2,6 +2,7 @@
 
 from bs4 import BeautifulSoup
 from django.test import RequestFactory
+from django.utils.safestring import mark_safe
 
 from django_formwork.views import FormworkSearchView, FormworkValidateView
 
@@ -26,7 +27,7 @@ class IconSearchView(FormworkSearchView):
 
     def get_results(self, query, **kwargs):
         return [
-            {"value": "py", "label": "Python", "icon": '<img src="py.svg">'},
+            {"value": "py", "label": "Python", "icon": mark_safe('<img src="py.svg">')},
         ]
 
 
