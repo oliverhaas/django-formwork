@@ -138,12 +138,14 @@ details.multiselect > summary {
    SearchSelect / MultiSelect: Alpine toggles .formwork-placeholder on the summary. */
 select:has(> option[value=""]:checked),
 .formwork-placeholder {
+    color: rgba(0, 0, 0, 0.5); /* fallback for browsers without color-mix() */
     color: color-mix(in oklab, currentColor 50%, transparent);
 }
 
 /* Placeholder option in the native dropdown — explicit color so the
    browser renders it gray (options don't inherit from <select>). */
 select > option[value=""] {
+    color: rgba(0, 0, 0, 0.5); /* fallback */
     color: color-mix(in oklab, currentColor 50%, transparent);
 }
 
@@ -243,6 +245,7 @@ input.combobox-input {
 .dropzone-prompt-icon,
 .image-upload-prompt-icon {
     @apply w-10 h-10 mx-auto;
+    color: #9ca3af; /* fallback for browsers without color-mix() */
     color: color-mix(in oklab, var(--color-base-content) 40%, var(--color-base-100));
 }
 
@@ -494,6 +497,7 @@ label:has(> input.hidden:checked) > .formwork-check {
 /* Error highlights inside the overlay */
 .validated-textarea-highlights mark {
     @apply rounded-sm text-inherit;
+    background-color: rgba(239, 68, 68, 0.2); /* fallback for browsers without color-mix() */
     background-color: color-mix(in oklab, var(--color-error) 20%, transparent);
 }
 

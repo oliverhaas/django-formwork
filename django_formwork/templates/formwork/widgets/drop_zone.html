@@ -50,7 +50,7 @@
     return (bytes / 1048576).toFixed(1) + ' MB';
   }
 }" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop($event)">
-  <div class="dropzone-area" :class="dragging && 'dragging'" @click="$refs.input.click()">
+  <div class="dropzone-area" :class="dragging && 'dragging'" @click="$refs.input.click()" tabindex="0" role="button" aria-label="Choose files" @keydown.enter.prevent="$refs.input.click()" @keydown.space.prevent="$refs.input.click()">
     <input x-ref="input" type="file" name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %} @change="handleChange($event)"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
     <div x-show="!files.length">
       <svg class="dropzone-prompt-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m8 17 4-4 4 4"/></svg>
