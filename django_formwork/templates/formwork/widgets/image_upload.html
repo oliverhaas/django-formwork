@@ -46,7 +46,7 @@
     this.$refs.input.value = '';
   }
 }" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop($event)">
-  <div class="image-upload-area" :class="dragging && 'dragging'">
+  <div class="image-upload-area" :class="dragging && 'dragging'" tabindex="0" role="button" aria-label="Choose image" @keydown.enter.prevent="$refs.input.click()" @keydown.space.prevent="$refs.input.click()">
     <input x-ref="input" type="file" name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %} @change="handleChange($event)"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
     <div x-show="!preview && !error" @click="$refs.input.click()">
       <svg class="image-upload-prompt-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21"/><path d="m14 19.5 3-3 3 3"/><path d="M17 22v-5.5"/><circle cx="9" cy="9" r="2"/></svg>
