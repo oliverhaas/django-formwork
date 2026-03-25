@@ -163,6 +163,11 @@ input[type="radio"]:not(.mask):not(.rating-hidden) {
     @apply radio;
 }
 
+/* Clearable rating: cancel the indent from the half-width rating-hidden input. */
+.rating:has(> .rating-hidden) {
+    margin-left: calc(-0.25rem * 2);
+}
+
 /* File inputs — excludes those inside upload widgets (DropZone,
    ImageUpload) which are hidden and triggered via JS. */
 input[type="file"]:not(.dropzone *):not(.image-upload *) {
@@ -294,10 +299,6 @@ input.combobox-input {
     @apply text-sm text-error;
 }
 
-/* Rating: clear button for clearable variant. */
-.rating-clear {
-    @apply text-lg leading-none opacity-30 hover:opacity-70 cursor-pointer transition-opacity;
-}
 
 /* Alpine.js: hide elements until Alpine initializes */
 [x-cloak] {

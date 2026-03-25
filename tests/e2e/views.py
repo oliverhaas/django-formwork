@@ -216,8 +216,43 @@ class SimpleForm(FormworkForm):
     )
 
 
+_COUNTRIES = [
+    ("ar", "\U0001f1e6\U0001f1f7", "Argentina"),
+    ("au", "\U0001f1e6\U0001f1fa", "Australia"),
+    ("br", "\U0001f1e7\U0001f1f7", "Brazil"),
+    ("ca", "\U0001f1e8\U0001f1e6", "Canada"),
+    ("cn", "\U0001f1e8\U0001f1f3", "China"),
+    ("de", "\U0001f1e9\U0001f1ea", "Germany"),
+    ("eg", "\U0001f1ea\U0001f1ec", "Egypt"),
+    ("es", "\U0001f1ea\U0001f1f8", "Spain"),
+    ("fr", "\U0001f1eb\U0001f1f7", "France"),
+    ("gb", "\U0001f1ec\U0001f1e7", "United Kingdom"),
+    ("gr", "\U0001f1ec\U0001f1f7", "Greece"),
+    ("id", "\U0001f1ee\U0001f1e9", "Indonesia"),
+    ("il", "\U0001f1ee\U0001f1f1", "Israel"),
+    ("in", "\U0001f1ee\U0001f1f3", "India"),
+    ("it", "\U0001f1ee\U0001f1f9", "Italy"),
+    ("jp", "\U0001f1ef\U0001f1f5", "Japan"),
+    ("kr", "\U0001f1f0\U0001f1f7", "South Korea"),
+    ("mx", "\U0001f1f2\U0001f1fd", "Mexico"),
+    ("ng", "\U0001f1f3\U0001f1ec", "Nigeria"),
+    ("nl", "\U0001f1f3\U0001f1f1", "Netherlands"),
+    ("no", "\U0001f1f3\U0001f1f4", "Norway"),
+    ("nz", "\U0001f1f3\U0001f1ff", "New Zealand"),
+    ("pe", "\U0001f1f5\U0001f1ea", "Peru"),
+    ("ph", "\U0001f1f5\U0001f1ed", "Philippines"),
+    ("pl", "\U0001f1f5\U0001f1f1", "Poland"),
+    ("pt", "\U0001f1f5\U0001f1f9", "Portugal"),
+    ("se", "\U0001f1f8\U0001f1ea", "Sweden"),
+    ("sg", "\U0001f1f8\U0001f1ec", "Singapore"),
+    ("th", "\U0001f1f9\U0001f1ed", "Thailand"),
+    ("tr", "\U0001f1f9\U0001f1f7", "Turkey"),
+    ("us", "\U0001f1fa\U0001f1f8", "United States"),
+]
+
+
 class SearchSelectForm(FormworkForm):
-    """SearchSelect \u2014 plain, with icons, and server-side search."""
+    """SearchSelect — few options (no search), many options (auto-search), icons, server-side."""
 
     city_plain = forms.ChoiceField(
         choices=[
@@ -230,7 +265,15 @@ class SearchSelectForm(FormworkForm):
         ],
         widget=SearchSelect,
         required=False,
-        label="City (plain)",
+        label="City (plain, few options)",
+    )
+    country_many = forms.ChoiceField(
+        choices=[("", "")] + [(c, n) for c, _flag, n in _COUNTRIES],
+        widget=SearchSelect(
+            icons={c: flag for c, flag, _n in _COUNTRIES},
+        ),
+        required=False,
+        label="Country (many options, auto-search)",
     )
     city_icons = forms.ChoiceField(
         choices=[
@@ -267,41 +310,6 @@ class SearchSelectForm(FormworkForm):
         required=False,
         label="Country (server search, icons + descriptions)",
     )
-
-
-_COUNTRIES = [
-    ("ar", "\U0001f1e6\U0001f1f7", "Argentina"),
-    ("au", "\U0001f1e6\U0001f1fa", "Australia"),
-    ("br", "\U0001f1e7\U0001f1f7", "Brazil"),
-    ("ca", "\U0001f1e8\U0001f1e6", "Canada"),
-    ("cn", "\U0001f1e8\U0001f1f3", "China"),
-    ("de", "\U0001f1e9\U0001f1ea", "Germany"),
-    ("eg", "\U0001f1ea\U0001f1ec", "Egypt"),
-    ("es", "\U0001f1ea\U0001f1f8", "Spain"),
-    ("fr", "\U0001f1eb\U0001f1f7", "France"),
-    ("gb", "\U0001f1ec\U0001f1e7", "United Kingdom"),
-    ("gr", "\U0001f1ec\U0001f1f7", "Greece"),
-    ("id", "\U0001f1ee\U0001f1e9", "Indonesia"),
-    ("il", "\U0001f1ee\U0001f1f1", "Israel"),
-    ("in", "\U0001f1ee\U0001f1f3", "India"),
-    ("it", "\U0001f1ee\U0001f1f9", "Italy"),
-    ("jp", "\U0001f1ef\U0001f1f5", "Japan"),
-    ("kr", "\U0001f1f0\U0001f1f7", "South Korea"),
-    ("mx", "\U0001f1f2\U0001f1fd", "Mexico"),
-    ("ng", "\U0001f1f3\U0001f1ec", "Nigeria"),
-    ("nl", "\U0001f1f3\U0001f1f1", "Netherlands"),
-    ("no", "\U0001f1f3\U0001f1f4", "Norway"),
-    ("nz", "\U0001f1f3\U0001f1ff", "New Zealand"),
-    ("pe", "\U0001f1f5\U0001f1ea", "Peru"),
-    ("ph", "\U0001f1f5\U0001f1ed", "Philippines"),
-    ("pl", "\U0001f1f5\U0001f1f1", "Poland"),
-    ("pt", "\U0001f1f5\U0001f1f9", "Portugal"),
-    ("se", "\U0001f1f8\U0001f1ea", "Sweden"),
-    ("sg", "\U0001f1f8\U0001f1ec", "Singapore"),
-    ("th", "\U0001f1f9\U0001f1ed", "Thailand"),
-    ("tr", "\U0001f1f9\U0001f1f7", "Turkey"),
-    ("us", "\U0001f1fa\U0001f1f8", "United States"),
-]
 
 
 class MultiSelectForm(FormworkForm):
@@ -366,6 +374,21 @@ class ComboBoxForm(FormworkForm):
         ),
         required=False,
         label="Language (with icons)",
+    )
+    language_icons_multi = forms.CharField(
+        widget=ComboBox(
+            suggestions=["Python", "JavaScript", "Go", "Rust"],
+            icons={
+                "Python": "\U0001f40d",
+                "JavaScript": "\U0001f7e8",
+                "Go": "\U0001f439",
+                "Rust": "\U0001f980",
+            },
+            multiple=True,
+            attrs={"placeholder": "Languages with icons"},
+        ),
+        required=False,
+        label="Language (icons + multiple)",
     )
     language_htmx = forms.CharField(
         widget=ComboBox(

@@ -163,15 +163,20 @@ class MultiSelect(forms.SelectMultiple):
         *,
         search_url: str | None = None,
         icons: dict[str, str] | None = None,
+        show_search: bool | None = None,
     ) -> None:
         super().__init__(attrs=attrs, choices=choices)
         self.search_url = search_url
         self.icons = icons or {}
+        self.show_search = show_search
 
     def get_context(self, name: str, value: list[str] | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         total = sum(len(options) for _, options, _ in context["widget"]["optgroups"])
-        context["widget"]["show_search"] = total > self.search_threshold or bool(self.search_url)
+        if self.show_search is not None:
+            context["widget"]["show_search"] = self.show_search
+        else:
+            context["widget"]["show_search"] = total >= self.search_threshold or bool(self.search_url)
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         context["widget"]["search_url"] = self.search_url
         # Inject icons into option data.
@@ -219,8 +224,9 @@ class SearchSelect(forms.Select):
 
     template_name = "formwork/widgets/search_select.html"
     option_inherits_attrs = False
+    search_threshold = 20
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         attrs: dict[str, Any] | None = None,
         choices: tuple = (),
@@ -228,11 +234,13 @@ class SearchSelect(forms.Select):
         search_url: str | None = None,
         icons: dict[str, str] | None = None,
         descriptions: dict[str, str] | None = None,
+        show_search: bool | None = None,
     ) -> None:
         super().__init__(attrs=attrs, choices=choices)
         self.search_url = search_url
         self.icons = icons or {}
         self.descriptions = descriptions or {}
+        self.show_search = show_search
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
@@ -243,6 +251,7 @@ class SearchSelect(forms.Select):
         # Single pass: find selected label/icon AND inject icons/descriptions.
         selected_label = ""
         selected_icon = ""
+        total = 0
         for _group, options, _index in context["widget"]["optgroups"]:
             for option in options:
                 val_str = str(option["value"])
@@ -251,10 +260,19 @@ class SearchSelect(forms.Select):
                 if option["selected"]:
                     selected_label = str(option["label"])
                     selected_icon = option["icon"]
+                total += 1
         context["widget"]["selected_label"] = selected_label
         context["widget"]["selected_icon"] = selected_icon
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         context["widget"]["search_url"] = self.search_url
+        context["widget"]["search_threshold"] = self.search_threshold
+        if self.show_search is not None:
+            context["widget"]["show_search"] = self.show_search
+        elif self.search_url:
+            # Server-side search: start hidden, let OOB total-count swap decide.
+            context["widget"]["show_search"] = False
+        else:
+            context["widget"]["show_search"] = total >= self.search_threshold
         return context
 
 

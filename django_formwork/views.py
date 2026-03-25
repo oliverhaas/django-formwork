@@ -121,6 +121,22 @@ class FormworkSearchView(View):
     #: Valid widget types for the ``type`` query parameter.
     VALID_WIDGET_TYPES = frozenset({"search_select", "combobox", "multiselect"})
 
+    def get_total_count(self, **kwargs: Any) -> int | None:
+        """Return the total number of unfiltered results.
+
+        Used by widgets to decide whether to show a search input
+        (when the count exceeds ``search_threshold``).  The count is
+        embedded as a hidden ``<li>`` in every response.
+
+        Override this in your subclass if counting is cheaper than
+        fetching all results.  The default calls ``get_results("")``
+        and returns the length.
+
+        Returns:
+            Total count, or ``None`` to omit the count element.
+        """
+        return len(self.get_results("", **kwargs))
+
     def get(self, request: HttpRequest) -> HttpResponse:
         query = request.GET.get("q", "").strip()
         widget_type = request.GET.get("type", self.widget_type)
@@ -129,11 +145,18 @@ class FormworkSearchView(View):
         if widget_type not in self.VALID_WIDGET_TYPES:
             widget_type = self.widget_type
 
+        total = self.get_total_count(request=request)
         results = self.get_results(query, request=request)
 
         template = self._get_template(widget_type)
         html = template.render(Context({"results": results, "field_name": field_name}))
-        return HttpResponse(html.strip())
+        parts = [html.strip()]
+        if total is not None and field_name:
+            widget_id = f"id_{field_name}"
+            parts.append(
+                f'<input id="{widget_id}_total" type="hidden" value="{total}" hx-swap-oob="true">',
+            )
+        return HttpResponse("".join(parts))
 
 
 @method_decorator(csrf_exempt, name="dispatch")
