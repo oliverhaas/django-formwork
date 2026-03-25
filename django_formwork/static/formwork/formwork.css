@@ -94,6 +94,45 @@ fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidd
     grid-column: 1 / -1;
 }
 
+/* MultiWidget (SplitDateTimeWidget, SelectDateWidget): Django's
+   multiwidget template outputs bare <input>/<select> elements with
+   no wrapper.  The fieldset grid would stack them vertically; switch
+   to explicit multi-column layout so sub-widgets sit side by side.
+   Legend and help text span all columns.
+   MUST be unlayered to beat DaisyUI's .fieldset grid-template-columns
+   (in @layer utilities). */
+fieldset.fieldset:has(> input[type="date"] + input[type="time"]),
+fieldset.fieldset:has(> .tooltip > input[type="date"] + input[type="time"]) {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 0.5rem;
+}
+
+fieldset.fieldset:has(> select + select + select),
+fieldset.fieldset:has(> .tooltip > select + select + select) {
+    grid-template-columns: 1fr 1fr 1fr;
+    column-gap: 0.5rem;
+}
+
+fieldset.fieldset:has(> input[type="date"] + input[type="time"]) > .fieldset-legend,
+fieldset.fieldset:has(> input[type="date"] + input[type="time"]) > .label,
+fieldset.fieldset:has(> .tooltip > input[type="date"] + input[type="time"]) > .fieldset-legend,
+fieldset.fieldset:has(> .tooltip > input[type="date"] + input[type="time"]) > .label,
+fieldset.fieldset:has(> select + select + select) > .fieldset-legend,
+fieldset.fieldset:has(> select + select + select) > .label,
+fieldset.fieldset:has(> .tooltip > select + select + select) > .fieldset-legend,
+fieldset.fieldset:has(> .tooltip > select + select + select) > .label {
+    grid-column: 1 / -1;
+}
+
+/* Error tooltip inside a multi-widget fieldset: span all columns
+   and use subgrid so child inputs keep the parent's column layout. */
+fieldset.fieldset > .tooltip:has(> input[type="date"] + input[type="time"]),
+fieldset.fieldset > .tooltip:has(> select + select + select) {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+}
+
 @layer components {
 
 /* Vertical spacing between consecutive field groups. */
@@ -184,6 +223,12 @@ input[type="range"] {
 div:has(> div > label > input[type="radio"]),
 div:has(> div > label > input[type="checkbox"]:not(.toggle):not(.hidden)) {
     @apply flex flex-col gap-1;
+}
+
+/* Individual option labels: align checkbox/radio with text. */
+div > div > label:has(> input[type="radio"]),
+div > div > label:has(> input[type="checkbox"]:not(.toggle):not(.hidden)) {
+    @apply flex items-center gap-2;
 }
 
 /* PasswordReveal wrapper label — DaisyUI .input applied via @apply
