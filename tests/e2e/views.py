@@ -216,6 +216,55 @@ class SimpleForm(FormworkForm):
     )
 
 
+class _FakeFile:
+    """Minimal file-like object so ClearableFileInput shows the clear checkbox."""
+
+    url = "#"
+
+    def __str__(self):
+        return "photo.jpg"
+
+
+class BuiltinWidgetsForm(FormworkForm):
+    """Showcases Django's built-in widgets that are auto-styled by formwork.css."""
+
+    event_at = forms.SplitDateTimeField(
+        widget=forms.SplitDateTimeWidget(
+            date_attrs={"type": "date"},
+            time_attrs={"type": "time"},
+        ),
+        required=False,
+        label="Event date & time",
+        help_text="SplitDateTimeWidget \u2014 paired date + time inputs, side by side via CSS grid.",
+    )
+    avatar = forms.FileField(
+        widget=forms.ClearableFileInput,
+        required=False,
+        initial=_FakeFile(),
+        label="Avatar",
+        help_text="ClearableFileInput \u2014 file input with a \u201cClear\u201d checkbox when a file is set.",
+    )
+    toppings = forms.MultipleChoiceField(
+        choices=[("cheese", "Cheese"), ("pepperoni", "Pepperoni"), ("mushrooms", "Mushrooms"), ("olives", "Olives")],
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="Toppings",
+        help_text="CheckboxSelectMultiple \u2014 checkbox group for multi-value selection.",
+    )
+    birthday = forms.DateField(
+        widget=forms.SelectDateWidget(years=range(2020, 2031)),
+        required=False,
+        label="Birthday",
+        help_text="SelectDateWidget \u2014 three dropdowns for month, day, and year.",
+    )
+    color = forms.CharField(
+        widget=forms.TextInput(attrs={"type": "color"}),
+        required=False,
+        label="Favorite color",
+        help_text="ColorInput \u2014 native color picker.",
+    )
+
+
 _COUNTRIES = [
     ("ar", "\U0001f1e6\U0001f1f7", "Argentina"),
     ("au", "\U0001f1e6\U0001f1fa", "Australia"),
@@ -875,6 +924,12 @@ _PAGES = [
     ),
     ("simple", "/simple/", "Simple Custom Widgets", "Toggle, range slider, password reveal, datalist, and star rating"),
     (
+        "builtin",
+        "/builtin/",
+        "Built-in Widgets",
+        "Django\u2019s built-in compound widgets \u2014 SplitDateTimeWidget, ClearableFileInput, CheckboxSelectMultiple, SelectDateWidget",
+    ),
+    (
         "search-select",
         "/search-select/",
         "SearchSelect",
@@ -1109,6 +1164,10 @@ def elements_view(request: HttpRequest) -> HttpResponse:
 
 def simple_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, SimpleForm, "simple")
+
+
+def builtin_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, BuiltinWidgetsForm, "builtin")
 
 
 def search_select_view(request: HttpRequest) -> HttpResponse:
