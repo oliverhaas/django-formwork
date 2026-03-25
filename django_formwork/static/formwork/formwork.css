@@ -60,28 +60,30 @@
    checkbox, for a clean indented look.
    Direct-child selectors exclude multi-checkbox groups (inputs nested
    inside div > div > label).
+   :not(:has(> input[type="file"])) excludes ClearableFileInput, which
+   also has a direct-child checkbox but is not a standalone boolean field.
    MUST be unlayered to beat DaisyUI's .fieldset grid-template-columns
    (in @layer utilities) and our tooltip display:grid override. */
-fieldset.fieldset:has(> input[type="checkbox"]:not(.toggle):not(.hidden)),
-fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidden)) {
+fieldset.fieldset:has(> input[type="checkbox"]:not(.toggle):not(.hidden)):not(:has(> input[type="file"])),
+fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidden)):not(:has(> input[type="file"])) {
     grid-template-columns: auto 1fr;
     column-gap: 0.5rem;
     align-items: center;
 }
 
 /* Checkbox in column 1, label in column 2. */
-:is(fieldset.fieldset, .tooltip) > input[type="checkbox"]:not(.toggle):not(.hidden) {
+:is(fieldset.fieldset, .tooltip):not(:has(input[type="file"])) > input[type="checkbox"]:not(.toggle):not(.hidden) {
     grid-column: 1;
     grid-row: 1;
 }
 
-:is(fieldset.fieldset, .tooltip):has(> input[type="checkbox"]:not(.toggle):not(.hidden)) > .fieldset-legend {
+:is(fieldset.fieldset, .tooltip):has(> input[type="checkbox"]:not(.toggle):not(.hidden)):not(:has(input[type="file"])) > .fieldset-legend {
     grid-column: 2;
     grid-row: 1;
 }
 
 /* Error tooltip: span both columns, subgrid for alignment. */
-fieldset.fieldset > .tooltip:has(> input[type="checkbox"]:not(.toggle):not(.hidden)) {
+fieldset.fieldset:not(:has(input[type="file"])) > .tooltip:has(> input[type="checkbox"]:not(.toggle):not(.hidden)) {
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: subgrid;
@@ -89,9 +91,46 @@ fieldset.fieldset > .tooltip:has(> input[type="checkbox"]:not(.toggle):not(.hidd
 }
 
 /* Help text spans full width (consistent with other field types). */
-fieldset.fieldset:has(> input[type="checkbox"]:not(.toggle):not(.hidden)) > .label,
-fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidden)) > .label {
+fieldset.fieldset:has(> input[type="checkbox"]:not(.toggle):not(.hidden)):not(:has(> input[type="file"])) > .label,
+fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidden)):not(:has(> input[type="file"])) > .label {
     grid-column: 1 / -1;
+}
+
+/* ClearableFileInput: checkbox + label + file input + bare text nodes.
+   Switch from grid to flow layout so text nodes ("Currently:", "Change:")
+   wrap naturally with their adjacent elements.  The <br> Django inserts
+   acts as a line break between the clear row and file input row. */
+fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+}
+
+/* Legend and help text take full width. */
+fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > .fieldset-legend,
+fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > .label {
+    width: 100%;
+}
+
+/* File input takes full width on its own line. */
+fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > input[type="file"] {
+    width: 100%;
+}
+
+/* The <br> forces "Change:" + file input onto a new line. */
+fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > br {
+    width: 100%;
+}
+
+/* Shrink the clear checkbox (it's next to a label, not standalone). */
+fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > input[type="checkbox"] {
+    @apply checkbox;
+}
+
+/* Style the "Currently: file.jpg / Clear" text to look cohesive. */
+fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > a {
+    @apply link link-primary;
 }
 
 /* MultiWidget (SplitDateTimeWidget, SelectDateWidget): Django's
