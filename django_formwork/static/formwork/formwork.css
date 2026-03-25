@@ -202,9 +202,12 @@ input.combobox-input {
     @apply input w-full;
 }
 
-/* ComboBox: icon display overlay (shown when input is not focused) */
+/* ComboBox: icon display overlay (shown when input is not focused).
+   The input underneath provides all visual chrome (border, height, shadows).
+   Match font-size and offset padding by the input border so text aligns. */
 .combobox-display {
-    @apply input w-full;
+    font-size: max(var(--font-size, 0.875rem), 0.875rem);
+    padding-inline: calc(var(--border, 1px) + 0.75rem);
 }
 
 /* Custom widget: drop zone / image upload — fill container width */
