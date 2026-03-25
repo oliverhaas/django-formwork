@@ -7,7 +7,7 @@ from .conftest import submit
 
 
 class TestSearchSelectPlain:
-    """SearchSelect with static choices, no icons."""
+    """SearchSelect with few static choices — no search input shown."""
 
     def _get(self, page):
         return page.locator("details.dropdown.search-select").first
@@ -27,7 +27,7 @@ class TestSearchSelectPlain:
         summary.click()
         search_select_page.wait_for_timeout(200)
 
-    def test_search_filters_options(self, search_select_page):
+    def test_no_search_input_with_few_options(self, search_select_page):
         sel = self._get(search_select_page)
         search_select_page.evaluate("""() => {
             const dd = document.querySelector('details.dropdown.search-select');
@@ -35,15 +35,12 @@ class TestSearchSelectPlain:
             dd.dispatchEvent(new Event('toggle'));
         }""")
         search_select_page.wait_for_timeout(200)
-        search = sel.locator('.dropdown-content input[type="text"]')
-        search.fill("Tok")
-        search_select_page.wait_for_timeout(100)
-        assert sel.locator("button", has_text="Tokyo").is_visible()
-        assert not sel.locator("button", has_text="London").is_visible()
+        search_wrapper = sel.locator(".dropdown-content > div").first
+        assert not search_wrapper.is_visible()
 
     def test_pick_option_sets_value(self, search_select_page):
         sel = self._get(search_select_page)
-        hidden = sel.locator('input[type="hidden"]')
+        hidden = sel.locator('input[type="hidden"][name]')
         search_select_page.evaluate("""() => {
             const dd = document.querySelector('details.dropdown.search-select');
             dd.open = true;
@@ -72,7 +69,7 @@ class TestSearchSelectPlain:
         search_select_page.wait_for_timeout(200)
         sel.locator("button", has_text="London").click()
         search_select_page.wait_for_timeout(200)
-        hidden = sel.locator('input[type="hidden"]')
+        hidden = sel.locator('input[type="hidden"][name]')
         assert hidden.input_value() == "ldn"
         submit(search_select_page)
         hidden = search_select_page.locator(
@@ -115,11 +112,56 @@ class TestSearchSelectPlain:
         assert "_searchselect" in sel.get_attribute("id")
 
 
+class TestSearchSelectMany:
+    """SearchSelect with many options — search input shown automatically."""
+
+    def _get(self, page):
+        return page.locator("details.dropdown.search-select").nth(1)
+
+    def test_search_input_shown(self, search_select_page):
+        sel = self._get(search_select_page)
+        search_select_page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            dds[1].open = true;
+            dds[1].dispatchEvent(new Event('toggle'));
+        }""")
+        search_select_page.wait_for_timeout(200)
+        search = sel.locator('.dropdown-content input[type="text"]')
+        assert search.count() == 1
+
+    def test_search_filters_options(self, search_select_page):
+        sel = self._get(search_select_page)
+        search_select_page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            dds[1].open = true;
+            dds[1].dispatchEvent(new Event('toggle'));
+        }""")
+        search_select_page.wait_for_timeout(200)
+        search = sel.locator('.dropdown-content input[type="text"]')
+        search.fill("Jap")
+        search_select_page.wait_for_timeout(100)
+        assert sel.locator("button", has_text="Japan").is_visible()
+        assert not sel.locator("button", has_text="Brazil").is_visible()
+
+    def test_pick_option_sets_value(self, search_select_page):
+        sel = self._get(search_select_page)
+        hidden = sel.locator('input[type="hidden"][name]')
+        search_select_page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            dds[1].open = true;
+            dds[1].dispatchEvent(new Event('toggle'));
+        }""")
+        search_select_page.wait_for_timeout(200)
+        sel.locator("button", has_text="Germany").click()
+        search_select_page.wait_for_timeout(100)
+        assert hidden.input_value() == "de"
+
+
 class TestSearchSelectIcons:
     """SearchSelect with icons in choices."""
 
     def _get(self, page):
-        return page.locator("details.dropdown.search-select").nth(1)
+        return page.locator("details.dropdown.search-select").nth(2)
 
     def test_renders(self, search_select_page):
         sel = self._get(search_select_page)
@@ -130,8 +172,8 @@ class TestSearchSelectIcons:
         summary = sel.locator("summary")
         search_select_page.evaluate("""() => {
             const dds = document.querySelectorAll('details.dropdown.search-select');
-            dds[1].open = true;
-            dds[1].dispatchEvent(new Event('toggle'));
+            dds[2].open = true;
+            dds[2].dispatchEvent(new Event('toggle'));
         }""")
         search_select_page.wait_for_timeout(200)
         sel.locator("button", has_text="New York").click()
@@ -144,19 +186,19 @@ class TestSearchSelectHtmx:
     """SearchSelect with server-side search via htmx."""
 
     def _get(self, page):
-        return page.locator("details.dropdown.search-select").nth(2)
+        return page.locator("details.dropdown.search-select").nth(3)
 
     def _open_and_load(self, page):
         sel = self._get(page)
         page.evaluate("""() => {
             const dds = document.querySelectorAll('details.dropdown.search-select');
-            dds[2].open = true;
-            dds[2].dispatchEvent(new Event('toggle'));
+            dds[3].open = true;
+            dds[3].dispatchEvent(new Event('toggle'));
         }""")
         page.wait_for_timeout(200)
         page.evaluate("""() => {
             const dds = document.querySelectorAll('details.dropdown.search-select');
-            const search = dds[2].querySelector('.dropdown-content input[type="text"]');
+            const search = dds[3].querySelector('.dropdown-content input[type="text"]');
             search.focus();
             search.dispatchEvent(new Event('focus'));
         }""")
@@ -177,7 +219,7 @@ class TestSearchSelectHtmx:
         expect(sel.locator("ul button")).to_have_count(4, timeout=3000)
         search_select_page.evaluate("""() => {
             const dds = document.querySelectorAll('details.dropdown.search-select');
-            const search = dds[2].querySelector('.dropdown-content input[type="text"]');
+            const search = dds[3].querySelector('.dropdown-content input[type="text"]');
             search.value = 'Tok';
             search.dispatchEvent(new Event('input', {bubbles: true}));
         }""")
@@ -186,10 +228,10 @@ class TestSearchSelectHtmx:
 
     def test_pick_sets_value(self, search_select_page):
         sel = self._open_and_load(search_select_page)
-        hidden = sel.locator('input[type="hidden"]')
+        hidden = sel.locator('input[type="hidden"][name]')
         search_select_page.evaluate("""() => {
             const dds = document.querySelectorAll('details.dropdown.search-select');
-            const search = dds[2].querySelector('.dropdown-content input[type="text"]');
+            const search = dds[3].querySelector('.dropdown-content input[type="text"]');
             search.value = 'Lon';
             search.dispatchEvent(new Event('input', {bubbles: true}));
         }""")
@@ -203,7 +245,7 @@ class TestSearchSelectHtmx:
         expect(sel.locator("ul button")).to_have_count(4, timeout=3000)
         search_select_page.evaluate("""() => {
             const dds = document.querySelectorAll('details.dropdown.search-select');
-            const search = dds[2].querySelector('.dropdown-content input[type="text"]');
+            const search = dds[3].querySelector('.dropdown-content input[type="text"]');
             htmx.ajax('GET', search.getAttribute('hx-get') + '?q=zzzzz&type=search_select', {
                 target: search.getAttribute('hx-target'),
                 swap: 'innerHTML',

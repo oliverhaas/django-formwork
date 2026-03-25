@@ -186,15 +186,15 @@ class TestRating:
 class TestClearableRating:
     """Clearable rating variant (required=False, allow_clear=True)."""
 
-    def test_renders_with_clear_button(self, simple_page):
+    def test_renders_with_hidden_clear_option(self, simple_page):
         rating = simple_page.locator("#id_clearable_rating")
         stars = rating.locator('input[type="radio"]:not(.rating-hidden)')
         assert stars.count() == 5
-        # Clear button is a sibling of the .rating div
-        clear_btn = simple_page.locator("#id_clearable_rating_wrapper .rating-clear")
-        assert clear_btn.is_visible()
+        # Hidden clear radio is the first input inside .rating
+        hidden = rating.locator("input.rating-hidden")
+        assert hidden.count() == 1
 
-    def test_clear_button_clears_selection(self, simple_page):
+    def test_hidden_clear_option_clears_selection(self, simple_page):
         # Select a star first
         simple_page.evaluate("""
             const star = document.querySelector('#id_clearable_rating input[value="3"]');
@@ -205,8 +205,12 @@ class TestClearableRating:
             "document.querySelector('#id_clearable_rating input:checked')?.value || ''",
         )
         assert checked == "3"
-        # Click clear button
-        simple_page.locator("#id_clearable_rating_wrapper .rating-clear").click()
+        # Click the hidden clear option (DaisyUI rating-hidden)
+        simple_page.evaluate("""
+            const hidden = document.querySelector('#id_clearable_rating .rating-hidden');
+            hidden.checked = true;
+            hidden.dispatchEvent(new Event('change', {bubbles: true}));
+        """)
         checked = simple_page.evaluate(
             "document.querySelector('#id_clearable_rating input:checked')?.value || ''",
         )

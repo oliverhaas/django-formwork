@@ -447,12 +447,20 @@ class TestSearchSelect:
         assert "text-left" in summary.get("class", [])
 
     def test_search_input_inside_dropdown(self):
-        """Search input is inside the dropdown content, not the trigger."""
-        widget = SearchSelect(choices=[("a", "Alpha"), ("b", "Beta")])
+        """Search input is inside the dropdown content when show_search is True."""
+        widget = SearchSelect(choices=[("a", "Alpha"), ("b", "Beta")], show_search=True)
         soup = render_widget(widget, name="test")
         dropdown = soup.find("div", class_="dropdown-content")
         search = dropdown.find("input", {"type": "text"})
         assert search is not None
+
+    def test_no_search_input_below_threshold(self):
+        """Search wrapper has x-show=false when choice count is below threshold."""
+        widget = SearchSelect(choices=[("a", "Alpha"), ("b", "Beta")])
+        soup = render_widget(widget, name="test")
+        details = soup.find("details")
+        # showSearch Alpine var should be initialized to false
+        assert "showSearch: false" in details.get("x-data", "")
 
     def test_renders_hidden_value_input(self):
         widget = SearchSelect(choices=[("a", "Alpha"), ("b", "Beta")])
@@ -565,7 +573,7 @@ class TestSearchSelect:
         assert search["hx-swap"] == "innerHTML"
 
     def test_no_htmx_attrs_without_search_url(self):
-        widget = SearchSelect(choices=[("a", "Alpha")])
+        widget = SearchSelect(choices=[("a", "Alpha")], show_search=True)
         soup = render_widget(widget, name="test", attrs={"id": "id_test"})
         dropdown = soup.find("div", class_="dropdown-content")
         search = dropdown.find("input", {"type": "text"})
