@@ -1,6 +1,7 @@
 """Server-side views for formwork widgets.
 
 :class:`FormworkSearchView` is the base class for dropdown search endpoints.
+:class:`FormworkAutoSearchView` dispatches auto-registered search endpoints.
 :class:`FormworkValidateView` is the base class for textarea validation endpoints.
 """
 
@@ -9,7 +10,7 @@ from __future__ import annotations
 from html import escape as html_escape
 from typing import TYPE_CHECKING, Any
 
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseBase
 from django.template import Context
 from django.template.engine import Engine
 from django.utils.decorators import method_decorator
@@ -157,6 +158,69 @@ class FormworkSearchView(View):
                 f'<input id="{widget_id}_total" type="hidden" value="{total}" hx-swap-oob="true">',
             )
         return HttpResponse("".join(parts))
+
+
+class FormworkAutoSearchView(FormworkSearchView):
+    """Dispatch view for auto-registered search endpoints.
+
+    Serves all widgets that use ``search_fields`` for automatic search
+    registration.  A single URL pattern handles all registered endpoints::
+
+        # urls.py
+        path("formwork/", include("django_formwork.urls"))
+
+    The view looks up the registration by key, filters the queryset, and
+    returns results using the appropriate template (search_select, multiselect,
+    or combobox).
+    """
+
+    def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
+        super().setup(request, *args, **kwargs)
+        from django_formwork.registry import get_registration
+
+        self.registration = get_registration(kwargs.get("key", ""))
+
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
+        if self.registration is None:
+            return HttpResponse(status=404)
+        reg = self.registration
+        if reg.permission and not reg.permission(request):
+            return HttpResponse(status=403)
+        self.widget_type = reg.widget_type
+        # Remove URL kwargs before passing to parent — get() doesn't accept them.
+        kwargs.pop("key", None)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:  # noqa: ARG002
+        from django.db.models import Q
+
+        reg = self.registration
+        if reg is None:  # pragma: no cover — dispatch() returns 404 when None
+            return []
+        qs = reg.queryset_factory()
+        if query:
+            q = Q()
+            for field_name in reg.search_fields:
+                q |= Q(**{f"{field_name}__icontains": query})
+            qs = qs.filter(q)
+        qs = qs[: reg.max_results]
+        results: list[dict[str, str]] = []
+        for obj in qs:
+            result: dict[str, str] = {
+                "value": str(getattr(obj, reg.to_field_name)),
+                "label": reg.label_from_instance(obj) if reg.label_from_instance else str(obj),
+            }
+            if reg.icon_from_instance:
+                result["icon"] = reg.icon_from_instance(obj)
+            if reg.description_from_instance:
+                result["description"] = reg.description_from_instance(obj)
+            results.append(result)
+        return results
+
+    def get_total_count(self, **kwargs: Any) -> int:  # noqa: ARG002
+        if self.registration is None:  # pragma: no cover
+            return 0
+        return self.registration.queryset_factory().count()
 
 
 @method_decorator(csrf_exempt, name="dispatch")
