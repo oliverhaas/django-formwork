@@ -303,7 +303,12 @@ class SearchSelectForm(FormworkForm):
     city_htmx = forms.ChoiceField(
         widget=SearchSelect(search_url="/e2e/search/cities/"),
         required=False,
-        label="City (server-side search)",
+        label="City (server search, few — no search input)",
+    )
+    city_htmx_many = forms.ChoiceField(
+        widget=SearchSelect(search_url="/e2e/search/cities-many/"),
+        required=False,
+        label="City (server search, many — auto search input)",
     )
     country_htmx_icons = forms.ChoiceField(
         widget=SearchSelect(search_url="/e2e/search/countries/"),
@@ -560,6 +565,33 @@ E2E_CITIES = [
     {"value": "par", "label": "Paris"},
 ]
 
+E2E_CITIES_MANY = [
+    {"value": "nyc", "label": "New York"},
+    {"value": "ldn", "label": "London"},
+    {"value": "tyo", "label": "Tokyo"},
+    {"value": "par", "label": "Paris"},
+    {"value": "syd", "label": "Sydney"},
+    {"value": "ber", "label": "Berlin"},
+    {"value": "rom", "label": "Rome"},
+    {"value": "mad", "label": "Madrid"},
+    {"value": "ams", "label": "Amsterdam"},
+    {"value": "vie", "label": "Vienna"},
+    {"value": "prg", "label": "Prague"},
+    {"value": "lis", "label": "Lisbon"},
+    {"value": "dub", "label": "Dublin"},
+    {"value": "cop", "label": "Copenhagen"},
+    {"value": "sto", "label": "Stockholm"},
+    {"value": "hel", "label": "Helsinki"},
+    {"value": "war", "label": "Warsaw"},
+    {"value": "bud", "label": "Budapest"},
+    {"value": "ath", "label": "Athens"},
+    {"value": "ist", "label": "Istanbul"},
+    {"value": "bkk", "label": "Bangkok"},
+    {"value": "sin", "label": "Singapore"},
+    {"value": "hkg", "label": "Hong Kong"},
+    {"value": "sel", "label": "Seoul"},
+]
+
 E2E_LANGUAGES = [
     {"value": "py", "label": "Python"},
     {"value": "js", "label": "JavaScript"},
@@ -584,6 +616,13 @@ class E2ECitySearchView(FormworkSearchView):
         if not query:
             return E2E_CITIES
         return [c for c in E2E_CITIES if query.lower() in c["label"].lower()]
+
+
+class E2ECityManySearchView(FormworkSearchView):
+    def get_results(self, query, **kwargs):
+        if not query:
+            return E2E_CITIES_MANY
+        return [c for c in E2E_CITIES_MANY if query.lower() in c["label"].lower()]
 
 
 class E2ELanguageSearchView(FormworkSearchView):
