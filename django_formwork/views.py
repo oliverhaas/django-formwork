@@ -154,7 +154,7 @@ class FormworkSearchView(View):
         template = self._get_template(widget_type)
         html = template.render(Context({"results": results, "field_name": field_name}))
         parts = [html.strip()]
-        if total is not None and field_name:
+        if total is not None and field_name and widget_type == "search_select":
             widget_id = f"id_{field_name}"
             parts.append(
                 f'<input id="{widget_id}_total" type="hidden" value="{total}" hx-swap-oob="true">',

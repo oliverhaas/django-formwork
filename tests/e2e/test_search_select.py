@@ -253,3 +253,72 @@ class TestSearchSelectHtmx:
         }""")
         no_results = sel.locator("li", has_text="No results")
         expect(no_results).to_be_visible(timeout=3000)
+
+
+class TestSearchSelectHtmxIcons:
+    """SearchSelect with server-side search, icons, and descriptions.
+
+    This is the country_htmx_icons dropdown (nth=4).
+    It has 31 options — above the search_threshold — so the search
+    input should become visible after the first htmx load.
+    """
+
+    def _get(self, page):
+        return page.locator("details.dropdown.search-select").nth(4)
+
+    def _open_and_wait(self, page):
+        sel = self._get(page)
+        page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            dds[4].open = true;
+            dds[4].dispatchEvent(new Event('toggle'));
+        }""")
+        # Wait for htmx to load initial results and OOB total count.
+        page.wait_for_timeout(2000)
+        return sel
+
+    def test_renders(self, search_select_page):
+        sel = self._get(search_select_page)
+        assert sel.is_visible()
+
+    def test_open_loads_all_results(self, search_select_page):
+        sel = self._open_and_wait(search_select_page)
+        buttons = sel.locator("ul button")
+        expect(buttons).to_have_count(31, timeout=3000)
+
+    def test_search_input_shown_above_threshold(self, search_select_page):
+        """Search input should be visible when total count >= search_threshold."""
+        sel = self._open_and_wait(search_select_page)
+        search_wrapper = sel.locator(".dropdown-content > div").first
+        expect(search_wrapper).to_be_visible(timeout=3000)
+
+    def test_results_have_icons(self, search_select_page):
+        sel = self._open_and_wait(search_select_page)
+        # Each button has an icon span with a flag emoji.
+        first_button = sel.locator("ul button").first
+        icon_span = first_button.locator("span.shrink-0").first
+        assert icon_span.text_content().strip() != ""
+
+    def test_results_have_descriptions(self, search_select_page):
+        sel = self._open_and_wait(search_select_page)
+        descs = sel.locator("ul button span.text-xs")
+        assert descs.count() >= 1
+        assert descs.first.text_content().strip() != ""
+
+    def test_search_filters_via_htmx(self, search_select_page):
+        sel = self._open_and_wait(search_select_page)
+        search_select_page.evaluate("""() => {
+            const dds = document.querySelectorAll('details.dropdown.search-select');
+            const search = dds[4].querySelector('.dropdown-content input[type="text"]');
+            search.value = 'Jap';
+            search.dispatchEvent(new Event('input', {bubbles: true}));
+        }""")
+        expect(sel.locator("ul button")).to_have_count(1, timeout=3000)
+        assert "Japan" in sel.locator("ul button").first.text_content()
+
+    def test_pick_sets_value(self, search_select_page):
+        sel = self._open_and_wait(search_select_page)
+        hidden = sel.locator('input[type="hidden"][name]')
+        sel.locator("ul button", has_text="France").click()
+        search_select_page.wait_for_timeout(200)
+        assert hidden.input_value() == "fr"
