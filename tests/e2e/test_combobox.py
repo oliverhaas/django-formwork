@@ -158,7 +158,7 @@ class TestComboBoxHtmx:
     """ComboBox with server-side search via htmx."""
 
     def _get(self, page):
-        return page.locator(".dropdown.combobox").nth(3)
+        return page.locator(".dropdown.combobox").nth(4)
 
     def test_renders(self, combobox_page):
         combo = self._get(combobox_page)
