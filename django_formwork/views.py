@@ -20,6 +20,8 @@ from django.views.decorators.csrf import csrf_exempt
 if TYPE_CHECKING:
     from django.template.base import Template
 
+    from django_formwork.registry import SearchRegistration
+
 
 class FormworkSearchView(View):
     """Base view for server-side widget search.
@@ -167,7 +169,7 @@ class FormworkAutoSearchView(FormworkSearchView):
     registration.  A single URL pattern handles all registered endpoints::
 
         # urls.py
-        path("formwork/", include("django_formwork.urls"))
+        path("__formwork__/", include("django_formwork.urls"))
 
     The view looks up the registration by key, filters the queryset, and
     returns results using the appropriate template (search_select, multiselect,
@@ -191,11 +193,35 @@ class FormworkAutoSearchView(FormworkSearchView):
         kwargs.pop("key", None)
         return super().dispatch(request, *args, **kwargs)
 
-    def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:  # noqa: ARG002
-        from django.db.models import Q
-
+    def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:
         reg = self.registration
         if reg is None:  # pragma: no cover — dispatch() returns 404 when None
+            return []
+
+        # Path 1: choices-backed (search_func).
+        if reg.search_func:
+            return self._normalize_results(reg.search_func(query, kwargs.get("request")))
+
+        # Path 2: model-backed (queryset + search_fields).
+        return self._queryset_results(reg, query)
+
+    @staticmethod
+    def _normalize_results(raw: list) -> list[dict[str, str]]:
+        """Convert (value, label) tuples or dicts to uniform result dicts."""
+        results: list[dict[str, str]] = []
+        for item in raw:
+            if isinstance(item, dict):
+                results.append(item)
+            else:
+                # (value, label) tuple
+                results.append({"value": str(item[0]), "label": str(item[1])})
+        return results
+
+    @staticmethod
+    def _queryset_results(reg: SearchRegistration, query: str) -> list[dict[str, str]]:
+        from django.db.models import Q
+
+        if reg.queryset_factory is None:  # pragma: no cover
             return []
         qs = reg.queryset_factory()
         if query:
@@ -217,10 +243,15 @@ class FormworkAutoSearchView(FormworkSearchView):
             results.append(result)
         return results
 
-    def get_total_count(self, **kwargs: Any) -> int:  # noqa: ARG002
-        if self.registration is None:  # pragma: no cover
+    def get_total_count(self, **kwargs: Any) -> int:
+        reg = self.registration
+        if reg is None:  # pragma: no cover
             return 0
-        return self.registration.queryset_factory().count()
+        if reg.search_func:
+            return len(self._normalize_results(reg.search_func("", kwargs.get("request"))))
+        if reg.queryset_factory is None:  # pragma: no cover
+            return 0
+        return reg.queryset_factory().count()
 
 
 @method_decorator(csrf_exempt, name="dispatch")

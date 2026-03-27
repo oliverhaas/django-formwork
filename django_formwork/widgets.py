@@ -348,6 +348,7 @@ class ComboBox(forms.TextInput):
         self.search_url = search_url
         self.icons = icons or {}
         self.descriptions = descriptions or {}
+        self._registry_key: str | None = None
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
@@ -357,7 +358,13 @@ class ComboBox(forms.TextInput):
         ]
         context["widget"]["multiple"] = self.multiple
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
-        context["widget"]["search_url"] = self.search_url
+        # Resolve search URL: explicit > auto-registered > none.
+        search_url = self.search_url
+        if not search_url and self._registry_key:
+            from django.urls import reverse
+
+            search_url = reverse("formwork:search", kwargs={"key": self._registry_key})
+        context["widget"]["search_url"] = search_url
         # Build initial icon map from current value for unfocused display.
         context["widget"]["icons_json"] = json.dumps(
             {s: self.icons[s] for s in self.suggestions if s in self.icons},

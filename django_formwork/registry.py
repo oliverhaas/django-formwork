@@ -1,9 +1,11 @@
 """Auto-registration registry for server-side search endpoints.
 
 Widgets with ``search_fields`` are automatically registered here when their
-form is instantiated.  A single dispatch view (``FormworkAutoSearchView``)
-serves all registered endpoints via a stable key derived from the model
-and search configuration.
+form is instantiated.  Forms with ``search_choices_<fieldname>`` methods are
+also registered for plain (non-model) choice fields.
+
+A single dispatch view (``FormworkAutoSearchView``) serves all registered
+endpoints via a stable key.
 """
 
 from __future__ import annotations
@@ -21,10 +23,17 @@ _registry: dict[str, SearchRegistration] = {}
 
 @dataclass(frozen=True)
 class SearchRegistration:
-    """Everything needed to serve a search endpoint."""
+    """Everything needed to serve a search endpoint.
 
-    queryset_factory: Callable[[], QuerySet]
-    search_fields: tuple[str, ...]
+    Two modes:
+
+    - **Model-backed**: ``queryset_factory`` + ``search_fields`` for automatic
+      ``__icontains`` filtering.
+    - **Choices-backed**: ``search_func(query, request)`` returns results directly.
+    """
+
+    queryset_factory: Callable[[], QuerySet] | None = None
+    search_fields: tuple[str, ...] = ()
     to_field_name: str = "pk"
     label_from_instance: Callable[..., str] | None = None
     icon_from_instance: Callable[..., str] | None = None
@@ -32,6 +41,7 @@ class SearchRegistration:
     permission: Callable[..., bool] | None = None
     max_results: int = 50
     widget_type: str = "search_select"
+    search_func: Callable[..., list] | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -40,12 +50,19 @@ def make_key(
     search_fields: Sequence[str],
     to_field_name: str = "pk",
 ) -> str:
-    """Build a stable, URL-safe registry key."""
+    """Build a stable, URL-safe registry key for model-backed search."""
     fields_part = ",".join(sorted(search_fields))
     key = f"{model_label}.{fields_part}"
     if to_field_name != "pk":
         key += f".{to_field_name}"
     return key
+
+
+def make_choices_key(form_cls: type, field_name: str) -> str:
+    """Build a stable, URL-safe registry key for choices-backed search."""
+    module = form_cls.__module__
+    qualname = form_cls.__qualname__
+    return f"{module}.{qualname}.{field_name}".lower()
 
 
 def register(key: str, registration: SearchRegistration) -> None:
