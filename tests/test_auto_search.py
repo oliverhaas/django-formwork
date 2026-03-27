@@ -9,6 +9,7 @@ from django_formwork.registry import (
     SearchRegistration,
     get_registration,
     get_registry,
+    make_choices_key,
     make_key,
     register,
 )
@@ -463,3 +464,235 @@ class TestFormworkAutoSearchView:
         request = factory.get("/search/", {"q": "zzzzz", "type": "search_select"})
         response = FormworkAutoSearchView.as_view()(request, key="test.noresults")
         assert b"No results" in response.content
+
+
+# ---------------------------------------------------------------------------
+# make_choices_key
+# ---------------------------------------------------------------------------
+
+
+class TestMakeChoicesKey:
+    def test_basic_key(self):
+        class MyForm:
+            pass
+
+        MyForm.__module__ = "myapp.forms"
+        MyForm.__qualname__ = "MyForm"
+        assert make_choices_key(MyForm, "city") == "myapp.forms.myform.city"
+
+    def test_nested_class(self):
+        class Outer:
+            class Inner:
+                pass
+
+        Outer.Inner.__module__ = "myapp.forms"
+        Outer.Inner.__qualname__ = "Outer.Inner"
+        key = make_choices_key(Outer.Inner, "color")
+        assert key == "myapp.forms.outer.inner.color"
+
+
+# ---------------------------------------------------------------------------
+# Choices-backed auto-registration
+# ---------------------------------------------------------------------------
+
+_CITIES = [
+    ("nyc", "New York"),
+    ("ldn", "London"),
+    ("par", "Paris"),
+    ("tky", "Tokyo"),
+    ("syd", "Sydney"),
+]
+
+
+def _search_cities(query, request=None):
+    if not query:
+        return _CITIES
+    return [(v, lbl) for v, lbl in _CITIES if query.lower() in lbl.lower()]
+
+
+class TestChoicesAutoRegistration:
+    def test_registers_search_choices_method(self):
+        from django import forms
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
+
+        class CityForm(FormworkForm):
+            city = forms.ChoiceField(
+                choices=_CITIES,
+                widget=SearchSelect(),
+            )
+
+            @staticmethod
+            def search_choices_city(query, request=None):
+                return _search_cities(query, request)
+
+        CityForm()
+        key = make_choices_key(CityForm, "city")
+        reg = get_registration(key)
+        assert reg is not None
+        assert reg.search_func is not None
+        assert reg.widget_type == "search_select"
+
+    def test_sets_registry_key_on_widget(self):
+        from django import forms
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
+
+        class CityForm(FormworkForm):
+            city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect())
+
+            @staticmethod
+            def search_choices_city(query, request=None):
+                return _search_cities(query, request)
+
+        form = CityForm()
+        widget = form.fields["city"].widget
+        assert widget._registry_key == make_choices_key(CityForm, "city")  # noqa: SLF001
+
+    def test_skips_without_search_choices_method(self):
+        from django import forms
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
+
+        class CityForm(FormworkForm):
+            city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect())
+
+        CityForm()
+        assert len(get_registry()) == 0
+
+    def test_skips_explicit_search_url(self):
+        from django import forms
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
+
+        class CityForm(FormworkForm):
+            city = forms.ChoiceField(
+                choices=_CITIES,
+                widget=SearchSelect(search_url="/my/url/"),
+            )
+
+            @staticmethod
+            def search_choices_city(query, request=None):
+                return _search_cities(query, request)
+
+        CityForm()
+        assert len(get_registry()) == 0
+
+    def test_multiselect_choices(self):
+        from django import forms
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import MultiSelect
+
+        class CityForm(FormworkForm):
+            cities = forms.MultipleChoiceField(choices=_CITIES, widget=MultiSelect())
+
+            @staticmethod
+            def search_choices_cities(query, request=None):
+                return _search_cities(query, request)
+
+        CityForm()
+        key = make_choices_key(CityForm, "cities")
+        reg = get_registration(key)
+        assert reg is not None
+        assert reg.widget_type == "multiselect"
+
+    def test_combobox_choices(self):
+        from django import forms
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import ComboBox
+
+        class TagForm(FormworkForm):
+            tag = forms.CharField(widget=ComboBox())
+
+            @staticmethod
+            def search_choices_tag(query, request=None):
+                tags = ["python", "javascript", "go", "rust"]
+                if not query:
+                    return [{"value": t, "label": t} for t in tags]
+                return [{"value": t, "label": t} for t in tags if query.lower() in t]
+
+        TagForm()
+        key = make_choices_key(TagForm, "tag")
+        reg = get_registration(key)
+        assert reg is not None
+        assert reg.widget_type == "combobox"
+
+
+# ---------------------------------------------------------------------------
+# FormworkAutoSearchView — choices-backed dispatch
+# ---------------------------------------------------------------------------
+
+
+class TestAutoSearchViewChoices:
+    @pytest.fixture
+    def choices_key(self):
+        reg = SearchRegistration(
+            search_func=_search_cities,
+            widget_type="search_select",
+        )
+        key = "test.choices.city"
+        register(key, reg)
+        return key
+
+    def test_returns_all_results(self, choices_key):
+        from django_formwork.views import FormworkAutoSearchView
+
+        request = factory.get("/search/", {"q": "", "type": "search_select", "name": "city"})
+        response = FormworkAutoSearchView.as_view()(request, key=choices_key)
+        assert response.status_code == 200
+        soup = BeautifulSoup(response.content, "html.parser")
+        buttons = soup.find_all("button")
+        assert len(buttons) == 5
+
+    def test_filters_by_query(self, choices_key):
+        from django_formwork.views import FormworkAutoSearchView
+
+        request = factory.get("/search/", {"q": "new", "type": "search_select"})
+        response = FormworkAutoSearchView.as_view()(request, key=choices_key)
+        soup = BeautifulSoup(response.content, "html.parser")
+        buttons = soup.find_all("button")
+        assert len(buttons) == 1
+        assert "New York" in buttons[0].get_text()
+
+    def test_total_count_oob(self, choices_key):
+        from django_formwork.views import FormworkAutoSearchView
+
+        request = factory.get("/search/", {"q": "lon", "type": "search_select", "name": "city"})
+        response = FormworkAutoSearchView.as_view()(request, key=choices_key)
+        soup = BeautifulSoup(response.content, "html.parser")
+        total_input = soup.find("input", {"type": "hidden"})
+        assert total_input is not None
+        # Total is always the UNFILTERED count.
+        assert total_input["value"] == "5"
+
+    def test_no_results(self, choices_key):
+        from django_formwork.views import FormworkAutoSearchView
+
+        request = factory.get("/search/", {"q": "zzz", "type": "search_select"})
+        response = FormworkAutoSearchView.as_view()(request, key=choices_key)
+        assert b"No results" in response.content
+
+    def test_dict_results(self):
+        """search_func can return dicts with extra keys (icon, description)."""
+        from django_formwork.views import FormworkAutoSearchView
+
+        def search_with_extras(query, request=None):
+            return [
+                {"value": "nyc", "label": "New York", "icon": "🗽", "description": "USA"},
+            ]
+
+        reg = SearchRegistration(search_func=search_with_extras)
+        register("test.dict", reg)
+
+        request = factory.get("/search/", {"q": "", "type": "search_select"})
+        response = FormworkAutoSearchView.as_view()(request, key="test.dict")
+        content = response.content.decode()
+        assert "New York" in content
+        assert "🗽" in content
+        assert "USA" in content
