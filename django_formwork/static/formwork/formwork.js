@@ -52,6 +52,18 @@
         return false;
       }
 
+      // Block checked attribute changes on checkboxes inside MultiSelect —
+      // user selections are tracked by Alpine state and checkbox DOM
+      // properties; idiomorph would reset them to the server-rendered state.
+      if (
+        attrName === "checked" &&
+        element.tagName === "INPUT" &&
+        element.type === "checkbox" &&
+        element.closest("details.multiselect")
+      ) {
+        return false;
+      }
+
       // Delegate to any previously installed callback.
       if (typeof origAttr === "function") {
         return origAttr(attrName, element, updateType);
