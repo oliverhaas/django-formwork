@@ -368,7 +368,7 @@ input.combobox-input {
 
 /* Filename shown as a compact badge/chip */
 .dropzone-file-name {
-    @apply badge badge-ghost text-xs max-w-48 truncate;
+    @apply badge badge-ghost text-xs max-w-xs truncate;
 }
 
 /* Muted file size below the badge */
