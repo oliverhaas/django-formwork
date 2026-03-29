@@ -1120,12 +1120,13 @@ class TestValidatedTextarea:
         textarea = soup.find("textarea")
         assert textarea.has_attr("@scroll")
 
-    def test_input_mirrors_text_to_highlights(self):
+    def test_no_input_handler_clears_highlights(self):
+        """Highlights are only updated by htmx, not by an @input handler."""
         widget = ValidatedTextarea(validate_url="/validate/")
         soup = render_widget(widget, name="content", attrs={"id": "id_content"})
         textarea = soup.find("textarea")
-        assert textarea.has_attr("@input")
-        assert "backdrop" in textarea["@input"]
+        # @input must NOT clear the backdrop — highlights persist until htmx responds
+        assert not textarea.has_attr("@input")
 
     def test_no_htmx_without_validate_url(self):
         widget = ValidatedTextarea()
