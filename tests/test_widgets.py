@@ -1003,9 +1003,10 @@ class TestImageUpload:
 
     def test_remove_button(self):
         soup = render_widget(ImageDropZone())
-        btn = soup.find("button", string="Remove")
+        btn = soup.find("button", class_="image-upload-remove")
         assert btn is not None
         assert btn["type"] == "button"
+        assert btn.get("aria-label") == "Remove image"
 
     def test_image_icon(self):
         soup = render_widget(ImageDropZone())
