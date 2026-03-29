@@ -65,6 +65,7 @@
         </button>
       </div>
       <p class="image-upload-replace-text">Drop to replace or <span class="image-upload-browse">browse</span></p>
+      {% if widget.accept_display or widget.max_size_display %}<p class="image-upload-accept-text">{% if widget.accept_display %}{{ widget.accept_display }}{% endif %}{% if widget.accept_display and widget.max_size_display %} · {% endif %}{% if widget.max_size_display %}Max {{ widget.max_size_display }}{% endif %}</p>{% endif %}
     </div>
   </div>
 </div>{% endwith %}

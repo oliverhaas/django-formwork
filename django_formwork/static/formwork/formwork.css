@@ -318,7 +318,7 @@ input.combobox-input {
 }
 
 .image-upload-area {
-    @apply rounded-box border-2 border-dashed border-base-300 p-4 text-center cursor-pointer transition-colors duration-150 h-52 flex items-center justify-center relative;
+    @apply rounded-box border-2 border-dashed border-base-300 px-4 py-6 text-center cursor-pointer transition-colors duration-150 h-52 flex items-center justify-center relative;
 }
 
 .dropzone-area:hover,
@@ -394,16 +394,16 @@ input.combobox-input {
     @apply flex flex-col items-center justify-center gap-2 h-full w-full;
 }
 
-/* Wrapper around the preview image — needed so the remove button can be
-   positioned relative to the image edge rather than the whole upload area. */
+/* Wrapper around the preview image — shrink-wraps the image so the remove
+   button is positioned relative to the image edge, not the upload area. */
 .image-upload-preview-wrapper {
-    @apply relative flex-1 min-h-0 w-full flex items-center justify-center;
+    @apply relative;
+    max-height: calc(100% - 3rem); /* leave room for replace text + accept text + gaps */
 }
 
-/* Constrain image so it never overflows the wrapper, which itself is flex-1
-   inside the fixed-height area (leaving room for the replace text below). */
+/* Constrain image so it never overflows the wrapper. */
 .image-upload-preview {
-    @apply max-h-full max-w-full object-contain rounded-box;
+    @apply block max-h-full max-w-full object-contain rounded-box;
 }
 
 /* Remove button: sits at the top-right corner of the image, half in/out. */
@@ -414,7 +414,7 @@ input.combobox-input {
 
 /* "Drop to replace or browse" text shown below preview */
 .image-upload-replace-text {
-    @apply text-xs text-base-content/50 shrink-0;
+    @apply text-sm text-base-content/50 shrink-0;
 }
 
 /* Accepted file types hint text */
