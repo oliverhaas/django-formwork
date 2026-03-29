@@ -1,6 +1,7 @@
 """Server-side views for formwork widgets.
 
 :class:`FormworkSearchView` is the base class for dropdown search endpoints.
+:class:`FormworkAutoSearchView` dispatches auto-registered search endpoints.
 :class:`FormworkValidateView` is the base class for textarea validation endpoints.
 """
 
@@ -9,7 +10,7 @@ from __future__ import annotations
 from html import escape as html_escape
 from typing import TYPE_CHECKING, Any
 
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseBase
 from django.template import Context
 from django.template.engine import Engine
 from django.utils.decorators import method_decorator
@@ -18,6 +19,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 if TYPE_CHECKING:
     from django.template.base import Template
+
+    from django_formwork.registry import SearchRegistration
 
 
 class FormworkSearchView(View):
@@ -151,12 +154,104 @@ class FormworkSearchView(View):
         template = self._get_template(widget_type)
         html = template.render(Context({"results": results, "field_name": field_name}))
         parts = [html.strip()]
-        if total is not None and field_name:
+        if total is not None and field_name and widget_type == "search_select":
             widget_id = f"id_{field_name}"
             parts.append(
                 f'<input id="{widget_id}_total" type="hidden" value="{total}" hx-swap-oob="true">',
             )
         return HttpResponse("".join(parts))
+
+
+class FormworkAutoSearchView(FormworkSearchView):
+    """Dispatch view for auto-registered search endpoints.
+
+    Serves all widgets that use ``search_fields`` for automatic search
+    registration.  A single URL pattern handles all registered endpoints::
+
+        # urls.py
+        path("__formwork__/", include("django_formwork.urls"))
+
+    The view looks up the registration by key, filters the queryset, and
+    returns results using the appropriate template (search_select, multiselect,
+    or combobox).
+    """
+
+    def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
+        super().setup(request, *args, **kwargs)
+        from django_formwork.registry import get_registration
+
+        self.registration = get_registration(kwargs.get("key", ""))
+
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
+        if self.registration is None:
+            return HttpResponse(status=404)
+        reg = self.registration
+        if reg.permission and not reg.permission(request):
+            return HttpResponse(status=403)
+        self.widget_type = reg.widget_type
+        # Remove URL kwargs before passing to parent — get() doesn't accept them.
+        kwargs.pop("key", None)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:
+        reg = self.registration
+        if reg is None:  # pragma: no cover — dispatch() returns 404 when None
+            return []
+
+        # Path 1: choices-backed (search_func).
+        if reg.search_func:
+            return self._normalize_results(reg.search_func(query, kwargs.get("request")))
+
+        # Path 2: model-backed (queryset + search_fields).
+        return self._queryset_results(reg, query)
+
+    @staticmethod
+    def _normalize_results(raw: list) -> list[dict[str, str]]:
+        """Convert (value, label) tuples or dicts to uniform result dicts."""
+        results: list[dict[str, str]] = []
+        for item in raw:
+            if isinstance(item, dict):
+                results.append(item)
+            else:
+                # (value, label) tuple
+                results.append({"value": str(item[0]), "label": str(item[1])})
+        return results
+
+    @staticmethod
+    def _queryset_results(reg: SearchRegistration, query: str) -> list[dict[str, str]]:
+        from django.db.models import Q
+
+        if reg.queryset_factory is None:  # pragma: no cover
+            return []
+        qs = reg.queryset_factory()
+        if query:
+            q = Q()
+            for field_name in reg.search_fields:
+                q |= Q(**{f"{field_name}__icontains": query})
+            qs = qs.filter(q)
+        qs = qs[: reg.max_results]
+        results: list[dict[str, str]] = []
+        for obj in qs:
+            result: dict[str, str] = {
+                "value": str(getattr(obj, reg.to_field_name)),
+                "label": reg.label_from_instance(obj) if reg.label_from_instance else str(obj),
+            }
+            if reg.icon_from_instance:
+                result["icon"] = reg.icon_from_instance(obj)
+            if reg.description_from_instance:
+                result["description"] = reg.description_from_instance(obj)
+            results.append(result)
+        return results
+
+    def get_total_count(self, **kwargs: Any) -> int:
+        reg = self.registration
+        if reg is None:  # pragma: no cover
+            return 0
+        if reg.search_func:
+            return len(self._normalize_results(reg.search_func("", kwargs.get("request"))))
+        if reg.queryset_factory is None:  # pragma: no cover
+            return 0
+        return reg.queryset_factory().count()
 
 
 @method_decorator(csrf_exempt, name="dispatch")
