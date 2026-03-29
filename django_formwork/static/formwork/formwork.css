@@ -578,9 +578,11 @@ details.dropdown.search-select > .dropdown-content {
 
 /* ================================================================
    ValidatedTextarea overlay
-   Transparent textarea stacked over a highlights div that shows
-   marked-up text with <mark> tags.  Both share identical sizing
-   via CSS Grid cell stacking.
+   Textarea (visible text, transparent background) stacked over a
+   highlights div (transparent text, coloured <mark> backgrounds).
+   Both share identical sizing via CSS Grid cell stacking.
+   New text is always visible in the textarea; highlights appear as
+   semi-transparent backgrounds behind the textarea text.
    ================================================================ */
 
 /* Container: stack textarea and highlights in the same grid cell.
@@ -595,19 +597,23 @@ details.dropdown.search-select > .dropdown-content {
     grid-area: 1 / 1;
 }
 
-/* Textarea: transparent text + background, visible caret and border */
+/* Textarea: transparent background so highlights show through, visible caret and border */
 .validated-textarea > textarea {
-    @apply !bg-transparent !text-transparent caret-base-content z-1 resize-none;
+    @apply !bg-transparent caret-base-content z-1 resize-none;
 }
 
-/* Highlights div: mirrors textarea appearance, no visible border */
+/* Highlights div: mirrors textarea appearance, no visible border.
+   Text is transparent so only the <mark> backgrounds are visible — the
+   actual text is rendered by the textarea above. */
 .validated-textarea > .validated-textarea-highlights {
-    @apply textarea w-full border-transparent pointer-events-none whitespace-pre-wrap break-words overflow-hidden;
+    @apply textarea w-full border-transparent pointer-events-none whitespace-pre-wrap break-words overflow-hidden !text-transparent;
 }
 
-/* Error highlights inside the overlay */
+/* Error highlights inside the overlay: transparent text (inherited from
+   highlights div) so only the background colour shows through. */
 .validated-textarea-highlights mark {
-    @apply rounded-sm text-inherit;
+    @apply rounded-sm;
+    color: transparent;
     background-color: rgba(239, 68, 68, 0.2); /* fallback for browsers without color-mix() */
     background-color: color-mix(in oklab, var(--color-error) 20%, transparent);
 }
