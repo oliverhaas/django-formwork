@@ -44,22 +44,41 @@
     }
     this.files = valid;
   },
+  clear() {
+    this.files = [];
+    this.error = '';
+    this.$refs.input.value = '';
+  },
   formatSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / 1048576).toFixed(1) + ' MB';
   }
 }" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop($event)">
-  <div class="dropzone-area" :class="dragging && 'dragging'" @click="$refs.input.click()" tabindex="0" role="button" aria-label="Choose files" @keydown.enter.prevent="$refs.input.click()" @keydown.space.prevent="$refs.input.click()">
+  <div class="dropzone-area" :class="dragging && 'dragging'" tabindex="0" role="button" aria-label="Choose files" @keydown.enter.prevent="$refs.input.click()" @keydown.space.prevent="$refs.input.click()">
     <input x-ref="input" type="file" name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %} @change="handleChange($event)"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
-    <div x-show="!files.length">
+    <div x-show="!files.length" @click="$refs.input.click()">
       <svg class="dropzone-prompt-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m8 17 4-4 4 4"/></svg>
       <p class="dropzone-prompt-text">Drag and drop files here or <span class="dropzone-browse">browse</span></p>
       {% if widget.accept_display or widget.max_size_display %}<p class="dropzone-accept-text">{% if widget.accept_display %}{{ widget.accept_display }}{% endif %}{% if widget.accept_display and widget.max_size_display %} · {% endif %}{% if widget.max_size_display %}Max {{ widget.max_size_display }}{% endif %}</p>{% endif %}
     </div>
-    <div x-show="files.length" x-cloak>
-      <template x-for="file in files" :key="file.name">
-        <p class="dropzone-file" x-text="file.name + ' (' + formatSize(file.size) + ')'"></p>
+    <div x-show="files.length" x-cloak class="dropzone-preview-area">
+      <button type="button" class="dropzone-remove" @click.stop="clear()" aria-label="Remove file">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="dropzone-remove-icon"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <template x-if="files.length === 1">
+        <div class="dropzone-file-preview" @click="$refs.input.click()">
+          <svg class="dropzone-file-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+          <p class="dropzone-file-name" x-text="files[0].name"></p>
+          <p class="dropzone-file-size" x-text="formatSize(files[0].size)"></p>
+        </div>
+      </template>
+      <template x-if="files.length > 1">
+        <div class="dropzone-file-preview" @click="$refs.input.click()">
+          <svg class="dropzone-file-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+          <p class="dropzone-file-name" x-text="files.length + ' files selected'"></p>
+          <p class="dropzone-file-size" x-text="files.map(f => f.name).join(', ')"></p>
+        </div>
       </template>
     </div>
     <p x-show="error" x-text="error" x-cloak class="dropzone-error"></p>
