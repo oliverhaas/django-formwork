@@ -118,3 +118,35 @@ class TestValidatedTextarea:
         ta.fill("Some bio text")
         submit(textarea_page)
         assert ta.input_value() == "Some bio text"
+
+    def test_aria_invalid_clears_when_errors_resolve(self, textarea_page):
+        """aria-invalid is set when errors appear and cleared when they resolve."""
+        ta = textarea_page.locator('textarea[name="bio"]')
+
+        # Type "spam" and trigger htmx validation via input event.
+        textarea_page.evaluate("""
+            const ta = document.querySelector('textarea[name="bio"]');
+            ta.value = 'spam';
+            ta.dispatchEvent(new Event('input', {bubbles: true}));
+        """)
+        # Wait for htmx debounce (500ms) + round trip + settle.
+        textarea_page.wait_for_timeout(1500)
+
+        # Errors should be visible and aria-invalid="true" set on textarea.
+        errors = textarea_page.locator(".validated-textarea-tooltip .formwork-errors")
+        expect(errors.locator("p")).to_have_count(1, timeout=3000)
+        expect(ta).to_have_attribute("aria-invalid", "true")
+
+        # Clear the textarea and trigger validation again.
+        textarea_page.evaluate("""
+            const ta = document.querySelector('textarea[name="bio"]');
+            ta.value = '';
+            ta.dispatchEvent(new Event('input', {bubbles: true}));
+        """)
+        # Wait for htmx debounce (500ms) + round trip + settle.
+        textarea_page.wait_for_timeout(1500)
+
+        # Errors should be gone and aria-invalid="false" on textarea.
+        expect(errors.locator("p")).to_have_count(0, timeout=3000)
+        expect(ta).to_have_attribute("aria-invalid", "false")
+        percy_snapshot(textarea_page, "ValidatedTextarea - aria-invalid Cleared")
