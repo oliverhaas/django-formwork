@@ -531,6 +531,7 @@ class ValidatedTextarea(forms.Textarea):
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         context["widget"]["validate_url"] = self.validate_url
+        context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         return context
 
 
