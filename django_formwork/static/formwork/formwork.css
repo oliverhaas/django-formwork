@@ -311,15 +311,11 @@ input.combobox-input {
     @apply hidden;
 }
 
-/* Drop area: dashed border, centered content */
+/* Drop area: dashed border, centered content, fixed height to prevent layout
+   shift when a preview loads. position:relative anchors the remove button. */
 .dropzone-area,
 .image-upload-area {
-    @apply rounded-box border-2 border-dashed border-base-300 p-6 text-center cursor-pointer transition-colors duration-150;
-}
-
-/* ImageUpload: fixed height so the layout doesn't shift when a preview loads. */
-.image-upload-area {
-    @apply h-40 flex items-center justify-center;
+    @apply rounded-box border-2 border-dashed border-base-300 p-6 text-center cursor-pointer transition-colors duration-150 h-40 flex items-center justify-center relative;
 }
 
 .dropzone-area:hover,
@@ -353,28 +349,51 @@ input.combobox-input {
     @apply text-primary underline cursor-pointer;
 }
 
-/* File list (DropZone) */
-.dropzone-file {
-    @apply text-sm py-0.5;
+/* DropZone file preview — shown after file selection. */
+.dropzone-preview-area {
+    @apply relative flex items-center justify-center h-full w-full;
 }
 
-/* Image preview area — fills the fixed-height upload area.
-   position:relative anchors the absolute-positioned remove button. */
+/* Centered content: file icon + filename badge + size text. */
+.dropzone-file-preview {
+    @apply flex flex-col items-center gap-1 cursor-pointer;
+}
+
+/* Lucide file icon */
+.dropzone-file-icon {
+    @apply w-10 h-10;
+    color: #9ca3af; /* fallback for browsers without color-mix() */
+    color: color-mix(in oklab, var(--color-base-content) 40%, var(--color-base-100));
+}
+
+/* Filename shown as a compact badge/chip */
+.dropzone-file-name {
+    @apply badge badge-ghost text-xs max-w-48 truncate;
+}
+
+/* Muted file size below the badge */
+.dropzone-file-size {
+    @apply text-xs text-base-content/50;
+}
+
+/* Remove button: X icon pinned to the top-right corner. */
+.dropzone-remove,
+.image-upload-remove {
+    @apply btn btn-circle btn-xs absolute top-1 right-1;
+}
+
+.dropzone-remove-icon,
+.image-upload-remove-icon {
+    @apply w-3 h-3;
+}
+
+/* Image preview area — fills the fixed-height upload area. */
 .image-upload-preview-area {
     @apply relative flex items-center justify-center h-full;
 }
 
 .image-upload-preview {
     @apply max-h-full object-contain rounded-box;
-}
-
-/* Remove button: X icon pinned to the top-right corner of the preview. */
-.image-upload-remove {
-    @apply btn btn-circle btn-xs absolute top-1 right-1;
-}
-
-.image-upload-remove-icon {
-    @apply w-3 h-3;
 }
 
 /* Accepted file types hint text */
