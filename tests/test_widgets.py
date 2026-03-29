@@ -1166,3 +1166,46 @@ class TestValidatedTextarea:
         soup = render_widget(widget, name="content", attrs={"id": "id_content"})
         wrapper = soup.find("div", class_="validated-textarea")
         assert wrapper["id"] == "id_content_vtextarea"
+
+    def test_aria_invalid_not_on_textarea_when_no_errors(self):
+        """aria-invalid is managed by Alpine (:aria-invalid binding), not the attrs loop."""
+        widget = ValidatedTextarea(validate_url="/validate/")
+        soup = render_widget(widget, name="content", attrs={"id": "id_content"})
+        textarea = soup.find("textarea")
+        # aria-invalid should NOT be a static HTML attr (it's controlled by Alpine)
+        assert not textarea.has_attr("aria-invalid")
+
+    def test_aria_invalid_alpine_binding_present(self):
+        """Textarea has Alpine :aria-invalid binding for reactive error styling."""
+        widget = ValidatedTextarea(validate_url="/validate/")
+        soup = render_widget(widget, name="content", attrs={"id": "id_content"})
+        textarea = soup.find("textarea")
+        assert textarea.has_attr(":aria-invalid")
+
+    def test_x_data_has_errors_false_without_errors(self):
+        """x-data initialises hasErrors to false when no aria-invalid attr is present."""
+        widget = ValidatedTextarea(validate_url="/validate/")
+        soup = render_widget(widget, name="content", attrs={"id": "id_content"})
+        wrapper = soup.find("div", attrs={"x-data": True})
+        assert "hasErrors: false" in wrapper["x-data"]
+
+    def test_x_data_has_errors_true_with_aria_invalid(self):
+        """x-data initialises hasErrors to true when aria-invalid='true' is passed."""
+        widget = ValidatedTextarea(validate_url="/validate/")
+        soup = render_widget(widget, name="content", attrs={"id": "id_content", "aria-invalid": "true"})
+        wrapper = soup.find("div", attrs={"x-data": True})
+        assert "hasErrors: true" in wrapper["x-data"]
+
+    def test_aria_invalid_in_context(self):
+        """get_context exposes aria_invalid from widget attrs."""
+        widget = ValidatedTextarea(validate_url="/validate/")
+        ctx = widget.get_context("content", "", {"id": "id_content", "aria-invalid": "true"})
+        assert ctx["widget"]["aria_invalid"] == "true"
+
+    def test_highlights_div_has_after_swap_handler(self):
+        """Highlights div carries hx-on::after-swap to update hasErrors after htmx response."""
+        widget = ValidatedTextarea(validate_url="/validate/")
+        soup = render_widget(widget, name="content", attrs={"id": "id_content"})
+        highlights = soup.find("div", class_="validated-textarea-highlights")
+        assert highlights.has_attr("hx-on::after-swap")
+        assert "hasErrors" in highlights["hx-on::after-swap"]
