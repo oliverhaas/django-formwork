@@ -16,6 +16,7 @@ urlpatterns = [
     path("complex/", views.complex_view),
     path("autosave/", views.autosave_view),
     path("e2e/search/cities/", views.E2ECitySearchView.as_view(), name="e2e-city-search"),
+    path("e2e/search/cities-many/", views.E2ECityManySearchView.as_view(), name="e2e-city-many-search"),
     path("e2e/search/languages/", views.E2ELanguageSearchView.as_view(), name="e2e-lang-search"),
     path("e2e/search/languages-icons/", views.E2ELanguageIconsSearchView.as_view(), name="e2e-lang-icons-search"),
     path("e2e/search/countries/", views.E2ECountrySearchView.as_view(), name="e2e-country-search"),
