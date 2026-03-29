@@ -1,7 +1,7 @@
 {% with id=widget.attrs.id %}<details class="dropdown multiselect"{% if id %} id="{{ id }}_multiselect"{% endif %} x-data="{% if widget.search_url %}{
   _v: 0,
   search: '',
-  selected: new Map({{ widget.initial_selected_json|safe }}),
+  selected: new Map({{ widget.initial_selected_json }}),
   toggle(value, label, icon) {
     if (this.selected.has(value)) this.selected.delete(value);
     else this.selected.set(value, [label, icon || '']);
