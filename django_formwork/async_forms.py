@@ -50,70 +50,74 @@ def _check_force_async(sync_name: str, async_name: str) -> None:
 class AsyncFormMixin:
     """Mixin that adds async validation to Django forms.
 
+    Must be used with ``forms.Form`` or ``forms.ModelForm`` via multiple
+    inheritance. Attributes like ``is_bound``, ``errors``, ``add_error()``,
+    etc. are provided by the cooperating Form base class at runtime.
+
     Detects whether ``clean_<field>()`` and ``clean()`` are sync or async
     via ``inspect.iscoroutinefunction()`` and calls them accordingly.
     """
 
-    def full_clean(self) -> None:
+    def full_clean(self: Any) -> None:
         _check_force_async("full_clean", "afull_clean")
         super().full_clean()  # type: ignore[misc]
 
-    def is_valid(self) -> bool:
+    def is_valid(self: Any) -> bool:
         _check_force_async("is_valid", "ais_valid")
         return super().is_valid()  # type: ignore[misc]
 
-    async def ais_valid(self) -> bool:
+    async def ais_valid(self: Any) -> bool:
         """Async version of ``is_valid()``."""
-        if not self.is_bound:  # type: ignore[attr-defined]
+        if not self.is_bound:
             return False
         await self.afull_clean()
-        return not self.errors  # type: ignore[attr-defined]
+        return not self.errors
 
-    async def afull_clean(self) -> None:
+    async def afull_clean(self: Any) -> None:
         """Async version of ``full_clean()``."""
         from django.forms.utils import ErrorDict
 
-        self._errors = ErrorDict(renderer=self.renderer)  # type: ignore[attr-defined]
-        if not self.is_bound:  # type: ignore[attr-defined]
+        self._errors = ErrorDict(renderer=self.renderer)
+        if not self.is_bound:
             return
-        self.cleaned_data = {}  # type: ignore[attr-defined]
-        if self.empty_permitted and not self.has_changed():  # type: ignore[attr-defined]
+        self.cleaned_data: dict[str, Any] = {}
+        if self.empty_permitted and not self.has_changed():
             return
 
         await self._aclean_fields()
         await self._aclean_form()
         await self._apost_clean()
 
-    async def _aclean_fields(self) -> None:
+    async def _aclean_fields(self: Any) -> None:
         """Async version of ``_clean_fields()``."""
-        for name, bf in self._bound_items():  # type: ignore[attr-defined]
+        for name, bf in self._bound_items():
             field = bf.field
             try:
-                self.cleaned_data[name] = field._clean_bound_field(bf)  # type: ignore[attr-defined]  # noqa: SLF001
+                self.cleaned_data[name] = field._clean_bound_field(bf)  # noqa: SLF001
                 method = getattr(self, f"clean_{name}", None)
                 if method is not None:
                     if inspect.iscoroutinefunction(method):
                         value = await method()
                     else:
                         value = method()
-                    self.cleaned_data[name] = value  # type: ignore[attr-defined]
+                    self.cleaned_data[name] = value
             except ValidationError as e:
-                self.add_error(name, e)  # type: ignore[attr-defined]
+                self.add_error(name, e)
 
-    async def _aclean_form(self) -> None:
+    async def _aclean_form(self: Any) -> None:
         """Async version of ``_clean_form()``."""
         try:
-            if inspect.iscoroutinefunction(self.clean):  # type: ignore[attr-defined]
-                cleaned_data = await self.clean()  # type: ignore[attr-defined]
+            if inspect.iscoroutinefunction(self.clean):
+                cleaned_data = await self.clean()
             else:
-                cleaned_data = self.clean()  # type: ignore[attr-defined]
+                cleaned_data = self.clean()
         except ValidationError as e:
-            self.add_error(None, e)  # type: ignore[attr-defined]
+            self.add_error(None, e)
         else:
             if cleaned_data is not None:
-                self.cleaned_data = cleaned_data  # type: ignore[attr-defined]
+                self.cleaned_data = cleaned_data
 
-    async def _apost_clean(self) -> None:
+    async def _apost_clean(self: Any) -> None:
         """Hook for subclasses. No-op on base forms."""
 
 
@@ -124,85 +128,85 @@ class AsyncModelFormMixin(AsyncFormMixin):
     async M2M saving.
     """
 
-    def save(self, commit: bool = True) -> Any:  # noqa: FBT001, FBT002, ANN401
+    def save(self: Any, commit: bool = True) -> Any:  # noqa: FBT001, FBT002, ANN401
         _check_force_async("save", "asave")
         return super().save(commit=commit)  # type: ignore[misc]
 
-    async def _apost_clean(self) -> None:
+    async def _apost_clean(self: Any) -> None:
         """Async version of ``ModelForm._post_clean()``."""
-        opts = self._meta  # type: ignore[attr-defined]
-        exclude = self._get_validation_exclusions()  # type: ignore[attr-defined]
+        opts = self._meta
+        exclude = self._get_validation_exclusions()
 
         from django.forms.models import InlineForeignKeyField
 
-        for name, field in self.fields.items():  # type: ignore[attr-defined]
+        for name, field in self.fields.items():
             if isinstance(field, InlineForeignKeyField):
                 exclude.add(name)
 
         try:
-            self.instance = construct_instance(  # type: ignore[attr-defined]
+            self.instance = construct_instance(
                 self,
                 self.instance,
                 opts.fields,
-                opts.exclude,  # type: ignore[attr-defined]
+                opts.exclude,
             )
         except ValidationError as e:
-            self._update_errors(e)  # type: ignore[attr-defined]
+            self._update_errors(e)
 
         try:
-            await sync_to_async(self.instance.full_clean)(  # type: ignore[attr-defined]
+            await sync_to_async(self.instance.full_clean)(
                 exclude=exclude,
                 validate_unique=False,
                 validate_constraints=False,
             )
         except ValidationError as e:
-            self._update_errors(e)  # type: ignore[attr-defined]
+            self._update_errors(e)
 
-        if self._validate_unique:  # type: ignore[attr-defined]
+        if self._validate_unique:
             await self.avalidate_unique()
-        if self._validate_constraints:  # type: ignore[attr-defined]
+        if self._validate_constraints:
             await self.avalidate_constraints()
 
-    async def avalidate_unique(self) -> None:
+    async def avalidate_unique(self: Any) -> None:
         """Async version of ``validate_unique()``."""
-        exclude = self._get_validation_exclusions()  # type: ignore[attr-defined]
+        exclude = self._get_validation_exclusions()
         try:
-            await sync_to_async(self.instance.validate_unique)(exclude=exclude)  # type: ignore[attr-defined]
+            await sync_to_async(self.instance.validate_unique)(exclude=exclude)
         except ValidationError as e:
-            self._update_errors(e)  # type: ignore[attr-defined]
+            self._update_errors(e)
 
-    async def avalidate_constraints(self) -> None:
+    async def avalidate_constraints(self: Any) -> None:
         """Async version of ``validate_constraints()``."""
-        exclude = self._get_validation_exclusions()  # type: ignore[attr-defined]
+        exclude = self._get_validation_exclusions()
         try:
-            await sync_to_async(self.instance.validate_constraints)(exclude=exclude)  # type: ignore[attr-defined]
+            await sync_to_async(self.instance.validate_constraints)(exclude=exclude)
         except ValidationError as e:
-            self._update_errors(e)  # type: ignore[attr-defined]
+            self._update_errors(e)
 
-    async def asave(self, commit: bool = True) -> models.Model:  # noqa: FBT001, FBT002
+    async def asave(self: Any, commit: bool = True) -> models.Model:  # noqa: FBT001, FBT002
         """Async version of ``ModelForm.save()``."""
-        if self.errors:  # type: ignore[attr-defined]
+        if self.errors:
             raise ValueError(
                 "The {} could not be {} because the data didn't validate.".format(
-                    self.instance._meta.object_name,  # type: ignore[attr-defined]  # noqa: SLF001
-                    "created" if self.instance._state.adding else "changed",  # type: ignore[attr-defined]  # noqa: SLF001
+                    self.instance._meta.object_name,  # noqa: SLF001
+                    "created" if self.instance._state.adding else "changed",  # noqa: SLF001
                 ),
             )
         if commit:
-            await self.instance.asave()  # type: ignore[attr-defined]
+            await self.instance.asave()
             await self._asave_m2m()
         else:
-            self.save_m2m = self._asave_m2m  # type: ignore[attr-defined]
-        return self.instance  # type: ignore[attr-defined]
+            self.save_m2m = self._asave_m2m
+        return self.instance
 
     asave.alters_data = True  # type: ignore[attr-defined]
 
-    async def _asave_m2m(self) -> None:
+    async def _asave_m2m(self: Any) -> None:
         """Async version of ``_save_m2m()``."""
-        cleaned_data = self.cleaned_data  # type: ignore[attr-defined]
-        exclude = self._meta.exclude  # type: ignore[attr-defined]
-        fields = self._meta.fields  # type: ignore[attr-defined]
-        opts = self.instance._meta  # type: ignore[attr-defined]  # noqa: SLF001
+        cleaned_data = self.cleaned_data
+        exclude = self._meta.exclude
+        fields = self._meta.fields
+        opts = self.instance._meta  # noqa: SLF001
         for f in chain(opts.many_to_many, opts.private_fields):
             if not hasattr(f, "save_form_data"):
                 continue
@@ -213,5 +217,5 @@ class AsyncModelFormMixin(AsyncFormMixin):
             if f.name in cleaned_data:
                 await sync_to_async(f.save_form_data)(
                     self.instance,
-                    cleaned_data[f.name],  # type: ignore[attr-defined]
+                    cleaned_data[f.name],
                 )
