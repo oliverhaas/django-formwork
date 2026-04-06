@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.forms import Form, ModelForm
 
+from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
 from django_formwork.renderers import FormworkRenderer
 
 if TYPE_CHECKING:
@@ -127,8 +128,8 @@ class _AutoSearchMixin:
         return "search_select"
 
 
-class FormworkForm(_AutoSearchMixin, Form):
-    """Form base class with DaisyUI styling.
+class FormworkForm(AsyncFormMixin, _AutoSearchMixin, Form):
+    """Form base class with DaisyUI styling and async support.
 
     Usage::
 
@@ -136,12 +137,24 @@ class FormworkForm(_AutoSearchMixin, Form):
             name = forms.CharField()
             email = forms.EmailField()
             message = forms.CharField(widget=forms.Textarea)
+
+    Async clean methods are supported::
+
+        class ContactForm(FormworkForm):
+            async def clean_email(self):
+                if await is_email_blocked(self.cleaned_data["email"]):
+                    raise ValidationError("Blocked")
+                return self.cleaned_data["email"]
+
+        # In async view:
+        if await form.ais_valid():
+            ...
     """
 
     default_renderer = FormworkRenderer
 
 
-class FormworkModelForm(_AutoSearchMixin, ModelForm):
-    """ModelForm base class with DaisyUI styling."""
+class FormworkModelForm(AsyncModelFormMixin, _AutoSearchMixin, ModelForm):
+    """ModelForm base class with DaisyUI styling and async support."""
 
     default_renderer = FormworkRenderer
