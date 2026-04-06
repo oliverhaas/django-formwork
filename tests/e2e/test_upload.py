@@ -67,7 +67,7 @@ class TestImageDropZone:
 
     def test_has_icon(self, uploads_page):
         zone = uploads_page.locator(".image-upload").first
-        svg = zone.locator("svg")
+        svg = zone.locator(".image-upload-prompt-icon")
         assert svg.is_visible()
 
 

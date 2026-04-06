@@ -1203,10 +1203,10 @@ class TestValidatedTextarea:
         ctx = widget.get_context("content", "", {"id": "id_content", "aria-invalid": "true"})
         assert ctx["widget"]["aria_invalid"] == "true"
 
-    def test_highlights_div_has_after_swap_handler(self):
-        """Highlights div carries hx-on::after-swap to update hasErrors after htmx response."""
+    def test_highlights_div_has_after_settle_handler(self):
+        """Highlights div carries hx-on::after-settle to update hasErrors after htmx response."""
         widget = ValidatedTextarea(validate_url="/validate/")
         soup = render_widget(widget, name="content", attrs={"id": "id_content"})
         highlights = soup.find("div", class_="validated-textarea-highlights")
-        assert highlights.has_attr("hx-on::after-swap")
-        assert "hasErrors" in highlights["hx-on::after-swap"]
+        assert highlights.has_attr("hx-on::after-settle")
+        assert "hasErrors" in highlights["hx-on::after-settle"]
