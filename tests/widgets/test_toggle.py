@@ -27,6 +27,8 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import Toggle
 
+from .conftest import render_widget
+
 
 class ToggleForm(FormworkForm):
     """Form fixture for Toggle integration tests."""
@@ -85,3 +87,45 @@ def test_toggle_get_context_with_value_none():
     widget = Toggle()
     ctx = widget.get_context("enabled", None, {"id": "id_enabled"})
     assert ctx["widget"]["value"] is None
+
+
+# ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
+
+
+@pytest.mark.unit
+def test_toggle_renders_non_empty_html():
+    """widget.render() produces non-empty output."""
+    soup = render_widget(Toggle())
+    assert soup.find("input") is not None
+
+
+@pytest.mark.unit
+def test_toggle_renders_checkbox_input():
+    """Rendered HTML contains an <input type='checkbox'>."""
+    soup = render_widget(Toggle())
+    inp = soup.find("input")
+    assert inp["type"] == "checkbox"
+
+
+@pytest.mark.unit
+def test_toggle_renders_toggle_class_in_output():
+    """The 'toggle' class appears on the rendered input element."""
+    soup = render_widget(Toggle())
+    inp = soup.find("input")
+    assert "toggle" in inp.get("class", [])
+
+
+@pytest.mark.unit
+def test_toggle_renders_checked_state():
+    """Passing value=True produces a checked input."""
+    soup = render_widget(Toggle(), value=True)
+    inp = soup.find("input")
+    assert inp.has_attr("checked")
+
+
+@pytest.mark.unit
+def test_toggle_renders_unchecked_state():
+    """Passing value=False produces an input without the checked attribute."""
+    soup = render_widget(Toggle(), value=False)
+    inp = soup.find("input")
+    assert not inp.has_attr("checked")
