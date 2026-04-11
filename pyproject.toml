@@ -43,7 +43,6 @@ dev = [
   "pytest-asyncio==1.3.0",
   "pytest-cov==7.1.0",
   "pytest-django==4.12.0",
-  "percy-playwright==1.0.2",
   "pytest-playwright==0.7.2",
   "pytest-xdist==3.8.0",
   "pytest==9.0.2",
@@ -150,6 +149,12 @@ addopts = "--cov=django_formwork --cov-report=term-missing --cov-report=xml --no
 pythonpath = ["tests"]
 testpaths = ["tests"]
 xfail_strict = true
+markers = [
+  "unit: fast, isolated unit tests (widget object, rendering)",
+  "integration: widget + form + template integration tests",
+  "e2e: browser-based end-to-end tests with live_server",
+  "screenshot: visual regression tests with Playwright snapshots",
+]
 
 [tool.coverage.run]
 omit = ["tests/*"]
