@@ -27,7 +27,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import Toggle
 
-from .conftest import render_widget
+from .conftest import render_form, render_widget
 
 
 class ToggleForm(FormworkForm):
@@ -129,3 +129,56 @@ def test_toggle_renders_unchecked_state():
     soup = render_widget(Toggle(), value=False)
     inp = soup.find("input")
     assert not inp.has_attr("checked")
+
+
+# ─── Level 3: Form integration ───────────────────────────────────────────
+
+
+@pytest.mark.integration
+def test_toggle_renders_via_form():
+    """Toggle renders correctly when used inside a FormworkForm."""
+    form = ToggleForm()
+    soup = render_form(form)
+    inp = soup.find("input", attrs={"name": "enabled"})
+    assert inp is not None
+    assert inp["type"] == "checkbox"
+
+
+@pytest.mark.integration
+def test_toggle_form_wraps_in_fieldset():
+    """Field template wraps the Toggle in a fieldset with a stable id."""
+    form = ToggleForm()
+    soup = render_form(form)
+    fieldset = soup.find("fieldset", id="id_enabled_field")
+    assert fieldset is not None
+
+
+@pytest.mark.integration
+def test_toggle_error_state_aria_invalid():
+    """Bound form with errors adds aria-invalid='true' to the input."""
+    form = ToggleForm(data={})
+    form.is_valid()
+    soup = render_form(form)
+    inp = soup.find("input", attrs={"name": "enabled"})
+    assert inp.get("aria-invalid") == "true"
+
+
+@pytest.mark.integration
+def test_toggle_error_state_shows_tooltip():
+    """Bound form with errors renders a tooltip containing the error text."""
+    form = ToggleForm(data={})
+    form.is_valid()
+    soup = render_form(form)
+    tooltip = soup.find(id="id_enabled_tooltip")
+    assert tooltip is not None
+    assert "required" in tooltip.text.lower()
+
+
+@pytest.mark.integration
+def test_toggle_form_prefix_handling():
+    """Form prefix propagates to widget name and id."""
+    form = ToggleForm(prefix="cfg")
+    soup = render_form(form)
+    inp = soup.find("input", attrs={"name": "cfg-enabled"})
+    assert inp is not None
+    assert inp["id"] == "id_cfg-enabled"
