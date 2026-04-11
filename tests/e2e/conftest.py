@@ -65,6 +65,12 @@ def simple_page(page, live_server):
 
 
 @pytest.fixture
+def toggle_page(page, live_server):
+    """Navigate to a page containing the Toggle widget."""
+    return _navigate(page, live_server, "/simple/")
+
+
+@pytest.fixture
 def search_select_page(page, live_server):
     """Navigate to the SearchSelect page."""
     return _navigate(page, live_server, "/search-select/")
