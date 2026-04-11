@@ -19,6 +19,7 @@ from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
 # ruff's unused-import check.
 from tests.e2e.conftest import (  # noqa: F401
     _e2e_settings,
+    combobox_page,
     simple_page,
     toggle_page,
 )
