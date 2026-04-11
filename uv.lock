@@ -262,6 +262,7 @@ dependencies = [
 dev = [
     { name = "beautifulsoup4" },
     { name = "django-stubs" },
+    { name = "jinja2" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -286,6 +287,7 @@ requires-dist = [{ name = "django", specifier = ">=5.2,<7" }]
 dev = [
     { name = "beautifulsoup4", specifier = "==4.14.3" },
     { name = "django-stubs", specifier = "==6.0.2" },
+    { name = "jinja2", specifier = "==3.1.6" },
     { name = "mypy", specifier = "==1.20.0" },
     { name = "pre-commit", specifier = "==4.5.1" },
     { name = "pytest", specifier = "==9.0.2" },
