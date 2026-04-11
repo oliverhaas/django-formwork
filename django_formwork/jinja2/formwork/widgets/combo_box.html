@@ -1,0 +1,72 @@
+{% set id = widget.attrs.id %}<div class="dropdown combobox"{% if id %} id="{{ id }}_combobox"{% endif %} data-icons='{{ widget.icons_json }}' x-data="{
+  open: false,
+  focused: false,
+  _v: 0,
+  iconMap: JSON.parse($el.dataset.icons || '{}'),
+  get noResults() {
+    this._v;
+    const q = this.currentSegment;
+    if (!q) return false;
+    return ![...this.$refs.options.querySelectorAll('.select-none')].some(
+      s => s.textContent.trim().toLowerCase().includes(q)
+    );
+  },
+  get currentSegment() {
+    this._v;
+    const v = $refs.input.value || '';
+    {% if widget.multiple %}const parts = v.split(',');
+    return parts[parts.length - 1].trim().toLowerCase();{% else %}return v.toLowerCase();{% endif %}
+  },
+  get displayParts() {
+    this._v;
+    const v = $refs.input?.value || '';
+    if (!v.trim()) return [];
+    {% if widget.multiple %}return v.split(',').map(s => s.trim()).filter(Boolean).map(
+      t => ({ text: t, icon: this.iconMap[t] || '' })
+    );{% else %}const ic = this.iconMap[v.trim()] || '';
+    return ic ? [{ text: v.trim(), icon: ic }] : [];{% endif %}
+  },
+  matches(label) {
+    const q = this.currentSegment;
+    return !q || label.toLowerCase().includes(q);
+  },
+  {% if widget.multiple %}isSelected(text) {
+    this._v;
+    const v = $refs.input?.value || '';
+    const all = v.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const sep = v.endsWith(',') || v.endsWith(', ') || !all.length;
+    return (sep ? all : all.slice(0, -1)).includes(text.toLowerCase());
+  },{% endif %}
+  pick(text, icon) {
+    if (icon) this.iconMap[text] = icon;
+    {% if widget.multiple %}const v = $refs.input.value || '';
+    const all = v.split(',').map(s => s.trim()).filter(Boolean);
+    const sep = v.endsWith(',') || v.endsWith(', ') || !all.length;
+    const confirmed = sep ? [...all] : all.slice(0, -1);
+    const idx = confirmed.findIndex(c => c.toLowerCase() === text.toLowerCase());
+    if (idx >= 0) confirmed.splice(idx, 1);
+    else confirmed.push(text);
+    $refs.input.value = confirmed.length ? confirmed.join(', ') + ', ' : '';
+    this._v++;
+    $refs.input.focus();
+    $refs.input.dispatchEvent(new Event('input', {bubbles: true}));{% else %}$refs.input.value = text;
+    this._v++;
+    this.open = false;{% endif %}
+  }
+}" :class="open && 'dropdown-open'" @click.outside="open = false" @keydown.escape.prevent="open = false">
+  <div x-show="!focused && displayParts.length" x-cloak @click="$refs.input.focus()" class="combobox-display absolute inset-0 flex items-center cursor-text z-1 overflow-hidden">
+    {% if widget.multiple %}<template x-for="(part, i) in displayParts" :key="i"><span class="inline-flex items-center shrink-0"><span x-show="i > 0">,&nbsp;</span><span x-show="part.icon" x-html="part.icon" class="shrink-0 mr-1"></span><span x-text="part.text"></span></span></template>{% else %}<span x-show="displayParts[0]?.icon" x-html="displayParts[0]?.icon" class="shrink-0 mr-1"></span><span x-text="displayParts[0]?.text"></span>{% endif %}
+  </div>
+  <input x-ref="input" type="text" name="{{ widget.name }}" value="{{ widget.value if widget.value is not none else '' }}" @input="open = true; _v++" @focus="open = true; focused = true{% if widget.multiple %}; if ($el.value && !$el.value.match(/,\s*$/)) $el.value += ', '{% endif %}" @blur="if (!$root.contains($event.relatedTarget)) { focused = false{% if widget.multiple %}; $el.value = $el.value.replace(/,\s*$/, ''){% endif %} }"{% if widget.multiple %} x-init="$el.form?.addEventListener('formdata', (e) => { if ($el.value) e.formData.set($el.name, $el.value.replace(/,\s*$/, '')) })"{% endif %}{% if id %} id="{{ id }}"{% endif %} class="combobox-input{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}" :class="!focused && displayParts.length > 0 && 'text-transparent'"{% if widget.attrs.placeholder %} placeholder="{{ widget.attrs.placeholder }}"{% else %} placeholder="Type to search&#x2026;"{% endif %} aria-label="{% if widget.attrs.placeholder %}{{ widget.attrs.placeholder }}{% else %}Type to search{% endif %}"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %} autocomplete="off" role="combobox" aria-autocomplete="list"{% if id %} aria-controls="{{ id }}_listbox"{% endif %} :aria-expanded="open"{% if widget.attrs.required %} required{% endif %}{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config-request="var v = this.value || ''; var p = v.split(','); event.detail.parameters.q = p[p.length-1].trim(); event.detail.parameters.type = 'combobox'" hx-indicator="#{{ id }}_spinner"{% endif %}>
+  {% if widget.search_url %}<span{% if id %} id="{{ id }}_spinner"{% endif %} class="htmx-indicator formwork-search-spinner"><span class="loading loading-spinner loading-xs"></span></span>{% endif %}
+  <div x-show="open" x-cloak @mousedown.prevent class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
+    <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1" @click="const btn = $event.target.closest('[data-suggestion]'); if (btn) pick(btn.dataset.suggestion, btn.dataset.icon || '')">
+      {% if not widget.search_url %}{% for suggestion in widget.suggestions %}
+      <li x-show="matches('{{ suggestion.text|escapejs }}')" role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ suggestion.text|escapejs }}"{% if suggestion.icon %} data-icon="{{ suggestion.icon }}"{% endif %}>
+        {% if widget.multiple %}<span class="formwork-check shrink-0" :class="isSelected('{{ suggestion.text|escapejs }}') ? 'opacity-100' : 'opacity-0'" aria-hidden="true">&#x2713;</span>{% endif %}
+        {% if suggestion.icon %}<span class="shrink-0">{{ suggestion.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ suggestion.text }}</span>{% if suggestion.description %}<span class="text-xs text-base-content/50">{{ suggestion.description }}</span>{% endif %}</span>
+      </button></li>{% endfor %}{% endif %}
+    </ul>
+    {% if not widget.search_url %}<p x-show="noResults" x-cloak class="px-3 py-2 text-base-content/50">No results</p>{% endif %}
+  </div>
+</div>

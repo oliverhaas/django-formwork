@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any
 from django.forms import Form, ModelForm
 
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
-from django_formwork.renderers import FormworkRenderer
+from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -158,3 +158,20 @@ class FormworkModelForm(AsyncModelFormMixin, _AutoSearchMixin, ModelForm):
     """ModelForm base class with DaisyUI styling and async support."""
 
     default_renderer = FormworkRenderer
+
+
+class FormworkJinja2Form(AsyncFormMixin, _AutoSearchMixin, Form):
+    """Form base class with DaisyUI styling (Jinja2 renderer) and async support.
+
+    Use this when your project uses Jinja2 templates.  Equivalent to
+    :class:`FormworkForm` but renders via
+    :class:`~django_formwork.renderers.FormworkJinja2Renderer`.
+    """
+
+    default_renderer = FormworkJinja2Renderer
+
+
+class FormworkJinja2ModelForm(AsyncModelFormMixin, _AutoSearchMixin, ModelForm):
+    """ModelForm base class with DaisyUI styling (Jinja2 renderer) and async support."""
+
+    default_renderer = FormworkJinja2Renderer
