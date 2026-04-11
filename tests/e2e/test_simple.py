@@ -1,35 +1,10 @@
-"""E2e tests for simple custom widgets: Toggle, Range, PasswordReveal, DataList, Rating."""
+"""E2e tests for simple custom widgets: Range, PasswordReveal, DataList, Rating.
+
+Toggle has been migrated to tests/widgets/test_toggle.py as the canonical
+exemplar.
+"""
 
 from .conftest import submit
-
-
-class TestToggle:
-    """Toggle switch widget functionality and morph resilience."""
-
-    def test_renders(self, simple_page):
-        toggle = simple_page.locator('input[name="toggle"]')
-        assert toggle.count() == 1
-
-    def test_toggle_on_off(self, simple_page):
-        toggle = simple_page.locator('input[name="toggle"]')
-        assert not toggle.is_checked()
-        toggle.click()
-        assert toggle.is_checked()
-        toggle.click()
-        assert not toggle.is_checked()
-
-    def test_morph_preserves_checked(self, simple_page):
-        toggle = simple_page.locator('input[name="toggle"]')
-        toggle.check()
-        assert toggle.is_checked()
-        submit(simple_page)
-        assert simple_page.locator('input[name="toggle"]').is_checked()
-
-    def test_morph_preserves_unchecked(self, simple_page):
-        toggle = simple_page.locator('input[name="toggle"]')
-        assert not toggle.is_checked()
-        submit(simple_page)
-        assert not simple_page.locator('input[name="toggle"]').is_checked()
 
 
 class TestRange:

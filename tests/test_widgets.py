@@ -11,7 +11,6 @@ from django_formwork.widgets import (
     Range,
     Rating,
     SearchSelect,
-    Toggle,
     ValidatedTextarea,
 )
 
@@ -20,29 +19,6 @@ def render_widget(widget, name="test", value=None, attrs=None):
     """Render a widget and return BeautifulSoup."""
     html = widget.render(name, value, attrs=attrs)
     return BeautifulSoup(html, "html.parser")
-
-
-class TestToggle:
-    def test_has_toggle_class(self):
-        widget = Toggle()
-        assert "toggle" in widget.attrs.get("class", "")
-
-    def test_renders_checkbox(self):
-        soup = render_widget(Toggle())
-        inp = soup.find("input")
-        assert inp is not None
-        assert inp["type"] == "checkbox"
-
-    def test_toggle_class_in_output(self):
-        soup = render_widget(Toggle())
-        inp = soup.find("input")
-        assert "toggle" in inp.get("class", [])
-
-    def test_preserves_user_attrs(self):
-        widget = Toggle(attrs={"class": "my-toggle"})
-        cls = widget.attrs.get("class", "")
-        assert "toggle" in cls
-        assert "my-toggle" in cls
 
 
 class TestRange:
