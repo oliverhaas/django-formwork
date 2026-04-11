@@ -2,7 +2,7 @@
   files: [],
   dragging: false,
   error: '',
-  maxSize: {{ widget.max_size if widget.max_size is not none else 0 }},
+  maxSize: {{ widget.max_size | default(0) }},
   isAccepted(file) {
     const accept = $refs.input.accept;
     if (!accept) return true;
