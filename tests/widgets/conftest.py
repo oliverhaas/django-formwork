@@ -1,8 +1,8 @@
 """Shared fixtures and helpers for widget-level tests.
 
-Unit and integration tests need no browser.  E2e and screenshot tests use
-the `*_page` fixtures from `tests/e2e/conftest.py` via pytest plugin
-auto-discovery.
+Unit and integration tests need no browser.  E2e and screenshot tests
+re-export fixtures from ``tests/e2e/conftest.py`` since pytest does not
+share conftest fixtures across sibling directories.
 """
 
 from __future__ import annotations
@@ -13,6 +13,14 @@ import pytest
 from bs4 import BeautifulSoup, NavigableString, Tag
 
 from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
+
+# Re-export e2e fixtures and the autouse settings override so e2e widget
+# tests in this directory can use them.  Listed in __all__ to satisfy
+# ruff's unused-import check.
+from tests.e2e.conftest import (  # noqa: F401
+    _e2e_settings,
+    toggle_page,
+)
 
 if TYPE_CHECKING:
     from django.forms.renderers import BaseRenderer
