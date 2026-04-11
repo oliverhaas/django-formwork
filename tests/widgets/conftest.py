@@ -22,6 +22,7 @@ from tests.e2e.conftest import (  # noqa: F401
     combobox_page,
     simple_page,
     toggle_page,
+    uploads_page,
 )
 
 if TYPE_CHECKING:
