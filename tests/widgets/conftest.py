@@ -21,6 +21,7 @@ from tests.e2e.conftest import (  # noqa: F401
     _e2e_settings,
     combobox_page,
     multi_select_page,
+    search_select_page,
     simple_page,
     toggle_page,
     uploads_page,
