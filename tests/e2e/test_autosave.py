@@ -4,8 +4,6 @@ Tests auto-save via htmx morph, caret/selection preservation,
 required error suppression, and explicit submit behavior.
 """
 
-from percy import percy_snapshot
-
 from .conftest import submit
 
 
@@ -31,7 +29,6 @@ class TestAutoSaveStructure:
     def test_form_renders(self, autosave_page):
         form = autosave_page.locator("#autosave-form")
         assert form.is_visible()
-        percy_snapshot(autosave_page, "Auto-Save Form - Default")
 
     def test_form_has_autosave_trigger(self, autosave_page):
         form = autosave_page.locator("#autosave-form")
@@ -67,7 +64,6 @@ class TestAutoSaveBehavior:
         _wait_for_autosave(autosave_page)
         # After morph, value should be preserved
         assert inp.input_value() == "Alice"
-        percy_snapshot(autosave_page, "Auto-Save Form - After Autosave Name")
 
     def test_empty_required_no_error(self, autosave_page):
         """Auto-save suppresses required errors for empty fields."""
@@ -85,7 +81,6 @@ class TestAutoSaveBehavior:
         _wait_for_autosave(autosave_page)
         email_tooltip = autosave_page.locator("#id_email_tooltip")
         assert email_tooltip.count() == 1
-        percy_snapshot(autosave_page, "Auto-Save Form - Email Error")
 
     def test_valid_email_clears_error(self, autosave_page):
         """Fixing a format error clears the error on next auto-save."""
@@ -96,7 +91,6 @@ class TestAutoSaveBehavior:
         email.fill("good@example.com")
         _wait_for_autosave(autosave_page)
         assert autosave_page.locator("#id_email_tooltip").count() == 0
-        percy_snapshot(autosave_page, "Auto-Save Form - Email Error Fixed")
 
 
 class TestMorphPreservation:
@@ -203,11 +197,9 @@ class TestExplicitSubmit:
         autosave_page.locator('input[name="agree"]').check()
         # Wait for auto-save morphs to settle before explicit submit
         _wait_for_autosave(autosave_page)
-        percy_snapshot(autosave_page, "Auto-Save Form - All Fields Before Submit")
         submit(autosave_page)
         errors = autosave_page.locator("#autosave-form .tooltip-error")
         assert errors.count() == 0
-        percy_snapshot(autosave_page, "Auto-Save Form - Submit Valid")
 
     def test_submit_missing_required_shows_errors(self, autosave_page):
         """Submit with empty required fields shows required errors."""
@@ -219,7 +211,6 @@ class TestExplicitSubmit:
         submit(autosave_page)
         errors = autosave_page.locator("#autosave-form .tooltip-error")
         assert errors.count() >= 1
-        percy_snapshot(autosave_page, "Auto-Save Form - Submit Required Errors")
 
     def test_submit_preserves_values_on_error(self, autosave_page):
         """Submitted values are preserved in the form after validation errors."""
@@ -286,17 +277,14 @@ class TestAutoSaveVisualStates:
         page.locator('input[name="name"]').fill("Jane Doe")
         _trigger_input_event(page, 'input[name="name"]')
         _wait_for_autosave(page)
-        percy_snapshot(page, "Auto-Save - Step 1 Name Filled")
 
         page.locator('input[name="email"]').fill("jane@example.com")
         _trigger_input_event(page, 'input[name="email"]')
         _wait_for_autosave(page)
-        percy_snapshot(page, "Auto-Save - Step 2 Email Filled")
 
         page.locator('textarea[name="message"]').fill("Hello,\nThis is a multi-line message.")
         _trigger_input_event(page, 'textarea[name="message"]')
         _wait_for_autosave(page)
-        percy_snapshot(page, "Auto-Save - Step 3 Message Filled")
 
         page.locator('select[name="priority"]').select_option("high")
         page.evaluate(
@@ -304,15 +292,12 @@ class TestAutoSaveVisualStates:
             """.dispatchEvent(new Event('change', {bubbles: true}))""",
         )
         _wait_for_autosave(page)
-        percy_snapshot(page, "Auto-Save - Step 4 Priority Changed")
 
         page.locator('input[name="notify"][value="sms"]').click(force=True)
         _wait_for_autosave(page)
-        percy_snapshot(page, "Auto-Save - Step 5 Radio Changed")
 
         page.locator('input[name="agree"]').check()
         _wait_for_autosave(page)
-        percy_snapshot(page, "Auto-Save - Step 6 All Fields Filled")
 
     def test_autosave_error_cycle(self, autosave_page):
         """Error appears on bad email, disappears when fixed."""
@@ -321,12 +306,10 @@ class TestAutoSaveVisualStates:
         page.locator('input[name="email"]').fill("not-valid")
         _trigger_input_event(page, 'input[name="email"]')
         _wait_for_autosave(page)
-        percy_snapshot(page, "Auto-Save - Error Invalid Email")
 
         page.locator('input[name="email"]').fill("fixed@example.com")
         _trigger_input_event(page, 'input[name="email"]')
         _wait_for_autosave(page)
-        percy_snapshot(page, "Auto-Save - Error Cleared Valid Email")
 
     def test_autosave_persist_and_reload(self, autosave_page):
         """Fill fields, reload, verify data persists, then delete."""
@@ -341,10 +324,8 @@ class TestAutoSaveVisualStates:
 
         page.reload()
         page.wait_for_timeout(500)
-        percy_snapshot(page, "Auto-Save - After Reload with Data")
 
         delete_btn = page.locator('button:text("Delete")')
         if delete_btn.count() > 0:
             delete_btn.click()
             page.wait_for_timeout(500)
-            percy_snapshot(page, "Auto-Save - After Delete")

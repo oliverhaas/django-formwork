@@ -1,7 +1,5 @@
 """E2e tests for upload widgets: FileDropZone, ImageDropZone with variations."""
 
-from percy import percy_snapshot
-
 
 class TestFileDropZone:
     """FileDropZone drag-and-drop file upload widget (multi)."""
@@ -9,7 +7,6 @@ class TestFileDropZone:
     def test_renders(self, uploads_page):
         zone = uploads_page.locator(".dropzone").first
         assert zone.is_visible()
-        percy_snapshot(uploads_page, "File Uploads - Default")
 
     def test_has_browse_text(self, uploads_page):
         zone = uploads_page.locator(".dropzone").first

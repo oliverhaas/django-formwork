@@ -1,6 +1,5 @@
 """E2e tests for MultiSelect widget: plain, with icons, and htmx."""
 
-from percy import percy_snapshot
 from playwright.sync_api import expect
 
 from .conftest import submit
@@ -15,7 +14,6 @@ class TestMultiSelectPlain:
     def test_renders(self, multi_select_page):
         multi = self._get(multi_select_page)
         assert multi.is_visible()
-        percy_snapshot(multi_select_page, "MultiSelect - Default")
 
     def test_open_shows_checkboxes(self, multi_select_page):
         multi = self._get(multi_select_page)
@@ -24,7 +22,6 @@ class TestMultiSelectPlain:
         multi_select_page.wait_for_timeout(100)
         checkboxes = multi.locator('input[type="checkbox"]')
         assert checkboxes.count() >= 2
-        percy_snapshot(multi_select_page, "MultiSelect Plain - Open")
 
     def test_select_multiple(self, multi_select_page):
         multi = self._get(multi_select_page)
@@ -127,7 +124,6 @@ class TestMultiSelectIcons:
         multi_select_page.wait_for_timeout(100)
         search = multi.locator('input[type="text"]')
         assert search.count() == 1
-        percy_snapshot(multi_select_page, "MultiSelect Icons - Open with Search")
 
     def test_many_checkboxes(self, multi_select_page):
         """Should have 31 country checkboxes."""

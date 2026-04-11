@@ -1,7 +1,5 @@
 """E2e tests for standalone HTML elements auto-styled by formwork.css."""
 
-from percy import percy_snapshot
-
 
 class TestStandaloneElements:
     """Verify that raw HTML inputs get DaisyUI styling from formwork.css."""
@@ -15,7 +13,6 @@ class TestStandaloneElements:
     def test_text_input_renders(self, elements_page):
         inp = self._card(elements_page).locator('input[type="text"]')
         assert inp.is_visible()
-        percy_snapshot(elements_page, "Standalone Elements")
 
     def test_email_input_renders(self, elements_page):
         inp = self._card(elements_page).locator('input[type="email"]')

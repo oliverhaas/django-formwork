@@ -1,7 +1,5 @@
 """E2e tests for simple custom widgets: Toggle, Range, PasswordReveal, DataList, Rating."""
 
-from percy import percy_snapshot
-
 from .conftest import submit
 
 
@@ -17,7 +15,6 @@ class TestToggle:
         assert not toggle.is_checked()
         toggle.click()
         assert toggle.is_checked()
-        percy_snapshot(simple_page, "Toggle - Checked")
         toggle.click()
         assert not toggle.is_checked()
 
@@ -80,7 +77,6 @@ class TestPasswordReveal:
         simple_page.locator("label.password-reveal button").click()
         simple_page.wait_for_timeout(100)
         assert inp.get_attribute("type") == "text"
-        percy_snapshot(simple_page, "PasswordReveal - Revealed")
         simple_page.locator("label.password-reveal button").click()
         simple_page.wait_for_timeout(100)
         assert inp.get_attribute("type") == "password"
@@ -157,7 +153,6 @@ class TestRating:
         rating = simple_page.locator("#id_stars")
         stars = rating.locator('input[type="radio"]')
         assert stars.count() == 5
-        percy_snapshot(simple_page, "Rating - Default")
 
     def test_click_selects_star(self, simple_page):
         rating = simple_page.locator("#id_stars")

@@ -1,6 +1,5 @@
 """E2e tests for complex forms with cross-field validation and morph resilience."""
 
-from percy import percy_snapshot
 from playwright.sync_api import expect
 
 from .conftest import submit
@@ -54,7 +53,6 @@ class TestComplexFormStructure:
     def test_form_renders(self, complex_page):
         form = complex_page.locator("#complex-form")
         assert form.is_visible()
-        percy_snapshot(complex_page, "Complex Form - Default")
 
     def test_has_two_password_fields(self, complex_page):
         pw_labels = complex_page.locator("label.password-reveal")
@@ -86,7 +84,6 @@ class TestComplexFormValidation:
         submit(complex_page)
         tooltips = complex_page.locator("#complex-form .tooltip-error")
         assert tooltips.count() >= 3
-        percy_snapshot(complex_page, "Complex Form - All Errors")
 
     def test_password_mismatch_error(self, complex_page):
         complex_page.locator('input[name="password"]').fill("abc123")
@@ -98,7 +95,6 @@ class TestComplexFormValidation:
         errors = complex_page.locator("#id_confirm_password_errors")
         assert errors.count() == 1
         assert "match" in errors.text_content().lower()
-        percy_snapshot(complex_page, "Complex Form - Password Mismatch")
 
     def test_password_match_no_error(self, complex_page):
         _fill_base_fields(complex_page)
@@ -116,7 +112,6 @@ class TestComplexFormValidation:
         errors = complex_page.locator("#id_end_date_errors")
         assert errors.count() == 1
         assert "after" in errors.text_content().lower()
-        percy_snapshot(complex_page, "Complex Form - Date Range Error")
 
     def test_valid_date_range_no_error(self, complex_page):
         _fill_base_fields(complex_page)
@@ -142,7 +137,6 @@ class TestComplexFormValidation:
         errors = complex_page.locator("#id_languages_errors")
         assert errors.count() == 1
         assert "language" in errors.text_content().lower()
-        percy_snapshot(complex_page, "Complex Form - Cross-field Error")
 
     def test_country_with_languages_no_error(self, complex_page):
         """Selecting both country and languages passes cross-field validation."""
@@ -163,14 +157,12 @@ class TestComplexFormMorphResilience:
         # Verify selection is visible
         summary = complex_page.locator("details.search-select summary")
         expect(summary).to_contain_text("United States", timeout=2000)
-        percy_snapshot(complex_page, "Complex Form - Country Selected Before Morph")
         submit(complex_page)
         # Verify selection persisted
         hidden = complex_page.locator('input[name="country"]')
         assert hidden.input_value() == "us"
         summary = complex_page.locator("details.search-select summary")
         expect(summary).to_contain_text("United States", timeout=2000)
-        percy_snapshot(complex_page, "Complex Form - Country Selected After Morph")
 
     def test_multiselect_value_survives_morph(self, complex_page):
         """MultiSelect selected values persist through morph."""
@@ -231,7 +223,6 @@ class TestComplexFormMorphResilience:
         errors = page.locator("#id_languages_errors")
         expect(errors).to_have_count(1, timeout=3000)
         assert "language" in errors.text_content().lower()
-        percy_snapshot(page, "Complex Form - Auto-validate Error")
 
 
 class TestComplexFormVisualStates:
@@ -245,7 +236,6 @@ class TestComplexFormVisualStates:
         search = page.locator("details.search-select input[type='text']")
         search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
         page.wait_for_timeout(800)
-        percy_snapshot(page, "Complex Form - SearchSelect Open All Results")
 
     def test_search_select_dropdown_filtered(self, complex_page):
         """SearchSelect dropdown with search text filtering results."""
@@ -262,7 +252,6 @@ class TestComplexFormVisualStates:
         }""",
         )
         page.wait_for_timeout(800)
-        percy_snapshot(page, "Complex Form - SearchSelect Filtered 'uni'")
 
     def test_multiselect_dropdown_open_with_results(self, complex_page):
         """MultiSelect dropdown open showing server-loaded options."""
@@ -272,7 +261,6 @@ class TestComplexFormVisualStates:
         search = page.locator("details.multiselect input[type='text']")
         search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
         page.wait_for_timeout(800)
-        percy_snapshot(page, "Complex Form - MultiSelect Open All Options")
 
     def test_multiselect_with_selections(self, complex_page):
         """MultiSelect with multiple options toggled — showing summary text."""
@@ -280,7 +268,6 @@ class TestComplexFormVisualStates:
         _toggle_multiselect_option(page, "py", "Python")
         _toggle_multiselect_option(page, "rs", "Rust")
         _toggle_multiselect_option(page, "go", "Go")
-        percy_snapshot(page, "Complex Form - MultiSelect 3 Selected")
 
     def test_full_form_filled_before_submit(self, complex_page):
         """All fields filled correctly before explicit submit."""
@@ -289,7 +276,6 @@ class TestComplexFormVisualStates:
         _pick_search_select(page, "de", "Germany")
         _toggle_multiselect_option(page, "py", "Python")
         _toggle_multiselect_option(page, "ts", "TypeScript")
-        percy_snapshot(page, "Complex Form - All Fields Filled")
 
     def test_full_form_after_submit(self, complex_page):
         """All fields filled and submitted — no errors, morphed state."""
@@ -299,16 +285,13 @@ class TestComplexFormVisualStates:
         _toggle_multiselect_option(page, "py", "Python")
         _toggle_multiselect_option(page, "ts", "TypeScript")
         submit(page)
-        percy_snapshot(page, "Complex Form - Submitted Valid")
 
     def test_password_reveal_toggle_visual(self, complex_page):
         """PasswordReveal with password visible vs hidden."""
         page = complex_page
         page.locator('input[name="password"]').fill("supersecret")
-        percy_snapshot(page, "Complex Form - Password Hidden")
         page.locator("label.password-reveal button").first.click()
         page.wait_for_timeout(200)
-        percy_snapshot(page, "Complex Form - Password Revealed")
 
     def test_auto_validate_then_fix(self, complex_page):
         """Auto-validate shows error, then adding languages fixes it."""
@@ -317,7 +300,5 @@ class TestComplexFormVisualStates:
         page.wait_for_timeout(2500)
         errors = page.locator("#id_languages_errors")
         expect(errors).to_have_count(1, timeout=3000)
-        percy_snapshot(page, "Complex Form - Auto-validate Country No Languages")
         _toggle_multiselect_option(page, "py", "Python")
         page.wait_for_timeout(2500)
-        percy_snapshot(page, "Complex Form - Auto-validate Error Fixed")
