@@ -15,8 +15,12 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from django.forms.renderers import DjangoTemplates, Jinja2
+
+if TYPE_CHECKING:
+    from django.template.backends.base import BaseEngine
 
 
 class FormworkRenderer(DjangoTemplates):
@@ -47,7 +51,7 @@ class FormworkJinja2Renderer(Jinja2):
     field_template_name = "django/forms/formwork_field.html"
 
     @cached_property
-    def engine(self) -> object:
+    def engine(self) -> BaseEngine:
         import django.forms.renderers as _fr
         from django.utils.html import escapejs
 
@@ -55,7 +59,8 @@ class FormworkJinja2Renderer(Jinja2):
         # standard widget templates (e.g. django/forms/widgets/input.html) are
         # found even when APP_DIRS is True but the django package itself is not
         # in INSTALLED_APPS as an app with a jinja2/ dir.
-        django_forms_jinja2 = Path(_fr.__file__).parent / self.backend.app_dirname
+        app_dirname: str = self.backend.app_dirname  # type: ignore[assignment]
+        django_forms_jinja2 = Path(_fr.__file__).parent / app_dirname
 
         return self.backend(
             {
