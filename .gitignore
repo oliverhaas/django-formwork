@@ -36,3 +36,4 @@ site/
 .playwright-mcp/
 node_modules/
 formwork-dist.css
+docs/superpowers/
