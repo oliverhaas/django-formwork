@@ -37,3 +37,4 @@ site/
 node_modules/
 formwork-dist.css
 docs/superpowers/
+test-results/

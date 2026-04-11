@@ -256,3 +256,26 @@ def test_toggle_morph_preserves_unchecked(toggle_page):
     expect(toggle).not_to_be_checked()
     submit(toggle_page)
     expect(toggle_page.locator('input[name="toggle"]')).not_to_be_checked()
+
+
+# ─── Level 8: Screenshot (visual regression) ─────────────────────────────
+#
+# Scaffolding only — these tests produce PNG artifacts in `test-results/`
+# that can be reviewed manually.  True baseline comparison requires
+# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
+# as a follow-up.  See issue #26 for the plan.
+
+
+@pytest.mark.screenshot
+def test_toggle_screenshot_default(toggle_page):
+    """Visual snapshot: Toggle in default (unchecked) state."""
+    wrapper = toggle_page.locator("#id_toggle_field")
+    wrapper.screenshot(path="test-results/toggle-default-actual.png")
+
+
+@pytest.mark.screenshot
+def test_toggle_screenshot_checked(toggle_page):
+    """Visual snapshot: Toggle in checked state."""
+    toggle_page.locator('input[name="toggle"]').check()
+    wrapper = toggle_page.locator("#id_toggle_field")
+    wrapper.screenshot(path="test-results/toggle-checked-actual.png")
