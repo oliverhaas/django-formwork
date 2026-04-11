@@ -1,0 +1,16 @@
+{% if errors %}
+<div role="alert" class="alert alert-error" id="formwork-non-field-errors">
+  {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+</div>
+{% endif %}
+{% if errors and not fields %}
+  {% for field in hidden_fields %}{{ field }}{% endfor %}
+{% endif %}
+{% for field, errors in fields %}
+{% if field.is_hidden %}{{ field }}{% else %}{{ field.as_field_group() }}{% endif %}
+{% if loop.last %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}
+{% endfor %}
+{% if not fields and not errors %}
+  {% for field in hidden_fields %}{{ field }}{% endfor %}
+{% endif %}
+<script>(function(){var s=document.currentScript,f=s&&s.closest('form');if(f&&f.querySelector('.formwork-errors'))f.noValidate=true})()</script>
