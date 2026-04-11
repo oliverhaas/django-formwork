@@ -20,6 +20,7 @@ from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
 from tests.e2e.conftest import (  # noqa: F401
     _e2e_settings,
     toggle_page,
+    uploads_page,
 )
 
 if TYPE_CHECKING:
