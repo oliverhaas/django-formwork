@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from django.forms.renderers import DjangoTemplates, Jinja2
 
@@ -53,7 +53,6 @@ class FormworkJinja2Renderer(Jinja2):
     @cached_property
     def engine(self) -> BaseEngine:
         import django.forms.renderers as _fr
-        from django.utils.html import escapejs
 
         # Include Django's built-in jinja2 widget templates directory so that
         # standard widget templates (e.g. django/forms/widgets/input.html) are
@@ -68,9 +67,22 @@ class FormworkJinja2Renderer(Jinja2):
                 "DIRS": [Path(__file__).parent / "jinja2", django_forms_jinja2],
                 "NAME": "djangoformworkjinja2",
                 "OPTIONS": {
-                    "filters": {
-                        "escapejs": escapejs,
-                    },
+                    "environment": "django_formwork.renderers.formwork_jinja2_environment",
                 },
             },
         )
+
+
+def formwork_jinja2_environment(**options: Any) -> Any:  # noqa: ANN401
+    """Jinja2 environment factory that registers the `escapejs` filter.
+
+    Django's Jinja2 backend sets `autoescape=True` via the default options
+    dict it passes here, so `S701` (ruff check for insecure autoescape) is
+    irrelevant for our usage.
+    """
+    import jinja2
+    from django.utils.html import escapejs
+
+    env = jinja2.Environment(**options)  # noqa: S701
+    env.filters["escapejs"] = escapejs
+    return env

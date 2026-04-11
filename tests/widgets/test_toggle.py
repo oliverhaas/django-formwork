@@ -27,7 +27,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import Toggle
 
-from .conftest import render_form, render_widget
+from .conftest import assert_html_equivalent, render_form, render_widget
 
 
 class ToggleForm(FormworkForm):
@@ -182,3 +182,14 @@ def test_toggle_form_prefix_handling():
     inp = soup.find("input", attrs={"name": "cfg-enabled"})
     assert inp is not None
     assert inp["id"] == "id_cfg-enabled"
+
+
+# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
+
+
+@pytest.mark.integration
+def test_toggle_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
+    """Toggle produces equivalent HTML when rendered via DTL and Jinja2."""
+    soup_dtl = render_form(ToggleForm(), renderer=dtl_renderer)
+    soup_jinja2 = render_form(ToggleForm(), renderer=jinja2_renderer)
+    assert_html_equivalent(soup_dtl, soup_jinja2)
