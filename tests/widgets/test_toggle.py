@@ -193,3 +193,66 @@ def test_toggle_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
     soup_dtl = render_form(ToggleForm(), renderer=dtl_renderer)
     soup_jinja2 = render_form(ToggleForm(), renderer=jinja2_renderer)
     assert_html_equivalent(soup_dtl, soup_jinja2)
+
+
+# ─── Level 5: E2e basic interaction ──────────────────────────────────────
+
+
+@pytest.mark.e2e
+def test_toggle_renders_on_page(toggle_page):
+    """Toggle input is visible on the /simple/ page."""
+    from playwright.sync_api import expect
+
+    toggle = toggle_page.locator('input[name="toggle"]')
+    expect(toggle).to_be_visible()
+
+
+@pytest.mark.e2e
+def test_toggle_user_can_click_on_off(toggle_page):
+    """User can toggle the switch on and off."""
+    from playwright.sync_api import expect
+
+    toggle = toggle_page.locator('input[name="toggle"]')
+    expect(toggle).not_to_be_checked()
+    toggle.click()
+    expect(toggle).to_be_checked()
+    toggle.click()
+    expect(toggle).not_to_be_checked()
+
+
+# ─── Level 6: E2e error flow ─────────────────────────────────────────────
+#
+# Toggle is not required on the /simple/ page, so dedicated error-flow
+# tests would need a separate page with a required=True Toggle.  Left as
+# a gap until that page exists — tracked under #28 (missing test
+# coverage) as part of the broader error-state test work.
+
+
+# ─── Level 7: E2e morph resilience ───────────────────────────────────────
+
+
+@pytest.mark.e2e
+def test_toggle_morph_preserves_checked(toggle_page):
+    """Checked state survives an htmx form morph."""
+    from playwright.sync_api import expect
+
+    from tests.e2e.conftest import submit
+
+    toggle = toggle_page.locator('input[name="toggle"]')
+    toggle.check()
+    expect(toggle).to_be_checked()
+    submit(toggle_page)
+    expect(toggle_page.locator('input[name="toggle"]')).to_be_checked()
+
+
+@pytest.mark.e2e
+def test_toggle_morph_preserves_unchecked(toggle_page):
+    """Unchecked state survives an htmx form morph."""
+    from playwright.sync_api import expect
+
+    from tests.e2e.conftest import submit
+
+    toggle = toggle_page.locator('input[name="toggle"]')
+    expect(toggle).not_to_be_checked()
+    submit(toggle_page)
+    expect(toggle_page.locator('input[name="toggle"]')).not_to_be_checked()
