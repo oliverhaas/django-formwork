@@ -1,6 +1,5 @@
 """E2e tests for SearchSelect widget: plain, with icons, and htmx."""
 
-from percy import percy_snapshot
 from playwright.sync_api import expect
 
 from .conftest import submit
@@ -15,7 +14,6 @@ class TestSearchSelectPlain:
     def test_renders(self, search_select_page):
         sel = self._get(search_select_page)
         assert sel.is_visible()
-        percy_snapshot(search_select_page, "SearchSelect - Default")
 
     def test_open_close_dropdown(self, search_select_page):
         sel = self._get(search_select_page)
@@ -23,7 +21,6 @@ class TestSearchSelectPlain:
         summary.click()
         search_select_page.wait_for_timeout(200)
         assert sel.get_attribute("open") is not None
-        percy_snapshot(search_select_page, "SearchSelect Plain - Open")
         summary.click()
         search_select_page.wait_for_timeout(200)
 
@@ -179,7 +176,6 @@ class TestSearchSelectIcons:
         sel.locator("button", has_text="New York").click()
         search_select_page.wait_for_timeout(100)
         assert "New York" in summary.text_content()
-        percy_snapshot(search_select_page, "SearchSelect Icons - Selected")
 
 
 class TestSearchSelectHtmx:

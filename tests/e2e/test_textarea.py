@@ -1,6 +1,5 @@
 """E2e tests for ValidatedTextarea with htmx validation."""
 
-from percy import percy_snapshot
 from playwright.sync_api import expect
 
 from .conftest import submit
@@ -43,7 +42,6 @@ class TestValidatedTextarea:
     def test_renders(self, textarea_page):
         wrapper = textarea_page.locator(".validated-textarea")
         assert wrapper.is_visible()
-        percy_snapshot(textarea_page, "ValidatedTextarea - Default")
 
     def test_has_overlay(self, textarea_page):
         highlights = textarea_page.locator(".validated-textarea-highlights")
@@ -65,7 +63,6 @@ class TestValidatedTextarea:
         marks = textarea_page.locator(".validated-textarea-highlights mark")
         expect(marks).to_have_count(1, timeout=3000)
         assert marks.first.text_content() == "badword"
-        percy_snapshot(textarea_page, "ValidatedTextarea - Badword Highlighted")
 
     def test_error_messages_appear(self, textarea_page):
         self._trigger_validation(textarea_page, "badword and spam here")
@@ -73,7 +70,6 @@ class TestValidatedTextarea:
         errors = textarea_page.locator(".validated-textarea-tooltip .formwork-errors")
         messages = errors.locator("p")
         expect(messages).to_have_count(2, timeout=3000)
-        percy_snapshot(textarea_page, "ValidatedTextarea - Multiple Errors")
 
     def test_errors_clear(self, textarea_page):
         self._trigger_validation(textarea_page, "badword")
@@ -88,7 +84,6 @@ class TestValidatedTextarea:
             0,
             timeout=3000,
         )
-        percy_snapshot(textarea_page, "ValidatedTextarea - Errors Cleared")
 
     def test_errors_persist_while_typing(self, textarea_page):
         """Error messages persist while typing; only cleared by server validation response."""
@@ -149,4 +144,3 @@ class TestValidatedTextarea:
         # Errors should be gone and aria-invalid="false" on textarea.
         expect(errors.locator("p")).to_have_count(0, timeout=3000)
         expect(ta).to_have_attribute("aria-invalid", "false")
-        percy_snapshot(textarea_page, "ValidatedTextarea - aria-invalid Cleared")

@@ -1,6 +1,5 @@
 """E2e tests for ComboBox widget: single, multiple, icons, and htmx."""
 
-from percy import percy_snapshot
 from playwright.sync_api import expect
 
 from .conftest import submit
@@ -15,7 +14,6 @@ class TestComboBoxSingle:
     def test_renders(self, combobox_page):
         combo = self._get(combobox_page)
         assert combo.is_visible()
-        percy_snapshot(combobox_page, "ComboBox - Default")
 
     def test_type_shows_suggestions(self, combobox_page):
         inp = combobox_page.locator('input[name="language_single"]')
@@ -151,7 +149,6 @@ class TestComboBoxIcons:
         combo = self._get(combobox_page)
         assert combo.locator("button", has_text="Python").is_visible()
         assert not combo.locator("button", has_text="Go").is_visible()
-        percy_snapshot(combobox_page, "ComboBox Icons - Filtered")
 
 
 class TestComboBoxHtmx:

@@ -1,7 +1,5 @@
 """E2e tests for standard Django widgets on the Basic Form page."""
 
-from percy import percy_snapshot
-
 from .conftest import submit
 
 
@@ -149,7 +147,6 @@ class TestCheckbox:
         assert not cb.is_checked()
         cb.click()
         assert cb.is_checked()
-        percy_snapshot(basic_page, "Checkbox - Checked")
 
     def test_submit_unchecked_shows_error(self, basic_page):
         submit(basic_page)

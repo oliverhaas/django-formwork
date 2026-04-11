@@ -1,7 +1,5 @@
 """Form structure and morph infrastructure tests."""
 
-from percy import percy_snapshot
-
 from .conftest import submit
 
 
@@ -14,7 +12,6 @@ class TestFormStructure:
     def test_form_renders(self, basic_page):
         form = basic_page.locator("#basic-form")
         assert form.is_visible()
-        percy_snapshot(basic_page, "Basic Form - Default")
 
     def test_fieldset_wrappers(self, basic_page):
         fieldsets = basic_page.locator("#basic-form fieldset.fieldset")
@@ -37,7 +34,6 @@ class TestFormStructure:
         submit(basic_page)
         tooltips = basic_page.locator("#basic-form .tooltip-error")
         assert tooltips.count() >= 1
-        percy_snapshot(basic_page, "Basic Form - Errors")
 
     def test_error_has_role_alert(self, basic_page):
         submit(basic_page)
