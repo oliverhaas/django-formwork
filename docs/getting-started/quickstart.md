@@ -102,6 +102,36 @@ class ExampleForm(forms.Form):
     avatar = forms.ImageField(widget=ImageDropZone)
 ```
 
+## Server-side textarea validation
+
+`ValidatedTextarea` sends the textarea content to a server-side view as the user types, and highlights error spans in real time.
+
+```python
+# views.py
+from django_formwork.views import FormworkValidateView
+
+class SpellCheckView(FormworkValidateView):
+    def get_errors(self, text: str, **kwargs) -> list[dict]:
+        errors = []
+        for match in find_misspellings(text):
+            errors.append({
+                "message": f"Misspelled: {match.word}",
+                "start": match.start,
+                "end": match.end,
+            })
+        return errors
+```
+
+```python
+# forms.py
+content = forms.CharField(
+    widget=ValidatedTextarea(validate_url=reverse_lazy("spell-check")),
+)
+```
+
+!!! warning "CSRF exemption"
+    `FormworkValidateView` is CSRF-exempt because it performs read-only validation. Do not use it for operations with side effects (database writes, emails, etc.). For those, use a regular Django view with CSRF protection.
+
 ## Server-side search
 
 For large datasets, use htmx-powered server-side search:

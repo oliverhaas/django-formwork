@@ -31,6 +31,17 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 
 Formwork uses [DaisyUI](https://daisyui.com/) 5 for component styling and [Tailwind CSS](https://tailwindcss.com/) 4+ for the build step. You need to include these in your project.
 
+### DaisyUI version
+
+Formwork requires **DaisyUI 5.x**. DaisyUI 4 and earlier use a different component API and are not compatible. Within the DaisyUI 5 series, formwork is tested against the latest stable release — any DaisyUI 5.x version should work.
+
+### CSS files
+
+Formwork ships two CSS files:
+
+- **`formwork.css`** — Tailwind source file. It contains `@apply` directives and must be processed by the Tailwind CLI or PostCSS plugin as part of your build. Use this for production.
+- **`formwork-dist.css`** — Pre-compiled output. It can be included directly without a build step, useful for quick prototyping or projects that don't use a Tailwind build pipeline. It is a snapshot and may lag behind `formwork.css` if you customise things.
+
 ### Tailwind CSS + DaisyUI setup
 
 ```bash
@@ -43,6 +54,12 @@ In your main CSS file, import Tailwind and DaisyUI, then import formwork's CSS:
 @import "tailwindcss";
 @import "daisyui";
 @import "../../path/to/site-packages/django_formwork/static/formwork/formwork.css";
+```
+
+For quick prototyping without a build step, use the pre-compiled file instead:
+
+```html
+<link rel="stylesheet" href="{% static 'formwork/formwork-dist.css' %}">
 ```
 
 ### htmx + Alpine.js (optional)

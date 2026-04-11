@@ -56,4 +56,6 @@ nav:
       - Quick Start: getting-started/quickstart.md
   - Reference:
       - Architecture: architecture.md
+      - Views: reference/views.md
+      - Browser Support: reference/browser-support.md
       - Changelog: reference/changelog.md
