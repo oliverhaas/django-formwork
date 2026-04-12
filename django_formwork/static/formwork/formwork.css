@@ -1,29 +1,31 @@
 /*
- * formwork.css — DaisyUI styling for django-formwork.
+ * formwork.css — Complete Tailwind CSS input for django-formwork.
  *
- * This is a Tailwind CSS source file.  It must be processed by the
- * Tailwind compiler (CLI or PostCSS plugin) as part of your build.
+ * This file IS your Tailwind input.  Include it in your CSS:
+ *
+ *   @import "path/to/django_formwork/static/formwork/formwork.css";
+ *   @source "../";   (scan your own templates for Tailwind classes)
+ *
+ * Then build with: npx @tailwindcss/cli -i your-app.css -o output.css
+ *
+ * Prerequisites:
+ *   - npm install tailwindcss daisyui
+ *   - python manage.py formwork install  (downloads Lucide icons)
  *
  * All DaisyUI component classes are applied via @apply so that
  * Django's standard widget templates can be used without modification.
  *
- * Custom formwork widgets are excluded from the base selectors using
- * :not() with classes already present on those elements (e.g. .toggle,
- * .mask, .hidden) or structural context (e.g. .password-reveal,
- * .dropdown-content).
- *
  * All rules live in @layer components so that:
  *   - Tailwind utility classes in HTML always win (utilities > components)
  *   - Users can override with unlayered CSS or higher-priority layers
- *
- * We cannot use @layer base because DaisyUI's @apply expansions create
- * nested sub-layers (e.g. base > daisyui.l1.l2.l3).  Sub-layers have
- * lower priority than direct parent-layer styles, so Tailwind's preflight
- * (also in @layer base) would beat the expanded DaisyUI properties.
- *
- * @layer components avoids this: components > base in the cascade, so
- * even sub-layers like components > daisyui.l1.l2.l3 outrank preflight.
  */
+
+/* --- Stack: Tailwind + DaisyUI + icons --- */
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: all;
+}
+@import "../iconx/icons.css";
 
 /* DaisyUI's .fieldset uses display:grid.  The UA default min-width:min-content
    on <fieldset> means grid items (inputs, labels) can push the fieldset wider

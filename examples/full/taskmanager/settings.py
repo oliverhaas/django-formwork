@@ -15,6 +15,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.staticfiles",
     "django.contrib.sessions",
+    "django_iconx",
     "django_formwork",
     "taskmanager",
 ]
@@ -41,6 +42,7 @@ TEMPLATES = [
 FORM_RENDERER = "django_formwork.FormworkRenderer"
 
 STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 DATABASES = {
     "default": {

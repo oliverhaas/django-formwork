@@ -1,3 +1,5 @@
+from pathlib import Path
+
 SECRET_KEY = "django-formwork-test-secret-key"
 
 MIDDLEWARE = ["django.contrib.sessions.middleware.SessionMiddleware"]
@@ -7,11 +9,15 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "django.contrib.staticfiles",
+    "django_iconx",
     "django_formwork",
     "e2e",
 ]
 
 STATIC_URL = "/static/"
+STATICFILES_DIRS = [
+    str(Path(__file__).resolve().parent.parent.parent / "django_formwork" / "static"),
+]
 
 TEMPLATES = [
     {
