@@ -42,6 +42,10 @@ __all__ = [
     "ValidatedTextarea",
 ]
 
+# Sentinel: distinguishes "developer didn't pass search_decorator" from
+# "developer explicitly passed None" (= no decorator, public endpoint).
+_NOT_SET = object()
+
 # ---------------------------------------------------------------------------
 # Custom widgets
 # ---------------------------------------------------------------------------
@@ -182,6 +186,7 @@ class MultiSelect(forms.SelectMultiple):
         icons: dict[str, str] | None = None,
         show_search: bool | None = None,
         search_fields: Sequence[str] | None = None,
+        search_decorator: Callable | object = _NOT_SET,
         icon_from_instance: Callable[..., str] | None = None,
         description_from_instance: Callable[..., str] | None = None,
     ) -> None:
@@ -190,6 +195,7 @@ class MultiSelect(forms.SelectMultiple):
         self.icons = icons or {}
         self.show_search = show_search
         self.search_fields = tuple(search_fields) if search_fields else None
+        self.search_decorator = search_decorator
         self.icon_from_instance = icon_from_instance
         self.description_from_instance = description_from_instance
         self._registry_key: str | None = None
@@ -266,6 +272,7 @@ class SearchSelect(forms.Select):
         descriptions: dict[str, str] | None = None,
         show_search: bool | None = None,
         search_fields: Sequence[str] | None = None,
+        search_decorator: Callable | object = _NOT_SET,
         icon_from_instance: Callable[..., str] | None = None,
         description_from_instance: Callable[..., str] | None = None,
     ) -> None:
@@ -275,6 +282,7 @@ class SearchSelect(forms.Select):
         self.descriptions = descriptions or {}
         self.show_search = show_search
         self.search_fields = tuple(search_fields) if search_fields else None
+        self.search_decorator = search_decorator
         self.icon_from_instance = icon_from_instance
         self.description_from_instance = description_from_instance
         self._registry_key: str | None = None
@@ -352,6 +360,7 @@ class ComboBox(forms.TextInput):
         suggestions: list[str] | None = None,
         multiple: bool = False,
         search_url: str | None = None,
+        search_decorator: Callable | object = _NOT_SET,
         icons: dict[str, str] | None = None,
         descriptions: dict[str, str] | None = None,
         attrs: dict[str, Any] | None = None,
@@ -360,6 +369,7 @@ class ComboBox(forms.TextInput):
         self.suggestions = suggestions or []
         self.multiple = multiple
         self.search_url = search_url
+        self.search_decorator = search_decorator
         self.icons = icons or {}
         self.descriptions = descriptions or {}
         self._registry_key: str | None = None

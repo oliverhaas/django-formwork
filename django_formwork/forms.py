@@ -60,12 +60,14 @@ class _AutoSearchMixin:
         self._auto_register_search()
 
     def _auto_register_search(self) -> None:
+        from django.core.exceptions import ImproperlyConfigured
+
         from django_formwork.registry import (
             SearchRegistration,
             make_choices_key,
             register,
         )
-        from django_formwork.widgets import ComboBox, MultiSelect, SearchSelect
+        from django_formwork.widgets import _NOT_SET, ComboBox, MultiSelect, SearchSelect
 
         for name, field in self.fields.items():
             widget = field.widget
@@ -75,10 +77,30 @@ class _AutoSearchMixin:
             if widget.search_url:
                 continue
 
-            # Path 1: model-backed (search_fields on widget + queryset on field).
+            # Check whether this widget would be auto-registered.
             search_fields = getattr(widget, "search_fields", None)
             queryset = getattr(field, "queryset", None)
-            if search_fields and queryset is not None:
+            has_model_search = bool(search_fields) and queryset is not None
+            has_choices_search = getattr(self.__class__, f"search_choices_{name}", None) is not None
+
+            if not has_model_search and not has_choices_search:
+                continue
+
+            # Enforce search_decorator — developer must make a conscious
+            # choice about auth for auto-registered search endpoints.
+            raw_decorator = getattr(widget, "search_decorator", _NOT_SET)
+            if raw_decorator is _NOT_SET:
+                widget_cls = type(widget).__name__
+                msg = (
+                    f"Field '{name}' uses {widget_cls} with server-side search but no "
+                    f"search_decorator was provided. Pass a decorator (e.g. login_required) "
+                    f"or None for public access."
+                )
+                raise ImproperlyConfigured(msg)
+            decorator = raw_decorator  # Validated: not _NOT_SET → Callable | None
+
+            # Path 1: model-backed (search_fields on widget + queryset on field).
+            if has_model_search and search_fields is not None and queryset is not None:
                 self._register_model_search(widget, field, search_fields, queryset)
                 continue
 
@@ -89,6 +111,7 @@ class _AutoSearchMixin:
                 key = make_choices_key(self.__class__, name)
                 registration = SearchRegistration(
                     search_func=method,
+                    search_decorator=decorator if callable(decorator) else None,
                     widget_type=widget_type,
                 )
                 register(key, registration)
@@ -119,6 +142,7 @@ class _AutoSearchMixin:
             label_from_instance=label_func,
             icon_from_instance=getattr(widget, "icon_from_instance", None),
             description_from_instance=getattr(widget, "description_from_instance", None),
+            search_decorator=widget.search_decorator if callable(widget.search_decorator) else None,
             widget_type=widget_type,
         )
         register(key, registration)

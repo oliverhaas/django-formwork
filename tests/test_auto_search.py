@@ -86,7 +86,7 @@ class TestAutoRegistration:
         class F(FormworkForm):
             user = forms.ModelChoiceField(
                 queryset=User.objects.all(),
-                widget=SearchSelect(search_fields=["username"]),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
             )
 
         F()
@@ -105,7 +105,7 @@ class TestAutoRegistration:
         class F(FormworkModelForm):
             user = forms.ModelChoiceField(
                 queryset=User.objects.all(),
-                widget=SearchSelect(search_fields=["username", "email"]),
+                widget=SearchSelect(search_fields=["username", "email"], search_decorator=None),
             )
 
             class Meta:
@@ -125,7 +125,7 @@ class TestAutoRegistration:
         class F(FormworkForm):
             user = forms.ModelChoiceField(
                 queryset=User.objects.all(),
-                widget=SearchSelect(),
+                widget=SearchSelect(search_decorator=None),
             )
 
         F()
@@ -155,7 +155,7 @@ class TestAutoRegistration:
         class F(FormworkForm):
             city = forms.ChoiceField(
                 choices=[("a", "A")],
-                widget=SearchSelect(search_fields=["name"]),
+                widget=SearchSelect(search_fields=["name"], search_decorator=None),
             )
 
         F()
@@ -170,7 +170,7 @@ class TestAutoRegistration:
         class F(FormworkForm):
             user = forms.ModelChoiceField(
                 queryset=User.objects.all(),
-                widget=SearchSelect(search_fields=["username"]),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
             )
 
         form = F()
@@ -186,7 +186,7 @@ class TestAutoRegistration:
         class F(FormworkForm):
             users = forms.ModelMultipleChoiceField(
                 queryset=User.objects.all(),
-                widget=MultiSelect(search_fields=["username"]),
+                widget=MultiSelect(search_fields=["username"], search_decorator=None),
             )
 
         F()
@@ -204,7 +204,7 @@ class TestAutoRegistration:
             user = forms.ModelChoiceField(
                 queryset=User.objects.all(),
                 to_field_name="username",
-                widget=SearchSelect(search_fields=["first_name"]),
+                widget=SearchSelect(search_fields=["first_name"], search_decorator=None),
             )
 
         F()
@@ -225,7 +225,7 @@ class TestAutoRegistration:
         class F(FormworkForm):
             user = MyField(
                 queryset=User.objects.all(),
-                widget=SearchSelect(search_fields=["username"]),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
             )
 
         F()
@@ -244,7 +244,7 @@ class TestAutoRegistration:
         class F(FormworkForm):
             user = forms.ModelChoiceField(
                 queryset=User.objects.all(),
-                widget=SearchSelect(search_fields=["username"], icon_from_instance=my_icon),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None, icon_from_instance=my_icon),
             )
 
         F()
@@ -260,13 +260,66 @@ class TestAutoRegistration:
         class F(FormworkForm):
             user = forms.ModelChoiceField(
                 queryset=User.objects.all(),
-                widget=SearchSelect(search_fields=["username"]),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
             )
 
         F()
         reg = get_registration(make_key("auth.user", ["username"]))
         qs = reg.queryset_factory()
         assert qs.model is User
+
+    def test_missing_search_decorator_raises(self):
+        """Omitting search_decorator on a widget with search_fields raises ImproperlyConfigured."""
+        from django import forms
+        from django.core.exceptions import ImproperlyConfigured
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
+
+        class F(FormworkForm):
+            user = forms.ModelChoiceField(
+                queryset=User.objects.all(),
+                widget=SearchSelect(search_fields=["username"]),
+            )
+
+        with pytest.raises(ImproperlyConfigured, match="search_decorator"):
+            F()
+
+    def test_missing_search_decorator_choices_raises(self):
+        """Omitting search_decorator with a search_choices_ method raises ImproperlyConfigured."""
+        from django import forms
+        from django.core.exceptions import ImproperlyConfigured
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
+
+        class CityForm(FormworkForm):
+            city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect())
+
+            @staticmethod
+            def search_choices_city(query, request=None):
+                return _search_cities(query, request)
+
+        with pytest.raises(ImproperlyConfigured, match="search_decorator"):
+            CityForm()
+
+    def test_search_decorator_stored_in_registration(self):
+        """The search_decorator value is stored in the SearchRegistration."""
+        from django import forms
+        from django.contrib.auth.decorators import login_required
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
+
+        class F(FormworkForm):
+            user = forms.ModelChoiceField(
+                queryset=User.objects.all(),
+                widget=SearchSelect(search_fields=["username"], search_decorator=login_required),
+            )
+
+        F()
+        reg = get_registration(make_key("auth.user", ["username"]))
+        assert reg.search_decorator is login_required
 
 
 # ---------------------------------------------------------------------------
@@ -321,30 +374,43 @@ class TestFormworkAutoSearchView:
         response = FormworkAutoSearchView.as_view()(request, key="nonexistent.key")
         assert response.status_code == 404
 
-    def test_permission_denied(self):
+    def test_search_decorator_applied(self):
+        """A search_decorator is applied at dispatch time."""
+        from functools import wraps
+
+        from django.http import HttpResponse
+
         from django_formwork.views import FormworkAutoSearchView
+
+        def deny_all(view_func):
+            @wraps(view_func)
+            def wrapper(request, *args, **kwargs):
+                return HttpResponse(status=403)
+
+            return wrapper
 
         reg = SearchRegistration(
             queryset_factory=User.objects.all,
             search_fields=("username",),
-            permission=lambda request: False,
+            search_decorator=deny_all,
         )
-        key = "test.denied"
+        key = "test.protected"
         register(key, reg)
 
         request = factory.get("/search/", {"q": ""})
         response = FormworkAutoSearchView.as_view()(request, key=key)
         assert response.status_code == 403
 
-    def test_permission_allowed(self):
+    def test_search_decorator_none_allows_anonymous(self):
+        """search_decorator=None means public — no auth check."""
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
             queryset_factory=User.objects.all,
             search_fields=("username",),
-            permission=lambda request: True,
+            search_decorator=None,
         )
-        key = "test.allowed"
+        key = "test.public"
         register(key, reg)
 
         request = factory.get("/search/", {"q": "", "type": "search_select"})
@@ -520,7 +586,7 @@ class TestChoicesAutoRegistration:
         class CityForm(FormworkForm):
             city = forms.ChoiceField(
                 choices=_CITIES,
-                widget=SearchSelect(),
+                widget=SearchSelect(search_decorator=None),
             )
 
             @staticmethod
@@ -541,7 +607,7 @@ class TestChoicesAutoRegistration:
         from django_formwork.widgets import SearchSelect
 
         class CityForm(FormworkForm):
-            city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect())
+            city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect(search_decorator=None))
 
             @staticmethod
             def search_choices_city(query, request=None):
@@ -558,7 +624,7 @@ class TestChoicesAutoRegistration:
         from django_formwork.widgets import SearchSelect
 
         class CityForm(FormworkForm):
-            city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect())
+            city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect(search_decorator=None))
 
         CityForm()
         assert len(get_registry()) == 0
@@ -589,7 +655,7 @@ class TestChoicesAutoRegistration:
         from django_formwork.widgets import MultiSelect
 
         class CityForm(FormworkForm):
-            cities = forms.MultipleChoiceField(choices=_CITIES, widget=MultiSelect())
+            cities = forms.MultipleChoiceField(choices=_CITIES, widget=MultiSelect(search_decorator=None))
 
             @staticmethod
             def search_choices_cities(query, request=None):
@@ -608,7 +674,7 @@ class TestChoicesAutoRegistration:
         from django_formwork.widgets import ComboBox
 
         class TagForm(FormworkForm):
-            tag = forms.CharField(widget=ComboBox())
+            tag = forms.CharField(widget=ComboBox(search_decorator=None))
 
             @staticmethod
             def search_choices_tag(query, request=None):

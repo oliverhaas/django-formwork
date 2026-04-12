@@ -195,11 +195,13 @@ class FormworkAutoSearchView(FormworkSearchView):
         if self.registration is None:
             return HttpResponse(status=404)
         reg = self.registration
-        if reg.permission and not reg.permission(request):
-            return HttpResponse(status=403)
         self.widget_type = reg.widget_type
         # Remove URL kwargs before passing to parent — get() doesn't accept them.
         kwargs.pop("key", None)
+        # Apply the search_decorator (e.g. login_required) if one was set.
+        if reg.search_decorator is not None:
+            decorated = reg.search_decorator(super().dispatch)
+            return decorated(request, *args, **kwargs)
         return super().dispatch(request, *args, **kwargs)
 
     def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:
