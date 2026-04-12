@@ -589,7 +589,7 @@ def test_combobox_screenshot_open_dropdown(combobox_page, assert_screenshot):
     inp.fill("P")
     combobox_page.wait_for_timeout(150)
     wrapper = combobox_page.locator(".dropdown.combobox").first
-    assert_screenshot(wrapper, "combobox-open.png", include_overflow=300)
+    assert_screenshot(wrapper, "combobox-open.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot
