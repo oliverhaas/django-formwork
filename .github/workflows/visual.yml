@@ -118,12 +118,18 @@ jobs:
           git add tests/widgets/screenshots/
           git commit -m "chore: update screenshot baselines for ${SOURCE_BRANCH} [auto]"
           git push -f origin "$UPDATE_BRANCH"
-          # Create PR targeting the source branch
-          UPDATE_PR_URL=$(gh pr create \
-            --title "chore: update screenshot baselines [auto]" \
-            --body "Automated screenshot baseline update for PR #${{ github.event.pull_request.number }}." \
-            --head "$UPDATE_BRANCH" \
-            --base "$SOURCE_BRANCH" 2>&1 || true)
+          # Create or update PR
+          EXISTING_PR=$(gh pr list --head "$UPDATE_BRANCH" --state open --json url -q '.[0].url')
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR already exists at $EXISTING_PR, force-pushed update."
+            UPDATE_PR_URL="$EXISTING_PR"
+          else
+            UPDATE_PR_URL=$(gh pr create \
+              --title "chore: update screenshot baselines [auto]" \
+              --body "Automated screenshot baseline update for PR #${{ github.event.pull_request.number }}." \
+              --head "$UPDATE_BRANCH" \
+              --base "$SOURCE_BRANCH")
+          fi
           # Comment on the original PR
           gh pr comment "${{ github.event.pull_request.number }}" \
             --body "Visual changes detected. Review and merge baseline update: ${UPDATE_PR_URL}"

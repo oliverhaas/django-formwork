@@ -5,3 +5,8 @@
 @source "../../django_formwork/";
 @source "./";
 @import "../../django_formwork/static/formwork/formwork.css";
+
+/* Pin font for screenshot reproducibility across platforms. */
+body {
+  font-family: "Inter", sans-serif;
+}
