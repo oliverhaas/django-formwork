@@ -58,6 +58,18 @@ The HTML fragment is rendered by one of three inline templates, selected by the 
 
 Override any of these as class attributes on your subclass to change the rendered markup.
 
+### `MAX_QUERY_LENGTH`
+
+Queries longer than `MAX_QUERY_LENGTH` (default: `200`) characters are silently truncated before being passed to `get_results()`. Override this class attribute to change the limit:
+
+```python
+class CitySearchView(FormworkSearchView):
+    MAX_QUERY_LENGTH = 100  # stricter limit
+
+    def get_results(self, query: str, **kwargs) -> list[dict]:
+        ...
+```
+
 ### `get_total_count()`
 
 Called once per request (before `get_results`) to determine the total number of unfiltered results. The widget uses this count to decide whether to show its search input (shown when count exceeds `search_threshold`, default 20 for `SearchSelect`).
@@ -123,16 +135,36 @@ class TagForm(FormworkForm):
 
 ### Access control
 
-For model-backed registrations, pass a `permission` callable to the widget:
+Auto-registered endpoints require a `search_decorator` on the widget. Omitting it raises `ImproperlyConfigured` — formwork refuses to silently expose an unauthenticated search endpoint.
+
+Pass a standard Django auth decorator:
+
+```python
+from django.contrib.auth.decorators import login_required, permission_required
+
+# Require login:
+SearchSelect(
+    search_fields=["name"],
+    search_decorator=login_required,
+)
+
+# Require a specific permission:
+SearchSelect(
+    search_fields=["name"],
+    search_decorator=permission_required("myapp.view_city"),
+)
+```
+
+To explicitly allow unauthenticated access (public endpoint), pass `None`:
 
 ```python
 SearchSelect(
     search_fields=["name"],
-    permission=lambda request: request.user.is_staff,
+    search_decorator=None,  # public — no auth required
 )
 ```
 
-The view returns HTTP 403 if the callable returns `False`.
+The decorator wraps `FormworkAutoSearchView.dispatch` for that endpoint.
 
 ---
 

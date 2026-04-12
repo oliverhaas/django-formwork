@@ -11,6 +11,7 @@ Formwork's CSS uses several modern CSS features. The table below lists the minim
 | CSS Grid `subgrid` | 117 | 71 | 16 | 117 |
 | CSS Nesting | 112 | 117 | 16.5 | 112 |
 | `color-mix()` with `oklab` | 111 | 113 | 16.2 | 111 |
+| `@layer` | 99 | 97 | 15.4 | 99 |
 
 ## Where each feature is used
 
@@ -22,9 +23,11 @@ Formwork's CSS uses several modern CSS features. The table below lists the minim
 
 **CSS Nesting** — used inside `@layer components` rule blocks (e.g. `.fieldset + .fieldset`). Browsers that don't support nesting will silently drop those rules.
 
+**`@layer`** — all `formwork.css` rules are wrapped in `@layer components`. This ensures Tailwind utilities in HTML (which are in `@layer utilities`) always take precedence, and users can override formwork styles with unlayered CSS. Browsers that don't support `@layer` receive no formwork styles at all.
+
 ## Effective minimum
 
-All four features are available in Chrome 117+, Firefox 121+, Safari 16.5+, and Edge 117+. Browsers released before these versions will have visual regressions (misaligned layouts, missing placeholder colors, broken subgrid alignment), but the forms remain functional.
+All five features are available in Chrome 117+, Firefox 121+, Safari 16.5+, and Edge 117+. Browsers released before these versions will have visual regressions (misaligned layouts, missing placeholder colors, broken subgrid alignment), but the forms remain functional.
 
 !!! note "Fallbacks"
     `color-mix()` rules always include a `rgba()` fallback on the preceding line, so colors degrade gracefully on older browsers. All other features have no fallback — if you need to support older browsers, you will need to add custom CSS overrides.

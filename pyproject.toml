@@ -57,8 +57,13 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["django_formwork"]
+# django_formwork/static/formwork/formwork-dist.css is a pre-compiled CSS file
+# for users who don't use Tailwind. It is included in the wheel intentionally.
 
 [tool.hatch.build.targets.sdist]
+# formwork-dist.css is a build artifact (compiled from formwork.css via Tailwind).
+# It is excluded from sdist by listing only source directories; users building
+# from source should run the Tailwind build step themselves.
 include = ["django_formwork", "LICENSE", "README.md"]
 
 [tool.ruff]
