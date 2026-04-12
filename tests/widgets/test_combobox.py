@@ -148,6 +148,23 @@ def test_combobox_empty_suggestions_get_context():
     assert ctx["widget"]["suggestions"] == []
 
 
+@pytest.mark.unit
+def test_combobox_get_context_with_value_none():
+    """Passing value=None is tolerated."""
+    widget = ComboBox(suggestions=["a"])
+    ctx = widget.get_context("field", None, {"id": "id_field"})
+    assert ctx["widget"]["name"] == "field"
+
+
+@pytest.mark.unit
+def test_combobox_renders_without_id():
+    """Widget renders without an id attribute."""
+    widget = ComboBox(suggestions=["a", "b"])
+    soup = render_widget(widget, name="field", attrs={})
+    div = soup.find("div", class_="combobox")
+    assert div is not None
+
+
 # ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
 
 

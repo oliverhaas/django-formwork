@@ -195,6 +195,37 @@ def test_multi_select_search_threshold_default():
     assert widget.search_threshold == 20
 
 
+@pytest.mark.unit
+def test_multi_select_get_context_with_value_none():
+    """Passing value=None is tolerated."""
+    widget = MultiSelect(choices=[("a", "A")])
+    ctx = widget.get_context("field", None, {"id": "id_field"})
+    assert ctx["widget"]["name"] == "field"
+
+
+@pytest.mark.unit
+def test_multi_select_renders_without_id():
+    """Widget renders without an id attribute."""
+    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    soup = render_widget(widget, name="field", attrs={})
+    details = soup.find("details")
+    assert details is not None
+
+
+@pytest.mark.unit
+def test_multi_select_optgroup_rendering():
+    """Grouped choices render all options from all groups."""
+    choices = [
+        ("Fruits", [("apple", "Apple"), ("banana", "Banana")]),
+        ("Vegs", [("carrot", "Carrot")]),
+    ]
+    widget = MultiSelect(choices=choices)
+    soup = render_widget(widget, name="food", attrs={"id": "id_food"})
+    checkboxes = soup.find_all("input", attrs={"type": "checkbox"})
+    values = {cb["value"] for cb in checkboxes}
+    assert values == {"apple", "banana", "carrot"}
+
+
 # ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
 
 

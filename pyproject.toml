@@ -96,6 +96,7 @@ suppress-none-returning = true
   "RUF012",  # Mutable class defaults fine in test Layout classes
   "S101",    # assert in tests
   "S105",    # Hardcoded passwords in test settings
+  "SLF001",  # Private member access needed to test internal methods
 ]
 
 [tool.mypy]
