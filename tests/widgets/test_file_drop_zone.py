@@ -195,10 +195,11 @@ def test_file_drop_zone_file_input_change_handler():
 
 @pytest.mark.unit
 def test_file_drop_zone_upload_icon():
-    """Rendered output contains an SVG upload icon."""
+    """Rendered output contains an upload icon."""
     soup = render_widget(FileDropZone())
-    svg = soup.find("svg")
-    assert svg is not None
+    icon = soup.find("i", class_="icon")
+    assert icon is not None
+    assert "icon-cloud-upload" in icon.get("class", [])
 
 
 @pytest.mark.unit

@@ -179,6 +179,7 @@ version = "0.1.0a1"
 source = { editable = "." }
 dependencies = [
     { name = "django" },
+    { name = "django-iconx" },
 ]
 
 [package.dev-dependencies]
@@ -206,7 +207,10 @@ docs = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "django", specifier = ">=6.0,<7" }]
+requires-dist = [
+    { name = "django", specifier = ">=6.0,<7" },
+    { name = "django-iconx", specifier = ">=0.2.0" },
+]
 
 [package.metadata.requires-dev]
 dev = [
@@ -230,6 +234,18 @@ docs = [
     { name = "mike", specifier = "==2.1.4" },
     { name = "mkdocs", specifier = "==1.6.1" },
     { name = "mkdocs-material", specifier = "==9.7.6" },
+]
+
+[[package]]
+name = "django-iconx"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d2/e1/8c0e96247274c59e9dc2575c0d6c9cb472ec5f30faa7c192b4aebba68c9d/django_iconx-0.2.0.tar.gz", hash = "sha256:91c0c44c0d501a4cf00ae093085b4611e8b92d98f002ce39986cf74a4d0b68af", size = 11204, upload-time = "2026-04-12T07:22:39.857Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f0/62/ef7b6cfdaabfdebf509e95998dcef5e33d98c0a58cd967846bc4cf1ff617/django_iconx-0.2.0-py3-none-any.whl", hash = "sha256:72c39bf66925d30ce4710c84e7134fa2e63aa2bf76d3b130915de1b9e7a2e72e", size = 13985, upload-time = "2026-04-12T07:22:38.294Z" },
 ]
 
 [[package]]

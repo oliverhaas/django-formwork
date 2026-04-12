@@ -23,7 +23,7 @@ classifiers = [
   "Topic :: Software Development :: Libraries",
   "Typing :: Typed",
 ]
-dependencies = ["Django>=6.0,<7"]
+dependencies = ["Django>=6.0,<7", "django-iconx>=0.2.0"]
 
 [project.urls]
 Homepage = "https://github.com/oliverhaas/django-formwork"
