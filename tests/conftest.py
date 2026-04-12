@@ -5,6 +5,15 @@ from django_formwork.forms import FormworkForm
 from django_formwork.widgets import MultiSelect, Range, Rating, Toggle
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--update-screenshots",
+        action="store_true",
+        default=False,
+        help="Regenerate screenshot baselines instead of comparing.",
+    )
+
+
 class SimpleForm(forms.Form):
     name = forms.CharField(help_text="Your full name")
     email = forms.EmailField()

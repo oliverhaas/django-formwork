@@ -7,6 +7,7 @@ share conftest fixtures across sibling directories.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -31,7 +32,14 @@ from tests.e2e.conftest import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from django.forms.renderers import BaseRenderer
+    from playwright.sync_api import Locator
+
+_SCREENSHOTS_DIR = Path(__file__).parent / "screenshots"
+_DIFF_OUTPUT_DIR = Path("test-results")
+_PER_PIXEL_TOLERANCE = 10  # per-channel tolerance (out of 255)
 
 
 def render_widget(widget, name: str = "test", value=None, attrs: dict | None = None) -> BeautifulSoup:
@@ -83,3 +91,154 @@ def dtl_renderer() -> FormworkRenderer:
 @pytest.fixture
 def jinja2_renderer() -> FormworkJinja2Renderer:
     return FormworkJinja2Renderer()
+
+
+def _compare_screenshots(
+    actual_bytes: bytes,
+    baseline_path: Path,
+    threshold: float,
+) -> tuple[bool, float, bytes | None]:
+    """Compare a screenshot against a baseline image.
+
+    Returns ``(passed, diff_ratio, diff_image_bytes)``.
+    """
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    actual_img = Image.open(io.BytesIO(actual_bytes)).convert("RGBA")
+    baseline_img = Image.open(baseline_path).convert("RGBA")
+
+    if actual_img.size != baseline_img.size:
+        return False, 1.0, _create_diff_image(actual_img, baseline_img)
+
+    actual_arr = np.array(actual_img, dtype=np.int16)
+    baseline_arr = np.array(baseline_img, dtype=np.int16)
+
+    diff = np.abs(actual_arr - baseline_arr)
+    pixel_differs = np.any(diff > _PER_PIXEL_TOLERANCE, axis=2)
+    diff_count = int(np.sum(pixel_differs))
+    total_pixels = actual_img.width * actual_img.height
+    diff_ratio = diff_count / total_pixels
+
+    passed = diff_ratio <= threshold
+    diff_image_bytes = None if passed else _create_diff_image(actual_img, baseline_img)
+    return passed, diff_ratio, diff_image_bytes
+
+
+def _create_diff_image(actual_img, baseline_img) -> bytes:
+    """Create a diff image highlighting changed pixels in red."""
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    width = max(actual_img.width, baseline_img.width)
+    height = max(actual_img.height, baseline_img.height)
+
+    actual_padded = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    actual_padded.paste(actual_img, (0, 0))
+    baseline_padded = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    baseline_padded.paste(baseline_img, (0, 0))
+
+    actual_arr = np.array(actual_padded, dtype=np.int16)
+    baseline_arr = np.array(baseline_padded, dtype=np.int16)
+    pixel_differs = np.any(np.abs(actual_arr - baseline_arr) > _PER_PIXEL_TOLERANCE, axis=2)
+
+    result_arr = (np.array(actual_padded, dtype=np.float64) * 0.3).astype(np.uint8)
+    result_arr[pixel_differs] = [255, 0, 0, 255]
+
+    buf = io.BytesIO()
+    Image.fromarray(result_arr, "RGBA").save(buf, format="PNG")
+    return buf.getvalue()
+
+
+@pytest.fixture
+def assert_screenshot(pytestconfig: pytest.Config) -> Callable[[Locator, str], None]:
+    """Fixture providing a callable to assert locator screenshots match baselines.
+
+    Usage in screenshot tests::
+
+        def test_toggle_screenshot_default(toggle_page, assert_screenshot):
+            wrapper = toggle_page.locator("#id_toggle_field")
+            assert_screenshot(wrapper, "toggle-default.png")
+
+    Pass ``--update-screenshots`` to regenerate baselines.
+    """
+    update_mode = pytestconfig.getoption("--update-screenshots", default=False)
+
+    def _assert(
+        locator: Locator,
+        name: str,
+        *,
+        threshold: float = 0.002,
+        padding: int = 8,
+        include_overflow: int = 0,
+    ) -> None:
+        no_anim = "*, *::before, *::after { transition: none !important; animation: none !important; }"
+        # Add breathing room around the element for visual clarity.
+        if padding:
+            locator.evaluate(f"el => el.style.padding = '{padding}px'")
+        if include_overflow:
+            # Dropdown content overflows the element's bounding box.
+            # Use a page-level clip rect expanded downward to capture it.
+            page = locator.page
+            box = locator.bounding_box()
+            actual_bytes = page.screenshot(
+                animations="disabled",
+                caret="hide",
+                style=no_anim,
+                clip={
+                    "x": box["x"],
+                    "y": box["y"],
+                    "width": box["width"],
+                    "height": box["height"] + include_overflow,
+                },
+            )
+        else:
+            actual_bytes = locator.screenshot(
+                animations="disabled",
+                caret="hide",
+                style=no_anim,
+            )
+
+        baseline_path = _SCREENSHOTS_DIR / name
+
+        if update_mode:
+            if baseline_path.exists():
+                passed, _, _ = _compare_screenshots(actual_bytes, baseline_path, threshold=threshold)
+                if passed:
+                    return  # Existing baseline is close enough.
+            _SCREENSHOTS_DIR.mkdir(exist_ok=True)
+            baseline_path.write_bytes(actual_bytes)
+            return
+
+        if not baseline_path.exists():
+            _SCREENSHOTS_DIR.mkdir(exist_ok=True)
+            baseline_path.write_bytes(actual_bytes)
+            pytest.skip(f"No baseline for '{name}'; created new baseline.")
+            return
+
+        passed, diff_ratio, diff_image = _compare_screenshots(
+            actual_bytes,
+            baseline_path,
+            threshold=threshold,
+        )
+        if passed:
+            return
+
+        safe_name = name.rsplit(".", 1)[0]
+        _DIFF_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        (_DIFF_OUTPUT_DIR / f"{safe_name}-actual.png").write_bytes(actual_bytes)
+        (_DIFF_OUTPUT_DIR / f"{safe_name}-baseline.png").write_bytes(baseline_path.read_bytes())
+        if diff_image:
+            (_DIFF_OUTPUT_DIR / f"{safe_name}-diff.png").write_bytes(diff_image)
+
+        pytest.fail(
+            f"Screenshot '{name}' differs from baseline by {diff_ratio:.4%} "
+            f"(threshold: {threshold:.4%}). "
+            f"Diff saved to {_DIFF_OUTPUT_DIR / safe_name}-diff.png",
+        )
+
+    return _assert

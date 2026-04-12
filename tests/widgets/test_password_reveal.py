@@ -347,16 +347,16 @@ def test_password_reveal_morph_preserves_reveal_state(simple_page):
 
 
 @pytest.mark.screenshot
-def test_password_reveal_screenshot_default(simple_page):
+def test_password_reveal_screenshot_default(simple_page, assert_screenshot):
     """Visual snapshot: PasswordReveal in default (hidden/password) state."""
     wrapper = simple_page.locator("#id_password_field")
-    wrapper.screenshot(path="test-results/password-reveal-default-actual.png")
+    assert_screenshot(wrapper, "password-reveal-default.png")
 
 
 @pytest.mark.screenshot
-def test_password_reveal_screenshot_revealed(simple_page):
+def test_password_reveal_screenshot_revealed(simple_page, assert_screenshot):
     """Visual snapshot: PasswordReveal in revealed (text) state."""
     simple_page.locator("label.password-reveal button").click()
     simple_page.wait_for_timeout(100)
     wrapper = simple_page.locator("#id_password_field")
-    wrapper.screenshot(path="test-results/password-reveal-revealed-actual.png")
+    assert_screenshot(wrapper, "password-reveal-revealed.png")

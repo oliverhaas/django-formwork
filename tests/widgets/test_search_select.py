@@ -1038,14 +1038,14 @@ def test_search_select_morph_preserves_dropdown_open(search_select_page):
 
 
 @pytest.mark.screenshot
-def test_search_select_screenshot_default(search_select_page):
+def test_search_select_screenshot_default(search_select_page, assert_screenshot):
     """Visual snapshot: SearchSelect in default (closed) state."""
     wrapper = search_select_page.locator("#id_city_plain_field")
-    wrapper.screenshot(path="test-results/search-select-default-actual.png")
+    assert_screenshot(wrapper, "search-select-default.png")
 
 
 @pytest.mark.screenshot
-def test_search_select_screenshot_open(search_select_page):
+def test_search_select_screenshot_open(search_select_page, assert_screenshot):
     """Visual snapshot: SearchSelect with dropdown open."""
     search_select_page.evaluate("""() => {
         const dd = document.querySelector('details.dropdown.search-select');
@@ -1054,11 +1054,11 @@ def test_search_select_screenshot_open(search_select_page):
     }""")
     search_select_page.wait_for_timeout(200)
     wrapper = search_select_page.locator("#id_city_plain_field")
-    wrapper.screenshot(path="test-results/search-select-open-actual.png")
+    assert_screenshot(wrapper, "search-select-open.png", include_overflow=300)
 
 
 @pytest.mark.screenshot
-def test_search_select_screenshot_selected(search_select_page):
+def test_search_select_screenshot_selected(search_select_page, assert_screenshot):
     """Visual snapshot: SearchSelect with an option selected."""
     search_select_page.evaluate("""() => {
         const dd = document.querySelector('details.dropdown.search-select');
@@ -1069,4 +1069,4 @@ def test_search_select_screenshot_selected(search_select_page):
     search_select_page.locator("details.dropdown.search-select").first.locator("button", has_text="London").click()
     search_select_page.wait_for_timeout(100)
     wrapper = search_select_page.locator("#id_city_plain_field")
-    wrapper.screenshot(path="test-results/search-select-selected-actual.png")
+    assert_screenshot(wrapper, "search-select-selected.png")

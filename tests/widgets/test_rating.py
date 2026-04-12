@@ -382,15 +382,15 @@ def test_rating_morph_no_star_selected_stays_empty(simple_page):
 
 
 @pytest.mark.screenshot
-def test_rating_screenshot_default(simple_page):
+def test_rating_screenshot_default(simple_page, assert_screenshot):
     """Visual snapshot: Rating in default (no selection) state."""
     wrapper = simple_page.locator("#id_stars_field")
-    wrapper.screenshot(path="test-results/rating-default-actual.png")
+    assert_screenshot(wrapper, "rating-default.png")
 
 
 @pytest.mark.screenshot
-def test_rating_screenshot_one_star_selected(simple_page):
+def test_rating_screenshot_one_star_selected(simple_page, assert_screenshot):
     """Visual snapshot: Rating with first star selected."""
     simple_page.locator('#id_stars input[type="radio"]').first.click(force=True)
     wrapper = simple_page.locator("#id_stars_field")
-    wrapper.screenshot(path="test-results/rating-one-star-actual.png")
+    assert_screenshot(wrapper, "rating-one-star.png")

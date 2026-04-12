@@ -253,16 +253,16 @@ def test_split_datetime_morph_preserves_values(builtin_page):
 
 
 @pytest.mark.screenshot
-def test_split_datetime_screenshot_default(builtin_page):
+def test_split_datetime_screenshot_default(builtin_page, assert_screenshot):
     """Visual snapshot: SplitDateTimeWidget in default (empty) state."""
     wrapper = builtin_page.locator("#id_event_at_field")
-    wrapper.screenshot(path="test-results/split-datetime-default-actual.png")
+    assert_screenshot(wrapper, "split-datetime-default.png")
 
 
 @pytest.mark.screenshot
-def test_split_datetime_screenshot_filled(builtin_page):
+def test_split_datetime_screenshot_filled(builtin_page, assert_screenshot):
     """Visual snapshot: SplitDateTimeWidget with date and time filled."""
     builtin_page.locator('input[name="event_at_0"]').fill("2024-06-15")
     builtin_page.locator('input[name="event_at_1"]').fill("14:30")
     wrapper = builtin_page.locator("#id_event_at_field")
-    wrapper.screenshot(path="test-results/split-datetime-filled-actual.png")
+    assert_screenshot(wrapper, "split-datetime-filled.png")

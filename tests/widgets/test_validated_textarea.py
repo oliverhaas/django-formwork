@@ -666,22 +666,22 @@ def test_morph_preserves_value(textarea_page):
 
 
 @pytest.mark.screenshot
-def test_screenshot_default(textarea_page):
+def test_screenshot_default(textarea_page, assert_screenshot):
     """Visual snapshot: ValidatedTextarea in default (empty) state."""
     wrapper = textarea_page.locator(".validated-textarea").first
-    wrapper.screenshot(path="test-results/validated-textarea-default-actual.png")
+    assert_screenshot(wrapper, "validated-textarea-default.png")
 
 
 @pytest.mark.screenshot
-def test_screenshot_with_content(textarea_page):
+def test_screenshot_with_content(textarea_page, assert_screenshot):
     """Visual snapshot: ValidatedTextarea after typing clean content."""
     textarea_page.locator('textarea[name="bio"]').fill("Some clean text here.")
     wrapper = textarea_page.locator(".validated-textarea").first
-    wrapper.screenshot(path="test-results/validated-textarea-with-content-actual.png")
+    assert_screenshot(wrapper, "validated-textarea-with-content.png")
 
 
 @pytest.mark.screenshot
-def test_screenshot_with_error_highlights(textarea_page):
+def test_screenshot_with_error_highlights(textarea_page, assert_screenshot):
     """Visual snapshot: ValidatedTextarea showing error highlights."""
     from playwright.sync_api import expect
 
@@ -689,4 +689,4 @@ def test_screenshot_with_error_highlights(textarea_page):
     textarea_page.wait_for_timeout(500)
     expect(textarea_page.locator(".validated-textarea-highlights mark")).to_have_count(2, timeout=3000)
     wrapper = textarea_page.locator(".validated-textarea").first
-    wrapper.screenshot(path="test-results/validated-textarea-with-error-highlights-actual.png")
+    assert_screenshot(wrapper, "validated-textarea-with-error-highlights.png")

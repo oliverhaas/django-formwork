@@ -255,15 +255,15 @@ def test_toggle_morph_preserves_unchecked(toggle_page):
 
 
 @pytest.mark.screenshot
-def test_toggle_screenshot_default(toggle_page):
+def test_toggle_screenshot_default(toggle_page, assert_screenshot):
     """Visual snapshot: Toggle in default (unchecked) state."""
     wrapper = toggle_page.locator("#id_toggle_field")
-    wrapper.screenshot(path="test-results/toggle-default-actual.png")
+    assert_screenshot(wrapper, "toggle-default.png")
 
 
 @pytest.mark.screenshot
-def test_toggle_screenshot_checked(toggle_page):
+def test_toggle_screenshot_checked(toggle_page, assert_screenshot):
     """Visual snapshot: Toggle in checked state."""
     toggle_page.locator('input[name="toggle"]').check()
     wrapper = toggle_page.locator("#id_toggle_field")
-    wrapper.screenshot(path="test-results/toggle-checked-actual.png")
+    assert_screenshot(wrapper, "toggle-checked.png")
