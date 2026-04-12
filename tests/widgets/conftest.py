@@ -174,34 +174,22 @@ def assert_screenshot(pytestconfig: pytest.Config) -> Callable[[Locator, str], N
         *,
         threshold: float = 0.002,
         padding: int = 8,
-        include_overflow: int = 0,
+        capture_dropdown: bool = False,
     ) -> None:
         no_anim = "*, *::before, *::after { transition: none !important; animation: none !important; }"
+        if capture_dropdown:
+            # Dropdown content uses position:absolute and overflows the
+            # parent's bounding box.  Making it static lets it flow
+            # normally so the locator's box includes everything.
+            no_anim += " .dropdown-content { position: static !important; }"
         # Add breathing room around the element for visual clarity.
         if padding:
             locator.evaluate(f"el => el.style.padding = '{padding}px'")
-        if include_overflow:
-            # Dropdown content overflows the element's bounding box.
-            # Use a page-level clip rect expanded downward to capture it.
-            page = locator.page
-            box = locator.bounding_box()
-            actual_bytes = page.screenshot(
-                animations="disabled",
-                caret="hide",
-                style=no_anim,
-                clip={
-                    "x": box["x"],
-                    "y": box["y"],
-                    "width": box["width"],
-                    "height": box["height"] + include_overflow,
-                },
-            )
-        else:
-            actual_bytes = locator.screenshot(
-                animations="disabled",
-                caret="hide",
-                style=no_anim,
-            )
+        actual_bytes = locator.screenshot(
+            animations="disabled",
+            caret="hide",
+            style=no_anim,
+        )
 
         baseline_path = _SCREENSHOTS_DIR / name
 

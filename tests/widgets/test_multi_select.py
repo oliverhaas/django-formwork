@@ -802,7 +802,7 @@ def test_multi_select_screenshot_open(multi_select_page, assert_screenshot):
         document.querySelector('details.dropdown.multiselect').open = true;
     """)
     multi_select_page.wait_for_timeout(100)
-    assert_screenshot(multi, "multi-select-open.png", include_overflow=300)
+    assert_screenshot(multi, "multi-select-open.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot
@@ -822,4 +822,4 @@ def test_multi_select_screenshot_selected(multi_select_page, assert_screenshot):
         });
     }""")
     multi_select_page.wait_for_timeout(100)
-    assert_screenshot(multi, "multi-select-selected.png", include_overflow=300)
+    assert_screenshot(multi, "multi-select-selected.png", capture_dropdown=True)

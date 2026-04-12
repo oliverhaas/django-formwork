@@ -1054,7 +1054,7 @@ def test_search_select_screenshot_open(search_select_page, assert_screenshot):
     }""")
     search_select_page.wait_for_timeout(200)
     wrapper = search_select_page.locator("#id_city_plain_field")
-    assert_screenshot(wrapper, "search-select-open.png", include_overflow=300)
+    assert_screenshot(wrapper, "search-select-open.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot
