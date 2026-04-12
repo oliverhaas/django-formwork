@@ -11,7 +11,6 @@ Levels:
     1. unit        — widget object: instantiation, get_context, value_from_datadict
     2. unit        — widget rendering: HTML structure, classes, attributes
     3. integration — form integration: field template, error state, morph IDs
-    4. integration — Jinja2/DTL parity: identical HTML across engines
     5. e2e         — user interaction: fill, click, submit
     6. e2e         — error flow: validation errors appear and clear
     7. e2e         — morph resilience: state preserved across htmx morphs
@@ -27,7 +26,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import Toggle
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import render_form, render_widget
 
 
 class ToggleForm(FormworkForm):
@@ -135,64 +134,53 @@ def test_toggle_renders_unchecked_state():
 
 
 @pytest.mark.integration
-def test_toggle_renders_via_form():
+def test_toggle_renders_via_form(renderer):
     """Toggle renders correctly when used inside a FormworkForm."""
     form = ToggleForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "enabled"})
     assert inp is not None
     assert inp["type"] == "checkbox"
 
 
 @pytest.mark.integration
-def test_toggle_form_wraps_in_fieldset():
+def test_toggle_form_wraps_in_fieldset(renderer):
     """Field template wraps the Toggle in a fieldset with a stable id."""
     form = ToggleForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_enabled_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_toggle_error_state_aria_invalid():
+def test_toggle_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the input."""
     form = ToggleForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "enabled"})
     assert inp.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
-def test_toggle_error_state_shows_tooltip():
+def test_toggle_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
     form = ToggleForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_enabled_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_toggle_form_prefix_handling():
+def test_toggle_form_prefix_handling(renderer):
     """Form prefix propagates to widget name and id."""
     form = ToggleForm(prefix="cfg")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "cfg-enabled"})
     assert inp is not None
     assert inp["id"] == "id_cfg-enabled"
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_toggle_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """Toggle produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(ToggleForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(ToggleForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

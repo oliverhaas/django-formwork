@@ -376,50 +376,50 @@ def test_combobox_empty_suggestions_renders_no_buttons():
 
 
 @pytest.mark.integration
-def test_combobox_renders_via_form():
+def test_combobox_renders_via_form(renderer):
     """ComboBox renders correctly when used inside a FormworkForm."""
     form = ComboBoxForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "tag"})
     assert inp is not None
     assert inp["type"] == "text"
 
 
 @pytest.mark.integration
-def test_combobox_form_wraps_in_fieldset():
+def test_combobox_form_wraps_in_fieldset(renderer):
     """Field template wraps the ComboBox in a fieldset with a stable id."""
     form = ComboBoxForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_tag_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_combobox_error_state_aria_invalid():
+def test_combobox_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the input."""
     form = ComboBoxForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "tag"})
     assert inp.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
-def test_combobox_error_state_shows_tooltip():
+def test_combobox_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
     form = ComboBoxForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_tag_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_combobox_form_prefix_handling():
+def test_combobox_form_prefix_handling(renderer):
     """Form prefix propagates to widget name and id."""
     form = ComboBoxForm(prefix="cfg")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "cfg-tag"})
     assert inp is not None
     assert inp["id"] == "id_cfg-tag"

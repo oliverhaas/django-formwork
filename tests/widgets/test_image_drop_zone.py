@@ -261,49 +261,49 @@ def test_image_drop_zone_id_on_file_input():
 
 
 @pytest.mark.integration
-def test_image_drop_zone_renders_via_form():
+def test_image_drop_zone_renders_via_form(renderer):
     """ImageDropZone renders correctly when used inside a FormworkForm."""
     form = ImageDropZoneForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", {"type": "file", "name": "avatar"})
     assert inp is not None
 
 
 @pytest.mark.integration
-def test_image_drop_zone_form_wraps_in_fieldset():
+def test_image_drop_zone_form_wraps_in_fieldset(renderer):
     """Field template wraps the ImageDropZone in a fieldset with a stable id."""
     form = ImageDropZoneForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_avatar_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_image_drop_zone_error_state_aria_invalid():
+def test_image_drop_zone_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the file input."""
     form = ImageDropZoneForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", {"type": "file", "name": "avatar"})
     assert inp.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
-def test_image_drop_zone_error_state_shows_tooltip():
+def test_image_drop_zone_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip with error text."""
     form = ImageDropZoneForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_avatar_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_image_drop_zone_form_prefix_handling():
+def test_image_drop_zone_form_prefix_handling(renderer):
     """Form prefix propagates to widget name and id."""
     form = ImageDropZoneForm(prefix="profile")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", {"type": "file", "name": "profile-avatar"})
     assert inp is not None
     assert inp["id"] == "id_profile-avatar"

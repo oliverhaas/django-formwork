@@ -372,39 +372,39 @@ def test_highlights_div_has_after_settle_handler():
 
 
 @pytest.mark.integration
-def test_renders_via_form():
+def test_renders_via_form(renderer):
     """ValidatedTextarea renders correctly when used inside a FormworkForm."""
     form = ValidatedTextareaForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     textarea = soup.find("textarea", attrs={"name": "content"})
     assert textarea is not None
 
 
 @pytest.mark.integration
-def test_form_wraps_in_fieldset():
+def test_form_wraps_in_fieldset(renderer):
     """Field template wraps the widget in a fieldset with a stable id."""
     form = ValidatedTextareaForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_content_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_form_error_state():
+def test_form_error_state(renderer):
     """Bound form with errors renders the error tooltip."""
     form = ValidatedTextareaForm(data={"content": ""})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_content_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_form_prefix_handling():
+def test_form_prefix_handling(renderer):
     """Form prefix propagates to widget name and id."""
     form = ValidatedTextareaForm(prefix="cfg")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     textarea = soup.find("textarea", attrs={"name": "cfg-content"})
     assert textarea is not None
     assert textarea["id"] == "id_cfg-content"

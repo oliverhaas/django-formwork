@@ -11,7 +11,6 @@ Levels:
     1. unit        — widget object: instantiation, get_context, value_from_datadict
     2. unit        — widget rendering: HTML structure, type="range", min/max/step attrs
     3. integration — form integration: field template, error state, morph IDs
-    4. integration — Jinja2/DTL parity: identical HTML across engines
     5. e2e         — user interaction: set value
     6. e2e         — error flow: SKIPPED (no required Range field on /simple/)
     7. e2e         — morph resilience: value preserved across htmx morphs
@@ -149,29 +148,29 @@ def test_range_renders_with_value():
 
 
 @pytest.mark.integration
-def test_range_renders_via_form():
+def test_range_renders_via_form(renderer):
     """Range renders correctly when used inside a FormworkForm."""
     form = RangeForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "level"})
     assert inp is not None
     assert inp["type"] == "range"
 
 
 @pytest.mark.integration
-def test_range_form_wraps_in_fieldset():
+def test_range_form_wraps_in_fieldset(renderer):
     """Field template wraps the Range in a fieldset with a stable id."""
     form = RangeForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_level_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_range_form_attrs_propagate():
+def test_range_form_attrs_propagate(renderer):
     """min/max/step attrs on the widget appear in the rendered form output."""
     form = RangeForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "level"})
     assert inp["min"] == "0"
     assert inp["max"] == "10"
@@ -179,31 +178,31 @@ def test_range_form_attrs_propagate():
 
 
 @pytest.mark.integration
-def test_range_error_state_aria_invalid():
+def test_range_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the input."""
     form = RangeForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "level"})
     assert inp.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
-def test_range_error_state_shows_tooltip():
+def test_range_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
     form = RangeForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_level_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_range_form_prefix_handling():
+def test_range_form_prefix_handling(renderer):
     """Form prefix propagates to widget name and id."""
     form = RangeForm(prefix="cfg")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "cfg-level"})
     assert inp is not None
     assert inp["id"] == "id_cfg-level"

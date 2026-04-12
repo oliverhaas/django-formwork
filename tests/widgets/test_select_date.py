@@ -135,29 +135,29 @@ def test_select_date_renders_name_suffixes():
 
 
 @pytest.mark.integration
-def test_select_date_renders_via_form():
+def test_select_date_renders_via_form(renderer):
     """SelectDateWidget renders correctly when used inside a FormworkForm."""
     form = SelectDateForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     assert soup.find("select", attrs={"name": "birthday_month"}) is not None
     assert soup.find("select", attrs={"name": "birthday_day"}) is not None
     assert soup.find("select", attrs={"name": "birthday_year"}) is not None
 
 
 @pytest.mark.integration
-def test_select_date_form_wraps_in_fieldset():
+def test_select_date_form_wraps_in_fieldset(renderer):
     """Field template wraps the SelectDateWidget in a fieldset with a stable id."""
     form = SelectDateForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_birthday_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_select_date_form_prefix():
+def test_select_date_form_prefix(renderer):
     """Form prefix propagates to the select name suffixes."""
     form = SelectDateForm(prefix="reg")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     assert soup.find("select", attrs={"name": "reg-birthday_month"}) is not None
     assert soup.find("select", attrs={"name": "reg-birthday_day"}) is not None
     assert soup.find("select", attrs={"name": "reg-birthday_year"}) is not None

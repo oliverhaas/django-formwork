@@ -67,6 +67,14 @@ def assert_html_equivalent(a: Tag, b: Tag) -> None:
     assert norm_a == norm_b, f"HTML trees differ.\nA:\n{a}\n\nB:\n{b}"
 
 
+@pytest.fixture(params=["dtl", "jinja2"], ids=["dtl", "jinja2"])
+def renderer(request) -> FormworkRenderer | FormworkJinja2Renderer:
+    """Parametrized renderer: each integration test runs against both engines."""
+    if request.param == "dtl":
+        return FormworkRenderer()
+    return FormworkJinja2Renderer()
+
+
 @pytest.fixture
 def dtl_renderer() -> FormworkRenderer:
     return FormworkRenderer()

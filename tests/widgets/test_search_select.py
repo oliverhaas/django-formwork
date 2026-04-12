@@ -476,50 +476,50 @@ def test_search_select_no_icon_element_when_not_provided():
 
 
 @pytest.mark.integration
-def test_search_select_renders_via_form():
+def test_search_select_renders_via_form(renderer):
     """SearchSelect renders correctly when used inside a FormworkForm."""
     form = SearchSelectForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     hidden = soup.find("input", {"type": "hidden", "name": "city"})
     assert hidden is not None
 
 
 @pytest.mark.integration
-def test_search_select_form_wraps_in_fieldset():
+def test_search_select_form_wraps_in_fieldset(renderer):
     """Field template wraps the SearchSelect in a fieldset with a stable id."""
     form = SearchSelectForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_city_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_search_select_form_error_state_aria_invalid():
+def test_search_select_form_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the summary."""
     form = SearchSelectForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     summary = soup.find("summary")
     assert summary is not None
     assert summary.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
-def test_search_select_form_error_state_shows_tooltip():
+def test_search_select_form_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
     form = SearchSelectForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_city_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_search_select_form_prefix_handling():
+def test_search_select_form_prefix_handling(renderer):
     """Form prefix propagates to the hidden input name and widget id."""
     form = SearchSelectForm(prefix="loc")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     hidden = soup.find("input", {"type": "hidden", "name": "loc-city"})
     assert hidden is not None
     assert hidden["id"] == "id_loc-city"

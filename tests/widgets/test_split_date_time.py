@@ -128,10 +128,10 @@ def test_split_datetime_renders_name_suffixes():
 
 
 @pytest.mark.integration
-def test_split_datetime_renders_via_form():
+def test_split_datetime_renders_via_form(renderer):
     """SplitDateTimeWidget renders correctly when used inside a FormworkForm."""
     form = SplitDateTimeForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     date_input = soup.find("input", attrs={"name": "event_at_0"})
     time_input = soup.find("input", attrs={"name": "event_at_1"})
     assert date_input is not None
@@ -139,20 +139,20 @@ def test_split_datetime_renders_via_form():
 
 
 @pytest.mark.integration
-def test_split_datetime_form_wraps_in_fieldset():
+def test_split_datetime_form_wraps_in_fieldset(renderer):
     """Field template wraps the widget in a fieldset with id='id_event_at_field'."""
     form = SplitDateTimeForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_event_at_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_split_datetime_error_state():
+def test_split_datetime_error_state(renderer):
     """Bound form with errors adds aria-invalid='true' to both sub-inputs."""
     form = SplitDateTimeForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     date_input = soup.find("input", attrs={"name": "event_at_0"})
     time_input = soup.find("input", attrs={"name": "event_at_1"})
     assert date_input is not None
@@ -163,10 +163,10 @@ def test_split_datetime_error_state():
 
 
 @pytest.mark.integration
-def test_split_datetime_form_prefix():
+def test_split_datetime_form_prefix(renderer):
     """Form prefix propagates to sub-widget names."""
     form = SplitDateTimeForm(prefix="evt")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     date_input = soup.find("input", attrs={"name": "evt-event_at_0"})
     time_input = soup.find("input", attrs={"name": "evt-event_at_1"})
     assert date_input is not None

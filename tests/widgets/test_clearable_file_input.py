@@ -121,28 +121,28 @@ def test_clearable_file_input_shows_current_filename():
 
 
 @pytest.mark.integration
-def test_clearable_file_input_renders_via_form():
+def test_clearable_file_input_renders_via_form(renderer):
     """ClearableFileInput renders correctly inside a FormworkForm."""
     form = ClearableFileForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "document", "type": "file"})
     assert inp is not None
 
 
 @pytest.mark.integration
-def test_clearable_file_input_form_wraps_in_fieldset():
+def test_clearable_file_input_form_wraps_in_fieldset(renderer):
     """Field template wraps the widget in a fieldset with a stable id."""
     form = ClearableFileForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_document_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_clearable_file_input_form_prefix():
+def test_clearable_file_input_form_prefix(renderer):
     """Form prefix propagates to widget name and id."""
     form = ClearableFileForm(prefix="upload")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "upload-document", "type": "file"})
     assert inp is not None
     assert inp["id"] == "id_upload-document"
