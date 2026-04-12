@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — Task Manager{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body">
+    <h2 class="card-title mb-4">{{ title }}</h2>
+    {% include "tasks/task_form_partial.html" %}
+  </div>
+</div>
+{% endblock %}

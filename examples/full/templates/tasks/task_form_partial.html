@@ -1,0 +1,14 @@
+<form id="task-form"
+      method="post"
+      hx-post
+      hx-target="#task-form"
+      hx-swap="morph"
+      hx-ext="morph"
+      data-formwork-dirty>
+  {% csrf_token %}
+  {{ form }}
+  <div class="flex gap-2 mt-4">
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{% url 'task_list' %}" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>

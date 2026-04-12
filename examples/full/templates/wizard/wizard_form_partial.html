@@ -1,0 +1,19 @@
+<form id="wizard-form"
+      method="post"
+      action="{% url 'wizard' %}"
+      hx-post="{% url 'wizard' %}"
+      hx-target="#wizard-form"
+      hx-swap="morph"
+      hx-ext="morph">
+  {% csrf_token %}
+  <input type="hidden" name="step" value="{{ step }}">
+  {{ form }}
+  <div class="flex gap-2 mt-4">
+    {% if has_prev %}
+    <a href="{% url 'wizard' %}?step={{ step|add:-1 }}" class="btn btn-ghost">Back</a>
+    {% endif %}
+    <button type="submit" class="btn btn-primary">
+      {% if is_last %}Create Project{% else %}Next{% endif %}
+    </button>
+  </div>
+</form>

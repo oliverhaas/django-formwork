@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}New Project — Step {{ step|add:1 }} of {{ total_steps }}{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body">
+    <h2 class="card-title mb-2">New Project</h2>
+
+    {# Progress indicator #}
+    <ul class="steps steps-horizontal w-full mb-6">
+      {% for i, title, done in steps %}
+      <li class="step{% if done %} step-primary{% endif %}">{{ title }}</li>
+      {% endfor %}
+    </ul>
+
+    <h3 class="text-lg font-medium mb-4">{{ step_title }}</h3>
+
+    {% include "wizard/wizard_form_partial.html" %}
+  </div>
+</div>
+{% endblock %}

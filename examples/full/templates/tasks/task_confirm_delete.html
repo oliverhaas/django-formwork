@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Delete Task — Task Manager{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body">
+    <h2 class="card-title text-error">Delete Task</h2>
+    <p class="mt-2">Are you sure you want to delete <strong>{{ task.title }}</strong>?</p>
+    <div class="flex gap-2 mt-4">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-error">Delete</button>
+      </form>
+      <a href="{% url 'task_list' %}" class="btn btn-ghost">Cancel</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
