@@ -1,4 +1,4 @@
-{% load formwork %}
+{% load formwork static %}
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -6,13 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Formwork Example{% endblock %}</title>
 
-  <!-- DaisyUI + Tailwind CSS (CDN) -->
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/full.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@4/index.css" rel="stylesheet">
-
-  <!-- Formwork bridge CSS (adds DaisyUI styling to Django form elements) -->
-  {% formwork_css %}
+  <!-- Built CSS (Tailwind + DaisyUI + formwork + icons) -->
+  <link rel="stylesheet" href="{% static 'dist.css' %}">
 
   <!-- htmx for form morphing -->
   <script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>

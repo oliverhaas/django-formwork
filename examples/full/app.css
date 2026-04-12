@@ -1,0 +1,5 @@
+/* Import formwork (includes Tailwind + DaisyUI + icons). */
+@import "../../django_formwork/static/formwork/formwork.css";
+
+/* Scan our templates for Tailwind utility classes. */
+@source "./templates/";

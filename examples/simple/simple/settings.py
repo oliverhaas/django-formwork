@@ -12,6 +12,7 @@ ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
     "django.contrib.staticfiles",
+    "django_iconx",
     "django_formwork",
 ]
 
@@ -36,5 +37,6 @@ TEMPLATES = [
 FORM_RENDERER = "django_formwork.FormworkRenderer"
 
 STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

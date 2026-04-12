@@ -1,4 +1,4 @@
-{% load formwork %}
+{% load formwork static %}
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -6,10 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Task Manager{% endblock %}</title>
 
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/full.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@4/index.css" rel="stylesheet">
-  {% formwork_css %}
+  <link rel="stylesheet" href="{% static 'dist.css' %}">
 
   <script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>
   <script src="https://unpkg.com/idiomorph@0.7/dist/idiomorph-ext.min.js"></script>

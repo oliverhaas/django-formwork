@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from django.core.management import call_command
@@ -9,6 +10,10 @@ from django.core.management.base import BaseCommand
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser
+
+# iconx CSS is generated into formwork's static directory so that
+# formwork.css can import it with a stable relative path.
+_ICONS_OUTPUT = str(Path(__file__).resolve().parent.parent.parent / "static" / "iconx" / "icons.css")
 
 
 class Command(BaseCommand):
@@ -28,5 +33,6 @@ class Command(BaseCommand):
     def _install(self) -> None:
         self.stdout.write("Installing Lucide icons via django-iconx...")
         call_command("iconx", "add", "lucide")
-        call_command("iconx", "generate")
+        call_command("iconx", "generate", "--output", _ICONS_OUTPUT)
+        self.stdout.write(self.style.SUCCESS(f"Icons CSS written to {_ICONS_OUTPUT}"))
         self.stdout.write(self.style.SUCCESS("Formwork setup complete."))

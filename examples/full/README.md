@@ -2,12 +2,16 @@
 
 A task management app demonstrating django-formwork's real-world usage: CRUD operations, search/filter, and a multi-step wizard.
 
-## Run
+## Setup
 
 ```bash
 cd examples/full
-uv run --extra-with django-formwork manage.py migrate
-uv run --extra-with django-formwork manage.py runserver
+uv pip install django django-formwork                # Python deps
+npm install tailwindcss daisyui                      # CSS build tools
+uv run manage.py formwork install                    # Download Lucide icons
+npx @tailwindcss/cli -i app.css -o static/dist.css  # Build CSS
+uv run manage.py migrate                             # Create database
+uv run manage.py runserver
 ```
 
 Open http://localhost:8000/ in your browser.
