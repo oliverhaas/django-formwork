@@ -107,6 +107,7 @@ suppress-none-returning = true
   "S101",    # assert in tests
   "S105",    # Hardcoded passwords in test settings
   "SLF001",  # Private member access needed to test internal methods
+  "T201",    # print used in benchmarks for output
 ]
 
 [tool.mypy]
@@ -173,6 +174,7 @@ markers = [
   "integration: widget + form + template integration tests",
   "e2e: browser-based end-to-end tests with live_server",
   "screenshot: visual regression tests with Playwright snapshots",
+  "benchmark: performance benchmarks (excluded from normal test runs)",
 ]
 
 [tool.coverage.run]
