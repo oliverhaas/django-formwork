@@ -19,6 +19,8 @@ from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
 # ruff's unused-import check.
 from tests.e2e.conftest import (  # noqa: F401
     _e2e_settings,
+    basic_page,
+    builtin_page,
     combobox_page,
     multi_select_page,
     search_select_page,

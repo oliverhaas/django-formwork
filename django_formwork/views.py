@@ -22,6 +22,12 @@ if TYPE_CHECKING:
 
     from django_formwork.registry import SearchRegistration
 
+__all__ = [
+    "FormworkAutoSearchView",
+    "FormworkSearchView",
+    "FormworkValidateView",
+]
+
 
 class FormworkSearchView(View):
     """Base view for server-side widget search.

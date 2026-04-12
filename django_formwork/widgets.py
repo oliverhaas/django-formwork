@@ -28,6 +28,20 @@ from django import forms
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+__all__ = [
+    "ComboBox",
+    "DataList",
+    "FileDropZone",
+    "ImageDropZone",
+    "MultiSelect",
+    "PasswordReveal",
+    "Range",
+    "Rating",
+    "SearchSelect",
+    "Toggle",
+    "ValidatedTextarea",
+]
+
 # ---------------------------------------------------------------------------
 # Custom widgets
 # ---------------------------------------------------------------------------
@@ -424,7 +438,23 @@ def _format_accept(accept: str) -> str:
     return ", ".join(labels)
 
 
-class FileDropZone(forms.FileInput):
+class _DropZoneMixin:
+    """Shared get_context logic for FileDropZone and ImageDropZone."""
+
+    max_size: int | None
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)  # type: ignore[misc]
+        accept = context["widget"]["attrs"].get("accept", "")
+        if accept:
+            context["widget"]["accept_display"] = _format_accept(accept)
+        if self.max_size is not None:
+            context["widget"]["max_size"] = self.max_size
+            context["widget"]["max_size_display"] = _format_size(self.max_size)
+        return context
+
+
+class FileDropZone(_DropZoneMixin, forms.FileInput):
     """Drag-and-drop file upload zone.
 
     Replaces the standard file input with a styled drop zone that accepts
@@ -456,18 +486,8 @@ class FileDropZone(forms.FileInput):
         super().__init__(attrs)
         self.max_size = max_size
 
-    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
-        context = super().get_context(name, value, attrs)
-        accept = context["widget"]["attrs"].get("accept", "")
-        if accept:
-            context["widget"]["accept_display"] = _format_accept(accept)
-        if self.max_size is not None:
-            context["widget"]["max_size"] = self.max_size
-            context["widget"]["max_size_display"] = _format_size(self.max_size)
-        return context
 
-
-class ImageDropZone(forms.FileInput):
+class ImageDropZone(_DropZoneMixin, forms.FileInput):
     """Drag-and-drop image upload with preview.
 
     Like :class:`FileDropZone` but restricted to images and shows a
@@ -492,16 +512,6 @@ class ImageDropZone(forms.FileInput):
             defaults.update(attrs)
         super().__init__(defaults)
         self.max_size = max_size
-
-    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
-        context = super().get_context(name, value, attrs)
-        accept = context["widget"]["attrs"].get("accept", "")
-        if accept:
-            context["widget"]["accept_display"] = _format_accept(accept)
-        if self.max_size is not None:
-            context["widget"]["max_size"] = self.max_size
-            context["widget"]["max_size_display"] = _format_size(self.max_size)
-        return context
 
 
 class ValidatedTextarea(forms.Textarea):

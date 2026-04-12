@@ -101,6 +101,12 @@ def textarea_page(page, live_server):
 
 
 @pytest.fixture
+def builtin_page(page, live_server):
+    """Navigate to the built-in compound widgets page."""
+    return _navigate(page, live_server, "/builtin/")
+
+
+@pytest.fixture
 def complex_page(page, live_server):
     """Navigate to the complex forms page."""
     return _navigate(page, live_server, "/complex/")
