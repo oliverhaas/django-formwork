@@ -49,7 +49,7 @@
   <div class="image-upload-area" :class="dragging && 'dragging'" tabindex="0" role="button" aria-label="Choose image" @keydown.enter.prevent="$refs.input.click()" @keydown.space.prevent="$refs.input.click()" @click="$refs.input.click()">
     <input x-ref="input" type="file" name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %} @change="handleChange($event)"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
     <div x-show="!preview && !error" class="image-upload-prompt">
-      <svg class="image-upload-prompt-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21"/><path d="m14 19.5 3-3 3 3"/><path d="M17 22v-5.5"/><circle cx="9" cy="9" r="2"/></svg>
+      <i class="icon icon-image-plus image-upload-prompt-icon"></i>
       <p class="image-upload-prompt-text">Drop an image or <span class="image-upload-browse">browse</span></p>
       {% if widget.accept_display or widget.max_size_display %}<p class="image-upload-accept-text">{% if widget.accept_display %}{{ widget.accept_display }}{% endif %}{% if widget.accept_display and widget.max_size_display %} · {% endif %}{% if widget.max_size_display %}Max {{ widget.max_size_display }}{% endif %}</p>{% endif %}
     </div>
@@ -61,7 +61,7 @@
       <div class="image-upload-preview-wrapper">
         <img :src="preview" class="image-upload-preview">
         <button type="button" class="image-upload-remove" @click.stop="clear()" aria-label="Remove image">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="image-upload-remove-icon"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <i class="icon icon-x image-upload-remove-icon"></i>
         </button>
       </div>
       <p class="image-upload-replace-text">Drop to replace or <span class="image-upload-browse">browse</span></p>

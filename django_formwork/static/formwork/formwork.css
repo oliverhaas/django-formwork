@@ -196,6 +196,15 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
     @apply input w-full;
 }
 
+/* Icon fallback: ensure iconx icons have a minimum size even if the
+   full iconx CSS hasn't been generated yet.  When iconx CSS IS loaded,
+   its .icon rule takes precedence (more specific). */
+i.icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+}
+
 /* DatePicker: relative positioning for the calendar dropdown. */
 .date-picker {
     @apply relative w-full;

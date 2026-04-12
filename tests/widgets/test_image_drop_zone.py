@@ -210,10 +210,11 @@ def test_image_drop_zone_remove_button():
 
 @pytest.mark.unit
 def test_image_drop_zone_image_icon():
-    """Rendered HTML contains an SVG icon."""
+    """Rendered HTML contains an upload icon."""
     soup = render_widget(ImageDropZone())
-    svg = soup.find("svg")
-    assert svg is not None
+    icon = soup.find("i", class_="icon")
+    assert icon is not None
+    assert "icon-image-plus" in icon.get("class", [])
 
 
 @pytest.mark.unit
