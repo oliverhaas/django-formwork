@@ -88,6 +88,11 @@ allow-star-arg-any = true
 suppress-none-returning = true
 
 [tool.ruff.lint.per-file-ignores]
+"examples/**" = [
+  "ANN",    # Type annotations not required in examples
+  "EXE001", # Shebang on manage.py is conventional
+  "S105",   # Hardcoded secret key is intentional (example only)
+]
 "tests/**" = [
   "ANN",     # Type annotations not required in tests
   "ARG",     # Unused arguments common in fixtures

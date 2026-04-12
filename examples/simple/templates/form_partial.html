@@ -1,0 +1,10 @@
+<form id="contact-form"
+      method="post"
+      hx-post="{% url 'contact' %}"
+      hx-target="#contact-form"
+      hx-swap="morph"
+      hx-ext="morph">
+  {% csrf_token %}
+  {{ form }}
+  <button type="submit" class="btn btn-primary mt-4 w-full">Submit</button>
+</form>
