@@ -520,3 +520,18 @@ class TestFormworkSearchViewErrorHandling:
         response = CitySearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         assert soup.find("input", {"hx-swap-oob": "true"}) is None
+
+    def test_query_truncated_to_max_length(self):
+        """Queries longer than MAX_QUERY_LENGTH are truncated."""
+        received = {}
+
+        class TrackingView(FormworkSearchView):
+            MAX_QUERY_LENGTH = 10
+
+            def get_results(self, query, **kwargs):
+                received["query"] = query
+                return []
+
+        request = factory.get("/search/", {"q": "a" * 50})
+        TrackingView.as_view()(request)
+        assert len(received["query"]) == 10

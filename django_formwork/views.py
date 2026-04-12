@@ -130,6 +130,9 @@ class FormworkSearchView(View):
     #: Valid widget types for the ``type`` query parameter.
     VALID_WIDGET_TYPES = frozenset({"search_select", "combobox", "multiselect"})
 
+    #: Maximum query length (bytes). Longer queries are truncated.
+    MAX_QUERY_LENGTH = 200
+
     def get_total_count(self, **kwargs: Any) -> int | None:
         """Return the total number of unfiltered results.
 
@@ -147,7 +150,7 @@ class FormworkSearchView(View):
         return len(self.get_results("", **kwargs))
 
     def get(self, request: HttpRequest) -> HttpResponse:
-        query = request.GET.get("q", "").strip()
+        query = request.GET.get("q", "").strip()[: self.MAX_QUERY_LENGTH]
         widget_type = request.GET.get("type", self.widget_type)
         field_name = request.GET.get("name", "")
 
@@ -260,6 +263,9 @@ class FormworkAutoSearchView(FormworkSearchView):
         return reg.queryset_factory().count()
 
 
+# SECURITY: CSRF-exempt because this view performs read-only validation
+# (no side effects, no data mutation).  The POST body contains only the
+# textarea text and an errors_id for OOB swap targeting.
 @method_decorator(csrf_exempt, name="dispatch")
 class FormworkValidateView(View):
     """Base view for server-side textarea validation with highlighting.

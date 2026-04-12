@@ -14,6 +14,7 @@ def formwork_css() -> str:
         {% load formwork %}
         {% formwork_css %}
     """
+    # SECURITY: safe — URL comes from Django's static file resolver, not user input.
     url = static("formwork/formwork.css")
     return mark_safe(f'<link rel="stylesheet" href="{url}">')  # noqa: S308
 
@@ -27,5 +28,6 @@ def formwork_js() -> str:
         {% load formwork %}
         {% formwork_js %}
     """
+    # SECURITY: safe — URL comes from Django's static file resolver, not user input.
     url = static("formwork/formwork.js")
     return mark_safe(f'<script src="{url}"></script>')  # noqa: S308
