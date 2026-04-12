@@ -29,12 +29,19 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
 __all__ = [
+    "CascadeSelect",
     "ComboBox",
+    "CountryInput",
     "DataList",
+    "DatePicker",
     "FileDropZone",
     "ImageDropZone",
+    "InputMask",
+    "InputNumber",
     "MultiSelect",
+    "OTPInput",
     "PasswordReveal",
+    "PhoneInput",
     "Range",
     "Rating",
     "SearchSelect",
@@ -584,4 +591,216 @@ class DataList(forms.TextInput):
         if widget_id:
             context["widget"]["attrs"]["list"] = f"{widget_id}_list"
         context["widget"]["datalist"] = self.datalist
+        return context
+
+
+# ---------------------------------------------------------------------------
+# DatePicker
+# ---------------------------------------------------------------------------
+
+
+class DatePicker(forms.DateInput):
+    """Date input with an Alpine.js calendar dropdown.
+
+    Renders a text input with a popover calendar panel for date selection.
+    The submitted value is a date string in ``YYYY-MM-DD`` format.
+
+    Usage::
+
+        due_date = forms.DateField(widget=DatePicker)
+    """
+
+    template_name = "formwork/widgets/date_picker.html"
+    input_type = "text"
+
+    def __init__(self, attrs: dict[str, Any] | None = None, *, format: str | None = None) -> None:  # noqa: A002
+        defaults: dict[str, Any] = {"placeholder": "YYYY-MM-DD"}
+        if attrs:
+            defaults.update(attrs)
+        super().__init__(attrs=defaults, format=format or "%Y-%m-%d")
+
+
+# --- InputNumber (stepper) ------------------------------------------------
+
+
+class InputNumber(forms.NumberInput):
+    """Number input with increment/decrement buttons.
+
+    Wraps a standard ``<input type="number">`` with +/- buttons.
+    Uses Alpine.js for the stepping logic.
+
+    Usage::
+
+        quantity = forms.IntegerField(widget=InputNumber(attrs={"min": "1", "max": "99"}))
+    """
+
+    template_name = "formwork/widgets/input_number.html"
+
+
+# ---------------------------------------------------------------------------
+# OTPInput
+# ---------------------------------------------------------------------------
+
+
+class OTPInput(forms.TextInput):
+    """One-time password / PIN code input.
+
+    Renders N single-character inputs that auto-advance on typing.
+    The submitted value is the concatenated string.  Uses Alpine.js.
+
+    Usage::
+
+        code = forms.CharField(widget=OTPInput(length=6))
+    """
+
+    template_name = "formwork/widgets/otp_input.html"
+
+    def __init__(self, attrs: dict[str, Any] | None = None, *, length: int = 6) -> None:
+        super().__init__(attrs)
+        self.length = length
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        context["widget"]["length"] = self.length
+        context["widget"]["digits"] = list(range(self.length))
+        # Pre-fill individual digits from current value.
+        val = value or ""
+        context["widget"]["initial_digits"] = [val[i] if i < len(val) else "" for i in range(self.length)]
+        return context
+
+
+# ---------------------------------------------------------------------------
+# PhoneInput
+# ---------------------------------------------------------------------------
+
+
+class PhoneInput(forms.MultiWidget):
+    """Phone number input with country code prefix selector.
+
+    Renders a country-code dropdown (with flags) next to a text input.
+    The submitted value is ``"{dial_code} {number}"`` (e.g. ``"+1 5551234"``).
+
+    Usage::
+
+        phone = forms.CharField(widget=PhoneInput)
+    """
+
+    template_name = "formwork/widgets/phone_input.html"
+
+    def __init__(self, attrs: dict[str, Any] | None = None, *, default_code: str = "+1") -> None:
+        from django_formwork.data import phone_prefix_choices
+
+        self.default_code = default_code
+        prefix_widget = forms.Select(choices=phone_prefix_choices())
+        number_widget = forms.TextInput(attrs={"placeholder": "Phone number", "type": "tel"})
+        super().__init__(widgets=[prefix_widget, number_widget], attrs=attrs)
+
+    def decompress(self, value: str | None) -> list[str]:
+        if value:
+            parts = value.split(" ", 1)
+            if len(parts) == 2:  # noqa: PLR2004
+                return parts
+            return [self.default_code, value]
+        return [self.default_code, ""]
+
+    def value_from_datadict(self, data: Any, files: Any, name: str) -> str:  # type: ignore[override]  # noqa: ANN401
+        values = super().value_from_datadict(data, files, name)
+        prefix = values[0] or ""
+        number = values[1] or ""
+        return f"{prefix} {number}".strip() if number else ""
+
+
+# ---------------------------------------------------------------------------
+# CountryInput
+# ---------------------------------------------------------------------------
+
+
+class CountryInput(SearchSelect):
+    """Searchable country selector with flag emojis.
+
+    Pre-loaded with all ISO 3166-1 countries.  Submits the two-letter
+    country code (e.g. ``"US"``, ``"DE"``).
+
+    Usage::
+
+        country = forms.ChoiceField(widget=CountryInput)
+    """
+
+    def __init__(self, attrs: dict[str, Any] | None = None, **kwargs: Any) -> None:
+        from django_formwork.data import country_choices
+
+        super().__init__(attrs=attrs, choices=tuple(country_choices()), **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# CascadeSelect
+# ---------------------------------------------------------------------------
+
+
+class CascadeSelect(forms.Select):
+    """Dependent cascading dropdown.
+
+    Renders a select that loads its options dynamically based on the
+    value of a parent field.  Uses htmx to fetch options from the server
+    when the parent changes.
+
+    Usage::
+
+        country = forms.ChoiceField(choices=COUNTRIES)
+        city = forms.ChoiceField(
+            widget=CascadeSelect(parent_field="country", search_url="/api/cities/"),
+        )
+    """
+
+    template_name = "formwork/widgets/cascade_select.html"
+
+    def __init__(
+        self,
+        attrs: dict[str, Any] | None = None,
+        choices: tuple = (),
+        *,
+        parent_field: str = "",
+        search_url: str = "",
+    ) -> None:
+        super().__init__(attrs=attrs, choices=choices)
+        self.parent_field = parent_field
+        self.search_url = search_url
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        context["widget"]["parent_field"] = self.parent_field
+        context["widget"]["search_url"] = self.search_url
+        return context
+
+
+# ---------------------------------------------------------------------------
+# InputMask
+# ---------------------------------------------------------------------------
+
+
+class InputMask(forms.TextInput):
+    """Text input with a fixed-format mask.
+
+    Uses Alpine.js to enforce a pattern as the user types.
+    ``#`` = digit, ``A`` = letter, ``*`` = any character.
+
+    Usage::
+
+        phone = forms.CharField(widget=InputMask(mask="(###) ###-####"))
+        zip_code = forms.CharField(widget=InputMask(mask="#####"))
+    """
+
+    template_name = "formwork/widgets/input_mask.html"
+
+    def __init__(self, attrs: dict[str, Any] | None = None, *, mask: str = "") -> None:
+        super().__init__(attrs)
+        self.mask = mask
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        context["widget"]["mask"] = self.mask
+        # Build placeholder from mask pattern.
+        placeholder = self.mask.replace("#", "_").replace("A", "_").replace("*", "_")
+        if "placeholder" not in context["widget"]["attrs"]:
+            context["widget"]["attrs"]["placeholder"] = placeholder
         return context

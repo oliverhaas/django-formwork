@@ -192,8 +192,23 @@ fieldset.fieldset > .tooltip:has(> select + select + select) {
    datetime-local, search, color, tel.
    Excludes inputs inside compound widgets (PasswordReveal's
    <label class="password-reveal">, dropdown search inputs) and ComboBox. */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *) {
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.otp-input *):not(.input-number *) {
     @apply input w-full;
+}
+
+/* DatePicker: relative positioning for the calendar dropdown. */
+.date-picker {
+    @apply relative w-full;
+}
+
+/* InputNumber: full width with joined buttons. */
+.input-number {
+    @apply w-full;
+}
+
+/* PhoneInput: joined prefix + number. */
+.phone-input {
+    @apply w-full;
 }
 
 textarea {

@@ -163,7 +163,9 @@ include = ["django_formwork/widgets.py"]
 [tool.ty.overrides.rules]
 # _DropZoneMixin uses super().get_context() which resolves at runtime via MRO
 # but ty can't see the cooperative base class.
+# PhoneInput.value_from_datadict returns str instead of list[Any] (intentional override).
 unresolved-attribute = "ignore"
+invalid-method-override = "ignore"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "settings.base"

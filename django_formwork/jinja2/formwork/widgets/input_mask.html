@@ -1,0 +1,22 @@
+{% set id = widget.attrs.id %}<input type="{{ widget.type }}" name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %} x-data="{
+  mask: '{{ widget.mask|escapejs }}',
+  apply(e) {
+    let raw = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+    let result = '';
+    let ri = 0;
+    for (let i = 0; i < this.mask.length && ri < raw.length; i++) {
+      const m = this.mask[i];
+      if (m === '#') {
+        if (/\d/.test(raw[ri])) result += raw[ri++]; else ri++;
+      } else if (m === 'A') {
+        if (/[a-zA-Z]/.test(raw[ri])) result += raw[ri++]; else ri++;
+      } else if (m === '*') {
+        result += raw[ri++];
+      } else {
+        result += m;
+        if (raw[ri] === m) ri++;
+      }
+    }
+    e.target.value = result;
+  }
+}" @input="apply($event)">
