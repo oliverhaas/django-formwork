@@ -91,6 +91,8 @@ suppress-none-returning = true
 "examples/**" = [
   "ANN",    # Type annotations not required in examples
   "EXE001", # Shebang on manage.py is conventional
+  "RUF005", # List concatenation is clearer in Django choices
+  "RUF012", # Mutable class defaults are standard Django patterns (Meta, choices)
   "S105",   # Hardcoded secret key is intentional (example only)
 ]
 "tests/**" = [

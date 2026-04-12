@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Project Created — Task Manager{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body text-center">
+    <h2 class="card-title justify-center text-success">Project Created</h2>
+    <p class="mt-2"><strong>{{ result.project_name }}</strong> is ready to go.</p>
+    <p class="text-base-content/60">First task: {{ result.task.title }} ({{ result.task.get_priority_display }})</p>
+    <div class="flex justify-center gap-2 mt-4">
+      <a href="{% url 'task_list' %}" class="btn btn-primary">View Tasks</a>
+      <a href="{% url 'wizard' %}" class="btn btn-outline">Create Another</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
