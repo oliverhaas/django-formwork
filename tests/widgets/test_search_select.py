@@ -201,6 +201,39 @@ def test_search_select_icons_stored():
     assert widget.icons == icons
 
 
+@pytest.mark.unit
+def test_search_select_get_context_with_value_none():
+    """Passing value=None is tolerated."""
+    widget = SearchSelect(choices=[("a", "A")])
+    ctx = widget.get_context("field", None, {"id": "id_field"})
+    assert ctx["widget"]["name"] == "field"
+
+
+@pytest.mark.unit
+def test_search_select_renders_without_id():
+    """Widget renders without an id attribute."""
+    widget = SearchSelect(choices=[("a", "A"), ("b", "B")])
+    soup = render_widget(widget, name="field", attrs={})
+    details = soup.find("details")
+    assert details is not None
+
+
+@pytest.mark.unit
+def test_search_select_optgroup_rendering():
+    """Grouped choices render all options from all groups."""
+    choices = [
+        ("Europe", [("ldn", "London"), ("par", "Paris")]),
+        ("Asia", [("tyo", "Tokyo")]),
+    ]
+    widget = SearchSelect(choices=choices)
+    soup = render_widget(widget, name="city", attrs={"id": "id_city"})
+    buttons = soup.find_all("button")
+    text = " ".join(btn.get_text() for btn in buttons)
+    assert "London" in text
+    assert "Paris" in text
+    assert "Tokyo" in text
+
+
 # ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
 
 

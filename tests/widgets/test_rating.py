@@ -141,6 +141,33 @@ def test_rating_make_choices_edge_one():
     assert choices[0] == ("1", "1 star")
 
 
+@pytest.mark.unit
+def test_rating_make_choices_zero_returns_empty():
+    """make_choices(0) returns an empty list."""
+    choices = Rating.make_choices(0)
+    assert choices == []
+
+
+@pytest.mark.unit
+def test_rating_get_context_with_value_none():
+    """Passing value=None is tolerated."""
+    widget = Rating()
+    widget.choices = Rating.make_choices(5)
+    ctx = widget.get_context("rating", None, {"id": "id_rating"})
+    assert ctx["widget"]["name"] == "rating"
+
+
+@pytest.mark.unit
+def test_rating_renders_without_id():
+    """Widget renders without an id attribute."""
+    widget = Rating()
+    widget.choices = Rating.make_choices(3)
+    soup = render_widget(widget, name="rating", attrs={})
+    div = soup.find("div", class_="rating")
+    assert div is not None
+    assert not div.has_attr("id")
+
+
 # ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
 
 

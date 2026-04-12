@@ -175,7 +175,7 @@ class TestAutoRegistration:
 
         form = F()
         widget = form.fields["user"].widget
-        assert widget._registry_key == make_key("auth.user", ["username"])  # noqa: SLF001
+        assert widget._registry_key == make_key("auth.user", ["username"])
 
     def test_multiselect_auto_registers(self):
         from django import forms
@@ -549,7 +549,7 @@ class TestChoicesAutoRegistration:
 
         form = CityForm()
         widget = form.fields["city"].widget
-        assert widget._registry_key == make_choices_key(CityForm, "city")  # noqa: SLF001
+        assert widget._registry_key == make_choices_key(CityForm, "city")
 
     def test_skips_without_search_choices_method(self):
         from django import forms
