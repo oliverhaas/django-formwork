@@ -158,7 +158,7 @@ invalid-type-form = "ignore"
 invalid-assignment = "ignore"
 
 [[tool.ty.overrides]]
-include = ["django_formwork/widgets.py"]
+include = ["django_formwork/widgets/*.py"]
 
 [tool.ty.overrides.rules]
 # _DropZoneMixin uses super().get_context() which resolves at runtime via MRO
