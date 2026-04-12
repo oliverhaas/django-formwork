@@ -667,6 +667,50 @@ details.dropdown.search-select > .dropdown-content {
     @apply textarea-error;
 }
 
+/* ================================================================
+   Dirty-field indicator (opt-in via data-formwork-dirty on <form>)
+   When a field's value changes from its initial server-rendered state,
+   formwork.js adds .formwork-dirty to the containing fieldset.
+   DaisyUI's -accent variants highlight the modified input.
+   ================================================================ */
+
+fieldset.formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *) {
+    @apply input-accent;
+}
+
+fieldset.formwork-dirty textarea {
+    @apply textarea-accent;
+}
+
+fieldset.formwork-dirty select {
+    @apply select-accent;
+}
+
+fieldset.formwork-dirty input[type="checkbox"]:not(.hidden) {
+    @apply checkbox-accent;
+}
+
+fieldset.formwork-dirty input[type="radio"]:not(.mask):not(.rating-hidden) {
+    @apply radio-accent;
+}
+
+fieldset.formwork-dirty input[type="range"] {
+    @apply range-accent;
+}
+
+fieldset.formwork-dirty input.toggle {
+    @apply toggle-accent;
+}
+
+fieldset.formwork-dirty details.search-select > summary,
+fieldset.formwork-dirty details.multiselect > summary {
+    @apply border-accent;
+}
+
+fieldset.formwork-dirty label.password-reveal {
+    @apply input-accent;
+}
+
 } /* @layer components */
 
 /* MultiSelect: show checkmark when option is selected.

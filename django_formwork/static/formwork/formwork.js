@@ -38,6 +38,69 @@
   // Re-run after htmx swaps (errors may appear after morph).
   document.addEventListener("htmx:afterSwap", disableNativeValidation);
 
+  // --- Dirty-field highlighting (opt-in via data-formwork-dirty) ---
+  // Tracks each field's initial value and toggles a .formwork-dirty class
+  // on the containing fieldset when the current value differs.
+
+  const DIRTY_CLS = "formwork-dirty";
+
+  const getFieldValue = (el) => {
+    if (el.type === "checkbox" || el.type === "radio") return el.checked ? el.value : "";
+    return el.value;
+  };
+
+  const initDirtyTracking = (form) => {
+    const baseline = new Map();
+
+    const snapshot = () => {
+      baseline.clear();
+      for (const el of form.elements) {
+        if (!el.name || el.type === "hidden") continue;
+        // Radio groups: track the checked value under the group name.
+        if (el.type === "radio") {
+          if (el.checked) baseline.set(el.name, el.value);
+          if (!baseline.has(el.name)) baseline.set(el.name, "");
+        } else {
+          baseline.set(el.id || el.name, getFieldValue(el));
+        }
+      }
+    };
+
+    const check = (el) => {
+      const fieldset = el.closest("fieldset.fieldset");
+      if (!fieldset) return;
+      const key = el.type === "radio" ? el.name : (el.id || el.name);
+      const initial = baseline.get(key) ?? "";
+      const current = el.type === "radio"
+        ? (form.querySelector(`input[name="${el.name}"]:checked`)?.value ?? "")
+        : getFieldValue(el);
+      fieldset.classList.toggle(DIRTY_CLS, current !== initial);
+    };
+
+    snapshot();
+    form.addEventListener("input", (e) => check(e.target));
+    form.addEventListener("change", (e) => check(e.target));
+
+    // Re-snapshot after successful morph (new server-rendered values = new baseline).
+    form.addEventListener("htmx:afterSwap", () => requestAnimationFrame(snapshot));
+
+    // Expose snapshot for programmatic reset.
+    form._formworkDirtySnapshot = snapshot;
+  };
+
+  const initAllDirtyForms = () => {
+    for (const form of document.querySelectorAll("form[data-formwork-dirty]")) {
+      if (!form._formworkDirtySnapshot) initDirtyTracking(form);
+    }
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAllDirtyForms);
+  } else {
+    initAllDirtyForms();
+  }
+  document.addEventListener("htmx:afterSwap", initAllDirtyForms);
+
   // --- Idiomorph morph wrapper ---
 
   if (typeof Idiomorph === "undefined") {

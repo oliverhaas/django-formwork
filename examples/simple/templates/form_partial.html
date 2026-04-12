@@ -3,7 +3,8 @@
       hx-post="{% url 'contact' %}"
       hx-target="#contact-form"
       hx-swap="morph"
-      hx-ext="morph">
+      hx-ext="morph"
+      data-formwork-dirty>
   {% csrf_token %}
   {{ form }}
   <button type="submit" class="btn btn-primary mt-4 w-full">Submit</button>
