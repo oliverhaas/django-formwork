@@ -44,9 +44,9 @@ jobs:
         id: screenshots
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            uv run pytest tests/widgets/ -m screenshot --update-screenshots -q
+            uv run pytest tests/widgets/ -m screenshot --update-screenshots --no-cov -q
           else
-            uv run pytest tests/widgets/ -m screenshot -q
+            uv run pytest tests/widgets/ -m screenshot --no-cov -q
           fi
 
       - name: Upload diff artifacts
@@ -57,7 +57,8 @@ jobs:
           path: test-results/*
           retention-days: 14
 
-      # On schedule/manual: create or update baseline PR if screenshots changed
+      # On schedule/manual: create or update baseline PR if screenshots changed,
+      # close stale PR if no changes remain.
       - name: Check for baseline changes
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         id: diff
@@ -91,11 +92,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # On PR: if screenshots fail, create baseline update PR targeting source branch
+      - name: Close stale baseline PR
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.diff.outputs.changed == 'false'
+        run: |
+          BRANCH="chore/update-screenshot-baselines"
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr close "$PR_NUMBER" --comment "Baselines match — no update needed." --delete-branch
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # On PR: if screenshots fail, create baseline update PR targeting source branch.
       - name: Regenerate baselines for PR
         if: github.event_name == 'pull_request' && failure() && steps.screenshots.outcome == 'failure'
         run: |
-          uv run pytest tests/widgets/ -m screenshot --update-screenshots -q || true
+          uv run pytest tests/widgets/ -m screenshot --update-screenshots --no-cov -q || true
 
       - name: Check for PR baseline changes
         if: github.event_name == 'pull_request' && failure() && steps.screenshots.outcome == 'failure'
@@ -133,5 +145,18 @@ jobs:
           # Comment on the original PR
           gh pr comment "${{ github.event.pull_request.number }}" \
             --body "Visual changes detected. Review and merge baseline update: ${UPDATE_PR_URL}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # On PR: close stale baseline update PR if screenshots now match.
+      - name: Close stale PR baseline update
+        if: github.event_name == 'pull_request' && success()
+        run: |
+          SOURCE_BRANCH="${{ github.head_ref }}"
+          UPDATE_BRANCH="chore/update-screenshots-${SOURCE_BRANCH}"
+          PR_NUMBER=$(gh pr list --head "$UPDATE_BRANCH" --state open --json number -q '.[0].number')
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr close "$PR_NUMBER" --comment "Screenshots now match baseline — update no longer needed." --delete-branch
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
