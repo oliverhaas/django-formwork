@@ -108,10 +108,10 @@ def test_color_input_renders_type():
 
 
 @pytest.mark.integration
-def test_required_field_has_asterisk():
+def test_required_field_has_asterisk(renderer):
     """Required field renders a red asterisk in its fieldset legend/label."""
     form = RequiredFieldForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_required_name_field")
     assert fieldset is not None
     asterisk = fieldset.find("span", class_="text-error")
@@ -120,10 +120,10 @@ def test_required_field_has_asterisk():
 
 
 @pytest.mark.integration
-def test_optional_field_no_asterisk():
+def test_optional_field_no_asterisk(renderer):
     """Optional field does not render an asterisk."""
     form = RequiredFieldForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_optional_name_field")
     assert fieldset is not None
     asterisk = fieldset.find("span", class_="text-error")
@@ -131,49 +131,49 @@ def test_optional_field_no_asterisk():
 
 
 @pytest.mark.integration
-def test_disabled_field_renders_via_form():
+def test_disabled_field_renders_via_form(renderer):
     """Disabled field renders correctly inside a FormworkForm."""
     form = DisabledFieldForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "name"})
     assert inp is not None
     assert inp.has_attr("disabled")
 
 
 @pytest.mark.integration
-def test_disabled_field_wraps_in_fieldset():
+def test_disabled_field_wraps_in_fieldset(renderer):
     """Disabled field is wrapped in a fieldset with id."""
     form = DisabledFieldForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_name_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_readonly_field_renders_via_form():
+def test_readonly_field_renders_via_form(renderer):
     """Readonly field renders correctly inside a FormworkForm."""
     form = ReadonlyFieldForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "name"})
     assert inp is not None
     assert inp.has_attr("readonly")
 
 
 @pytest.mark.integration
-def test_color_input_renders_via_form():
+def test_color_input_renders_via_form(renderer):
     """Color input renders correctly inside a FormworkForm."""
     form = ColorInputForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "color"})
     assert inp is not None
     assert inp["type"] == "color"
 
 
 @pytest.mark.integration
-def test_color_input_wraps_in_fieldset():
+def test_color_input_wraps_in_fieldset(renderer):
     """Color input is wrapped in a fieldset with id."""
     form = ColorInputForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_color_field")
     assert fieldset is not None
 

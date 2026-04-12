@@ -163,19 +163,19 @@ def test_checkbox_select_multiple_renders_all_unchecked():
 
 
 @pytest.mark.integration
-def test_checkbox_select_multiple_renders_via_form():
+def test_checkbox_select_multiple_renders_via_form(renderer):
     """CheckboxSelectMultiple renders correctly when used inside a FormworkForm."""
     form = CheckboxSelectMultipleForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     checkboxes = soup.find_all("input", attrs={"type": "checkbox", "name": "toppings"})
     assert len(checkboxes) == 4
 
 
 @pytest.mark.integration
-def test_checkbox_select_multiple_form_wraps_in_fieldset():
+def test_checkbox_select_multiple_form_wraps_in_fieldset(renderer):
     """The widget group is wrapped in a formwork fieldset with a legend."""
     form = CheckboxSelectMultipleForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_toppings_field")
     assert fieldset is not None
     legend = fieldset.find("legend")
@@ -183,11 +183,11 @@ def test_checkbox_select_multiple_form_wraps_in_fieldset():
 
 
 @pytest.mark.integration
-def test_checkbox_select_multiple_error_state():
+def test_checkbox_select_multiple_error_state(renderer):
     """Bound required form with no selection adds aria-invalid to the widget."""
     form = CheckboxSelectMultipleRequiredForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     # The inner fieldset should carry aria-invalid when in error state
     checkboxes = soup.find_all("input", attrs={"name": "toppings"})
     # At least one checkbox should have aria-invalid, or the fieldset should
@@ -201,10 +201,10 @@ def test_checkbox_select_multiple_error_state():
 
 
 @pytest.mark.integration
-def test_checkbox_select_multiple_form_prefix():
+def test_checkbox_select_multiple_form_prefix(renderer):
     """Form prefix propagates to checkbox names and ids."""
     form = CheckboxSelectMultipleForm(prefix="order")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     checkboxes = soup.find_all("input", attrs={"type": "checkbox", "name": "order-toppings"})
     assert len(checkboxes) == 4
 

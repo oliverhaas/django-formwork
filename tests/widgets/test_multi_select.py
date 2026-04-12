@@ -501,49 +501,49 @@ def test_multi_select_no_icon_when_not_provided():
 
 
 @pytest.mark.integration
-def test_multi_select_renders_via_form():
+def test_multi_select_renders_via_form(renderer):
     """MultiSelect renders correctly when used inside a FormworkForm."""
     form = MultiSelectForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     details = soup.find("details", class_="multiselect")
     assert details is not None
 
 
 @pytest.mark.integration
-def test_multi_select_form_wraps_in_fieldset():
+def test_multi_select_form_wraps_in_fieldset(renderer):
     """Field template wraps the MultiSelect in a fieldset with a stable id."""
     form = MultiSelectForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_tags_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_multi_select_error_state_aria_invalid():
+def test_multi_select_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the summary trigger."""
     form = MultiSelectForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     summary = soup.find("summary")
     assert summary.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
-def test_multi_select_error_state_shows_tooltip():
+def test_multi_select_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
     form = MultiSelectForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_tags_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_multi_select_form_prefix_handling():
+def test_multi_select_form_prefix_handling(renderer):
     """Form prefix propagates to widget id and wrapper id."""
     form = MultiSelectForm(prefix="cfg")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     details = soup.find("details", class_="multiselect")
     assert details is not None
     assert details.get("id") == "id_cfg-tags_multiselect"

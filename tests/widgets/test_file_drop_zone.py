@@ -264,50 +264,50 @@ def test_file_drop_zone_max_size_display_shown():
 
 
 @pytest.mark.integration
-def test_file_drop_zone_renders_via_form():
+def test_file_drop_zone_renders_via_form(renderer):
     """FileDropZone renders correctly when used inside a FormworkForm."""
     form = FileDropZoneForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", {"type": "file", "name": "upload"})
     assert inp is not None
 
 
 @pytest.mark.integration
-def test_file_drop_zone_form_wraps_in_fieldset():
+def test_file_drop_zone_form_wraps_in_fieldset(renderer):
     """Field template wraps the FileDropZone in a fieldset with a stable id."""
     form = FileDropZoneForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_upload_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_file_drop_zone_error_state_aria_invalid():
+def test_file_drop_zone_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the file input."""
     form = FileDropZoneForm(data={}, files={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", {"type": "file", "name": "upload"})
     assert inp is not None
     assert inp.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
-def test_file_drop_zone_error_state_shows_tooltip():
+def test_file_drop_zone_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip with error text."""
     form = FileDropZoneForm(data={}, files={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_upload_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_file_drop_zone_form_prefix_handling():
+def test_file_drop_zone_form_prefix_handling(renderer):
     """Form prefix propagates to widget name and id."""
     form = FileDropZoneForm(prefix="doc")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", {"type": "file", "name": "doc-upload"})
     assert inp is not None
     assert inp["id"] == "id_doc-upload"

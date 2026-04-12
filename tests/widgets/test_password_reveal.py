@@ -183,49 +183,49 @@ def test_password_reveal_no_wrapper_id_without_id():
 
 
 @pytest.mark.integration
-def test_password_reveal_renders_via_form():
+def test_password_reveal_renders_via_form(renderer):
     """PasswordReveal renders correctly when used inside a FormworkForm."""
     form = PasswordRevealForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "password"})
     assert inp is not None
 
 
 @pytest.mark.integration
-def test_password_reveal_form_wraps_in_fieldset():
+def test_password_reveal_form_wraps_in_fieldset(renderer):
     """Field template wraps the PasswordReveal in a fieldset with a stable id."""
     form = PasswordRevealForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_password_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_password_reveal_error_state_aria_invalid():
+def test_password_reveal_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the input."""
     form = PasswordRevealForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "password"})
     assert inp.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
-def test_password_reveal_error_state_shows_tooltip():
+def test_password_reveal_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
     form = PasswordRevealForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_password_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_password_reveal_form_prefix_handling():
+def test_password_reveal_form_prefix_handling(renderer):
     """Form prefix propagates to widget name and id."""
     form = PasswordRevealForm(prefix="auth")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "auth-password"})
     assert inp is not None
     assert inp["id"] == "id_auth-password"

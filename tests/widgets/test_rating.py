@@ -236,29 +236,29 @@ def test_rating_custom_star_class_in_output():
 
 
 @pytest.mark.integration
-def test_rating_renders_via_form():
+def test_rating_renders_via_form(renderer):
     """Rating renders correctly when used inside a FormworkForm."""
     form = RatingForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     radios = soup.find_all("input", {"type": "radio", "name": "rating"})
     assert len(radios) == 5
 
 
 @pytest.mark.integration
-def test_rating_form_wraps_in_fieldset():
+def test_rating_form_wraps_in_fieldset(renderer):
     """Field template wraps the Rating in a fieldset with a stable id."""
     form = RatingForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_rating_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_rating_error_state_aria_invalid():
+def test_rating_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the widget."""
     form = RatingForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     # The rating div wrapper should carry the aria-invalid attribute
     rating_div = soup.find("div", class_="rating")
     assert rating_div is not None
@@ -269,21 +269,21 @@ def test_rating_error_state_aria_invalid():
 
 
 @pytest.mark.integration
-def test_rating_error_state_shows_tooltip():
+def test_rating_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
     form = RatingForm(data={})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_rating_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_rating_form_prefix_handling():
+def test_rating_form_prefix_handling(renderer):
     """Form prefix propagates to widget name and id attributes."""
     form = RatingForm(prefix="srv")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     radios = soup.find_all("input", {"type": "radio", "name": "srv-rating"})
     assert len(radios) > 0
     assert radios[0]["id"].startswith("id_srv-rating")

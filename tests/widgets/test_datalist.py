@@ -186,29 +186,29 @@ def test_datalist_preserves_placeholder():
 
 
 @pytest.mark.integration
-def test_datalist_renders_via_form():
+def test_datalist_renders_via_form(renderer):
     """DataList renders correctly when used inside a FormworkForm."""
     form = DataListForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "browser"})
     assert inp is not None
     assert inp.get("type") == "text"
 
 
 @pytest.mark.integration
-def test_datalist_form_wraps_in_fieldset():
+def test_datalist_form_wraps_in_fieldset(renderer):
     """Field template wraps DataList in a fieldset with a stable id."""
     form = DataListForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_browser_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_datalist_form_has_datalist_element():
+def test_datalist_form_has_datalist_element(renderer):
     """The rendered form includes the <datalist> element with options."""
     form = DataListForm()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     datalist = soup.find("datalist")
     assert datalist is not None
     options = datalist.find_all("option")
@@ -216,31 +216,31 @@ def test_datalist_form_has_datalist_element():
 
 
 @pytest.mark.integration
-def test_datalist_error_state_aria_invalid():
+def test_datalist_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the input."""
     form = DataListForm(data={"browser": ""})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "browser"})
     assert inp.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
-def test_datalist_error_state_shows_tooltip():
+def test_datalist_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
     form = DataListForm(data={"browser": ""})
     form.is_valid()
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_browser_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
 
 @pytest.mark.integration
-def test_datalist_form_prefix_handling():
+def test_datalist_form_prefix_handling(renderer):
     """Form prefix propagates to widget name and id."""
     form = DataListForm(prefix="cfg")
-    soup = render_form(form)
+    soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "cfg-browser"})
     assert inp is not None
     assert inp["id"] == "id_cfg-browser"
