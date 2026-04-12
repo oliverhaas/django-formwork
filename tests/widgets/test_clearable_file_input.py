@@ -231,7 +231,7 @@ def test_clearable_file_input_morph_preserves_clear_checkbox(builtin_page):
 
 
 @pytest.mark.screenshot
-def test_clearable_file_input_screenshot_default(builtin_page):
+def test_clearable_file_input_screenshot_default(builtin_page, assert_screenshot):
     """Visual snapshot: ClearableFileInput in default state."""
     wrapper = builtin_page.locator("#id_avatar_field")
-    wrapper.screenshot(path="test-results/clearable-file-input-default-actual.png")
+    assert_screenshot(wrapper, "clearable-file-input-default.png")

@@ -313,16 +313,16 @@ def test_checkbox_select_multiple_morph_preserves_selections(builtin_page):
 
 
 @pytest.mark.screenshot
-def test_checkbox_select_multiple_screenshot_default(builtin_page):
+def test_checkbox_select_multiple_screenshot_default(builtin_page, assert_screenshot):
     """Visual snapshot: CheckboxSelectMultiple in default (all unchecked) state."""
     wrapper = builtin_page.locator("#id_toppings_field")
-    wrapper.screenshot(path="test-results/checkbox-select-multiple-default-actual.png")
+    assert_screenshot(wrapper, "checkbox-select-multiple-default.png")
 
 
 @pytest.mark.screenshot
-def test_checkbox_select_multiple_screenshot_checked(builtin_page):
+def test_checkbox_select_multiple_screenshot_checked(builtin_page, assert_screenshot):
     """Visual snapshot: CheckboxSelectMultiple with some options checked."""
     builtin_page.locator('input[name="toppings"][value="cheese"]').check()
     builtin_page.locator('input[name="toppings"][value="mushrooms"]').check()
     wrapper = builtin_page.locator("#id_toppings_field")
-    wrapper.screenshot(path="test-results/checkbox-select-multiple-checked-actual.png")
+    assert_screenshot(wrapper, "checkbox-select-multiple-checked.png")

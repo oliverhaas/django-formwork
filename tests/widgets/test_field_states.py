@@ -292,14 +292,14 @@ def test_color_input_morph_preserves_value(builtin_page):
 
 
 @pytest.mark.screenshot
-def test_disabled_field_screenshot(builtin_page):
+def test_disabled_field_screenshot(builtin_page, assert_screenshot):
     """Visual snapshot: disabled text input."""
     wrapper = builtin_page.locator("#id_disabled_text_field")
-    wrapper.screenshot(path="test-results/disabled-field-actual.png")
+    assert_screenshot(wrapper, "disabled-field.png")
 
 
 @pytest.mark.screenshot
-def test_readonly_field_screenshot(builtin_page):
+def test_readonly_field_screenshot(builtin_page, assert_screenshot):
     """Visual snapshot: readonly text input."""
     wrapper = builtin_page.locator("#id_readonly_text_field")
-    wrapper.screenshot(path="test-results/readonly-field-actual.png")
+    assert_screenshot(wrapper, "readonly-field.png")

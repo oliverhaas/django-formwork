@@ -3,11 +3,16 @@ name: Visual Tests
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1" # Weekly on Monday at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
-  percy:
+  screenshots:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -16,7 +21,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Set up Python
-        run: uv python install 3.13
+        run: uv python install 3.14
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -35,7 +40,92 @@ jobs:
       - name: Build CSS
         run: npx @tailwindcss/cli -i tests/e2e/app.css -o django_formwork/static/formwork/formwork-dist.css
 
-      - name: Run Percy visual tests
-        run: npx percy exec -- uv run pytest tests/e2e/ -x
+      - name: Run screenshot tests
+        id: screenshots
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            uv run pytest tests/widgets/ -m screenshot --update-screenshots -q
+          else
+            uv run pytest tests/widgets/ -m screenshot -q
+          fi
+
+      - name: Upload diff artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs
+          path: test-results/*
+          retention-days: 14
+
+      # On schedule/manual: create or update baseline PR if screenshots changed
+      - name: Check for baseline changes
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        id: diff
+        run: |
+          if git diff --quiet tests/widgets/screenshots/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create baseline update PR
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH="chore/update-screenshot-baselines"
+          git checkout -B "$BRANCH"
+          git add tests/widgets/screenshots/
+          git commit -m "chore: update screenshot baselines [auto]"
+          git push -f origin "$BRANCH"
+          # Create or update PR
+          if gh pr list --head "$BRANCH" --state open --json number -q '.[0].number' | grep -q .; then
+            echo "PR already exists, force-pushed update."
+          else
+            gh pr create \
+              --title "chore: update screenshot baselines [auto]" \
+              --body "Automated screenshot baseline update triggered by ${{ github.event_name }}." \
+              --head "$BRANCH" \
+              --base main
+          fi
         env:
-          PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # On PR: if screenshots fail, create baseline update PR targeting source branch
+      - name: Regenerate baselines for PR
+        if: github.event_name == 'pull_request' && failure() && steps.screenshots.outcome == 'failure'
+        run: |
+          uv run pytest tests/widgets/ -m screenshot --update-screenshots -q || true
+
+      - name: Check for PR baseline changes
+        if: github.event_name == 'pull_request' && failure() && steps.screenshots.outcome == 'failure'
+        id: pr_diff
+        run: |
+          if git diff --quiet tests/widgets/screenshots/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create baseline update PR for source branch
+        if: github.event_name == 'pull_request' && failure() && steps.screenshots.outcome == 'failure' && steps.pr_diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          SOURCE_BRANCH="${{ github.head_ref }}"
+          UPDATE_BRANCH="chore/update-screenshots-${SOURCE_BRANCH}"
+          git checkout -B "$UPDATE_BRANCH"
+          git add tests/widgets/screenshots/
+          git commit -m "chore: update screenshot baselines for ${SOURCE_BRANCH} [auto]"
+          git push -f origin "$UPDATE_BRANCH"
+          # Create PR targeting the source branch
+          UPDATE_PR_URL=$(gh pr create \
+            --title "chore: update screenshot baselines [auto]" \
+            --body "Automated screenshot baseline update for PR #${{ github.event.pull_request.number }}." \
+            --head "$UPDATE_BRANCH" \
+            --base "$SOURCE_BRANCH" 2>&1 || true)
+          # Comment on the original PR
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --body "Visual changes detected. Review and merge baseline update: ${UPDATE_PR_URL}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

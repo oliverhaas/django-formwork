@@ -375,14 +375,14 @@ def test_image_drop_zone_has_icon(uploads_page):
 
 
 @pytest.mark.screenshot
-def test_image_drop_zone_screenshot_default(uploads_page):
+def test_image_drop_zone_screenshot_default(uploads_page, assert_screenshot):
     """Visual snapshot: ImageDropZone in default (empty) state."""
     wrapper = uploads_page.locator(".image-upload").first
-    wrapper.screenshot(path="test-results/image-drop-zone-default-actual.png")
+    assert_screenshot(wrapper, "image-drop-zone-default.png")
 
 
 @pytest.mark.screenshot
-def test_image_drop_zone_screenshot_restricted(uploads_page):
+def test_image_drop_zone_screenshot_restricted(uploads_page, assert_screenshot):
     """Visual snapshot: ImageDropZone with PNG/JPEG restriction (second widget)."""
     wrapper = uploads_page.locator(".image-upload").nth(1)
-    wrapper.screenshot(path="test-results/image-drop-zone-restricted-actual.png")
+    assert_screenshot(wrapper, "image-drop-zone-restricted.png")

@@ -788,25 +788,25 @@ def test_multi_select_morph_preserves_dropdown_open(multi_select_page):
 
 
 @pytest.mark.screenshot
-def test_multi_select_screenshot_default(multi_select_page):
+def test_multi_select_screenshot_default(multi_select_page, assert_screenshot):
     """Visual snapshot: MultiSelect in default (closed) state."""
     wrapper = multi_select_page.locator("details.dropdown.multiselect").first
-    wrapper.screenshot(path="test-results/multi-select-default-actual.png")
+    assert_screenshot(wrapper, "multi-select-default.png")
 
 
 @pytest.mark.screenshot
-def test_multi_select_screenshot_open(multi_select_page):
+def test_multi_select_screenshot_open(multi_select_page, assert_screenshot):
     """Visual snapshot: MultiSelect with dropdown open."""
     multi = multi_select_page.locator("details.dropdown.multiselect").first
     multi_select_page.evaluate("""
         document.querySelector('details.dropdown.multiselect').open = true;
     """)
     multi_select_page.wait_for_timeout(100)
-    multi.screenshot(path="test-results/multi-select-open-actual.png")
+    assert_screenshot(multi, "multi-select-open.png", include_overflow=300)
 
 
 @pytest.mark.screenshot
-def test_multi_select_screenshot_selected(multi_select_page):
+def test_multi_select_screenshot_selected(multi_select_page, assert_screenshot):
     """Visual snapshot: MultiSelect with at least 3 options selected."""
     multi = multi_select_page.locator("details.dropdown.multiselect").first
     multi.locator("summary").click()
@@ -822,4 +822,4 @@ def test_multi_select_screenshot_selected(multi_select_page):
         });
     }""")
     multi_select_page.wait_for_timeout(100)
-    multi.screenshot(path="test-results/multi-select-selected-actual.png")
+    assert_screenshot(multi, "multi-select-selected.png", include_overflow=300)

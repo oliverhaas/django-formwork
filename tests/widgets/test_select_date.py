@@ -253,17 +253,17 @@ def test_select_date_morph_preserves_date(builtin_page):
 
 
 @pytest.mark.screenshot
-def test_select_date_screenshot_default(builtin_page):
+def test_select_date_screenshot_default(builtin_page, assert_screenshot):
     """Visual snapshot: SelectDateWidget in default (empty) state."""
     wrapper = builtin_page.locator("#id_birthday_field")
-    wrapper.screenshot(path="test-results/select-date-default-actual.png")
+    assert_screenshot(wrapper, "select-date-default.png")
 
 
 @pytest.mark.screenshot
-def test_select_date_screenshot_filled(builtin_page):
+def test_select_date_screenshot_filled(builtin_page, assert_screenshot):
     """Visual snapshot: SelectDateWidget with a date selected."""
     builtin_page.select_option('select[name="birthday_month"]', value="3")
     builtin_page.select_option('select[name="birthday_day"]', value="14")
     builtin_page.select_option('select[name="birthday_year"]', value="2025")
     wrapper = builtin_page.locator("#id_birthday_field")
-    wrapper.screenshot(path="test-results/select-date-filled-actual.png")
+    assert_screenshot(wrapper, "select-date-filled.png")

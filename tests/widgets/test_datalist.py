@@ -338,15 +338,15 @@ def test_datalist_morph_preserves_empty(simple_page):
 
 
 @pytest.mark.screenshot
-def test_datalist_screenshot_default(simple_page):
+def test_datalist_screenshot_default(simple_page, assert_screenshot):
     """Visual snapshot: DataList in default (empty) state."""
     wrapper = simple_page.locator("#id_browser_field")
-    wrapper.screenshot(path="test-results/datalist-default-actual.png")
+    assert_screenshot(wrapper, "datalist-default.png")
 
 
 @pytest.mark.screenshot
-def test_datalist_screenshot_filled(simple_page):
+def test_datalist_screenshot_filled(simple_page, assert_screenshot):
     """Visual snapshot: DataList with a typed value."""
     simple_page.locator('input[name="browser"]').fill("Firefox")
     wrapper = simple_page.locator("#id_browser_field")
-    wrapper.screenshot(path="test-results/datalist-filled-actual.png")
+    assert_screenshot(wrapper, "datalist-filled.png")

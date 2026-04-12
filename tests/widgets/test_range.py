@@ -296,14 +296,14 @@ def test_range_morph_preserves_default_value(simple_page):
 
 
 @pytest.mark.screenshot
-def test_range_screenshot_default(simple_page):
+def test_range_screenshot_default(simple_page, assert_screenshot):
     """Visual snapshot: Range in default state."""
     wrapper = simple_page.locator("#id_volume_field")
-    wrapper.screenshot(path="test-results/range-default-actual.png")
+    assert_screenshot(wrapper, "range-default.png")
 
 
 @pytest.mark.screenshot
-def test_range_screenshot_set_value(simple_page):
+def test_range_screenshot_set_value(simple_page, assert_screenshot):
     """Visual snapshot: Range with value set to 70."""
     simple_page.evaluate("""
         const r = document.querySelector('input[name="volume"]');
@@ -311,4 +311,4 @@ def test_range_screenshot_set_value(simple_page):
         r.dispatchEvent(new Event('input', {bubbles: true}));
     """)
     wrapper = simple_page.locator("#id_volume_field")
-    wrapper.screenshot(path="test-results/range-set-value-actual.png")
+    assert_screenshot(wrapper, "range-set-value.png")

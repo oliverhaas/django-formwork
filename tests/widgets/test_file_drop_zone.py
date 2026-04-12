@@ -418,14 +418,14 @@ def test_file_drop_zone_restricted_shows_file_type(uploads_page):
 
 
 @pytest.mark.screenshot
-def test_file_drop_zone_screenshot_default(uploads_page):
+def test_file_drop_zone_screenshot_default(uploads_page, assert_screenshot):
     """Visual snapshot: FileDropZone in default (empty) state."""
     wrapper = uploads_page.locator(".dropzone").first
-    wrapper.screenshot(path="test-results/file-drop-zone-default-actual.png")
+    assert_screenshot(wrapper, "file-drop-zone-default.png")
 
 
 @pytest.mark.screenshot
-def test_file_drop_zone_screenshot_restricted(uploads_page):
+def test_file_drop_zone_screenshot_restricted(uploads_page, assert_screenshot):
     """Visual snapshot: FileDropZone with PDF restriction and size limit."""
     wrapper = uploads_page.locator(".dropzone").nth(1)
-    wrapper.screenshot(path="test-results/file-drop-zone-restricted-actual.png")
+    assert_screenshot(wrapper, "file-drop-zone-restricted.png")

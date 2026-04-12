@@ -575,25 +575,25 @@ def test_combobox_morph_preserves_multiple_selected(combobox_page):
 
 
 @pytest.mark.screenshot
-def test_combobox_screenshot_default(combobox_page):
+def test_combobox_screenshot_default(combobox_page, assert_screenshot):
     """Visual snapshot: ComboBox in default (empty) state."""
     wrapper = combobox_page.locator(".dropdown.combobox").first
-    wrapper.screenshot(path="test-results/combobox-default-actual.png")
+    assert_screenshot(wrapper, "combobox-default.png")
 
 
 @pytest.mark.screenshot
-def test_combobox_screenshot_open_dropdown(combobox_page):
+def test_combobox_screenshot_open_dropdown(combobox_page, assert_screenshot):
     """Visual snapshot: ComboBox with dropdown open."""
     inp = combobox_page.locator('input[name="language_single"]')
     inp.click()
     inp.fill("P")
     combobox_page.wait_for_timeout(150)
     wrapper = combobox_page.locator(".dropdown.combobox").first
-    wrapper.screenshot(path="test-results/combobox-open-actual.png")
+    assert_screenshot(wrapper, "combobox-open.png", include_overflow=300)
 
 
 @pytest.mark.screenshot
-def test_combobox_screenshot_suggestion_selected(combobox_page):
+def test_combobox_screenshot_suggestion_selected(combobox_page, assert_screenshot):
     """Visual snapshot: ComboBox after a suggestion has been selected."""
     inp = combobox_page.locator('input[name="language_single"]')
     inp.click()
@@ -602,4 +602,4 @@ def test_combobox_screenshot_suggestion_selected(combobox_page):
     combobox_page.locator(".dropdown.combobox").first.locator("button", has_text="Python").click()
     combobox_page.wait_for_timeout(100)
     wrapper = combobox_page.locator(".dropdown.combobox").first
-    wrapper.screenshot(path="test-results/combobox-selected-actual.png")
+    assert_screenshot(wrapper, "combobox-selected.png")
