@@ -1,0 +1,63 @@
+{% with id=widget.attrs.id %}<div class="date-picker"{% if id %} id="{{ id }}_datepicker"{% endif %} x-data="{
+  open: false,
+  value: '{{ widget.value|default:'' }}',
+  month: null,
+  year: null,
+  days: [],
+  init() {
+    const d = this.value ? new Date(this.value + 'T00:00:00') : new Date();
+    this.month = d.getMonth();
+    this.year = d.getFullYear();
+    this.buildDays();
+  },
+  buildDays() {
+    const first = new Date(this.year, this.month, 1);
+    const last = new Date(this.year, this.month + 1, 0);
+    const startDay = first.getDay();
+    this.days = [];
+    for (let i = 0; i < startDay; i++) this.days.push(null);
+    for (let d = 1; d <= last.getDate(); d++) this.days.push(d);
+  },
+  prev() { if (this.month === 0) { this.month = 11; this.year--; } else { this.month--; } this.buildDays(); },
+  next() { if (this.month === 11) { this.month = 0; this.year++; } else { this.month++; } this.buildDays(); },
+  pick(day) {
+    const m = String(this.month + 1).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    this.value = this.year + '-' + m + '-' + d;
+    this.open = false;
+    this.$refs.input.value = this.value;
+    this.$refs.input.dispatchEvent(new Event('change', {bubbles: true}));
+  },
+  isSelected(day) {
+    if (!this.value || !day) return false;
+    const m = String(this.month + 1).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    return this.value === this.year + '-' + m + '-' + d;
+  },
+  isToday(day) {
+    if (!day) return false;
+    const t = new Date();
+    return day === t.getDate() && this.month === t.getMonth() && this.year === t.getFullYear();
+  },
+  monthName() { return new Date(this.year, this.month).toLocaleString('default', {month: 'long'}); }
+}" @click.away="open = false">
+  <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default:'' }}"{% include "django/forms/widgets/attrs.html" %} @focus="open = true" @input="value = $el.value" autocomplete="off">
+  <div x-show="open" x-cloak class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 p-3 w-72 z-10 absolute">
+    <div class="flex items-center justify-between mb-2">
+      <button type="button" @click.stop="prev()" class="btn btn-ghost btn-xs">&larr;</button>
+      <span class="font-medium text-sm" x-text="monthName() + ' ' + year"></span>
+      <button type="button" @click.stop="next()" class="btn btn-ghost btn-xs">&rarr;</button>
+    </div>
+    <div class="grid grid-cols-7 gap-0.5 text-center text-xs mb-1">
+      <span class="text-base-content/50">Su</span><span class="text-base-content/50">Mo</span><span class="text-base-content/50">Tu</span><span class="text-base-content/50">We</span><span class="text-base-content/50">Th</span><span class="text-base-content/50">Fr</span><span class="text-base-content/50">Sa</span>
+    </div>
+    <div class="grid grid-cols-7 gap-0.5 text-center text-sm">
+      <template x-for="(day, i) in days" :key="i">
+        <button type="button" x-show="day" x-text="day" @click.stop="pick(day)" class="btn btn-ghost btn-xs" :class="{ 'btn-primary': isSelected(day), 'font-bold': isToday(day) }"></button>
+      </template>
+      <template x-for="(day, i) in days" :key="'e'+i">
+        <span x-show="!day"></span>
+      </template>
+    </div>
+  </div>
+</div>{% endwith %}

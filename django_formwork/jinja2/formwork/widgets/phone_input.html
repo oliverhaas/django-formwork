@@ -1,0 +1,3 @@
+{% set id = widget.attrs.id %}<div class="phone-input join w-full"{% if id %} id="{{ id }}_phone"{% endif %}>
+  {% for subwidget in widget.subwidgets %}<div class="{% if loop.first %}join-item w-28 shrink-0{% else %}join-item grow{% endif %}">{{ subwidget.tag }}</div>{% endfor %}
+</div>
