@@ -45,14 +45,13 @@ class TestFormStructure:
         invalid = basic_page.locator('#basic-form [aria-invalid="true"]')
         assert invalid.count() >= 1
 
-    def test_novalidate_script_present(self, basic_page):
-        """Inline script that disables native validation is present in rendered HTML."""
-        script = basic_page.evaluate("""
-            [...document.querySelectorAll('#basic-form script')].some(
-                s => s.textContent.includes('noValidate')
-            )
-        """)
-        assert script is True
+    def test_novalidate_set_on_form_with_errors(self, basic_page):
+        """formwork.js disables native validation after errors appear via morph."""
+        submit(basic_page)
+        no_validate = basic_page.evaluate(
+            "document.querySelector('#basic-form').noValidate",
+        )
+        assert no_validate is True
 
 
 class TestMorphInfrastructure:

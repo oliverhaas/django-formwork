@@ -257,6 +257,20 @@ class BuiltinWidgetsForm(FormworkForm):
         label="Birthday",
         help_text="SelectDateWidget \u2014 three dropdowns for month, day, and year.",
     )
+    disabled_text = forms.CharField(
+        widget=forms.TextInput(attrs={"disabled": True}),
+        required=False,
+        initial="Cannot edit this",
+        label="Disabled field",
+        help_text="TextInput with disabled attribute.",
+    )
+    readonly_text = forms.CharField(
+        widget=forms.TextInput(attrs={"readonly": True}),
+        required=False,
+        initial="Read-only value",
+        label="Readonly field",
+        help_text="TextInput with readonly attribute.",
+    )
     color = forms.CharField(
         widget=forms.TextInput(attrs={"type": "color"}),
         required=False,

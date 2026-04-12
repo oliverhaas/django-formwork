@@ -4,14 +4,13 @@ version = "0.1.0a1"
 description = "Better Django forms — modern styling out of the box, then HTMX integration for dynamic behavior"
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 keywords = ["django", "forms", "widgets", "rendering", "htmx"]
 authors = [{ name = "Oliver Haas", email = "ohaas@e1plus.de" }]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Web Environment",
   "Framework :: Django",
-  "Framework :: Django :: 5.2",
   "Framework :: Django :: 6.0",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: BSD License",
@@ -19,14 +18,12 @@ classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Topic :: Internet :: WWW/HTTP",
   "Topic :: Software Development :: Libraries",
   "Typing :: Typed",
 ]
-dependencies = ["Django>=5.2,<7"]
+dependencies = ["Django>=6.0,<7"]
 
 [project.urls]
 Homepage = "https://github.com/oliverhaas/django-formwork"
@@ -63,7 +60,7 @@ packages = ["django_formwork"]
 include = ["django_formwork", "LICENSE", "README.md"]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 line-length = 120
 fix = true
 
@@ -100,7 +97,7 @@ suppress-none-returning = true
 ]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 plugins = ["mypy_django_plugin.main"]
 pretty = true
 show_error_codes = true
@@ -113,7 +110,7 @@ warn_unreachable = false
 django_settings_module = "tests.settings.mypy"
 
 [tool.ty.environment]
-python-version = "3.13"
+python-version = "3.14"
 
 [tool.ty.analysis]
 respect-type-ignore-comments = false
