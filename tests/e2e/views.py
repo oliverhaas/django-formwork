@@ -9,12 +9,19 @@ from e2e.models import AutoSaveFormData, BasicFormData
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkSearchView, FormworkValidateView
 from django_formwork.widgets import (
+    CascadeSelect,
     ComboBox,
+    CountryInput,
     DataList,
+    DatePicker,
     FileDropZone,
     ImageDropZone,
+    InputMask,
+    InputNumber,
     MultiSelect,
+    OTPInput,
     PasswordReveal,
+    PhoneInput,
     Range,
     Rating,
     SearchSelect,
@@ -545,6 +552,62 @@ class TextareaForm(FormworkForm):
     )
 
 
+CITY_CHOICES = [
+    ("nyc", "New York"),
+    ("ldn", "London"),
+    ("tyo", "Tokyo"),
+    ("par", "Paris"),
+    ("syd", "Sydney"),
+]
+
+
+class NewWidgetsForm(FormworkForm):
+    """DatePicker, InputNumber, OTP, Phone, Country, CascadeSelect, InputMask."""
+
+    due_date = forms.DateField(
+        widget=DatePicker,
+        required=False,
+        help_text="Calendar date picker with month navigation.",
+    )
+    quantity = forms.IntegerField(
+        widget=InputNumber(attrs={"min": "1", "max": "99", "step": "1"}),
+        initial=1,
+        help_text="Number input with +/- stepper buttons.",
+    )
+    otp_code = forms.CharField(
+        widget=OTPInput(length=6),
+        required=False,
+        help_text="One-time password with auto-advance between digits.",
+    )
+    phone = forms.CharField(
+        widget=PhoneInput,
+        required=False,
+        help_text="Country code selector with phone number input.",
+    )
+    country = forms.ChoiceField(
+        widget=CountryInput,
+        required=False,
+        help_text="Searchable country selector with flag emojis.",
+    )
+    city = forms.ChoiceField(
+        choices=CITY_CHOICES,
+        widget=CascadeSelect(parent_field="country", search_url=""),
+        required=False,
+        help_text="Dependent select (CascadeSelect, no server search in this demo).",
+    )
+    zip_code = forms.CharField(
+        widget=InputMask(mask="#####"),
+        required=False,
+        help_text="Masked input: 5 digits only.",
+    )
+    phone_masked = forms.CharField(
+        widget=InputMask(mask="(###) ###-####"),
+        required=False,
+        label="Phone (masked)",
+        help_text="Masked input with pattern formatting.",
+    )
+
+
 class ComplexForm(FormworkForm):
     """Cross-field validation with dropdowns, auto-validated on every change."""
 
@@ -1006,6 +1069,12 @@ _PAGES = [
     ("uploads", "/uploads/", "File Uploads", "Drag-and-drop file and image uploads with size and type restrictions"),
     ("textarea", "/textarea/", "ValidatedTextarea", "Server-side validation with inline word highlighting via htmx"),
     (
+        "new-widgets",
+        "/new-widgets/",
+        "New Widgets",
+        "DatePicker, InputNumber, OTP, Phone, Country, CascadeSelect, InputMask",
+    ),
+    (
         "complex",
         "/complex/",
         "Complex Form",
@@ -1244,6 +1313,10 @@ def uploads_view(request: HttpRequest) -> HttpResponse:
 
 def textarea_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, TextareaForm, "textarea")
+
+
+def new_widgets_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, NewWidgetsForm, "new-widgets")
 
 
 def complex_view(request: HttpRequest) -> HttpResponse:
