@@ -24,8 +24,13 @@ class PhoneInput(forms.MultiWidget):
         from django_formwork.data import phone_prefix_choices
 
         self.default_code = default_code
-        prefix_widget = forms.Select(choices=phone_prefix_choices())
-        number_widget = forms.TextInput(attrs={"placeholder": "Phone number", "type": "tel"})
+        prefix_widget = forms.Select(
+            choices=phone_prefix_choices(),
+            attrs={"class": "join-item select w-28 shrink-0"},
+        )
+        number_widget = forms.TextInput(
+            attrs={"placeholder": "Phone number", "type": "tel", "class": "join-item input grow"},
+        )
         super().__init__(widgets=[prefix_widget, number_widget], attrs=attrs)
 
     def decompress(self, value: str | None) -> list[str]:
