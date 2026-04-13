@@ -98,41 +98,17 @@ fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidd
     grid-column: 1 / -1;
 }
 
-/* ClearableFileInput: checkbox + label + file input + bare text nodes.
-   Switch from grid to flow layout so text nodes ("Currently:", "Change:")
-   wrap naturally with their adjacent elements.  The <br> Django inserts
-   acts as a line break between the clear row and file input row. */
-fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.25rem 0.5rem;
+/* ClearableFileInput: custom template wraps everything in .clearable-file-info.
+   Line 1: "Currently: file.jpg"
+   Line 2: [checkbox] Clear
+   Line 3: "Change:"
+   Then the file input is a sibling outside the wrapper. */
+.clearable-file-info {
+    @apply text-sm space-y-1;
 }
 
-/* Legend and help text take full width. */
-fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > .fieldset-legend,
-fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > .label {
-    width: 100%;
-}
-
-/* File input takes full width on its own line. */
-fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > input[type="file"] {
-    width: 100%;
-}
-
-/* The <br> forces "Change:" + file input onto a new line. */
-fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > br {
-    width: 100%;
-}
-
-/* Shrink the clear checkbox (it's next to a label, not standalone). */
-fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > input[type="checkbox"] {
-    @apply checkbox;
-}
-
-/* Style the "Currently: file.jpg / Clear" text to look cohesive. */
-fieldset.fieldset:has(> input[type="file"]):has(> input[type="checkbox"]) > a {
-    @apply link link-primary;
+.clearable-file-clear {
+    @apply inline-flex items-center gap-1.5 cursor-pointer;
 }
 
 /* MultiWidget (SplitDateTimeWidget, SelectDateWidget): Django's
@@ -358,10 +334,10 @@ input.combobox-input {
     @apply border-primary bg-primary/5;
 }
 
-/* Upload prompt icon */
+/* Upload prompt icon — sized via font-size (iconx icons use 1em). */
 .dropzone-prompt-icon,
 .image-upload-prompt-icon {
-    @apply w-10 h-10 mx-auto;
+    @apply mx-auto text-[2.5rem];
     color: #9ca3af; /* fallback for browsers without color-mix() */
     color: color-mix(in oklab, var(--color-base-content) 40%, var(--color-base-100));
 }
@@ -388,9 +364,9 @@ input.combobox-input {
     @apply flex flex-col items-center gap-1 cursor-pointer;
 }
 
-/* Lucide file icon */
+/* File icon in preview area, sized via font-size for iconx. */
 .dropzone-file-icon {
-    @apply w-10 h-10;
+    @apply text-[2.5rem];
     color: #9ca3af; /* fallback for browsers without color-mix() */
     color: color-mix(in oklab, var(--color-base-content) 40%, var(--color-base-100));
 }
@@ -412,7 +388,7 @@ input.combobox-input {
 
 .dropzone-remove-icon,
 .image-upload-remove-icon {
-    @apply w-3 h-3;
+    @apply text-xs;
 }
 
 /* Image preview area — column flex: image wrapper + replace text below. */
