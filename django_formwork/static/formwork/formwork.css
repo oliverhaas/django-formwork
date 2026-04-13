@@ -170,7 +170,7 @@ fieldset.fieldset > .tooltip:has(> select + select + select) {
    datetime-local, search, color, tel.
    Excludes inputs inside compound widgets (PasswordReveal's
    <label class="password-reveal">, dropdown search inputs) and ComboBox. */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.otp-input *):not(.input-number *) {
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.otp-input *):not(.input-number *):not(.phone-input *) {
     @apply input w-full;
 }
 
@@ -198,11 +198,18 @@ i.icon {
     @apply w-full;
 }
 
+/* InputMask: monospace + letter-spacing so placeholder characters
+   are visually distinct and easy to count. */
+.input-mask {
+    font-family: ui-monospace, monospace;
+    letter-spacing: 0.15em;
+}
+
 textarea {
     @apply textarea w-full;
 }
 
-select {
+select:not(.phone-input *) {
     @apply select w-full;
 }
 

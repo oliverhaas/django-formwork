@@ -22,7 +22,13 @@ class InputMask(forms.TextInput):
     template_name = "formwork/widgets/input_mask.html"
 
     def __init__(self, attrs: dict[str, Any] | None = None, *, mask: str = "") -> None:
-        super().__init__(attrs)
+        defaults: dict[str, Any] = {"class": "input-mask"}
+        if attrs:
+            defaults.update(attrs)
+            cls = defaults.get("class", "")
+            if "input-mask" not in cls:
+                defaults["class"] = f"input-mask {cls}"
+        super().__init__(defaults)
         self.mask = mask
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
