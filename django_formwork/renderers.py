@@ -28,10 +28,32 @@ class FormworkRenderer(DjangoTemplates):
 
     Overrides both ``form_template_name`` (used by ``{{ form }}``) and
     ``field_template_name`` (used by ``{{ field.as_field_group }}``).
+
+    Adds formwork's template directory to DIRS so our widget template
+    overrides (e.g. clearable_file_input.html) take precedence over
+    Django's built-in versions.
     """
 
     form_template_name = "django/forms/formwork.html"
     field_template_name = "django/forms/formwork_field.html"
+
+    @cached_property
+    def engine(self) -> BaseEngine:
+        import django.forms.renderers as _fr
+
+        return self.backend(
+            {
+                "APP_DIRS": True,
+                "DIRS": [
+                    # Formwork templates first (widget overrides).
+                    Path(__file__).parent / "templates",
+                    # Django's built-in widget templates (attrs.html, etc.).
+                    Path(_fr.__file__).parent / "templates",
+                ],
+                "NAME": "djangoformwork",
+                "OPTIONS": {},
+            },
+        )
 
 
 class FormworkJinja2Renderer(Jinja2):

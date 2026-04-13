@@ -1,4 +1,4 @@
-"""Views for e2e testing — widget showcase with one page per topic."""
+"""Views for e2e testing. widget showcase with one page per topic."""
 
 from django import forms
 from django.forms.models import construct_instance
@@ -133,11 +133,11 @@ class AutoSaveForm(FormworkModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Model has blank=True (allows partial saves) but visually these
-        # fields are required — set required=True for the asterisk.
+        # fields are required. set required=True for the asterisk.
         self.fields["name"].required = True
         self.fields["email"].required = True
         # Strip the HTML required attribute so native validation doesn't
-        # fire — keep field.required=True for the template asterisk.
+        # fire. keep field.required=True for the template asterisk.
         for field in self.fields.values():
             field.widget.use_required_attribute = lambda *_a: False
 
@@ -315,7 +315,7 @@ _COUNTRIES = [
 
 
 class SearchSelectForm(FormworkForm):
-    """SearchSelect — few options (no search), many options (auto-search), icons, server-side."""
+    """SearchSelect. few options (no search), many options (auto-search), icons, server-side."""
 
     city_plain = forms.ChoiceField(
         choices=[
@@ -366,12 +366,12 @@ class SearchSelectForm(FormworkForm):
     city_htmx = forms.ChoiceField(
         widget=SearchSelect(search_url="/e2e/search/cities/"),
         required=False,
-        label="City (server search, few — no search input)",
+        label="City (server search, few, no search input)",
     )
     city_htmx_many = forms.ChoiceField(
         widget=SearchSelect(search_url="/e2e/search/cities-many/"),
         required=False,
-        label="City (server search, many — auto search input)",
+        label="City (server search, many, auto search input)",
     )
     country_htmx_icons = forms.ChoiceField(
         widget=SearchSelect(search_url="/e2e/search/countries/"),
@@ -1137,7 +1137,7 @@ def index_view(request: HttpRequest) -> HttpResponse:
 
 
 def basic_view(request: HttpRequest) -> HttpResponse:
-    """Model-backed basic form view — always reads/writes the first row."""
+    """Model-backed basic form view. always reads/writes the first row."""
     engine = engines["django"]
     form_tmpl, card_tmpl, page_tmpl = _TEMPLATES["basic"]
     is_htmx = request.headers.get("HX-Request") == "true"
@@ -1174,7 +1174,7 @@ def basic_view(request: HttpRequest) -> HttpResponse:
 
 
 def autosave_view(request: HttpRequest) -> HttpResponse:
-    """Auto-save form view — saves on every field change with submit button."""
+    """Auto-save form view. saves on every field change with submit button."""
     engine = engines["django"]
     form_tmpl, card_tmpl, page_tmpl = _TEMPLATES["autosave"]
     is_htmx = request.headers.get("HX-Request") == "true"
