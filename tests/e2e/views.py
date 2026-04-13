@@ -585,7 +585,7 @@ class NewWidgetsForm(FormworkForm):
         help_text="Country code selector with phone number input.",
     )
     country = forms.ChoiceField(
-        widget=CountryInput,
+        widget=CountryInput(),
         required=False,
         help_text="Searchable country selector with flag emojis.",
     )

@@ -198,11 +198,9 @@ i.icon {
     @apply w-full;
 }
 
-/* InputMask: monospace + letter-spacing so placeholder characters
-   are visually distinct and easy to count. */
+/* InputMask: monospace font so each placeholder character has equal width. */
 .input-mask {
     font-family: ui-monospace, monospace;
-    letter-spacing: 0.15em;
 }
 
 textarea {
