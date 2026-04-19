@@ -47,7 +47,7 @@ class SearchSelect(forms.Select):
     option_inherits_attrs = False
     search_threshold = 20
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         attrs: dict[str, Any] | None = None,
         choices: tuple = (),

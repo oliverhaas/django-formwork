@@ -52,7 +52,13 @@ class FormworkModelFormMetaclass(ModelFormMetaclass):
     Explicit field declarations — including custom subclasses — are left alone.
     """
 
-    def __new__(mcs, name, bases, namespace, **kwargs):
+    def __new__(
+        mcs,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        **kwargs: Any,
+    ) -> type:
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
         if not hasattr(cls, "base_fields"):
             return cls
