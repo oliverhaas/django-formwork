@@ -156,7 +156,14 @@ class _AutoSearchMixin:
         key = make_key(model_label, search_fields, to_field_name)
 
         widget_type = "multiselect" if isinstance(widget, MultiSelect) else "search_select"
+        # Callbacks live on the field.  Formwork fields expose icon/description
+        # callbacks; plain ModelChoiceField only exposes label_from_instance.
         label_func = getattr(field, "label_from_instance", None)
+        icon_func = None
+        desc_func = None
+        if isinstance(field, (FormworkModelChoiceField, FormworkModelMultipleChoiceField)):
+            icon_func = field.icon_from_instance
+            desc_func = field.description_from_instance
         base_qs = queryset
 
         registration = SearchRegistration(
@@ -164,8 +171,8 @@ class _AutoSearchMixin:
             search_fields=tuple(search_fields),
             to_field_name=to_field_name,
             label_from_instance=label_func,
-            icon_from_instance=getattr(widget, "icon_from_instance", None),
-            description_from_instance=getattr(widget, "description_from_instance", None),
+            icon_from_instance=icon_func,
+            description_from_instance=desc_func,
             search_decorator=widget.search_decorator if callable(widget.search_decorator) else None,
             widget_type=widget_type,
         )
