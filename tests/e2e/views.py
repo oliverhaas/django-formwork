@@ -6,6 +6,7 @@ from django.http import HttpRequest, HttpResponse
 from django.template import engines
 from e2e.models import AutoSaveFormData, BasicFormData
 
+from django_formwork.fields import FormworkChoiceLabel
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkSearchView, FormworkValidateView
 from django_formwork.widgets import (
@@ -337,35 +338,20 @@ class SearchSelectForm(FormworkForm):
         label="City (plain, few options)",
     )
     country_many = forms.ChoiceField(
-        choices=[("", "")] + [(c, n) for c, _flag, n in _COUNTRIES],
-        widget=SearchSelect(
-            icons={c: flag for c, flag, _n in _COUNTRIES},
-        ),
+        choices=[("", "")] + [(c, FormworkChoiceLabel(n, icon=flag)) for c, flag, n in _COUNTRIES],
+        widget=SearchSelect(),
         required=False,
         label="Country (many options, auto-search)",
     )
     city_icons = forms.ChoiceField(
         choices=[
             ("", ""),
-            ("nyc", "New York"),
-            ("ldn", "London"),
-            ("tyo", "Tokyo"),
-            ("par", "Paris"),
+            ("nyc", FormworkChoiceLabel("New York", icon="\U0001f5fd", description="The Big Apple")),
+            ("ldn", FormworkChoiceLabel("London", icon="\U0001f1ec\U0001f1e7", description="Capital of England")),
+            ("tyo", FormworkChoiceLabel("Tokyo", icon="\U0001f5fc", description="Capital of Japan")),
+            ("par", FormworkChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7", description="City of Light")),
         ],
-        widget=SearchSelect(
-            icons={
-                "nyc": "\U0001f5fd",
-                "ldn": "\U0001f1ec\U0001f1e7",
-                "tyo": "\U0001f5fc",
-                "par": "\U0001f1eb\U0001f1f7",
-            },
-            descriptions={
-                "nyc": "The Big Apple",
-                "ldn": "Capital of England",
-                "tyo": "Capital of Japan",
-                "par": "City of Light",
-            },
-        ),
+        widget=SearchSelect(),
         required=False,
         label="City (icons + descriptions)",
     )
@@ -401,10 +387,8 @@ class MultiSelectForm(FormworkForm):
         label="Languages (plain)",
     )
     countries_icons = forms.MultipleChoiceField(
-        choices=[(code, name) for code, _flag, name in _COUNTRIES],
-        widget=MultiSelect(
-            icons={code: flag for code, flag, _name in _COUNTRIES},
-        ),
+        choices=[(code, FormworkChoiceLabel(name, icon=flag)) for code, flag, name in _COUNTRIES],
+        widget=MultiSelect(),
         required=False,
         label="Countries (icons, auto-search)",
     )
