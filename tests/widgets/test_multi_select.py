@@ -28,6 +28,7 @@ from django import forms
 from django.http import QueryDict
 from django.utils.safestring import mark_safe
 
+from django_formwork.fields import FormworkChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import MultiSelect
 
@@ -121,10 +122,12 @@ def test_multi_select_get_context_optgroups_have_icon():
 
 @pytest.mark.unit
 def test_multi_select_get_context_icon_populated():
-    """Icons dict is reflected in option['icon'] for matching values."""
+    """FormworkChoiceLabel icons are reflected in option['icon']."""
     widget = MultiSelect(
-        choices=[("a", "Alpha"), ("b", "Beta")],
-        icons={"a": mark_safe("<svg>icon</svg>")},
+        choices=[
+            ("a", FormworkChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>"))),
+            ("b", "Beta"),
+        ],
     )
     ctx = widget.get_context("test", [], {})
     for _group, options, _index in ctx["widget"]["optgroups"]:
@@ -509,10 +512,12 @@ def test_multi_select_htmx_wrapper_has_id():
 
 @pytest.mark.unit
 def test_multi_select_icons_rendered():
-    """Icons dict values appear in the rendered HTML for matching choices."""
+    """FormworkChoiceLabel icons appear in the rendered HTML."""
     widget = MultiSelect(
-        choices=[("a", "Alpha"), ("b", "Beta")],
-        icons={"a": mark_safe('<img src="a.svg">')},
+        choices=[
+            ("a", FormworkChoiceLabel("Alpha", icon=mark_safe('<img src="a.svg">'))),
+            ("b", "Beta"),
+        ],
     )
     soup = render_widget(widget, name="test")
     icon = soup.find("img", {"src": "a.svg"})
@@ -521,7 +526,7 @@ def test_multi_select_icons_rendered():
 
 @pytest.mark.unit
 def test_multi_select_no_icon_when_not_provided():
-    """No <img> elements rendered when no icons are configured."""
+    """No <img> elements rendered when no FormworkChoiceLabel icons."""
     widget = MultiSelect(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test")
     icons = soup.find_all("img")
