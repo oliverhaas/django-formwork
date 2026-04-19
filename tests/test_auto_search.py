@@ -233,8 +233,7 @@ class TestAutoRegistration:
         assert reg.label_from_instance is not None
 
     def test_captures_icon_from_instance(self):
-        from django import forms
-
+        from django_formwork.fields import FormworkModelChoiceField
         from django_formwork.forms import FormworkForm
         from django_formwork.widgets import SearchSelect
 
@@ -242,14 +241,15 @@ class TestAutoRegistration:
             return f"<img src='{obj.pk}.png'>"
 
         class F(FormworkForm):
-            user = forms.ModelChoiceField(
+            user = FormworkModelChoiceField(
                 queryset=User.objects.all(),
-                widget=SearchSelect(search_fields=["username"], search_decorator=None, icon_from_instance=my_icon),
+                icon_from_instance=my_icon,
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
             )
 
         F()
         reg = get_registration(make_key("auth.user", ["username"]))
-        assert reg.icon_from_instance is my_icon
+        assert reg.icon_from_instance is not None
 
     def test_queryset_factory_returns_fresh_qs(self):
         from django import forms
