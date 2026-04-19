@@ -68,10 +68,11 @@ class FormworkModelChoiceIterator(ModelChoiceIterator):
 
     def choice(self, obj: Model) -> tuple:
         value = self.field.prepare_value(obj)
+        field: Any = self.field
         label = FormworkChoiceLabel(
-            self.field.label_from_instance(obj),
-            icon=self.field.icon_from_instance(obj),
-            description=self.field.description_from_instance(obj),
+            field.label_from_instance(obj),
+            icon=field.icon_from_instance(obj),
+            description=field.description_from_instance(obj),
         )
         return (ModelChoiceIteratorValue(value, obj), label)
 
@@ -96,19 +97,19 @@ class FormworkModelChoiceField(ModelChoiceField):
     ) -> None:
         super().__init__(*args, **kwargs)
         if label_from_instance is not None:
-            self.label_from_instance = label_from_instance  # type: ignore[assignment]
+            self.label_from_instance = label_from_instance  # type: ignore[method-assign]
         if icon_from_instance is not None:
-            self.icon_from_instance = icon_from_instance  # type: ignore[assignment]
+            self.icon_from_instance = icon_from_instance  # type: ignore[method-assign]
         if description_from_instance is not None:
-            self.description_from_instance = description_from_instance  # type: ignore[assignment]
+            self.description_from_instance = description_from_instance  # type: ignore[method-assign]
 
     def label_from_instance(self, obj: Model) -> str:
         return str(obj)
 
-    def icon_from_instance(self, obj: Model) -> str:
+    def icon_from_instance(self, obj: Model) -> str:  # noqa: ARG002
         return ""
 
-    def description_from_instance(self, obj: Model) -> str:
+    def description_from_instance(self, obj: Model) -> str:  # noqa: ARG002
         return ""
 
     @classmethod
@@ -143,19 +144,19 @@ class FormworkModelMultipleChoiceField(ModelMultipleChoiceField):
     ) -> None:
         super().__init__(*args, **kwargs)
         if label_from_instance is not None:
-            self.label_from_instance = label_from_instance  # type: ignore[assignment]
+            self.label_from_instance = label_from_instance  # type: ignore[method-assign]
         if icon_from_instance is not None:
-            self.icon_from_instance = icon_from_instance  # type: ignore[assignment]
+            self.icon_from_instance = icon_from_instance  # type: ignore[method-assign]
         if description_from_instance is not None:
-            self.description_from_instance = description_from_instance  # type: ignore[assignment]
+            self.description_from_instance = description_from_instance  # type: ignore[method-assign]
 
     def label_from_instance(self, obj: Model) -> str:
         return str(obj)
 
-    def icon_from_instance(self, obj: Model) -> str:
+    def icon_from_instance(self, obj: Model) -> str:  # noqa: ARG002
         return ""
 
-    def description_from_instance(self, obj: Model) -> str:
+    def description_from_instance(self, obj: Model) -> str:  # noqa: ARG002
         return ""
 
     @classmethod
