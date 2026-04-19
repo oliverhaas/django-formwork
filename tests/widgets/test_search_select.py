@@ -26,6 +26,7 @@ from django import forms
 from django.http import QueryDict
 from django.utils.safestring import mark_safe
 
+from django_formwork.fields import FormworkChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import SearchSelect
 
@@ -154,10 +155,12 @@ def test_search_select_get_context_show_search_explicit_overrides():
 
 @pytest.mark.unit
 def test_search_select_get_context_optgroups_with_icons():
-    """Icons are injected into the optgroups options in get_context."""
+    """Icons from FormworkChoiceLabel are injected into optgroups."""
     widget = SearchSelect(
-        choices=[("a", "Alpha"), ("b", "Beta")],
-        icons={"a": mark_safe("<svg>icon</svg>")},
+        choices=[
+            ("a", FormworkChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>"))),
+            ("b", "Beta"),
+        ],
     )
     ctx = widget.get_context("test", "", {})
     for _group, options, _index in ctx["widget"]["optgroups"]:
@@ -187,18 +190,10 @@ def test_search_select_value_from_datadict_missing():
 
 
 @pytest.mark.unit
-def test_search_select_icons_default_empty():
-    """icons defaults to an empty dict when not specified."""
-    widget = SearchSelect(choices=[("a", "Alpha")])
-    assert widget.icons == {}
-
-
-@pytest.mark.unit
-def test_search_select_icons_stored():
-    """Icons dict passed at construction is stored on the widget."""
-    icons = {"a": mark_safe('<img src="a.svg">')}
-    widget = SearchSelect(choices=[("a", "Alpha")], icons=icons)
-    assert widget.icons == icons
+def test_search_select_no_icons_kwarg():
+    """SearchSelect no longer accepts an icons kwarg."""
+    with pytest.raises(TypeError):
+        SearchSelect(choices=[("a", "Alpha")], icons={"a": "icon"})
 
 
 @pytest.mark.unit
@@ -486,10 +481,12 @@ def test_search_select_no_alpine_no_results_when_search_url():
 
 @pytest.mark.unit
 def test_search_select_icon_rendered_in_option():
-    """Icons dict entries appear in the rendered option buttons."""
+    """FormworkChoiceLabel icons appear in the rendered option buttons."""
     widget = SearchSelect(
-        choices=[("a", "Alpha"), ("b", "Beta")],
-        icons={"a": mark_safe('<img src="a.svg">')},
+        choices=[
+            ("a", FormworkChoiceLabel("Alpha", icon=mark_safe('<img src="a.svg">'))),
+            ("b", "Beta"),
+        ],
     )
     soup = render_widget(widget, name="test")
     icon = soup.find("img", {"src": "a.svg"})
@@ -498,7 +495,7 @@ def test_search_select_icon_rendered_in_option():
 
 @pytest.mark.unit
 def test_search_select_no_icon_element_when_not_provided():
-    """No <img> elements rendered when no icons are supplied."""
+    """No <img> elements rendered when no FormworkChoiceLabel icons."""
     widget = SearchSelect(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test")
     icons = soup.find_all("img")
