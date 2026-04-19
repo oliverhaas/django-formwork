@@ -21,9 +21,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from django.forms import Form, ModelForm
+from django.forms import Form, ModelChoiceField, ModelForm, ModelMultipleChoiceField
+from django.forms.models import ModelFormMetaclass
 
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
+from django_formwork.fields import FormworkModelChoiceField, FormworkModelMultipleChoiceField
 from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
 
 if TYPE_CHECKING:
@@ -37,7 +39,29 @@ __all__ = [
     "FormworkJinja2Form",
     "FormworkJinja2ModelForm",
     "FormworkModelForm",
+    "FormworkModelFormMetaclass",
 ]
+
+
+class FormworkModelFormMetaclass(ModelFormMetaclass):
+    """Metaclass that auto-upgrades ``ModelChoiceField`` to ``FormworkModelChoiceField``.
+
+    Auto-generated ``ModelChoiceField`` / ``ModelMultipleChoiceField`` instances
+    (from ``Meta.model`` / ``Meta.fields``) are swapped for their Formwork
+    equivalents so icon/description callbacks can be attached to the field.
+    Explicit field declarations — including custom subclasses — are left alone.
+    """
+
+    def __new__(mcs, name, bases, namespace, **kwargs):
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+        if not hasattr(cls, "base_fields"):
+            return cls
+        for field_name, field in cls.base_fields.items():
+            if type(field) is ModelChoiceField:
+                cls.base_fields[field_name] = FormworkModelChoiceField.from_field(field)
+            elif type(field) is ModelMultipleChoiceField:
+                cls.base_fields[field_name] = FormworkModelMultipleChoiceField.from_field(field)
+        return cls
 
 
 class _AutoSearchMixin:
@@ -185,7 +209,7 @@ class FormworkForm(AsyncFormMixin, _AutoSearchMixin, Form):
     default_renderer = FormworkRenderer
 
 
-class FormworkModelForm(AsyncModelFormMixin, _AutoSearchMixin, ModelForm):
+class FormworkModelForm(AsyncModelFormMixin, _AutoSearchMixin, ModelForm, metaclass=FormworkModelFormMetaclass):
     """ModelForm base class with DaisyUI styling and async support."""
 
     default_renderer = FormworkRenderer
@@ -202,7 +226,9 @@ class FormworkJinja2Form(AsyncFormMixin, _AutoSearchMixin, Form):
     default_renderer = FormworkJinja2Renderer
 
 
-class FormworkJinja2ModelForm(AsyncModelFormMixin, _AutoSearchMixin, ModelForm):
+class FormworkJinja2ModelForm(
+    AsyncModelFormMixin, _AutoSearchMixin, ModelForm, metaclass=FormworkModelFormMetaclass,
+):
     """ModelForm base class with DaisyUI styling (Jinja2 renderer) and async support."""
 
     default_renderer = FormworkJinja2Renderer

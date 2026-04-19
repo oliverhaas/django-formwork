@@ -190,3 +190,86 @@ class TestFormworkModelMultipleChoiceField:
         assert isinstance(converted, FormworkModelMultipleChoiceField)
         assert converted.queryset.model is User
         assert converted.required is False
+
+
+@pytest.mark.django_db
+class TestFormworkModelFormMetaclass:
+    def test_auto_swaps_model_choice_field(self):
+        from django_formwork.forms import FormworkModelForm
+
+        class F(FormworkModelForm):
+            class Meta:
+                model = User
+                fields = ["groups"]
+
+        field = F.base_fields["groups"]
+        assert isinstance(field, FormworkModelMultipleChoiceField)
+
+    def test_preserves_explicit_formwork_field(self):
+        from django_formwork.forms import FormworkModelForm
+
+        class F(FormworkModelForm):
+            groups = FormworkModelMultipleChoiceField(
+                queryset=Group.objects.all(),
+                icon_from_instance=lambda g: f"icon-{g.name}",
+            )
+
+            class Meta:
+                model = User
+                fields = ["groups"]
+
+        field = F.base_fields["groups"]
+        assert isinstance(field, FormworkModelMultipleChoiceField)
+        Group.objects.create(name="editors")
+        choices = list(field.choices)
+        _, label = choices[0]
+        assert label.icon == "icon-editors"
+
+    def test_preserves_other_subclass(self):
+        """A custom ModelChoiceField subclass (not ours) is left untouched."""
+        from django.forms import ModelMultipleChoiceField
+
+        from django_formwork.forms import FormworkModelForm
+
+        class CustomField(ModelMultipleChoiceField):
+            pass
+
+        class F(FormworkModelForm):
+            groups = CustomField(queryset=Group.objects.all())
+
+            class Meta:
+                model = User
+                fields = ["groups"]
+
+        field = F.base_fields["groups"]
+        assert type(field) is CustomField
+
+    def test_preserves_widget(self):
+        """The original widget from Meta.widgets is preserved after the swap."""
+        from django_formwork.forms import FormworkModelForm
+        from django_formwork.widgets import MultiSelect
+
+        class F(FormworkModelForm):
+            class Meta:
+                model = User
+                fields = ["groups"]
+                widgets = {"groups": MultiSelect()}
+
+        field = F.base_fields["groups"]
+        assert isinstance(field, FormworkModelMultipleChoiceField)
+        assert isinstance(field.widget, MultiSelect)
+
+    def test_non_model_fields_untouched(self):
+        """Regular CharField, etc. are not affected by the metaclass."""
+        from django import forms
+
+        from django_formwork.forms import FormworkModelForm
+
+        class F(FormworkModelForm):
+            extra = forms.CharField()
+
+            class Meta:
+                model = User
+                fields = ["groups"]
+
+        assert type(F.base_fields["extra"]) is forms.CharField
