@@ -46,10 +46,10 @@ def test_input_mask_get_context_has_mask():
 
 @pytest.mark.unit
 def test_input_mask_auto_placeholder():
-    """Placeholder is auto-generated from the mask: # -> _, A -> _, * -> _."""
+    """Placeholder is auto-generated from the mask: # -> \u00b7, A -> \u00b7, * -> \u00b7."""
     widget = InputMask(mask="(###) ###-####")
     ctx = widget.get_context("phone", None, {"id": "id_phone"})
-    assert ctx["widget"]["attrs"]["placeholder"] == "(___) ___-____"
+    assert ctx["widget"]["attrs"]["placeholder"] == "(\u00b7\u00b7\u00b7) \u00b7\u00b7\u00b7-\u00b7\u00b7\u00b7\u00b7"
 
 
 @pytest.mark.unit
@@ -73,19 +73,24 @@ def test_input_mask_value_from_datadict():
 
 
 @pytest.mark.unit
-def test_input_mask_renders_input():
-    """InputMask renders an <input> element."""
-    soup = render_widget(InputMask(mask="(###) ###-####"))
-    assert soup.find("input") is not None
+def test_input_mask_renders_wrapper():
+    """InputMask renders a div wrapper with hidden + display inputs."""
+    soup = render_widget(InputMask(mask="(###) ###-####"), attrs={"id": "id_phone"})
+    wrapper = soup.find("div", class_="input-mask")
+    assert wrapper is not None
+    hidden = wrapper.find("input", attrs={"type": "hidden"})
+    assert hidden is not None
+    display = wrapper.find("input", class_="input-mask-display")
+    assert display is not None
 
 
 @pytest.mark.unit
 def test_input_mask_renders_placeholder():
-    """Auto-generated placeholder appears on the rendered input element."""
+    """Auto-generated placeholder appears on the display input element."""
     soup = render_widget(InputMask(mask="(###) ###-####"), attrs={"id": "id_phone"})
-    inp = soup.find("input")
-    assert inp is not None
-    assert inp.get("placeholder") == "(___) ___-____"
+    display = soup.find("input", class_="input-mask-display")
+    assert display is not None
+    assert display.get("placeholder") == "(\u00b7\u00b7\u00b7) \u00b7\u00b7\u00b7-\u00b7\u00b7\u00b7\u00b7"
 
 
 # ─── Level 3: Form integration ───────────────────────────────────────────
@@ -111,23 +116,24 @@ def test_input_mask_form_wraps_in_fieldset(renderer):
 
 @pytest.mark.integration
 def test_input_mask_error_state(renderer):
-    """Bound form with errors adds aria-invalid='true' to the input."""
+    """Bound form with errors adds aria-invalid='true' to the display input."""
     form = InputMaskForm(data={})
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    inp = soup.find("input", attrs={"name": "phone"})
-    assert inp is not None
-    assert inp.get("aria-invalid") == "true"
+    # The hidden input has name="phone"; the display input has aria-invalid.
+    display = soup.find("input", class_="input-mask-display")
+    assert display is not None
+    assert display.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
 def test_input_mask_form_prefix(renderer):
-    """Form prefix propagates to widget name and id."""
+    """Form prefix propagates to hidden input name and id."""
     form = InputMaskForm(prefix="contact")
     soup = render_form(form, renderer=renderer)
-    inp = soup.find("input", attrs={"name": "contact-phone"})
-    assert inp is not None
-    assert inp["id"] == "id_contact-phone"
+    hidden = soup.find("input", attrs={"name": "contact-phone"})
+    assert hidden is not None
+    assert hidden["id"] == "id_contact-phone"
 
 
 # ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────

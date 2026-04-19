@@ -1,3 +1,0 @@
-{% with id=widget.attrs.id %}<select name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="load" hx-target="this" hx-swap="innerHTML" hx-include="[name='{{ widget.parent_field }}']" hx-params="{{ widget.parent_field }}"{% endif %}>
-{% for group, options, index in widget.optgroups %}{% if group %}<optgroup label="{{ group }}">{% endif %}{% for option in options %}<option value="{{ option.value|stringformat:'s' }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>{% endfor %}{% if group %}</optgroup>{% endif %}{% endfor %}
-</select>{% endwith %}

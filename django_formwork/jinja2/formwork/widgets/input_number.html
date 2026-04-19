@@ -1,4 +1,4 @@
-{% set id = widget.attrs.id %}<div class="input-number join"{% if id %} id="{{ id }}_stepper"{% endif %} x-data="{
+{% set id = widget.attrs.id %}<div class="input-number"{% if id %} id="{{ id }}_stepper"{% endif %} x-data="{
   val: {{ widget.value|default("0", true) }},
   min: {{ widget.attrs.min|default("null") }},
   max: {{ widget.attrs.max|default("null") }},
@@ -7,7 +7,7 @@
   inc() { const v = this.val + this.step; this.val = (this.max !== null && v > this.max) ? this.max : v; this.sync(); },
   sync() { this.$refs.input.value = this.val; this.$refs.input.dispatchEvent(new Event('input', {bubbles: true})); }
 }">
-  <button type="button" @click="dec()" class="btn btn-square join-item" aria-label="Decrease">&minus;</button>
-  <input x-ref="input" type="number" name="{{ widget.name }}" :value="val" @input="val = Number($el.value)"{% include "django/forms/widgets/attrs.html" %} class="input join-item text-center w-full">
-  <button type="button" @click="inc()" class="btn btn-square join-item" aria-label="Increase">&plus;</button>
+  <button type="button" @click="dec()" class="btn" aria-label="Decrease">&minus;</button>
+  <input x-ref="input" type="number" name="{{ widget.name }}" :value="val" @input="val = Number($el.value)"{% include "django/forms/widgets/attrs.html" %}>
+  <button type="button" @click="inc()" class="btn" aria-label="Increase">&plus;</button>
 </div>

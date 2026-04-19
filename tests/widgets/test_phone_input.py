@@ -61,10 +61,10 @@ def test_phone_input_custom_default_code():
 
 
 @pytest.mark.unit
-def test_phone_input_first_subwidget_is_select():
-    """The first sub-widget is a Select (country code prefix)."""
+def test_phone_input_first_subwidget_is_hidden():
+    """The first sub-widget is a HiddenInput (country code prefix value)."""
     widget = PhoneInput()
-    assert isinstance(widget.widgets[0], forms.Select)
+    assert isinstance(widget.widgets[0], forms.HiddenInput)
 
 
 @pytest.mark.unit
@@ -152,30 +152,26 @@ def test_phone_input_wrapper_has_stable_id():
 
 
 @pytest.mark.unit
-def test_phone_input_prefix_subwidget_renders_select():
-    """The first sub-widget (prefix select) renders a <select> with options."""
+def test_phone_input_prefix_subwidget_renders_hidden():
+    """The first sub-widget (prefix) renders a hidden input."""
     from bs4 import BeautifulSoup
 
     widget = PhoneInput()
     html = widget.widgets[0].render("phone_0", "+1")
     soup = BeautifulSoup(html, "html.parser")
-    select = soup.find("select")
-    assert select is not None
-    options = select.find_all("option")
-    assert len(options) > 10
+    hidden = soup.find("input", attrs={"type": "hidden"})
+    assert hidden is not None
+    assert hidden["value"] == "+1"
 
 
 @pytest.mark.unit
-def test_phone_input_prefix_subwidget_has_us_option():
-    """The prefix select contains a '+1' option."""
-    from bs4 import BeautifulSoup
-
+def test_phone_input_has_prefix_choices():
+    """The widget context includes prefix choices for the custom dropdown."""
     widget = PhoneInput()
-    html = widget.widgets[0].render("phone_0", "+1")
-    soup = BeautifulSoup(html, "html.parser")
-    select = soup.find("select")
-    option_values = [opt.get("value", "") for opt in select.find_all("option")]
-    assert "+1" in option_values
+    ctx = widget.get_context("phone", None, {"id": "id_phone"})
+    choices = ctx["widget"]["prefix_choices"]
+    values = [v for v, _lbl in choices]
+    assert "+1" in values
 
 
 @pytest.mark.unit
@@ -191,16 +187,16 @@ def test_phone_input_number_subwidget_renders_tel_input():
 
 
 @pytest.mark.unit
-def test_phone_input_prefix_subwidget_selects_matching_option():
-    """The prefix select marks the current prefix as selected."""
+def test_phone_input_prefix_subwidget_preserves_value():
+    """The prefix hidden input preserves the selected dial code."""
     from bs4 import BeautifulSoup
 
     widget = PhoneInput()
     html = widget.widgets[0].render("phone_0", "+44")
     soup = BeautifulSoup(html, "html.parser")
-    selected = soup.find("option", selected=True)
-    assert selected is not None
-    assert selected.get("value") == "+44"
+    hidden = soup.find("input", attrs={"type": "hidden"})
+    assert hidden is not None
+    assert hidden["value"] == "+44"
 
 
 # ─── Level 3: Form integration ───────────────────────────────────────────
