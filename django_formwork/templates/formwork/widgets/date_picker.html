@@ -1,4 +1,4 @@
-{% with id=widget.attrs.id %}<div class="date-picker"{% if id %} id="{{ id }}_datepicker"{% endif %} x-data="{
+{% with id=widget.attrs.id %}<div class="date-picker" :data-open="open"{% if id %} id="{{ id }}_datepicker"{% endif %} x-data="{
   open: false,
   value: '{{ widget.value|default:'' }}',
   month: null,
@@ -41,7 +41,12 @@
   },
   monthName() { return new Date(this.year, this.month).toLocaleString('default', {month: 'long'}); }
 }" @click.away="open = false">
-  <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default:'' }}"{% include "django/forms/widgets/attrs.html" %} @focus="open = true" @input="value = $el.value" autocomplete="off">
+  <label class="date-picker-label">
+    <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default:'' }}"{% include "django/forms/widgets/attrs.html" %} @focus="open = true" @input="value = $el.value" autocomplete="off" class="grow">
+    <button type="button" class="date-picker-toggle" @click.stop="open = !open" aria-label="Open calendar">
+      <i class="icon icon-calendar size-4"></i>
+    </button>
+  </label>
   <div x-show="open" x-cloak class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 p-3 w-72 z-10 absolute">
     <div class="flex items-center justify-between mb-2">
       <button type="button" @click.stop="prev()" class="btn btn-ghost btn-xs">&larr;</button>

@@ -213,13 +213,16 @@ def country_choices() -> list[tuple[str, str]]:
 
 
 def phone_prefix_choices() -> list[tuple[str, str]]:
-    """Return (dial_code, 'flag dial_code') choices for PhoneInput."""
+    """Return (dial_code, 'flag dial_code') choices for PhoneInput.
+
+    Deduplicated and sorted numerically by dial code.
+    """
     seen: set[str] = set()
     choices: list[tuple[str, str]] = []
     for _code, _name, flag, dial in COUNTRIES:
-        # Deduplicate dial codes (e.g. +1 for US/Canada).
         base_dial = dial.split("-")[0]
         if base_dial not in seen:
             seen.add(base_dial)
             choices.append((base_dial, f"{flag} {base_dial}"))
+    choices.sort(key=lambda c: int(c[0].lstrip("+")))
     return choices

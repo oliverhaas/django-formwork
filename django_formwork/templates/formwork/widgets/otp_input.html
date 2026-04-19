@@ -1,4 +1,4 @@
-{% with id=widget.attrs.id %}<div class="otp-input flex gap-2"{% if id %} id="{{ id }}_otp"{% endif %} x-data="{
+{% with id=widget.attrs.id %}<div class="otp-input"{% if id %} id="{{ id }}_otp"{% endif %} x-data="{
   digits: [{% for d in widget.initial_digits %}'{{ d }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
   get combined() { return this.digits.join(''); },
   handleInput(i, e) {
@@ -23,5 +23,7 @@
   }
 }">
   <input x-ref="hidden" type="hidden" name="{{ widget.name }}" :value="combined"{% if id %} id="{{ id }}"{% endif %}>
-  {% for i in widget.digits %}<input x-ref="d{{ i }}" type="text" inputmode="numeric" maxlength="1" class="input input-bordered w-12 text-center text-lg" :value="digits[{{ i }}]" @input="handleInput({{ i }}, $event)" @keydown="handleKey({{ i }}, $event)" @paste="handlePaste($event)" autocomplete="one-time-code">{% endfor %}
+  <div class="otp-boxes">
+    {% for i in widget.digits %}<input x-ref="d{{ i }}" type="text" inputmode="numeric" maxlength="1" class="otp-digit" :value="digits[{{ i }}]" @input="handleInput({{ i }}, $event)" @keydown="handleKey({{ i }}, $event)" @paste="handlePaste($event)" @focus="$el.select()" autocomplete="one-time-code">{% endfor %}
+  </div>
 </div>{% endwith %}

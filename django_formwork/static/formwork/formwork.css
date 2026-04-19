@@ -170,7 +170,7 @@ fieldset.fieldset > .tooltip:has(> select + select + select) {
    datetime-local, search, color, tel.
    Excludes inputs inside compound widgets (PasswordReveal's
    <label class="password-reveal">, dropdown search inputs) and ComboBox. */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.otp-input *):not(.input-number *):not(.phone-input *) {
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.otp-input *):not(.phone-input *):not(.date-picker-label *):not(.input-mask *) {
     @apply input w-full;
 }
 
@@ -188,19 +188,109 @@ i.icon {
     @apply relative w-full;
 }
 
-/* InputNumber: full width with joined buttons. */
+/* DatePicker: label wrapper styled like PasswordReveal — input + icon button. */
+.date-picker-label {
+    @apply input w-full;
+}
+
+/* DatePicker: toggle button — subtle by default, dark when open. */
+.date-picker-toggle {
+    @apply cursor-pointer opacity-40 hover:opacity-70 transition-opacity shrink-0;
+}
+
+.date-picker[data-open="true"] .date-picker-toggle {
+    @apply opacity-100;
+}
+
+/* InputNumber: the <input> provides the border; buttons overlay its edges. */
 .input-number {
-    @apply w-full;
+    @apply relative w-full;
+}
+
+.input-number > input {
+    @apply input w-full text-center;
+    padding-inline: 3rem;
+}
+
+.input-number > .btn {
+    @apply absolute top-0 bottom-0 z-1 btn-ghost border-0;
+}
+
+.input-number > .btn:first-child {
+    @apply left-0 rounded-none rounded-l-[--radius-field];
+}
+
+.input-number > .btn:last-child {
+    @apply right-0 rounded-none rounded-r-[--radius-field];
+}
+
+/* Hide browser-native number spinners. */
+.input-number > input::-webkit-inner-spin-button,
+.input-number > input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input-number > input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 /* PhoneInput: joined prefix + number. */
 .phone-input {
-    @apply w-full;
+    @apply w-full relative;
 }
 
-/* InputMask: monospace font so each placeholder character has equal width. */
+.phone-prefix-trigger {
+    @apply select w-24 shrink-0 rounded-r-none;
+}
+
+.phone-prefix-menu {
+    @apply absolute top-full left-0 mt-1 w-24;
+}
+
+/* OTPInput: individual digit boxes in a row. */
+.otp-input {
+    @apply w-fit;
+}
+
+.otp-boxes {
+    @apply flex gap-2;
+}
+
+input.otp-digit {
+    @apply w-12 h-12 rounded-lg border border-base-300 bg-base-100 text-lg font-medium text-center p-0;
+}
+
+input.otp-digit:focus {
+    @apply border-primary outline-2 outline-offset-2 outline-primary;
+}
+
+/* InputMask: CSS Grid stacking — overlay shows colored text (black entered
+   chars, gray dots), input on top has transparent text but captures input.
+   Same pattern as ValidatedTextarea. */
 .input-mask {
+    @apply grid w-full;
+}
+
+.input-mask > .input-mask-overlay,
+.input-mask > .input-mask-display {
+    grid-area: 1 / 1;
     font-family: ui-monospace, monospace;
+}
+
+.input-mask-display {
+    @apply input w-full !bg-transparent !text-transparent z-1;
+    caret-color: var(--color-base-content);
+}
+
+.input-mask-overlay {
+    @apply input w-full border-transparent pointer-events-none overflow-hidden whitespace-pre gap-0;
+}
+
+/* Unfilled dots and trailing literals — gray. */
+.input-mask-dot {
+    color: color-mix(in oklab, currentColor 40%, transparent);
 }
 
 textarea {
@@ -448,7 +538,12 @@ input.combobox-input {
    Django adds aria-invalid="true" on widgets with validation errors.
    ================================================================ */
 
-input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *) {
+input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.date-picker-label *) {
+    @apply input-error;
+}
+
+/* DatePicker: style the wrapper label based on the inner input's state. */
+.date-picker-label:has(> input[aria-invalid="true"]) {
     @apply input-error;
 }
 
@@ -681,7 +776,11 @@ details.dropdown.search-select > .dropdown-content {
    DaisyUI's -accent variants highlight the modified input.
    ================================================================ */
 
-fieldset.formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *) {
+fieldset.formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.date-picker-label *) {
+    @apply input-accent;
+}
+
+fieldset.formwork-dirty .date-picker-label {
     @apply input-accent;
 }
 

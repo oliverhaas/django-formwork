@@ -9,7 +9,6 @@ from e2e.models import AutoSaveFormData, BasicFormData
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkSearchView, FormworkValidateView
 from django_formwork.widgets import (
-    CascadeSelect,
     ComboBox,
     CountryInput,
     DataList,
@@ -552,17 +551,8 @@ class TextareaForm(FormworkForm):
     )
 
 
-CITY_CHOICES = [
-    ("nyc", "New York"),
-    ("ldn", "London"),
-    ("tyo", "Tokyo"),
-    ("par", "Paris"),
-    ("syd", "Sydney"),
-]
-
-
 class NewWidgetsForm(FormworkForm):
-    """DatePicker, InputNumber, OTP, Phone, Country, CascadeSelect, InputMask."""
+    """DatePicker, InputNumber, OTP, Phone, Country, InputMask."""
 
     due_date = forms.DateField(
         widget=DatePicker,
@@ -588,12 +578,6 @@ class NewWidgetsForm(FormworkForm):
         widget=CountryInput(),
         required=False,
         help_text="Searchable country selector with flag emojis.",
-    )
-    city = forms.ChoiceField(
-        choices=CITY_CHOICES,
-        widget=CascadeSelect(parent_field="country", search_url=""),
-        required=False,
-        help_text="Dependent select (CascadeSelect, no server search in this demo).",
     )
     zip_code = forms.CharField(
         widget=InputMask(mask="#####"),
@@ -1072,7 +1056,7 @@ _PAGES = [
         "new-widgets",
         "/new-widgets/",
         "New Widgets",
-        "DatePicker, InputNumber, OTP, Phone, Country, CascadeSelect, InputMask",
+        "DatePicker, InputNumber, OTP, Phone, Country, InputMask",
     ),
     (
         "complex",

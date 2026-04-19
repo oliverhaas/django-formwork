@@ -22,20 +22,16 @@ class InputMask(forms.TextInput):
     template_name = "formwork/widgets/input_mask.html"
 
     def __init__(self, attrs: dict[str, Any] | None = None, *, mask: str = "") -> None:
-        defaults: dict[str, Any] = {"class": "input-mask"}
-        if attrs:
-            defaults.update(attrs)
-            cls = defaults.get("class", "")
-            if "input-mask" not in cls:
-                defaults["class"] = f"input-mask {cls}"
-        super().__init__(defaults)
+        super().__init__(attrs)
         self.mask = mask
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         context["widget"]["mask"] = self.mask
         # Build placeholder from mask pattern.
-        placeholder = self.mask.replace("#", "_").replace("A", "_").replace("*", "_")
+        # Use middle dot (·) instead of underscore — underscores sit at the
+        # text baseline and are clipped/invisible in DaisyUI's input component.
+        placeholder = self.mask.replace("#", "\u00b7").replace("A", "\u00b7").replace("*", "\u00b7")
         if "placeholder" not in context["widget"]["attrs"]:
             context["widget"]["attrs"]["placeholder"] = placeholder
         return context

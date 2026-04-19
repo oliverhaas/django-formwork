@@ -11,7 +11,6 @@ from django_formwork.widgets._base import (
     _format_accept,
     _format_size,
 )
-from django_formwork.widgets.cascade_select import CascadeSelect
 from django_formwork.widgets.combobox import ComboBox
 from django_formwork.widgets.country_input import CountryInput
 from django_formwork.widgets.datalist import DataList
@@ -32,7 +31,6 @@ from django_formwork.widgets.validated_textarea import ValidatedTextarea
 
 __all__ = [
     "_NOT_SET",
-    "CascadeSelect",
     "ComboBox",
     "CountryInput",
     "DataList",
