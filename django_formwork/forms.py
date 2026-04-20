@@ -240,7 +240,10 @@ class FormworkJinja2Form(AsyncFormMixin, _AutoSearchMixin, Form):
 
 
 class FormworkJinja2ModelForm(
-    AsyncModelFormMixin, _AutoSearchMixin, ModelForm, metaclass=FormworkModelFormMetaclass,
+    AsyncModelFormMixin,
+    _AutoSearchMixin,
+    ModelForm,
+    metaclass=FormworkModelFormMetaclass,
 ):
     """ModelForm base class with DaisyUI styling (Jinja2 renderer) and async support."""
 
