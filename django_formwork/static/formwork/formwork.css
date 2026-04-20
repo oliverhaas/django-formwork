@@ -324,9 +324,11 @@ select > option[value=""] {
     color: color-mix(in oklab, currentColor 50%, transparent);
 }
 
-/* Non-placeholder options: restore full color so they aren't affected
-   by the grayed-out select trigger. */
-select:has(> option[value=""]:checked) > option:not([value=""]) {
+/* Non-placeholder options and optgroup labels: restore full color so
+   they aren't affected by the grayed-out select trigger.  Descendant
+   selector (not child) so options inside <optgroup> are also restored. */
+select:has(> option[value=""]:checked) option:not([value=""]),
+select:has(> option[value=""]:checked) optgroup {
     @apply text-base-content;
 }
 
@@ -636,6 +638,12 @@ details.dropdown.multiselect,
 details.dropdown.search-select,
 .dropdown.combobox {
     @apply w-full;
+}
+
+/* Dropdown search inputs: no focus border/outline — the parent
+   dropdown already has focus styling on the summary trigger. */
+.dropdown-content input:focus {
+    @apply outline-none border-transparent shadow-none;
 }
 
 /* ComboBox: loading spinner overlays the right side of the input. */

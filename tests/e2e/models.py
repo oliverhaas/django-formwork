@@ -21,6 +21,33 @@ class BasicFormData(models.Model):
         return self.name or f"BasicFormData #{self.pk}"
 
 
+class Region(models.Model):
+    """Geographic region for grouping cities."""
+
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        app_label = "e2e"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class City(models.Model):
+    """City belonging to a region."""
+
+    name = models.CharField(max_length=100)
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name="cities")
+
+    class Meta:
+        app_label = "e2e"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class AutoSaveFormData(models.Model):
     """Stores auto-saved form data (partial saves allowed)."""
 

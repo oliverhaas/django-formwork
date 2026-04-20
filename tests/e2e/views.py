@@ -4,7 +4,7 @@ from django import forms
 from django.forms.models import construct_instance
 from django.http import HttpRequest, HttpResponse
 from django.template import engines
-from e2e.models import AutoSaveFormData, BasicFormData
+from e2e.models import AutoSaveFormData, BasicFormData, City, Region
 
 from django_formwork.fields import FormworkChoiceLabel
 from django_formwork.forms import FormworkForm, FormworkModelForm
@@ -232,8 +232,71 @@ class _FakeFile:
         return "photo.jpg"
 
 
+class GroupedModelChoiceField(forms.ModelChoiceField):
+    """ModelChoiceField that groups cities by their region."""
+
+    def label_from_instance(self, obj):
+        return obj.name
+
+    iterator = type(
+        "GroupedIterator",
+        (forms.models.ModelChoiceIterator,),
+        {
+            "__iter__": lambda self: iter(
+                [("", self.field.empty_label)]
+                + [
+                    (
+                        region.name,
+                        [(city.pk, self.field.label_from_instance(city)) for city in region.cities.all()],
+                    )
+                    for region in Region.objects.prefetch_related("cities")
+                ],
+            ),
+        },
+    )
+
+
+def _ensure_cities():
+    """Seed Region/City data if the tables are empty."""
+    if Region.objects.exists():
+        return
+    data = {
+        "Europe": ["London", "Paris", "Berlin"],
+        "Asia": ["Tokyo", "Seoul", "Bangkok"],
+        "Americas": ["New York", "S\u00e3o Paulo", "Mexico City"],
+    }
+    for region_name, cities in data.items():
+        region = Region.objects.create(name=region_name)
+        for city_name in cities:
+            City.objects.create(name=city_name, region=region)
+
+
 class BuiltinWidgetsForm(FormworkForm):
     """Showcases Django's built-in widgets that are auto-styled by formwork.css."""
+
+    region = forms.ChoiceField(
+        choices=[
+            ("", "Select a city\u2026"),
+            ("Europe", [("ldn", "London"), ("par", "Paris"), ("ber", "Berlin")]),
+            ("Asia", [("tyo", "Tokyo"), ("sel", "Seoul"), ("bkk", "Bangkok")]),
+            ("Americas", [("nyc", "New York"), ("sao", "S\u00e3o Paulo"), ("mex", "Mexico City")]),
+        ],
+        required=False,
+        label="City by region",
+        help_text="ChoiceField with optgroup \u2014 options grouped under region headers.",
+    )
+    city_model = GroupedModelChoiceField(
+        queryset=City.objects.none(),
+        required=False,
+        empty_label="Select a city\u2026",
+        label="City by region (model)",
+        help_text="ModelChoiceField with optgroup \u2014 same grouping, backed by database models.",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _ensure_cities()
+        self.fields["city_model"].queryset = City.objects.select_related("region")
 
     event_at = forms.SplitDateTimeField(
         widget=forms.SplitDateTimeWidget(
