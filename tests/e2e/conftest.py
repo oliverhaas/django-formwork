@@ -107,6 +107,12 @@ def builtin_page(page, live_server):
 
 
 @pytest.fixture
+def icon_modifiers_page(page, live_server):
+    """Navigate to the icon modifiers demo page."""
+    return _navigate(page, live_server, "/icon-modifiers/")
+
+
+@pytest.fixture
 def complex_page(page, live_server):
     """Navigate to the complex forms page."""
     return _navigate(page, live_server, "/complex/")
