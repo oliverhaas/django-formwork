@@ -47,3 +47,15 @@ class TestStaticFiles:
         assert result is not None
         content = Path(result).read_text()
         assert "DETAILS" in content
+
+    def test_css_has_btn_icon(self):
+        result = find("formwork/formwork.css")
+        assert result is not None
+        content = Path(result).read_text()
+        assert ".btn-icon::before" in content
+
+    def test_css_has_btn_icon_end(self):
+        result = find("formwork/formwork.css")
+        assert result is not None
+        content = Path(result).read_text()
+        assert ".btn-icon-end::after" in content
