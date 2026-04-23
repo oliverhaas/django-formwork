@@ -861,6 +861,56 @@ fieldset.formwork-dirty label.password-reveal {
     @apply input-accent;
 }
 
+
+/* ================================================================
+   Alert icon (alert-icon / alert-col / alert-soft)
+
+   Leading glyph on DaisyUI .alert via ::before pseudo.  Default
+   glyph is info.svg — override with any icon-* class on the alert
+   container (icon-* is unlayered, beating @layer components).
+
+   alert-col: vertical stacked layout for empty states / prominent
+   messages.  alert-soft: softer background tint.
+   ================================================================ */
+
+.alert-soft {
+    background-color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 15%, var(--color-base-0));
+    border-color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 18%, var(--color-base-0));
+}
+
+.alert {
+    text-wrap: pretty;
+}
+
+.alert.alert-col {
+    grid-auto-flow: row;
+    grid-template-columns: auto;
+    justify-content: center;
+    place-items: center;
+    text-align: center;
+}
+
+.alert-col.alert-icon::before {
+    width: 3rem;
+    height: 3rem;
+}
+
+.alert-icon {
+    --icon-url: url("/static/icons/lucide/info.svg");
+}
+
+.alert-icon::before {
+    content: "";
+    width: 1.25rem;
+    height: 1.25rem;
+    background-color: currentColor;
+    mask-image: var(--icon-url);
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-mode: alpha;
+}
+
 } /* @layer components */
 
 /* ================================================================
