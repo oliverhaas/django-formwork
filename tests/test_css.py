@@ -59,3 +59,17 @@ class TestStaticFiles:
         assert result is not None
         content = Path(result).read_text()
         assert ".btn-icon-end::after" in content
+
+    def test_css_has_btn_loading(self):
+        result = find("formwork/formwork.css")
+        assert result is not None
+        content = Path(result).read_text()
+        assert ".btn-loading" in content
+        assert "htmx-request" in content
+
+    def test_css_has_btn_loading_variants(self):
+        result = find("formwork/formwork.css")
+        assert result is not None
+        content = Path(result).read_text()
+        for variant in ("dots", "ring", "ball", "bars", "infinity"):
+            assert f".btn-loading-{variant}" in content, f"Missing btn-loading-{variant}"
