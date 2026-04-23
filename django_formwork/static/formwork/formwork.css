@@ -98,6 +98,21 @@ fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidd
     grid-column: 1 / -1;
 }
 
+/* DaisyUI's .alert sets grid-auto-flow:column in @layer utilities.
+   alert-col must be unlayered to flip to vertical layout.
+   text-wrap:pretty is a nice default for alerts. */
+.alert {
+    text-wrap: pretty;
+}
+
+.alert.alert-col {
+    grid-auto-flow: row;
+    grid-template-columns: auto;
+    justify-content: center;
+    place-items: center;
+    text-align: center;
+}
+
 /* ClearableFileInput: custom template wraps everything in .clearable-file-info.
    Line 1: "Currently: file.jpg"
    Line 2: [checkbox] Clear
@@ -869,30 +884,13 @@ fieldset.formwork-dirty label.password-reveal {
    glyph is info.svg — override with any icon-* class on the alert
    container (icon-* is unlayered, beating @layer components).
 
-   alert-col: vertical stacked layout for empty states / prominent
-   messages.  alert-soft: softer background tint.
+   alert-soft: softer background tint (15% vs DaisyUI's 8%).
+   alert-col and text-wrap are unlayered (see below @layer components).
    ================================================================ */
 
 .alert-soft {
     background-color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 15%, var(--color-base-0));
     border-color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 18%, var(--color-base-0));
-}
-
-.alert {
-    text-wrap: pretty;
-}
-
-.alert.alert-col {
-    grid-auto-flow: row;
-    grid-template-columns: auto;
-    justify-content: center;
-    place-items: center;
-    text-align: center;
-}
-
-.alert-col.alert-icon::before {
-    width: 3rem;
-    height: 3rem;
 }
 
 .alert-icon {
@@ -909,6 +907,11 @@ fieldset.formwork-dirty label.password-reveal {
     mask-repeat: no-repeat;
     mask-position: center;
     mask-mode: alpha;
+}
+
+.alert-col.alert-icon::before {
+    width: 3rem;
+    height: 3rem;
 }
 
 } /* @layer components */

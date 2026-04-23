@@ -1059,6 +1059,38 @@ def _build_templates(key, url, title, description=None, form_html_fn=None):
 
 
 # Page registry: (key, url, title, description)
+_ICON_MODIFIERS_INNER = (
+    '<p class="text-sm text-base-content/60 mb-4">'
+    "Button and alert icon modifier patterns.</p>\n"
+    '<div class="grid gap-4">\n'
+    '  <button id="btn-icon-upload" class="btn btn-primary btn-icon icon-upload">Upload</button>\n'
+    '  <button id="btn-icon-end-next" class="btn btn-outline btn-icon-end icon-chevron-right">Next</button>\n'
+    '  <button id="btn-icon-square" class="btn btn-square btn-icon icon-pencil" aria-label="Edit"></button>\n'
+    '  <button id="btn-icon-xs" class="btn btn-xs btn-icon icon-upload">XS</button>\n'
+    '  <button id="btn-icon-sm" class="btn btn-sm btn-icon icon-upload">SM</button>\n'
+    '  <button id="btn-icon-lg" class="btn btn-lg btn-icon icon-upload">LG</button>\n'
+    '  <button id="btn-icon-xl" class="btn btn-xl btn-icon icon-upload">XL</button>\n'
+    '  <button id="btn-loading-standalone" class="btn btn-primary btn-loading">Save</button>\n'
+    '  <button id="btn-loading-icon" class="btn btn-primary btn-icon btn-loading icon-upload">Upload</button>\n'
+    '  <button id="btn-loading-dots" class="btn btn-primary btn-loading btn-loading-dots">Dots</button>\n'
+    '  <div id="alert-icon-default" class="alert alert-success alert-icon">Saved successfully.</div>\n'
+    '  <div id="alert-icon-custom" class="alert alert-warning alert-icon icon-triangle-alert">Check input.</div>\n'
+    '  <div id="alert-col" class="alert alert-info alert-col alert-icon icon-search">\n'
+    "    <strong>No matches</strong>\n"
+    "    <p>Try broadening your search.</p>\n"
+    "  </div>\n"
+    '  <div id="alert-soft" class="alert alert-info alert-soft alert-icon">Tip: drag to reorder.</div>\n'
+    "</div>"
+)
+
+_ICON_MODIFIERS_BODY = _card_body("Icon Modifiers", _ICON_MODIFIERS_INNER)
+_ICON_MODIFIERS_CARD = _card_body(
+    "Icon Modifiers",
+    _ICON_MODIFIERS_INNER,
+    standalone_url="/icon-modifiers/",
+)
+_ICON_MODIFIERS_HTML = _page_html("Icon Modifiers", _ICON_MODIFIERS_BODY)
+
 _PAGES = [
     (
         "basic",
@@ -1116,6 +1148,12 @@ _PAGES = [
         "/autosave/",
         "Auto-Save Form",
         "Auto-saves on every field change \u2014 server-side validation with idiomorph morphing",
+    ),
+    (
+        "icon-modifiers",
+        "/icon-modifiers/",
+        "Icon Modifiers",
+        "Button and alert icon modifier patterns \u2014 btn-icon, btn-loading, alert-icon",
     ),
 ]
 
@@ -1348,6 +1386,12 @@ def textarea_view(request: HttpRequest) -> HttpResponse:
 
 def new_widgets_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, NewWidgetsForm, "new-widgets")
+
+
+def icon_modifiers_view(request: HttpRequest) -> HttpResponse:
+    if request.headers.get("HX-Request") == "true":
+        return HttpResponse(_ICON_MODIFIERS_CARD)
+    return HttpResponse(_ICON_MODIFIERS_HTML)
 
 
 def complex_view(request: HttpRequest) -> HttpResponse:
