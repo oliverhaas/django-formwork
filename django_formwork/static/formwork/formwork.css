@@ -183,6 +183,42 @@ i.icon {
     height: 1em;
 }
 
+/* ================================================================
+   Button icons (btn-icon / btn-icon-end)
+
+   Render a leading (::before) or trailing (::after) icon glyph
+   inside a .btn, auto-scaled to the button's size.  Pair with an
+   icon-* class on the button to set --icon-url.
+
+   Size ladder: icon pseudo font-size is one Tailwind text step
+   above the button's label text.
+   ================================================================ */
+
+.btn {
+    gap: 0.5rem;
+}
+
+.btn-icon::before,
+.btn-icon-end::after {
+    @apply text-lg;
+    content: "";
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    background-color: currentColor;
+    mask-image: var(--icon-url);
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-mode: alpha;
+}
+
+/* Size ladder — one Tailwind text step above each DaisyUI btn size */
+.btn-xs.btn-icon::before, .btn-xs.btn-icon-end::after { @apply text-xs; }
+.btn-sm.btn-icon::before, .btn-sm.btn-icon-end::after { @apply text-sm; }
+.btn-lg.btn-icon::before, .btn-lg.btn-icon-end::after { @apply text-xl; }
+.btn-xl.btn-icon::before, .btn-xl.btn-icon-end::after { @apply text-2xl; }
+
 /* DatePicker: relative positioning for the calendar dropdown. */
 .date-picker {
     @apply relative w-full;
