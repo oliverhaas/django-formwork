@@ -863,6 +863,71 @@ fieldset.formwork-dirty label.password-reveal {
 
 } /* @layer components */
 
+/* ================================================================
+   Button loading state (btn-loading)
+
+   Communicates htmx loading state on buttons.  Two auto-detected modes:
+
+   Mode 1 (with btn-icon/btn-icon-end): swap the icon pseudo's
+   mask-image to a DaisyUI loading animation.  Label stays visible.
+
+   Mode 2 (standalone): hide the label, overlay a centered loading
+   animation via ::before.
+
+   Unlayered so the mask-image override beats icon-* setters (also
+   unlayered, from iconx).  Default is loading-spinner; modifiers
+   swap to other DaisyUI loading variants.
+   ================================================================ */
+
+/* Mode 1: with btn-icon/btn-icon-end — swap icon to loading animation */
+.btn-loading.htmx-request::before,
+.btn-loading.htmx-request::after {
+    @apply loading loading-spinner;
+}
+
+/* Mode 1 variant modifiers */
+.btn-loading-dots.htmx-request::before,
+.btn-loading-dots.htmx-request::after { @apply loading-dots; }
+.btn-loading-ring.htmx-request::before,
+.btn-loading-ring.htmx-request::after { @apply loading-ring; }
+.btn-loading-ball.htmx-request::before,
+.btn-loading-ball.htmx-request::after { @apply loading-ball; }
+.btn-loading-bars.htmx-request::before,
+.btn-loading-bars.htmx-request::after { @apply loading-bars; }
+.btn-loading-infinity.htmx-request::before,
+.btn-loading-infinity.htmx-request::after { @apply loading-infinity; }
+
+/* Mode 2: standalone — label hidden, centered loading overlay */
+.btn-loading:not(.btn-icon, .btn-icon-end) {
+    position: relative;
+}
+.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request {
+    color: transparent;
+    text-shadow: none;
+}
+.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before {
+    @apply loading loading-spinner text-lg;
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 1em;
+    height: 1em;
+}
+
+/* Standalone size ladder */
+.btn-xs.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply text-xs; }
+.btn-sm.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply text-sm; }
+.btn-lg.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply text-xl; }
+.btn-xl.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply text-2xl; }
+
+/* Standalone variant modifiers */
+.btn-loading-dots:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-dots; }
+.btn-loading-ring:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-ring; }
+.btn-loading-ball:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-ball; }
+.btn-loading-bars:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-bars; }
+.btn-loading-infinity:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-infinity; }
+
 /* MultiSelect: show checkmark when option is selected.
    Outside @layer so it beats the opacity-0 utility class in HTML. */
 label:has(> input.hidden:checked) > .formwork-check {
