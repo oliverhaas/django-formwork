@@ -932,10 +932,14 @@ fieldset.formwork-dirty label.password-reveal {
    swap to other DaisyUI loading variants.
    ================================================================ */
 
-/* Mode 1: with btn-icon/btn-icon-end — swap icon to loading animation */
+/* Mode 1: with btn-icon/btn-icon-end — swap icon to loading animation.
+   Explicit width/height beat @apply loading's oversized width (in
+   @layer utilities) — keeps spinner the same size as the icon slot. */
 .btn-loading.htmx-request::before,
 .btn-loading.htmx-request::after {
     @apply loading loading-spinner;
+    width: 1em;
+    height: 1em;
 }
 
 /* Mode 1 variant modifiers */
@@ -954,8 +958,13 @@ fieldset.formwork-dirty label.password-reveal {
 .btn-loading:not(.btn-icon, .btn-icon-end) {
     position: relative;
 }
+/* font-size:0 hides the label text while keeping currentColor intact
+   for the spinner's background-color.  color:transparent would make
+   currentColor transparent on the pseudo too, hiding the spinner.
+   text-shadow:none kills DaisyUI's white text-shadow (drawn
+   independently of font-size). */
 .btn-loading:not(.btn-icon, .btn-icon-end).htmx-request {
-    color: transparent;
+    font-size: 0;
     text-shadow: none;
 }
 .btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before {
