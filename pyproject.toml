@@ -135,7 +135,29 @@ respect-type-ignore-comments = false
 include = ["tests/**"]
 
 [tool.ty.overrides.rules]
+# Test files hit Django stub and BeautifulSoup stub limitations (unresolved
+# imports via pythonpath, ModelChoiceField.choices union, soup.find() nullability,
+# TEMPLATES dict shape, async clean override, etc.).  Suppressing broadly
+# because test code is verified by running the tests, not the type checker.
 unresolved-attribute = "ignore"
+unresolved-import = "ignore"
+invalid-argument-type = "ignore"
+invalid-assignment = "ignore"
+invalid-method-override = "ignore"
+not-iterable = "ignore"
+not-subscriptable = "ignore"
+no-matching-overload = "ignore"
+unsupported-operator = "ignore"
+call-non-callable = "ignore"
+unknown-argument = "ignore"
+
+[[tool.ty.overrides]]
+include = ["examples/**"]
+
+[tool.ty.overrides.rules]
+# Example apps hit Django stub limitations (choices type, settings, etc.).
+invalid-argument-type = "ignore"
+unresolved-import = "ignore"
 
 [[tool.ty.overrides]]
 include = ["django_formwork/async_forms.py"]
@@ -145,6 +167,26 @@ include = ["django_formwork/async_forms.py"]
 unresolved-attribute = "ignore"
 # construct_instance expects BaseForm; mixin passes self which is always mixed into ModelForm.
 invalid-argument-type = "ignore"
+
+[[tool.ty.overrides]]
+include = ["django_formwork/fields.py"]
+
+[tool.ty.overrides.rules]
+# FormworkModelChoiceIterator.choice() uses Any-typed local for field access;
+# method-shadowing pattern (self.label_from_instance = callable) is intentional;
+# label_from_instance(obj: Model) overrides generic _M from django stubs.
+unresolved-attribute = "ignore"
+invalid-assignment = "ignore"
+invalid-method-override = "ignore"
+
+[[tool.ty.overrides]]
+include = ["django_formwork/forms.py"]
+
+[tool.ty.overrides.rules]
+# FormworkModelFormMetaclass.__new__ accesses cls.base_fields which ty can't
+# resolve through the metaclass return type.
+unresolved-attribute = "ignore"
+invalid-assignment = "ignore"
 
 [[tool.ty.overrides]]
 include = ["django_formwork/renderers.py"]
