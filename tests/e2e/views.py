@@ -1062,24 +1062,44 @@ def _build_templates(key, url, title, description=None, form_html_fn=None):
 _ICON_MODIFIERS_INNER = (
     '<p class="text-sm text-base-content/60 mb-4">'
     "Button and alert icon modifier patterns.</p>\n"
-    '<div class="grid gap-4">\n'
+    # --- btn-icon ---
+    '<p class="text-xs font-semibold uppercase tracking-wide text-base-content/40 mt-2">btn-icon / btn-icon-end</p>\n'
+    '<div class="flex flex-wrap gap-2 mt-1">\n'
     '  <button id="btn-icon-upload" class="btn btn-primary btn-icon icon-upload">Upload</button>\n'
     '  <button id="btn-icon-end-next" class="btn btn-outline btn-icon-end icon-chevron-right">Next</button>\n'
     '  <button id="btn-icon-square" class="btn btn-square btn-icon icon-pencil" aria-label="Edit"></button>\n'
+    "</div>\n"
+    '<p class="text-xs font-semibold uppercase tracking-wide text-base-content/40 mt-4">size ladder</p>\n'
+    '<div class="flex flex-wrap items-end gap-2 mt-1">\n'
     '  <button id="btn-icon-xs" class="btn btn-xs btn-icon icon-upload">XS</button>\n'
     '  <button id="btn-icon-sm" class="btn btn-sm btn-icon icon-upload">SM</button>\n'
+    '  <button class="btn btn-icon icon-upload">MD</button>\n'
     '  <button id="btn-icon-lg" class="btn btn-lg btn-icon icon-upload">LG</button>\n'
     '  <button id="btn-icon-xl" class="btn btn-xl btn-icon icon-upload">XL</button>\n'
+    "</div>\n"
+    # --- btn-loading ---
+    '<div class="divider"></div>\n'
+    '<p class="text-xs font-semibold uppercase tracking-wide text-base-content/40">btn-loading</p>\n'
+    '<div class="flex flex-wrap gap-2 mt-1">\n'
     '  <button id="btn-loading-standalone" class="btn btn-primary btn-loading">Save</button>\n'
     '  <button id="btn-loading-icon" class="btn btn-primary btn-icon btn-loading icon-upload">Upload</button>\n'
     '  <button id="btn-loading-dots" class="btn btn-primary btn-loading btn-loading-dots">Dots</button>\n'
+    '  <button class="btn btn-secondary btn-loading btn-loading-ring">Ring</button>\n'
+    '  <button class="btn btn-accent btn-loading btn-loading-ball">Ball</button>\n'
+    '  <button class="btn btn-neutral btn-loading btn-loading-bars">Bars</button>\n'
+    '  <button class="btn btn-info btn-loading btn-loading-infinity">Infinity</button>\n'
+    "</div>\n"
+    # --- alert-icon ---
+    '<div class="divider"></div>\n'
+    '<p class="text-xs font-semibold uppercase tracking-wide text-base-content/40">alert-icon / alert-col / alert-soft</p>\n'
+    '<div class="grid gap-3 mt-1">\n'
     '  <div id="alert-icon-default" class="alert alert-success alert-icon">Saved successfully.</div>\n'
     '  <div id="alert-icon-custom" class="alert alert-warning alert-icon icon-triangle-alert">Check input.</div>\n'
+    '  <div id="alert-soft" class="alert alert-info alert-soft alert-icon">Tip: drag to reorder.</div>\n'
     '  <div id="alert-col" class="alert alert-info alert-col alert-icon icon-search">\n'
     "    <strong>No matches</strong>\n"
     "    <p>Try broadening your search.</p>\n"
     "  </div>\n"
-    '  <div id="alert-soft" class="alert alert-info alert-soft alert-icon">Tip: drag to reorder.</div>\n'
     "</div>"
 )
 
