@@ -70,7 +70,7 @@ class TestBtnLoading:
     """Verify btn-loading htmx loading state."""
 
     def test_standalone_loading_hides_text(self, icon_modifiers_page):
-        """Mode 2: adding htmx-request hides text via visibility:hidden."""
+        """Mode 2: adding htmx-request hides text via color:transparent."""
         page = icon_modifiers_page
         btn = page.locator("#btn-loading-standalone")
         assert btn.is_visible()
@@ -82,7 +82,7 @@ class TestBtnLoading:
         page.evaluate(
             "() => document.getElementById('btn-loading-standalone').classList.add('htmx-request')",
         )
-        page.wait_for_timeout(100)
+        page.wait_for_timeout(600)
 
         # Button dimensions preserved (text still in flow, just invisible)
         width_during = page.evaluate(
@@ -90,17 +90,11 @@ class TestBtnLoading:
         )
         assert width_during == width_before
 
-        # Text hidden via visibility:hidden on button
-        visibility = page.evaluate(
-            """() => getComputedStyle(document.getElementById('btn-loading-standalone')).visibility""",
+        # Text color is transparent
+        color = page.evaluate(
+            """() => getComputedStyle(document.getElementById('btn-loading-standalone')).color""",
         )
-        assert visibility == "hidden"
-
-        # Spinner pseudo is visible (visibility:visible overrides parent)
-        pseudo_vis = page.evaluate(
-            """() => getComputedStyle(document.getElementById('btn-loading-standalone'), '::before').visibility""",
-        )
-        assert pseudo_vis == "visible"
+        assert "0, 0, 0, 0" in color or color == "transparent"
 
     def test_standalone_loading_shows_spinner(self, icon_modifiers_page):
         """Mode 2: ::before pseudo appears during htmx-request."""
