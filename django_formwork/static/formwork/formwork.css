@@ -954,21 +954,21 @@ fieldset.formwork-dirty label.password-reveal {
 .btn-loading-infinity.htmx-request::before,
 .btn-loading-infinity.htmx-request::after { @apply loading-infinity; }
 
-/* Mode 2: standalone — label hidden, centered loading overlay */
+/* Mode 2: standalone — label hidden, centered loading overlay.
+   visibility:hidden hides the text while preserving button dimensions
+   (text stays in flow, just invisible).  The ::before pseudo restores
+   visibility for the spinner.  --btn-fg ensures the spinner uses the
+   button's themed text color (set by DaisyUI on every btn variant). */
 .btn-loading:not(.btn-icon, .btn-icon-end) {
     position: relative;
 }
-/* font-size:0 hides the label text while keeping currentColor intact
-   for the spinner's background-color.  color:transparent would make
-   currentColor transparent on the pseudo too, hiding the spinner.
-   text-shadow:none kills DaisyUI's white text-shadow (drawn
-   independently of font-size). */
 .btn-loading:not(.btn-icon, .btn-icon-end).htmx-request {
-    font-size: 0;
-    text-shadow: none;
+    visibility: hidden;
 }
 .btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before {
     @apply loading loading-spinner text-lg;
+    visibility: visible;
+    background-color: var(--btn-fg);
     content: "";
     position: absolute;
     inset: 0;
