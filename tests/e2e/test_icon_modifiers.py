@@ -70,24 +70,20 @@ class TestBtnLoading:
     """Verify btn-loading htmx loading state."""
 
     def test_standalone_loading_hides_text(self, icon_modifiers_page):
-        """Mode 2: adding htmx-request hides the label text."""
+        """Mode 2: adding htmx-request hides the label text via font-size:0."""
         page = icon_modifiers_page
         btn = page.locator("#btn-loading-standalone")
         assert btn.is_visible()
-
-        color_before = page.evaluate(
-            """() => getComputedStyle(document.getElementById('btn-loading-standalone')).color""",
-        )
 
         page.evaluate(
             "() => document.getElementById('btn-loading-standalone').classList.add('htmx-request')",
         )
         page.wait_for_timeout(100)
 
-        color_during = page.evaluate(
-            """() => getComputedStyle(document.getElementById('btn-loading-standalone')).color""",
+        font_size = page.evaluate(
+            """() => getComputedStyle(document.getElementById('btn-loading-standalone')).fontSize""",
         )
-        assert color_during != color_before
+        assert font_size == "0px"
 
     def test_standalone_loading_shows_spinner(self, icon_modifiers_page):
         """Mode 2: ::before pseudo appears during htmx-request."""
