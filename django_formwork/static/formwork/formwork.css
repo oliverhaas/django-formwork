@@ -958,23 +958,29 @@ fieldset.formwork-dirty label.password-reveal {
    visibility:hidden hides the text while preserving button dimensions
    (text stays in flow, just invisible).  The ::before pseudo restores
    visibility for the spinner.  --btn-fg ensures the spinner uses the
-   button's themed text color (set by DaisyUI on every btn variant). */
+   button's themed text color (set by DaisyUI on every btn variant).
+   Opacity fade on the pseudo matches DaisyUI's .2s btn transition. */
 .btn-loading:not(.btn-icon, .btn-icon-end) {
     position: relative;
 }
 .btn-loading:not(.btn-icon, .btn-icon-end).htmx-request {
     visibility: hidden;
 }
-.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before {
-    @apply loading loading-spinner text-lg;
-    visibility: visible;
-    background-color: var(--btn-fg);
+.btn-loading:not(.btn-icon, .btn-icon-end)::before {
     content: "";
     position: absolute;
     inset: 0;
     margin: auto;
     width: 1em;
     height: 1em;
+    opacity: 0;
+    transition: opacity 0.2s cubic-bezier(0, 0, 0.2, 1);
+}
+.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before {
+    @apply loading loading-spinner text-lg;
+    visibility: visible;
+    background-color: var(--btn-fg);
+    opacity: 1;
 }
 
 /* Standalone size ladder */
