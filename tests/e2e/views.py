@@ -1081,13 +1081,27 @@ _ICON_MODIFIERS_INNER = (
     '<div class="divider"></div>\n'
     '<p class="text-xs font-semibold uppercase tracking-wide text-base-content/40">btn-loading</p>\n'
     '<div class="flex flex-wrap gap-2 mt-1">\n'
-    '  <button id="btn-loading-standalone" class="btn btn-primary btn-loading">Save</button>\n'
-    '  <button id="btn-loading-icon" class="btn btn-primary btn-icon btn-loading icon-upload">Upload</button>\n'
-    '  <button id="btn-loading-dots" class="btn btn-primary btn-loading btn-loading-dots">Dots</button>\n'
-    '  <button class="btn btn-secondary btn-loading btn-loading-ring">Ring</button>\n'
-    '  <button class="btn btn-accent btn-loading btn-loading-ball">Ball</button>\n'
-    '  <button class="btn btn-neutral btn-loading btn-loading-bars">Bars</button>\n'
-    '  <button class="btn btn-info btn-loading btn-loading-infinity">Infinity</button>\n'
+    '  <button id="btn-loading-standalone" class="btn btn-primary btn-loading"'
+    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
+    ">Save</button>\n"
+    '  <button id="btn-loading-icon" class="btn btn-primary btn-icon btn-loading icon-upload"'
+    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
+    ">Upload</button>\n"
+    '  <button id="btn-loading-dots" class="btn btn-primary btn-loading btn-loading-dots"'
+    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
+    ">Dots</button>\n"
+    '  <button class="btn btn-secondary btn-loading btn-loading-ring"'
+    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
+    ">Ring</button>\n"
+    '  <button class="btn btn-accent btn-loading btn-loading-ball"'
+    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
+    ">Ball</button>\n"
+    '  <button class="btn btn-neutral btn-loading btn-loading-bars"'
+    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
+    ">Bars</button>\n"
+    '  <button class="btn btn-info btn-loading btn-loading-infinity"'
+    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
+    ">Infinity</button>\n"
     "</div>\n"
     # --- alert-icon ---
     '<div class="divider"></div>\n'
