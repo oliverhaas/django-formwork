@@ -977,7 +977,7 @@ fieldset.formwork-dirty label.password-reveal {
     width: 1em;
     height: 1em;
     opacity: 0;
-    transition: opacity 0.5s cubic-bezier(0, 0, 0.2, 1);
+    transition: opacity 0.2s cubic-bezier(0, 0, 0.2, 1);
 }
 .btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before {
     @apply loading loading-spinner text-lg;
