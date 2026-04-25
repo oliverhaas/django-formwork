@@ -113,6 +113,14 @@ fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidd
     text-align: center;
 }
 
+/* DaisyUI's .tooltip-open forces display:grid in @layer utilities.
+   Our hiding rule must be unlayered to beat it when there are no errors.
+   Match <p> children specifically: htmx OOB swap can leave an empty
+   wrapper div inside .formwork-errors, so :not(:empty) is unreliable. */
+.validated-textarea-tooltip:not(:has(.formwork-errors p)) {
+    display: none;
+}
+
 /* ClearableFileInput: custom template wraps everything in .clearable-file-info.
    Line 1: "Currently: file.jpg"
    Line 2: [checkbox] Clear
@@ -808,10 +816,6 @@ details.dropdown.search-select > .dropdown-content {
     @apply absolute top-full left-0 w-full h-0 overflow-visible;
 }
 
-.validated-textarea-tooltip:not(:has(.formwork-errors:not(:empty))) {
-    @apply hidden;
-}
-
 /* Spacer: zero-height anchor so DaisyUI positions the tooltip below. */
 .validated-textarea-spacer {
     @apply w-full h-0;
@@ -823,8 +827,9 @@ details.dropdown.search-select > .dropdown-content {
 }
 
 /* Error border on textarea when inline validation errors exist.
-   The tooltip is inside the grid container, positioned absolutely. */
-.validated-textarea:has(.formwork-errors:not(:empty)) > textarea {
+   Match <p> children specifically: htmx OOB swap can leave an empty
+   wrapper div inside .formwork-errors, so :not(:empty) is unreliable. */
+.validated-textarea:has(.formwork-errors p) > textarea {
     @apply textarea-error;
 }
 
