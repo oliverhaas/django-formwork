@@ -29,36 +29,65 @@ def _skeleton_rows(expected_count: int | None) -> list[int]:
     return list(range(_skeleton_row_count(expected_count)))
 
 
-def _resolve_search_expectations(
+def _resolve_skeleton_options(
     registry_key: str | None,
-    expected_count: int | None,
-    expected_icons: bool,  # noqa: FBT001 — internal helper, kwargs would only obscure the call site
-    expected_descriptions: bool,  # noqa: FBT001
-) -> tuple[int | None, bool, bool]:
-    """Resolve ``(expected_count, expected_icons, expected_descriptions)``.
+    max_results: int = 5,
+) -> list[dict[str, Any]]:
+    """Fetch up to ``max_results`` unfiltered options from the registry.
 
-    Looks up auto-registered metadata when the widget didn't supply hints.
-    The count comes from the queryset factory, the icon/description flags
-    from whether ``icon_from_instance`` / ``description_from_instance`` were
-    registered.
+    Used to render a pixel-perfect loading skeleton that exactly matches
+    the eventual response: same row layout, same icon column, same label
+    widths.  Returns an empty list when no registry is attached or no
+    queryset factory is registered (search_func-only registrations need a
+    request and are skipped here — callers should fall back to the
+    approximate skeleton in that case).
     """
     if registry_key is None:
-        return expected_count, expected_icons, expected_descriptions
+        return []
+    from django_formwork.registry import get_registration
+
+    reg = get_registration(registry_key)
+    if reg is None or reg.queryset_factory is None:
+        return []
+    try:
+        qs = reg.queryset_factory()[:max_results]
+        results: list[dict[str, Any]] = []
+        for obj in qs:
+            entry: dict[str, Any] = {
+                "value": str(getattr(obj, reg.to_field_name)),
+                "label": str(reg.label_from_instance(obj)) if reg.label_from_instance else str(obj),
+                "icon": reg.icon_from_instance(obj) if reg.icon_from_instance else "",
+                "description": reg.description_from_instance(obj) if reg.description_from_instance else "",
+            }
+            results.append(entry)
+    except Exception:  # noqa: BLE001 — skeleton is a hint, never block render
+        return []
+    return results
+
+
+def _resolve_search_expectations(registry_key: str | None) -> tuple[int | None, bool, bool]:
+    """Resolve ``(expected_count, expected_icons, expected_descriptions)`` from the registry.
+
+    The count comes from ``queryset_factory().count()``; the icon and
+    description flags from whether ``icon_from_instance`` /
+    ``description_from_instance`` were registered.  Returns
+    ``(None, False, False)`` when no registration is attached, so the
+    template falls back to a generic skeleton shape.
+    """
+    if registry_key is None:
+        return None, False, False
     from django_formwork.registry import get_registration
 
     reg = get_registration(registry_key)
     if reg is None:
-        return expected_count, expected_icons, expected_descriptions
-    if expected_count is None and reg.queryset_factory is not None:
+        return None, False, False
+    expected_count: int | None = None
+    if reg.queryset_factory is not None:
         try:
             expected_count = reg.queryset_factory().count()
         except Exception:  # noqa: BLE001 — count is a hint, never block render
             expected_count = None
-    if not expected_icons and reg.icon_from_instance is not None:
-        expected_icons = True
-    if not expected_descriptions and reg.description_from_instance is not None:
-        expected_descriptions = True
-    return expected_count, expected_icons, expected_descriptions
+    return expected_count, reg.icon_from_instance is not None, reg.description_from_instance is not None
 
 
 def _format_size(size: int) -> str:

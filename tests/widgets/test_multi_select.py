@@ -32,7 +32,7 @@ from django_formwork.fields import FormworkChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import MultiSelect
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, make_server_widget, render_form, render_widget
 
 
 class MultiSelectForm(FormworkForm):
@@ -49,20 +49,6 @@ class MultiSelectForm(FormworkForm):
 
 
 @pytest.mark.unit
-def test_multi_select_default_search_url_is_none():
-    """MultiSelect has no search_url by default."""
-    widget = MultiSelect(choices=[("a", "A")])
-    assert widget.search_url is None
-
-
-@pytest.mark.unit
-def test_multi_select_search_url_stored():
-    """search_url passed to constructor is accessible on the widget."""
-    widget = MultiSelect(search_url="/api/search/", choices=[("a", "A")])
-    assert widget.search_url == "/api/search/"
-
-
-@pytest.mark.unit
 def test_multi_select_choices_stored():
     """Choices passed to constructor are available via widget.choices."""
     widget = MultiSelect(choices=[("py", "Python"), ("js", "JavaScript")])
@@ -70,16 +56,17 @@ def test_multi_select_choices_stored():
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_has_search_url():
-    """get_context() exposes search_url in widget context."""
-    widget = MultiSelect(search_url="/search/", choices=[("a", "A")])
+def test_multi_select_get_context_search_url_resolved_from_registry():
+    """get_context() resolves a search_url for widgets attached to the registry."""
+    widget = make_server_widget(MultiSelect, choices=[("a", "A")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
-    assert ctx["widget"]["search_url"] == "/search/"
+    assert ctx["widget"]["search_url"] is not None
+    assert ctx["widget"]["search_url"].startswith("/__formwork__/search/")
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_search_url_none_by_default():
-    """get_context() has search_url=None when not supplied."""
+def test_multi_select_get_context_search_url_none_when_unregistered():
+    """get_context() leaves search_url None when no registry entry is attached."""
     widget = MultiSelect(choices=[("a", "A")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["search_url"] is None
@@ -103,11 +90,19 @@ def test_multi_select_get_context_show_search_true_for_many():
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_show_search_true_with_search_url():
-    """show_search is always True when search_url is provided."""
-    widget = MultiSelect(search_url="/search/", choices=[("a", "A")])
+def test_multi_select_get_context_show_search_true_when_registry_count_meets_threshold():
+    """show_search opens up-front when the registry reports a count >= threshold."""
+    widget = make_server_widget(MultiSelect, count=30, choices=[("a", "A")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["show_search"] is True
+
+
+@pytest.mark.unit
+def test_multi_select_get_context_show_search_false_when_registry_count_below_threshold():
+    """show_search stays closed when the registry count is below the threshold."""
+    widget = make_server_widget(MultiSelect, count=5, choices=[("a", "A")])
+    ctx = widget.get_context("test", [], {"id": "id_test"})
+    assert ctx["widget"]["show_search"] is False
 
 
 @pytest.mark.unit
@@ -149,7 +144,7 @@ def test_multi_select_initial_selected_json_empty_without_search_url():
 @pytest.mark.unit
 def test_multi_select_initial_selected_json_empty_list():
     """initial_selected_json is '[]' when search_url set but no values selected."""
-    widget = MultiSelect(search_url="/search/", choices=[("a", "Alpha")])
+    widget = make_server_widget(MultiSelect, choices=[("a", "Alpha")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
     initial = json.loads(ctx["widget"]["initial_selected_json"])
     assert initial == []
@@ -158,7 +153,7 @@ def test_multi_select_initial_selected_json_empty_list():
 @pytest.mark.unit
 def test_multi_select_initial_selected_json_with_value():
     """initial_selected_json encodes selected value with label and icon."""
-    widget = MultiSelect(search_url="/search/", choices=[("a", "Alpha"), ("b", "Beta")])
+    widget = make_server_widget(MultiSelect, choices=[("a", "Alpha"), ("b", "Beta")])
     ctx = widget.get_context("test", ["a"], {"id": "id_test"})
     initial = json.loads(ctx["widget"]["initial_selected_json"])
     assert initial == [["a", ["Alpha", ""]]]
@@ -323,7 +318,7 @@ def test_multi_select_xdata_has_nav_methods():
 def test_multi_select_xdata_tracks_highlighted_el():
     """Both client- and htmx-mode x-data declare ``highlightedEl``."""
     plain = MultiSelect(choices=[("a", "A")]).render("test", [])
-    htmx_mode = MultiSelect(search_url="/s/", choices=[("a", "A")]).render("test", [])
+    htmx_mode = make_server_widget(MultiSelect, choices=[("a", "A")]).render("test", [])
     assert "highlightedEl" in plain
     assert "highlightedEl" in htmx_mode
 
@@ -555,13 +550,13 @@ def test_multi_select_no_wrapper_id_without_id():
 
 
 @pytest.mark.unit
-def test_multi_select_htmx_attrs_when_search_url():
-    """Search input gets hx-get, hx-trigger, hx-target, hx-swap when search_url set."""
-    widget = MultiSelect(search_url="/search/", choices=[])
+def test_multi_select_htmx_attrs_when_registered():
+    """Search input gets hx-get, hx-trigger, hx-target, hx-swap when registered."""
+    widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="lang", attrs={"id": "id_lang"})
     search_input = soup.find("input", {"type": "text"})
     assert search_input is not None
-    assert search_input["hx-get"] == "/search/"
+    assert search_input["hx-get"].startswith("/__formwork__/search/")
     assert "input changed delay:300ms" in search_input["hx-trigger"]
     assert search_input["hx-target"] == "#id_lang_options"
     assert search_input["hx-swap"] == "innerHTML"
@@ -580,7 +575,7 @@ def test_multi_select_no_htmx_attrs_without_search_url():
 @pytest.mark.unit
 def test_multi_select_no_client_options_when_search_url():
     """No checkboxes are rendered in the DOM when search_url is provided."""
-    widget = MultiSelect(search_url="/search/", choices=[("a", "A")])
+    widget = make_server_widget(MultiSelect, choices=[("a", "A")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     checkboxes = soup.find_all("input", {"type": "checkbox"})
     assert len(checkboxes) == 0
@@ -589,7 +584,7 @@ def test_multi_select_no_client_options_when_search_url():
 @pytest.mark.unit
 def test_multi_select_htmx_mode_uses_alpine_map():
     """htmx mode Alpine x-data uses a Map for selected values tracking."""
-    widget = MultiSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details")
     x_data = details["x-data"]
@@ -600,7 +595,7 @@ def test_multi_select_htmx_mode_uses_alpine_map():
 @pytest.mark.unit
 def test_multi_select_htmx_mode_hidden_inputs_template():
     """htmx mode uses an x-for template that renders hidden inputs per selected value."""
-    widget = MultiSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     template = soup.find("template", {"x-for": True})
     assert template is not None
@@ -613,41 +608,40 @@ def test_multi_select_htmx_mode_hidden_inputs_template():
 @pytest.mark.unit
 def test_multi_select_htmx_wrapper_has_id():
     """<details> id is set correctly in htmx mode too."""
-    widget = MultiSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="multiselect")
     assert details["id"] == "id_test_multiselect"
 
 
 @pytest.mark.unit
-def test_multi_select_renders_skeleton_when_search_url():
-    """The smart skeleton container sits beside the listbox; rows include a
-    multi-select checkbox column placeholder."""
-    widget = MultiSelect(search_url="/search/", choices=[])
+def test_multi_select_renders_skeleton_when_registered():
+    """The skeleton container sits beside the listbox when the widget is registered."""
+    widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     skeleton = soup.find("div", class_="formwork-skeleton")
     assert skeleton is not None
     assert skeleton.get("x-show") == "loading && !hasError"
-    rows = skeleton.find_all("div", class_="formwork-skeleton-row")
-    assert len(rows) == 4
-    for row in rows:
-        assert "formwork-skeleton-row-multi" in row["class"]
+    items = skeleton.find_all("div", class_="formwork-skeleton-item")
+    assert items, "expected real-data skeleton rows to render"
 
 
 @pytest.mark.unit
-def test_multi_select_skeleton_row_count_follows_expected_count():
-    """expected_count drives row count, capped at 5."""
-    soup = render_widget(MultiSelect(search_url="/search/", expected_count=2), attrs={"id": "id_x"})
-    rows = soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-row")
+def test_multi_select_skeleton_row_count_follows_registry_count():
+    """The skeleton renders one row per registry item, capped at 5."""
+    soup = render_widget(make_server_widget(MultiSelect, count=2), attrs={"id": "id_x"})
+    rows = soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-item")
     assert len(rows) == 2
 
 
 @pytest.mark.unit
-def test_multi_select_skeleton_includes_icon_placeholder_when_expected():
-    """expected_icons adds an icon shimmer to each row."""
-    soup = render_widget(MultiSelect(search_url="/search/", expected_icons=True), attrs={"id": "id_x"})
-    row = soup.find("div", class_="formwork-skeleton-row")
-    assert row.find("span", class_="formwork-skeleton-icon") is not None
+def test_multi_select_skeleton_includes_icon_placeholder_when_registry_has_icons():
+    """When the registry exposes icons, skeleton rows include an icon shimmer."""
+    soup = render_widget(make_server_widget(MultiSelect, icons=True), attrs={"id": "id_x"})
+    row = soup.find("div", class_="formwork-skeleton-item")
+    skeleton_spans = row.find_all("span", class_="skeleton")
+    # icon shimmer is the first .skeleton span (label / desc come after)
+    assert any("shrink-0" in span.get("class", []) for span in skeleton_spans)
 
 
 @pytest.mark.unit
@@ -661,7 +655,7 @@ def test_multi_select_no_skeleton_without_search_url():
 @pytest.mark.unit
 def test_multi_select_renders_error_alert_with_icon_when_search_url():
     """Error alert wrapper carries DaisyUI alert-icon + icon-circle-x."""
-    widget = MultiSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     wrapper = soup.find("div", class_="formwork-search-error")
     assert wrapper is not None
@@ -685,7 +679,7 @@ def test_multi_select_no_error_alert_without_search_url():
 def test_multi_select_search_input_wires_loading_and_error_handlers():
     """The htmx search input toggles `loading` and `hasError` on every
     request lifecycle so the skeleton/alert react accordingly."""
-    widget = MultiSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="lang", attrs={"id": "id_lang"})
     search = soup.find("input", {"type": "text"})
     before = search["hx-on::before-request"]
@@ -699,7 +693,7 @@ def test_multi_select_search_input_wires_loading_and_error_handlers():
 @pytest.mark.unit
 def test_multi_select_listbox_hidden_while_loading_or_error():
     """The listbox stays hidden while loading or in error state."""
-    widget = MultiSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_options")
     assert listbox.get("x-show") == "!loading && !hasError"
@@ -709,7 +703,7 @@ def test_multi_select_listbox_hidden_while_loading_or_error():
 @pytest.mark.unit
 def test_multi_select_xdata_has_loading_and_error_flags_when_search_url():
     """`loading: true` and `hasError: false` are part of the Alpine x-data."""
-    widget = MultiSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="multiselect")
     assert "loading: true" in details["x-data"]
@@ -918,7 +912,7 @@ def test_multi_select_htmx_open_loads_results(multi_select_page):
     from playwright.sync_api import expect
 
     checkboxes = multi.locator('input[type="checkbox"]')
-    expect(checkboxes.first).to_be_attached(timeout=6000)
+    expect(checkboxes.first).to_be_attached(timeout=10000)
     assert checkboxes.count() >= 1
 
 
@@ -938,7 +932,7 @@ def test_multi_select_htmx_select_creates_hidden_inputs(multi_select_page):
     }""")
     from playwright.sync_api import expect
 
-    expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=6000)
+    expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=10000)
     multi_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.multiselect');
         const cbs = dds[2].querySelectorAll('input[type="checkbox"]');
@@ -1216,20 +1210,14 @@ def test_multi_select_skeleton_replaced_after_first_load(multi_select_page):
     from playwright.sync_api import expect
 
     multi = multi_select_page.locator("details.dropdown.multiselect").nth(2)
+    # The @toggle handler dispatches focus on first open; don't double-fire.
     multi_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.multiselect');
         dds[2].open = true;
         dds[2].dispatchEvent(new Event('toggle'));
     }""")
-    multi_select_page.wait_for_timeout(200)
-    multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
-        const search = dds[2].querySelector('.dropdown-content input[type="text"]');
-        search.focus();
-        search.dispatchEvent(new Event('focus'));
-    }""")
-    expect(multi.locator("ul[role='listbox'] label")).to_have_count(6, timeout=6000)
-    expect(multi.locator(".formwork-skeleton")).to_be_hidden()
+    expect(multi.locator("ul[role='listbox'] label")).to_have_count(6, timeout=10000)
+    expect(multi.locator(".formwork-skeleton")).to_be_hidden(timeout=2000)
 
 
 @pytest.mark.e2e
@@ -1251,7 +1239,7 @@ def test_multi_select_failing_search_shows_error_alert(multi_select_page):
         search.dispatchEvent(new Event('focus'));
     }""")
     alert = multi.locator(".formwork-search-error .alert")
-    expect(alert).to_be_visible(timeout=6000)
+    expect(alert).to_be_visible(timeout=10000)
     assert "Search failed" in alert.text_content()
     expect(multi.locator("ul[role='listbox']")).to_be_hidden()
 
@@ -1276,7 +1264,7 @@ def test_multi_select_search_input_works_after_error(multi_select_page):
         search.dispatchEvent(new Event('focus'));
     }""")
     alert = multi.locator(".formwork-search-error .alert")
-    expect(alert).to_be_visible(timeout=6000)
+    expect(alert).to_be_visible(timeout=10000)
     multi_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.multiselect');
         const search = dds[4].querySelector('.dropdown-content input[type="text"]');

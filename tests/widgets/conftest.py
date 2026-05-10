@@ -48,6 +48,84 @@ def render_widget(widget, name: str = "test", value=None, attrs: dict | None = N
     return BeautifulSoup(html, "html.parser")
 
 
+def attach_server_search(
+    widget,
+    *,
+    count: int | None = None,
+    icons: bool = False,
+    descriptions: bool = False,
+    key: str | None = None,
+) -> None:
+    """Wire a SearchSelect/MultiSelect/ComboBox into the registry as if it were
+    auto-registered, so unit tests can exercise the server-side rendering paths
+    without going through a full FormworkForm.
+
+    ``count`` populates a fake queryset whose ``.count()`` and slicing yield
+    that many objects with ``label`` / ``icon`` / ``description`` attributes.
+    """
+    from django_formwork.registry import SearchRegistration, register
+
+    key = key or f"tests.widget.{type(widget).__name__}.{id(widget)}"
+
+    class _Obj:
+        def __init__(self, i: int) -> None:
+            self.pk = str(i)
+            self.label = f"Item {i}"
+            self.icon = f"\U0001f4cd{i}" if icons else ""
+            self.description = f"desc {i}" if descriptions else ""
+
+        def __str__(self) -> str:
+            return self.label
+
+    class _QS:
+        def __init__(self, n: int) -> None:
+            self._items = [_Obj(i) for i in range(n)]
+
+        def count(self) -> int:
+            return len(self._items)
+
+        def all(self) -> _QS:
+            return self
+
+        def __getitem__(self, key):
+            return self._items[key]
+
+        def __iter__(self):
+            return iter(self._items)
+
+    n = count if count is not None else 0
+    factory = (lambda: _QS(n)) if count is not None else None
+    register(
+        key,
+        SearchRegistration(
+            queryset_factory=factory,
+            search_fields=("label",) if factory else (),
+            label_from_instance=(lambda obj: obj.label) if factory else None,
+            icon_from_instance=(lambda obj: obj.icon) if (factory and icons) else None,
+            description_from_instance=(lambda obj: obj.description) if (factory and descriptions) else None,
+        ),
+    )
+    widget._registry_key = key
+
+
+def make_server_widget(
+    widget_cls,
+    *,
+    count: int | None = 10,
+    icons: bool = False,
+    descriptions: bool = False,
+    **kwargs,
+):
+    """Build a SearchSelect/MultiSelect/ComboBox already wired into the registry.
+
+    Drop-in for tests that previously created a widget with ``search_url=``
+    and expected server-side mode to be active.
+    """
+    widget = widget_cls(**kwargs)
+    attach_server_search(widget, count=count, icons=icons, descriptions=descriptions)
+    return widget
+
+
 def render_form(form, renderer: BaseRenderer | None = None) -> BeautifulSoup:
     """Render a form via a formwork renderer and return a BeautifulSoup tree."""
     if renderer is not None:
@@ -73,6 +151,16 @@ def assert_html_equivalent(a: Tag, b: Tag) -> None:
     norm_a = _normalize(a)
     norm_b = _normalize(b)
     assert norm_a == norm_b, f"HTML trees differ.\nA:\n{a}\n\nB:\n{b}"
+
+
+@pytest.fixture(autouse=True)
+def _clean_widget_registry():
+    """Drop any registry entries created by ``attach_server_search`` so tests
+    don't leak state across the module."""
+    from django_formwork.registry import get_registry
+
+    yield
+    get_registry().clear()
 
 
 @pytest.fixture(params=["dtl", "jinja2"], ids=["dtl", "jinja2"])

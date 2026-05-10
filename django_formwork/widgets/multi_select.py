@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from django import forms
 
-from ._base import _NOT_SET, _resolve_search_expectations, _skeleton_rows
+from ._base import _NOT_SET, _resolve_search_expectations, _resolve_skeleton_options, _skeleton_rows
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -21,9 +21,11 @@ class MultiSelect(forms.SelectMultiple):
     The template adds the ``multiselect`` class on checkboxes so
     CSS doesn't apply the default ``checkbox`` class.
 
-    When ``search_url`` is provided, the search input uses htmx to fetch
-    options from the server.  Selected values are tracked in Alpine state
-    and submitted via hidden inputs (not the visible checkboxes).
+    Server-side search auto-wires through the formwork registry: pair the
+    widget with ``search_fields`` against a ``ModelMultipleChoiceField``
+    queryset, or define a ``search_choices_<fieldname>`` method on a
+    :class:`~django_formwork.forms.FormworkForm`.  Selected values are
+    tracked in Alpine state and submitted via hidden inputs.
 
     Icons are carried by the choice label.  Wrap choice labels in
     :class:`~django_formwork.fields.FormworkChoiceLabel` (with the ``icon``
@@ -33,14 +35,16 @@ class MultiSelect(forms.SelectMultiple):
 
     Usage::
 
+        # Static choices
         languages = forms.MultipleChoiceField(
             choices=[("py", "Python"), ("js", "JavaScript")],
             widget=MultiSelect,
         )
 
-        # With server-side search:
-        languages = forms.MultipleChoiceField(
-            widget=MultiSelect(search_url=reverse_lazy("lang-search")),
+        # Server-side search (model-backed)
+        languages = forms.ModelMultipleChoiceField(
+            queryset=Language.objects.all(),
+            widget=MultiSelect(search_fields=["name"], search_decorator=login_required),
         )
     """
 
@@ -48,27 +52,19 @@ class MultiSelect(forms.SelectMultiple):
     option_inherits_attrs = False
     search_threshold = 20
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         attrs: dict[str, Any] | None = None,
         choices: tuple = (),
         *,
-        search_url: str | None = None,
         show_search: bool | None = None,
         search_fields: Sequence[str] | None = None,
         search_decorator: Callable | object = _NOT_SET,
-        expected_count: int | None = None,
-        expected_icons: bool = False,
-        expected_descriptions: bool = False,
     ) -> None:
         super().__init__(attrs=attrs, choices=choices)
-        self.search_url = search_url
         self.show_search = show_search
         self.search_fields = tuple(search_fields) if search_fields else None
         self.search_decorator = search_decorator
-        self.expected_count = expected_count
-        self.expected_icons = expected_icons
-        self.expected_descriptions = expected_descriptions
         self._registry_key: str | None = None
 
     def get_context(self, name: str, value: list[str] | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
@@ -76,19 +72,13 @@ class MultiSelect(forms.SelectMultiple):
 
         context = super().get_context(name, value, attrs)
         total = sum(len(options) for _, options, _ in context["widget"]["optgroups"])
-        # Resolve search URL: explicit > auto-registered > none.
-        search_url = self.search_url
-        if not search_url and self._registry_key:
+        # Resolve search URL from the registry. No registration → client-side only.
+        search_url: str | None = None
+        if self._registry_key:
             from django.urls import reverse
 
             search_url = reverse("formwork:search", kwargs={"key": self._registry_key})
-        # Resolve expected counts/shape — drives skeleton + initial search visibility.
-        expected_count, expected_icons, expected_descriptions = _resolve_search_expectations(
-            self._registry_key,
-            self.expected_count,
-            self.expected_icons,
-            self.expected_descriptions,
-        )
+        expected_count, expected_icons, expected_descriptions = _resolve_search_expectations(self._registry_key)
         if self.show_search is not None:
             context["widget"]["show_search"] = self.show_search
         elif search_url and expected_count is not None:
@@ -101,6 +91,7 @@ class MultiSelect(forms.SelectMultiple):
         context["widget"]["expected_icons"] = expected_icons
         context["widget"]["expected_descriptions"] = expected_descriptions
         context["widget"]["skeleton_rows"] = _skeleton_rows(expected_count) if search_url else []
+        context["widget"]["skeleton_options"] = _resolve_skeleton_options(self._registry_key) if search_url else []
         # Read icon from FormworkChoiceLabel.
         for _group, options, _index in context["widget"]["optgroups"]:
             for option in options:

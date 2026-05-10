@@ -92,9 +92,10 @@ def test_country_input_many_choices():
 
 @pytest.mark.unit
 def test_country_input_no_search_url_by_default():
-    """search_url defaults to None (client-side filtering)."""
+    """No registry entry by default → no server-side search URL in context."""
     widget = CountryInput()
-    assert widget.search_url is None
+    ctx = widget.get_context("country", "", {"id": "id_country"})
+    assert ctx["widget"]["search_url"] is None
 
 
 # ─── Level 2: Widget rendering (HTML output) ─────────────────────────────

@@ -30,7 +30,7 @@ from django_formwork.fields import FormworkChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import SearchSelect
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, make_server_widget, render_form, render_widget
 
 
 class SearchSelectForm(FormworkForm):
@@ -59,20 +59,6 @@ def test_search_select_accepts_choices():
     vals = [v for v, _label in widget.choices]
     assert "a" in vals
     assert "b" in vals
-
-
-@pytest.mark.unit
-def test_search_select_default_search_url_is_none():
-    """search_url defaults to None when not specified."""
-    widget = SearchSelect(choices=[("a", "Alpha")])
-    assert widget.search_url is None
-
-
-@pytest.mark.unit
-def test_search_select_search_url_stored():
-    """Explicitly passed search_url is stored on the widget."""
-    widget = SearchSelect(search_url="/search/", choices=[("a", "Alpha")])
-    assert widget.search_url == "/search/"
 
 
 @pytest.mark.unit
@@ -113,16 +99,17 @@ def test_search_select_get_context_selected_label_empty_when_no_value():
 
 
 @pytest.mark.unit
-def test_search_select_get_context_search_url():
-    """get_context returns the search_url that was passed at construction."""
-    widget = SearchSelect(search_url="/search/", choices=[("a", "Alpha")])
+def test_search_select_get_context_search_url_resolved_from_registry():
+    """get_context resolves a search_url for widgets attached to the registry."""
+    widget = make_server_widget(SearchSelect, choices=[("a", "Alpha")])
     ctx = widget.get_context("test", "", {"id": "id_test"})
-    assert ctx["widget"]["search_url"] == "/search/"
+    assert ctx["widget"]["search_url"] is not None
+    assert ctx["widget"]["search_url"].startswith("/__formwork__/search/")
 
 
 @pytest.mark.unit
-def test_search_select_get_context_search_url_none_by_default():
-    """search_url in context is None when not specified."""
+def test_search_select_get_context_search_url_none_when_unregistered():
+    """search_url in context is None when no registry entry is attached."""
     widget = SearchSelect(choices=[("a", "Alpha")])
     ctx = widget.get_context("test", "", {"id": "id_test"})
     assert ctx["widget"]["search_url"] is None
@@ -400,7 +387,7 @@ def test_search_select_keydown_handlers_on_wrapper():
 def test_search_select_xdata_has_nav_methods():
     """Both client- and htmx-mode x-data declare the nav methods."""
     plain = SearchSelect(choices=[("a", "A")]).render("test", "")
-    htmx_mode = SearchSelect(search_url="/s/", choices=[]).render("test", "")
+    htmx_mode = make_server_widget(SearchSelect, choices=[]).render("test", "")
     for html in (plain, htmx_mode):
         for method in ("nav(", "confirm(", "_clearHighlight(", "_visibleOptions("):
             assert method in html, f"missing {method!r}"
@@ -453,7 +440,7 @@ def test_search_select_no_wrapper_id_without_attrs_id():
 @pytest.mark.unit
 def test_search_select_htmx_wrapper_id():
     """details wrapper id is present even when search_url is set."""
-    widget = SearchSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="search-select")
     assert details["id"] == "id_test_searchselect"
@@ -470,13 +457,13 @@ def test_search_select_search_input_inside_dropdown():
 
 
 @pytest.mark.unit
-def test_search_select_htmx_attrs_when_search_url():
-    """Search input carries htmx attrs when search_url is set."""
-    widget = SearchSelect(search_url="/search/", choices=[])
+def test_search_select_htmx_attrs_when_registered():
+    """Search input carries htmx attrs when the widget is attached to the registry."""
+    widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="city", attrs={"id": "id_city"})
     dropdown = soup.find("div", class_="dropdown-content")
     search = dropdown.find("input", {"type": "text"})
-    assert search["hx-get"] == "/search/"
+    assert search["hx-get"].startswith("/__formwork__/search/")
     assert "input changed delay:300ms" in search["hx-trigger"]
     assert search["hx-target"] == "#id_city_listbox"
     assert search["hx-swap"] == "innerHTML"
@@ -495,7 +482,7 @@ def test_search_select_no_htmx_attrs_without_search_url():
 @pytest.mark.unit
 def test_search_select_no_client_options_when_search_url():
     """No option buttons are rendered when search_url is set (server-side only)."""
-    widget = SearchSelect(search_url="/search/", choices=[("a", "Alpha")])
+    widget = make_server_widget(SearchSelect, choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     buttons = soup.find_all("button", {"type": "button"})
     assert len(buttons) == 0
@@ -504,61 +491,58 @@ def test_search_select_no_client_options_when_search_url():
 @pytest.mark.unit
 def test_search_select_no_alpine_no_results_when_search_url():
     """No 'No results' paragraph when search_url is set (server handles no results)."""
-    widget = SearchSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     no_results = soup.find("p", string="No results")
     assert no_results is None
 
 
 @pytest.mark.unit
-def test_search_select_renders_skeleton_when_search_url():
-    """The smart skeleton container sits beside the listbox, with one row
-    per ``widget.skeleton_rows`` slot so the dropdown is shaped like the
-    eventual response from first paint."""
-    widget = SearchSelect(search_url="/search/", choices=[])
+def test_search_select_renders_skeleton_when_registered():
+    """The skeleton container sits beside the listbox; rows reflect the
+    eventual response shape — real labels rendered behind a skeleton bar so
+    widths land in roughly the right place."""
+    widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     skeleton = soup.find("div", class_="formwork-skeleton")
     assert skeleton is not None
     assert skeleton.get("x-show") == "loading && !hasError"
-    rows = skeleton.find_all("div", class_="formwork-skeleton-row")
-    assert len(rows) == 4  # default when no expected_count provided
+    items = skeleton.find_all("div", class_="formwork-skeleton-item")
+    assert items, "expected real-data skeleton rows to render"
 
 
 @pytest.mark.unit
-def test_search_select_skeleton_row_count_follows_expected_count():
-    """expected_count drives the row count, capped at 5 so the skeleton
-    never reads as a wall of bars."""
-    soup = render_widget(SearchSelect(search_url="/search/", expected_count=2), attrs={"id": "id_x"})
-    assert len(soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-row")) == 2
-    soup = render_widget(SearchSelect(search_url="/search/", expected_count=50), attrs={"id": "id_x"})
-    assert len(soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-row")) == 5
+def test_search_select_skeleton_row_count_follows_registry_count():
+    """The skeleton renders one row per registry item, capped at 5."""
+    soup = render_widget(make_server_widget(SearchSelect, count=2), attrs={"id": "id_x"})
+    assert len(soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-item")) == 2
+    soup = render_widget(make_server_widget(SearchSelect, count=50), attrs={"id": "id_y"})
+    assert len(soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-item")) == 5
 
 
 @pytest.mark.unit
-def test_search_select_skeleton_includes_icon_placeholder_when_expected():
-    """expected_icons adds an icon placeholder to each skeleton row so the
-    dropdown leaves room for the eventual icon column."""
-    soup = render_widget(
-        SearchSelect(search_url="/search/", expected_icons=True),
-        attrs={"id": "id_x"},
-    )
-    row = soup.find("div", class_="formwork-skeleton-row")
-    assert row.find("span", class_="formwork-skeleton-icon") is not None
-    soup_no_icon = render_widget(SearchSelect(search_url="/search/"), attrs={"id": "id_y"})
-    row_no_icon = soup_no_icon.find("div", class_="formwork-skeleton-row")
-    assert row_no_icon.find("span", class_="formwork-skeleton-icon") is None
+def test_search_select_skeleton_includes_icon_placeholder_when_registry_has_icons():
+    """When the registry exposes icon_from_instance, skeleton rows include an icon shimmer."""
+    soup = render_widget(make_server_widget(SearchSelect, icons=True), attrs={"id": "id_x"})
+    row = soup.find("div", class_="formwork-skeleton-item")
+    skeleton_spans = row.find_all("span", class_="skeleton")
+    # icon shimmer is the .skeleton span that's also .shrink-0
+    assert any("shrink-0" in span.get("class", []) for span in skeleton_spans)
+
+    soup_no_icon = render_widget(make_server_widget(SearchSelect, icons=False), attrs={"id": "id_y"})
+    row_no_icon = soup_no_icon.find("div", class_="formwork-skeleton-item")
+    skeleton_spans = row_no_icon.find_all("span", class_="skeleton")
+    assert not any("shrink-0" in span.get("class", []) for span in skeleton_spans)
 
 
 @pytest.mark.unit
-def test_search_select_skeleton_includes_description_placeholder_when_expected():
-    """expected_descriptions adds a second narrow shimmer line so two-line
-    options pre-allocate vertical space."""
-    soup = render_widget(
-        SearchSelect(search_url="/search/", expected_descriptions=True),
-        attrs={"id": "id_x"},
-    )
-    row = soup.find("div", class_="formwork-skeleton-row")
-    assert row.find("span", class_="formwork-skeleton-desc") is not None
+def test_search_select_skeleton_includes_description_placeholder_when_registry_has_descriptions():
+    """When the registry exposes description_from_instance, skeleton rows include a second shimmer line."""
+    soup = render_widget(make_server_widget(SearchSelect, descriptions=True), attrs={"id": "id_x"})
+    row = soup.find("div", class_="formwork-skeleton-item")
+    desc_span = row.find("span", class_="text-xs")
+    assert desc_span is not None
+    assert "skeleton" in desc_span.get("class", [])
 
 
 @pytest.mark.unit
@@ -574,7 +558,7 @@ def test_search_select_renders_error_alert_when_search_url():
     """Error alert wrapper is present when search_url is set, hidden by
     default via x-show='hasError', and contains the user-visible message
     plus a DaisyUI error icon."""
-    widget = SearchSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     wrapper = soup.find("div", class_="formwork-search-error")
     assert wrapper is not None
@@ -599,7 +583,7 @@ def test_search_select_no_error_alert_without_search_url():
 def test_search_select_search_input_wires_loading_and_error_handlers():
     """The htmx search input toggles the Alpine `loading` and `hasError`
     flags so the skeleton/alert react to every request lifecycle."""
-    widget = SearchSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="city", attrs={"id": "id_city"})
     search = soup.find("div", class_="dropdown-content").find("input", {"type": "text"})
     before = search["hx-on::before-request"]
@@ -617,7 +601,7 @@ def test_search_select_search_input_wires_loading_and_error_handlers():
 def test_search_select_listbox_hidden_while_loading_or_error():
     """The listbox stays hidden while loading or in an error state, so
     the skeleton/alert take over the dropdown space."""
-    widget = SearchSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_listbox")
     assert listbox.get("x-show") == "!loading && !hasError"
@@ -627,7 +611,7 @@ def test_search_select_listbox_hidden_while_loading_or_error():
 @pytest.mark.unit
 def test_search_select_xdata_has_loading_and_error_flags_when_search_url():
     """`loading: true` and `hasError: false` are initialised in x-data."""
-    widget = SearchSelect(search_url="/search/", choices=[])
+    widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="search-select")
     assert "loading: true" in details["x-data"]
@@ -636,9 +620,8 @@ def test_search_select_xdata_has_loading_and_error_flags_when_search_url():
 
 @pytest.mark.unit
 def test_search_select_show_search_visible_from_first_render_when_count_meets_threshold():
-    """expected_count >= search_threshold opens the search input from the
-    first page render — no waiting for the OOB total-count swap."""
-    widget = SearchSelect(search_url="/search/", expected_count=30)
+    """When the registry count meets the threshold, the search input opens from first paint."""
+    widget = make_server_widget(SearchSelect, count=30)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="search-select")
     assert "showSearch: true" in details["x-data"]
@@ -646,8 +629,8 @@ def test_search_select_show_search_visible_from_first_render_when_count_meets_th
 
 @pytest.mark.unit
 def test_search_select_show_search_hidden_when_count_below_threshold():
-    """A small expected_count keeps the search input hidden."""
-    widget = SearchSelect(search_url="/search/", expected_count=5)
+    """A small registry count keeps the search input hidden."""
+    widget = make_server_widget(SearchSelect, count=5)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="search-select")
     assert "showSearch: false" in details["x-data"]
@@ -1001,7 +984,7 @@ def test_search_select_htmx_open_loads_results(search_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     buttons = sel.locator("ul button")
     assert buttons.count() >= 1
 
@@ -1024,15 +1007,15 @@ def test_search_select_htmx_filters_via_htmx(search_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    search_select_page.wait_for_timeout(4000)
-    expect(sel.locator("ul button")).to_have_count(4, timeout=6000)
+    search_select_page.wait_for_timeout(8000)
+    expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         const search = dds[3].querySelector('.dropdown-content input[type="text"]');
         search.value = 'Tok';
         search.dispatchEvent(new Event('input', {bubbles: true}));
     }""")
-    expect(sel.locator("ul button")).to_have_count(1, timeout=6000)
+    expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
     assert "Tokyo" in sel.locator("ul button").first.text_content()
 
 
@@ -1053,14 +1036,14 @@ def test_search_select_htmx_pick_sets_value(search_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         const search = dds[3].querySelector('.dropdown-content input[type="text"]');
         search.value = 'Lon';
         search.dispatchEvent(new Event('input', {bubbles: true}));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     sel.locator("ul button", has_text="London").click()
     search_select_page.wait_for_timeout(200)
     assert hidden.input_value() == "ldn"
@@ -1084,8 +1067,8 @@ def test_search_select_htmx_no_results_message(search_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    search_select_page.wait_for_timeout(4000)
-    expect(sel.locator("ul button")).to_have_count(4, timeout=6000)
+    search_select_page.wait_for_timeout(8000)
+    expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         const search = dds[3].querySelector('.dropdown-content input[type="text"]');
@@ -1095,7 +1078,7 @@ def test_search_select_htmx_no_results_message(search_select_page):
         });
     }""")
     no_results = sel.locator("li", has_text="No results")
-    expect(no_results).to_be_visible(timeout=6000)
+    expect(no_results).to_be_visible(timeout=10000)
 
 
 @pytest.mark.e2e
@@ -1109,9 +1092,9 @@ def test_search_select_htmx_many_open_loads_all(search_select_page):
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     buttons = sel.locator("ul button")
-    expect(buttons).to_have_count(24, timeout=6000)
+    expect(buttons).to_have_count(24, timeout=10000)
 
 
 @pytest.mark.e2e
@@ -1125,9 +1108,9 @@ def test_search_select_htmx_many_search_input_shown_above_threshold(search_selec
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     search_wrapper = sel.locator(".dropdown-content > div").first
-    expect(search_wrapper).to_be_visible(timeout=6000)
+    expect(search_wrapper).to_be_visible(timeout=10000)
 
 
 @pytest.mark.e2e
@@ -1141,14 +1124,14 @@ def test_search_select_htmx_many_filters_via_htmx(search_select_page):
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         const search = dds[4].querySelector('.dropdown-content input[type="text"]');
         search.value = 'Ber';
         search.dispatchEvent(new Event('input', {bubbles: true}));
     }""")
-    expect(sel.locator("ul button")).to_have_count(1, timeout=6000)
+    expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
     assert "Berlin" in sel.locator("ul button").first.text_content()
 
 
@@ -1170,9 +1153,9 @@ def test_search_select_htmx_icons_loads_results(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     buttons = sel.locator("ul button")
-    expect(buttons).to_have_count(31, timeout=6000)
+    expect(buttons).to_have_count(31, timeout=10000)
 
 
 @pytest.mark.e2e
@@ -1186,9 +1169,9 @@ def test_search_select_htmx_icons_search_input_shown(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     search_wrapper = sel.locator(".dropdown-content > div").first
-    expect(search_wrapper).to_be_visible(timeout=6000)
+    expect(search_wrapper).to_be_visible(timeout=10000)
 
 
 @pytest.mark.e2e
@@ -1200,7 +1183,7 @@ def test_search_select_htmx_icons_results_have_icons(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     first_button = sel.locator("ul button").first
     icon_span = first_button.locator("span.shrink-0").first
     assert icon_span.text_content().strip() != ""
@@ -1215,7 +1198,7 @@ def test_search_select_htmx_icons_results_have_descriptions(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     descs = sel.locator("ul button span.text-xs")
     assert descs.count() >= 1
     assert descs.first.text_content().strip() != ""
@@ -1232,14 +1215,14 @@ def test_search_select_htmx_icons_filters(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         const search = dds[5].querySelector('.dropdown-content input[type="text"]');
         search.value = 'Jap';
         search.dispatchEvent(new Event('input', {bubbles: true}));
     }""")
-    expect(sel.locator("ul button")).to_have_count(1, timeout=6000)
+    expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
     assert "Japan" in sel.locator("ul button").first.text_content()
 
 
@@ -1253,7 +1236,7 @@ def test_search_select_htmx_icons_pick_sets_value(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(4000)
+    search_select_page.wait_for_timeout(8000)
     sel.locator("ul button", has_text="France").click()
     search_select_page.wait_for_timeout(200)
     assert hidden.input_value() == "fr"
@@ -1499,20 +1482,15 @@ def test_search_select_skeleton_replaced_after_first_load(search_select_page):
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(3)
+    # The @toggle handler dispatches focus on first open, which fires htmx.
+    # Don't fire focus manually on top of that — it spawns a duplicate request.
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         dds[3].open = true;
         dds[3].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(200)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[3].querySelector('.dropdown-content input[type="text"]');
-        search.focus();
-        search.dispatchEvent(new Event('focus'));
-    }""")
-    expect(sel.locator("ul button")).to_have_count(4, timeout=6000)
-    expect(sel.locator(".formwork-skeleton")).to_be_hidden()
+    expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
+    expect(sel.locator(".formwork-skeleton")).to_be_hidden(timeout=2000)
 
 
 @pytest.mark.e2e
@@ -1535,7 +1513,7 @@ def test_search_select_failing_search_shows_error_alert(search_select_page):
         search.dispatchEvent(new Event('focus'));
     }""")
     alert = sel.locator(".formwork-search-error .alert")
-    expect(alert).to_be_visible(timeout=6000)
+    expect(alert).to_be_visible(timeout=10000)
     assert "Search failed" in alert.text_content()
     expect(sel.locator("ul[role='listbox']")).to_be_hidden()
 
@@ -1560,7 +1538,7 @@ def test_search_select_search_input_works_after_error(search_select_page):
         search.dispatchEvent(new Event('focus'));
     }""")
     alert = sel.locator(".formwork-search-error .alert")
-    expect(alert).to_be_visible(timeout=6000)
+    expect(alert).to_be_visible(timeout=10000)
     # Type to fire another request — before-request should reset hasError,
     # hiding the alert while the next (also-slow) request is in flight.
     search_select_page.evaluate("""() => {

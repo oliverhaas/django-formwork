@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from django import forms
 
-from ._base import _NOT_SET, _resolve_search_expectations, _skeleton_rows
+from ._base import _NOT_SET, _resolve_search_expectations, _resolve_skeleton_options, _skeleton_rows
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -22,8 +22,12 @@ class SearchSelect(forms.Select):
     This is a ``<select>`` replacement — the submitted value is a key
     from the choices list, not free text.
 
-    When ``search_url`` is provided, the text input uses htmx to fetch
-    matching options from the server instead of client-side filtering.
+    Server-side search auto-wires through the formwork registry: pair the
+    widget with ``search_fields`` against a ``ModelChoiceField`` queryset,
+    or define a ``search_choices_<fieldname>`` method on a
+    :class:`~django_formwork.forms.FormworkForm`.  The skeleton loader,
+    expected row count and search-input visibility are all derived from
+    the registration; nothing else to configure.
 
     Icons and descriptions are carried by the choice label.  Wrap choice
     labels in :class:`~django_formwork.fields.FormworkChoiceLabel` or use
@@ -32,14 +36,16 @@ class SearchSelect(forms.Select):
 
     Usage::
 
+        # Static choices
         city = forms.ChoiceField(
             choices=[("nyc", "New York"), ("ldn", "London"), ...],
             widget=SearchSelect,
         )
 
-        # With server-side search:
-        city = forms.ChoiceField(
-            widget=SearchSelect(search_url=reverse_lazy("city-search")),
+        # Server-side search (model-backed)
+        city = forms.ModelChoiceField(
+            queryset=City.objects.all(),
+            widget=SearchSelect(search_fields=["name"], search_decorator=login_required),
         )
     """
 
@@ -47,27 +53,19 @@ class SearchSelect(forms.Select):
     option_inherits_attrs = False
     search_threshold = 20
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         attrs: dict[str, Any] | None = None,
         choices: tuple = (),
         *,
-        search_url: str | None = None,
         show_search: bool | None = None,
         search_fields: Sequence[str] | None = None,
         search_decorator: Callable | object = _NOT_SET,
-        expected_count: int | None = None,
-        expected_icons: bool = False,
-        expected_descriptions: bool = False,
     ) -> None:
         super().__init__(attrs=attrs, choices=choices)
-        self.search_url = search_url
         self.show_search = show_search
         self.search_fields = tuple(search_fields) if search_fields else None
         self.search_decorator = search_decorator
-        self.expected_count = expected_count
-        self.expected_icons = expected_icons
-        self.expected_descriptions = expected_descriptions
         self._registry_key: str | None = None
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
@@ -98,25 +96,22 @@ class SearchSelect(forms.Select):
         context["widget"]["selected_label"] = selected_label
         context["widget"]["selected_icon"] = selected_icon
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
-        # Resolve search URL: explicit > auto-registered > none.
-        search_url = self.search_url
-        if not search_url and self._registry_key:
+        # Resolve search URL from the registry. No registration → client-side only.
+        search_url: str | None = None
+        if self._registry_key:
             from django.urls import reverse
 
             search_url = reverse("formwork:search", kwargs={"key": self._registry_key})
         context["widget"]["search_url"] = search_url
         context["widget"]["search_threshold"] = self.search_threshold
-        # Resolve expected counts/shape — for server-side widgets this drives
-        # the loading skeleton and the initial visibility of the search input.
-        expected_count, expected_icons, expected_descriptions = self._resolve_expectations()
+        # Derive skeleton + search-input expectations entirely from the registry.
+        expected_count, expected_icons, expected_descriptions = _resolve_search_expectations(self._registry_key)
         if self.show_search is not None:
             context["widget"]["show_search"] = self.show_search
         elif search_url and expected_count is not None:
-            # Decide up-front from the expected count instead of waiting for an OOB swap.
             context["widget"]["show_search"] = expected_count >= self.search_threshold
         elif search_url:
-            # Server-side search without an expected count hint: start hidden,
-            # let OOB total-count swap decide.
+            # Server-side search without a count hint: start hidden, OOB total-count swap decides.
             context["widget"]["show_search"] = False
         else:
             context["widget"]["show_search"] = total >= self.search_threshold
@@ -124,17 +119,5 @@ class SearchSelect(forms.Select):
         context["widget"]["expected_icons"] = expected_icons
         context["widget"]["expected_descriptions"] = expected_descriptions
         context["widget"]["skeleton_rows"] = _skeleton_rows(expected_count) if search_url else []
+        context["widget"]["skeleton_options"] = _resolve_skeleton_options(self._registry_key) if search_url else []
         return context
-
-    def _resolve_expectations(self) -> tuple[int | None, bool, bool]:
-        """Return ``(expected_count, expected_icons, expected_descriptions)``.
-
-        Falls back to auto-registered metadata so most callers don't need to
-        repeat what the registry already knows.
-        """
-        return _resolve_search_expectations(
-            self._registry_key,
-            self.expected_count,
-            self.expected_icons,
-            self.expected_descriptions,
-        )

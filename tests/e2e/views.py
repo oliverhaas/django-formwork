@@ -10,7 +10,7 @@ from e2e.models import AutoSaveFormData, BasicFormData, City, Region
 
 from django_formwork.fields import FormworkChoiceLabel
 from django_formwork.forms import FormworkForm, FormworkModelForm
-from django_formwork.views import FormworkSearchView, FormworkValidateView
+from django_formwork.views import FormworkValidateView
 from django_formwork.widgets import (
     ComboBox,
     CountryInput,
@@ -385,6 +385,50 @@ _COUNTRIES = [
     ("us", "\U0001f1fa\U0001f1f8", "United States"),
 ]
 
+_COUNTRY_DESCRIPTIONS = {
+    "ar": "South America",
+    "au": "Oceania",
+    "br": "South America",
+    "ca": "North America",
+    "cn": "East Asia",
+    "de": "Central Europe",
+    "eg": "North Africa",
+    "es": "Southern Europe",
+    "fr": "Western Europe",
+    "gb": "Northern Europe",
+    "gr": "Southern Europe",
+    "id": "Southeast Asia",
+    "il": "Middle East",
+    "in": "South Asia",
+    "it": "Southern Europe",
+    "jp": "East Asia",
+    "kr": "East Asia",
+    "mx": "North America",
+    "ng": "West Africa",
+    "nl": "Western Europe",
+    "no": "Northern Europe",
+    "nz": "Oceania",
+    "pe": "South America",
+    "ph": "Southeast Asia",
+    "pl": "Central Europe",
+    "pt": "Southern Europe",
+    "se": "Northern Europe",
+    "sg": "Southeast Asia",
+    "th": "Southeast Asia",
+    "tr": "Eurasia",
+    "us": "North America",
+}
+
+E2E_COUNTRIES_SEARCH = [
+    {
+        "value": code,
+        "label": name,
+        "icon": flag,
+        "description": _COUNTRY_DESCRIPTIONS.get(code, ""),
+    }
+    for code, flag, name in _COUNTRIES
+]
+
 
 class SearchSelectForm(FormworkForm):
     """SearchSelect. few options (no search), many options (auto-search), icons, server-side."""
@@ -421,17 +465,17 @@ class SearchSelectForm(FormworkForm):
         label="City (icons + descriptions)",
     )
     city_htmx = forms.ChoiceField(
-        widget=SearchSelect(search_url="/e2e/search/cities/"),
+        widget=SearchSelect(search_decorator=None),
         required=False,
         label="City (server search, few, no search input)",
     )
     city_htmx_many = forms.ChoiceField(
-        widget=SearchSelect(search_url="/e2e/search/cities-many/"),
+        widget=SearchSelect(search_decorator=None),
         required=False,
         label="City (server search, many, auto search input)",
     )
     country_htmx_icons = forms.ChoiceField(
-        widget=SearchSelect(search_url="/e2e/search/countries/"),
+        widget=SearchSelect(search_decorator=None),
         required=False,
         label="Country (server search, icons + descriptions)",
     )
@@ -479,20 +523,27 @@ class SearchSelectForm(FormworkForm):
         ),
     )
     city_failing = forms.ChoiceField(
-        widget=SearchSelect(
-            search_url="/e2e/search/failing/",
-            expected_count=30,
-            expected_icons=True,
-            expected_descriptions=True,
-        ),
+        widget=SearchSelect(search_decorator=None),
         required=False,
         label="City (server search, slow + always fails)",
-        help_text=(
-            "Endpoint sleeps 3s and returns HTTP 500. "
-            "expected_count=30 + expected_icons + expected_descriptions render a smart skeleton "
-            "and pre-show the search input, so the dropdown is shaped like the eventual response from first paint."
-        ),
+        help_text="Endpoint sleeps 3s and raises — exercises the error UX.",
     )
+
+    @staticmethod
+    def search_choices_city_htmx(query, request=None):
+        return _slow_search(query, E2E_CITIES)
+
+    @staticmethod
+    def search_choices_city_htmx_many(query, request=None):
+        return _slow_search(query, E2E_CITIES_MANY)
+
+    @staticmethod
+    def search_choices_country_htmx_icons(query, request=None):
+        return _slow_search(query, E2E_COUNTRIES_SEARCH)
+
+    @staticmethod
+    def search_choices_city_failing(query, request=None):
+        _slow_fail()
 
 
 class MultiSelectForm(FormworkForm):
@@ -516,7 +567,7 @@ class MultiSelectForm(FormworkForm):
         label="Countries (icons, auto-search)",
     )
     languages_htmx = forms.MultipleChoiceField(
-        widget=MultiSelect(search_url="/e2e/search/languages/"),
+        widget=MultiSelect(search_decorator=None),
         required=False,
         label="Languages (server-side search)",
     )
@@ -553,19 +604,19 @@ class MultiSelectForm(FormworkForm):
         help_text="Grouped MultiSelect — optgroup headers, keyboard nav, Enter toggles without closing.",
     )
     languages_failing = forms.MultipleChoiceField(
-        widget=MultiSelect(
-            search_url="/e2e/search/failing/",
-            expected_count=8,
-            expected_icons=True,
-        ),
+        widget=MultiSelect(search_decorator=None),
         required=False,
         label="Languages (server search, slow + always fails)",
-        help_text=(
-            "Endpoint sleeps 3s and returns HTTP 500. "
-            "expected_count=8 + expected_icons render a smaller skeleton with checkbox + icon "
-            "placeholders so the dropdown reads as a multi-select from first paint."
-        ),
+        help_text="Endpoint sleeps 3s and raises — exercises the error UX.",
     )
+
+    @staticmethod
+    def search_choices_languages_htmx(query, request=None):
+        return _slow_search(query, E2E_LANGUAGES)
+
+    @staticmethod
+    def search_choices_languages_failing(query, request=None):
+        _slow_fail()
 
 
 class ComboBoxForm(FormworkForm):
@@ -619,7 +670,7 @@ class ComboBoxForm(FormworkForm):
     )
     language_htmx = forms.CharField(
         widget=ComboBox(
-            search_url="/e2e/search/languages/",
+            search_decorator=None,
             attrs={"placeholder": "Server-side search"},
         ),
         required=False,
@@ -627,7 +678,7 @@ class ComboBoxForm(FormworkForm):
     )
     language_htmx_icons = forms.CharField(
         widget=ComboBox(
-            search_url="/e2e/search/languages-icons/",
+            search_decorator=None,
             attrs={"placeholder": "Server search with icons"},
         ),
         required=False,
@@ -678,18 +729,25 @@ class ComboBoxForm(FormworkForm):
     )
     language_failing = forms.CharField(
         widget=ComboBox(
-            search_url="/e2e/search/failing/",
+            search_decorator=None,
             attrs={"placeholder": "Server search (always fails)"},
-            expected_count=12,
-            expected_descriptions=True,
         ),
         required=False,
         label="Language (server search, slow + always fails)",
-        help_text=(
-            "Endpoint sleeps 3s and returns HTTP 500. "
-            "expected_count=12 + expected_descriptions render a skeleton with two-line rows."
-        ),
+        help_text="Endpoint sleeps 3s and raises — exercises the error UX.",
     )
+
+    @staticmethod
+    def search_choices_language_htmx(query, request=None):
+        return _slow_search(query, E2E_LANGUAGES)
+
+    @staticmethod
+    def search_choices_language_htmx_icons(query, request=None):
+        return _slow_search(query, E2E_LANGUAGES_ICONS)
+
+    @staticmethod
+    def search_choices_language_failing(query, request=None):
+        _slow_fail()
 
 
 class UploadsForm(FormworkForm):
@@ -790,7 +848,7 @@ class ComplexForm(FormworkForm):
         widget=PasswordReveal(attrs={"placeholder": "Confirm password"}),
     )
     country = forms.CharField(
-        widget=SearchSelect(search_url="/e2e/search/countries/"),
+        widget=SearchSelect(search_decorator=None),
         required=False,
         label="Country",
     )
@@ -803,10 +861,19 @@ class ComplexForm(FormworkForm):
             ("ts", "TypeScript"),
             ("rb", "Ruby"),
         ],
-        widget=MultiSelect(search_url="/e2e/search/languages/"),
+        widget=MultiSelect(search_decorator=None),
         required=False,
         label="Languages",
     )
+
+    @staticmethod
+    def search_choices_country(query, request=None):
+        return _slow_search(query, E2E_COUNTRIES_SEARCH)
+
+    @staticmethod
+    def search_choices_languages(query, request=None):
+        return _slow_search(query, E2E_LANGUAGES)
+
     start_date = forms.DateField(
         widget=forms.DateInput(attrs={"type": "date"}),
     )
@@ -909,104 +976,21 @@ E2E_LANGUAGES_ICONS = [
 ]
 
 
-class _E2ESlowSearchView(FormworkSearchView):
-    """Base for e2e server-side search views: sleeps 3s before responding so
-    the loading skeleton has a deterministic window to render. Demo-only —
-    real apps would not artificially slow their search endpoints."""
-
-    def get(self, request: HttpRequest) -> HttpResponse:
-        time.sleep(3)
-        return super().get(request)
-
-
-class E2ECitySearchView(_E2ESlowSearchView):
-    def get_results(self, query, **kwargs):
-        if not query:
-            return E2E_CITIES
-        return [c for c in E2E_CITIES if query.lower() in c["label"].lower()]
+def _slow_search(query, results):
+    """Sleep 3s and filter ``results`` by ``query`` — simulates a slow
+    upstream so the loading skeleton has a deterministic window to render.
+    Demo-only; real apps would not artificially slow their search endpoints.
+    """
+    time.sleep(3)
+    if not query:
+        return results
+    return [r for r in results if query.lower() in r["label"].lower()]
 
 
-class E2ECityManySearchView(_E2ESlowSearchView):
-    def get_results(self, query, **kwargs):
-        if not query:
-            return E2E_CITIES_MANY
-        return [c for c in E2E_CITIES_MANY if query.lower() in c["label"].lower()]
-
-
-class E2ELanguageSearchView(_E2ESlowSearchView):
-    def get_results(self, query, **kwargs):
-        if not query:
-            return E2E_LANGUAGES
-        return [lang for lang in E2E_LANGUAGES if query.lower() in lang["label"].lower()]
-
-
-class E2ELanguageIconsSearchView(_E2ESlowSearchView):
-    def get_results(self, query, **kwargs):
-        if not query:
-            return E2E_LANGUAGES_ICONS
-        return [lang for lang in E2E_LANGUAGES_ICONS if query.lower() in lang["label"].lower()]
-
-
-_COUNTRY_DESCRIPTIONS = {
-    "ar": "South America",
-    "au": "Oceania",
-    "br": "South America",
-    "ca": "North America",
-    "cn": "East Asia",
-    "de": "Central Europe",
-    "eg": "North Africa",
-    "es": "Southern Europe",
-    "fr": "Western Europe",
-    "gb": "Northern Europe",
-    "gr": "Southern Europe",
-    "id": "Southeast Asia",
-    "il": "Middle East",
-    "in": "South Asia",
-    "it": "Southern Europe",
-    "jp": "East Asia",
-    "kr": "East Asia",
-    "mx": "North America",
-    "ng": "West Africa",
-    "nl": "Western Europe",
-    "no": "Northern Europe",
-    "nz": "Oceania",
-    "pe": "South America",
-    "ph": "Southeast Asia",
-    "pl": "Central Europe",
-    "pt": "Southern Europe",
-    "se": "Northern Europe",
-    "sg": "Southeast Asia",
-    "th": "Southeast Asia",
-    "tr": "Eurasia",
-    "us": "North America",
-}
-
-E2E_COUNTRIES_SEARCH = [
-    {
-        "value": code,
-        "label": name,
-        "icon": flag,
-        "description": _COUNTRY_DESCRIPTIONS.get(code, ""),
-    }
-    for code, flag, name in _COUNTRIES
-]
-
-
-class E2ECountrySearchView(_E2ESlowSearchView):
-    def get_results(self, query, **kwargs):
-        if not query:
-            return E2E_COUNTRIES_SEARCH
-        return [c for c in E2E_COUNTRIES_SEARCH if query.lower() in c["label"].lower()]
-
-
-class E2EFailingSearchView(FormworkSearchView):
-    """Sleeps 3 seconds then returns HTTP 500 — exercises the slow-then-fail
-    path for dropdown widgets so the skeleton, spinner, and error alert all
-    have a deterministic window to observe."""
-
-    def get(self, request: HttpRequest) -> HttpResponse:
-        time.sleep(3)
-        return HttpResponse("Simulated upstream failure", status=500)
+def _slow_fail():
+    """Sleep 3s then raise — exercises the failure UX (htmx 500 → alert)."""
+    time.sleep(3)
+    raise RuntimeError("Simulated upstream failure")
 
 
 class E2EBioValidateView(FormworkValidateView):

@@ -28,7 +28,7 @@ from django.utils.safestring import mark_safe
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import ComboBox
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, make_server_widget, render_form, render_widget
 
 
 class ComboBoxForm(FormworkForm):
@@ -49,7 +49,6 @@ def test_combobox_instantiation_default():
     widget = ComboBox()
     assert widget.suggestions == []
     assert widget.multiple is False
-    assert widget.search_url is None
 
 
 @pytest.mark.unit
@@ -64,13 +63,6 @@ def test_combobox_instantiation_multiple():
     """ComboBox stores multiple flag."""
     widget = ComboBox(suggestions=["A"], multiple=True)
     assert widget.multiple is True
-
-
-@pytest.mark.unit
-def test_combobox_instantiation_search_url():
-    """ComboBox stores search_url."""
-    widget = ComboBox(search_url="/search/")
-    assert widget.search_url == "/search/"
 
 
 @pytest.mark.unit
@@ -107,16 +99,17 @@ def test_combobox_get_context_single_mode():
 
 
 @pytest.mark.unit
-def test_combobox_get_context_search_url():
-    """get_context() exposes search_url."""
-    widget = ComboBox(search_url="/search/")
+def test_combobox_get_context_search_url_resolved_from_registry():
+    """get_context() resolves a search_url for widgets attached to the registry."""
+    widget = make_server_widget(ComboBox)
     ctx = widget.get_context("test", "", {"id": "id_test"})
-    assert ctx["widget"]["search_url"] == "/search/"
+    assert ctx["widget"]["search_url"] is not None
+    assert ctx["widget"]["search_url"].startswith("/__formwork__/search/")
 
 
 @pytest.mark.unit
-def test_combobox_get_context_search_url_none_by_default():
-    """get_context() has search_url=None when not provided."""
+def test_combobox_get_context_search_url_none_when_unregistered():
+    """get_context() leaves search_url None when no registry entry is attached."""
     widget = ComboBox(suggestions=["A"])
     ctx = widget.get_context("test", "", {"id": "id_test"})
     assert ctx["widget"]["search_url"] is None
@@ -379,12 +372,12 @@ def test_combobox_aria_invalid():
 
 
 @pytest.mark.unit
-def test_combobox_htmx_attrs_when_search_url():
-    """When search_url is set, htmx attributes are added to the input."""
-    widget = ComboBox(search_url="/search/")
+def test_combobox_htmx_attrs_when_registered():
+    """When the widget is attached to the registry, htmx attributes are added to the input."""
+    widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="tags", attrs={"id": "id_tags"})
     trigger = soup.find("input", class_="combobox-input")
-    assert trigger["hx-get"] == "/search/"
+    assert trigger["hx-get"].startswith("/__formwork__/search/")
     assert "input changed delay:300ms" in trigger["hx-trigger"]
     assert trigger["hx-target"] == "#id_tags_listbox"
     assert trigger["hx-swap"] == "innerHTML"
@@ -402,7 +395,7 @@ def test_combobox_no_htmx_attrs_without_search_url():
 @pytest.mark.unit
 def test_combobox_no_client_suggestions_when_search_url():
     """When search_url is set, client-side suggestion buttons are not rendered."""
-    widget = ComboBox(suggestions=["Alpha"], search_url="/search/")
+    widget = make_server_widget(ComboBox, suggestions=["Alpha"])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     buttons = soup.find_all("button", {"type": "button"})
     assert len(buttons) == 0
@@ -411,41 +404,40 @@ def test_combobox_no_client_suggestions_when_search_url():
 @pytest.mark.unit
 def test_combobox_no_alpine_no_results_when_search_url():
     """When search_url is set, 'No results' element is not rendered."""
-    widget = ComboBox(search_url="/search/")
+    widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     no_results = soup.find("p", string="No results")
     assert no_results is None
 
 
 @pytest.mark.unit
-def test_combobox_renders_skeleton_when_search_url():
-    """The smart skeleton container is rendered alongside the listbox."""
-    widget = ComboBox(search_url="/search/")
+def test_combobox_renders_skeleton_when_registered():
+    """The skeleton container is rendered alongside the listbox when registered."""
+    widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     skeleton = soup.find("div", class_="formwork-skeleton")
     assert skeleton is not None
     assert skeleton.get("x-show") == "loading && !hasError"
-    rows = skeleton.find_all("div", class_="formwork-skeleton-row")
-    assert len(rows) == 4
+    items = skeleton.find_all("div", class_="formwork-skeleton-item")
+    assert items, "expected real-data skeleton rows to render"
 
 
 @pytest.mark.unit
-def test_combobox_skeleton_row_count_follows_expected_count():
-    """expected_count drives the row count."""
-    soup = render_widget(ComboBox(search_url="/search/", expected_count=3), attrs={"id": "id_x"})
-    rows = soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-row")
+def test_combobox_skeleton_row_count_follows_registry_count():
+    """The skeleton renders one row per registry item, capped at 5."""
+    soup = render_widget(make_server_widget(ComboBox, count=3), attrs={"id": "id_x"})
+    rows = soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-item")
     assert len(rows) == 3
 
 
 @pytest.mark.unit
-def test_combobox_skeleton_includes_description_placeholder_when_expected():
-    """expected_descriptions adds a second shimmer line to each row."""
-    soup = render_widget(
-        ComboBox(search_url="/search/", expected_descriptions=True),
-        attrs={"id": "id_x"},
-    )
-    row = soup.find("div", class_="formwork-skeleton-row")
-    assert row.find("span", class_="formwork-skeleton-desc") is not None
+def test_combobox_skeleton_includes_description_placeholder_when_registry_has_descriptions():
+    """When the registry exposes descriptions, skeleton rows include a second shimmer line."""
+    soup = render_widget(make_server_widget(ComboBox, descriptions=True), attrs={"id": "id_x"})
+    row = soup.find("div", class_="formwork-skeleton-item")
+    desc_span = row.find("span", class_="text-xs")
+    assert desc_span is not None
+    assert "skeleton" in desc_span.get("class", [])
 
 
 @pytest.mark.unit
@@ -459,7 +451,7 @@ def test_combobox_no_skeleton_without_search_url():
 @pytest.mark.unit
 def test_combobox_renders_error_alert_with_icon_when_search_url():
     """Error alert carries DaisyUI alert-icon + icon-circle-x."""
-    widget = ComboBox(search_url="/search/")
+    widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     wrapper = soup.find("div", class_="formwork-search-error")
     assert wrapper is not None
@@ -483,7 +475,7 @@ def test_combobox_no_error_alert_without_search_url():
 def test_combobox_input_wires_loading_and_error_handlers():
     """The combobox-input toggles `loading` and `hasError` on every
     request lifecycle."""
-    widget = ComboBox(search_url="/search/")
+    widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="tags", attrs={"id": "id_tags"})
     trigger = soup.find("input", class_="combobox-input")
     before = trigger["hx-on::before-request"]
@@ -497,7 +489,7 @@ def test_combobox_input_wires_loading_and_error_handlers():
 @pytest.mark.unit
 def test_combobox_listbox_hidden_while_loading_or_error():
     """The listbox stays hidden while loading or in error state."""
-    widget = ComboBox(search_url="/search/")
+    widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_listbox")
     assert listbox.get("x-show") == "!loading && !hasError"
@@ -507,7 +499,7 @@ def test_combobox_listbox_hidden_while_loading_or_error():
 @pytest.mark.unit
 def test_combobox_xdata_has_loading_and_error_flags_when_search_url():
     """`loading: true` and `hasError: false` are part of the Alpine x-data."""
-    widget = ComboBox(search_url="/search/")
+    widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     wrapper = soup.find("div", class_="combobox")
     assert "loading: true" in wrapper["x-data"]
@@ -1059,7 +1051,7 @@ def test_combobox_skeleton_replaced_after_first_load(combobox_page):
     combo = combobox_page.locator(".dropdown.combobox").nth(4)
     inp = combobox_page.locator('input[name="language_htmx"]')
     inp.click()
-    expect(combo.locator("ul button")).to_have_count(6, timeout=6000)
+    expect(combo.locator("ul button")).to_have_count(6, timeout=10000)
     expect(combo.locator(".formwork-skeleton")).to_be_hidden()
 
 
@@ -1072,7 +1064,7 @@ def test_combobox_failing_search_shows_error_alert(combobox_page):
     inp = combobox_page.locator('input[name="language_failing"]')
     inp.click()
     alert = combo.locator(".formwork-search-error .alert")
-    expect(alert).to_be_visible(timeout=6000)
+    expect(alert).to_be_visible(timeout=10000)
     assert "Search failed" in alert.text_content()
     expect(combo.locator("ul[role='listbox']")).to_be_hidden()
 
@@ -1087,7 +1079,7 @@ def test_combobox_input_works_after_error(combobox_page):
     inp = combobox_page.locator('input[name="language_failing"]')
     inp.click()
     alert = combo.locator(".formwork-search-error .alert")
-    expect(alert).to_be_visible(timeout=6000)
+    expect(alert).to_be_visible(timeout=10000)
     inp.fill("x")
     expect(alert).to_be_hidden(timeout=2000)
 

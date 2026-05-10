@@ -103,9 +103,6 @@ class _AutoSearchMixin:
             widget = field.widget
             if not isinstance(widget, (SearchSelect, MultiSelect, ComboBox)):
                 continue
-            # Already has an explicit search_url — skip auto-registration.
-            if widget.search_url:
-                continue
 
             # Check whether this widget would be auto-registered.
             search_fields = getattr(widget, "search_fields", None)
