@@ -419,28 +419,46 @@ def test_combobox_no_alpine_no_results_when_search_url():
 
 @pytest.mark.unit
 def test_combobox_renders_skeleton_when_search_url():
-    """4 skeleton rows render inside the listbox before the first htmx swap
-    so the dropdown reads as 'loading' rather than empty on initial load."""
+    """The smart skeleton container is rendered alongside the listbox."""
     widget = ComboBox(search_url="/search/")
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    listbox = soup.find("ul", id="id_test_listbox")
-    rows = listbox.find_all("li", class_="formwork-skeleton-row")
+    skeleton = soup.find("div", class_="formwork-skeleton")
+    assert skeleton is not None
+    assert skeleton.get("x-show") == "loading && !hasError"
+    rows = skeleton.find_all("div", class_="formwork-skeleton-row")
     assert len(rows) == 4
-    for row in rows:
-        assert row.find("span", class_="formwork-skeleton") is not None
+
+
+@pytest.mark.unit
+def test_combobox_skeleton_row_count_follows_expected_count():
+    """expected_count drives the row count."""
+    soup = render_widget(ComboBox(search_url="/search/", expected_count=3), attrs={"id": "id_x"})
+    rows = soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-row")
+    assert len(rows) == 3
+
+
+@pytest.mark.unit
+def test_combobox_skeleton_includes_description_placeholder_when_expected():
+    """expected_descriptions adds a second shimmer line to each row."""
+    soup = render_widget(
+        ComboBox(search_url="/search/", expected_descriptions=True),
+        attrs={"id": "id_x"},
+    )
+    row = soup.find("div", class_="formwork-skeleton-row")
+    assert row.find("span", class_="formwork-skeleton-desc") is not None
 
 
 @pytest.mark.unit
 def test_combobox_no_skeleton_without_search_url():
-    """No skeleton rows when there is no server-side search."""
+    """No skeleton container without server-side search."""
     widget = ComboBox(suggestions=["Alpha"])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    assert soup.find("li", class_="formwork-skeleton-row") is None
+    assert soup.find("div", class_="formwork-skeleton") is None
 
 
 @pytest.mark.unit
-def test_combobox_renders_error_alert_when_search_url():
-    """Error alert wrapper is present (Alpine-hidden) when search_url is set."""
+def test_combobox_renders_error_alert_with_icon_when_search_url():
+    """Error alert carries DaisyUI alert-icon + icon-circle-x."""
     widget = ComboBox(search_url="/search/")
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     wrapper = soup.find("div", class_="formwork-search-error")
@@ -448,7 +466,7 @@ def test_combobox_renders_error_alert_when_search_url():
     assert wrapper.get("x-show") == "hasError"
     alert = wrapper.find("div", class_="alert")
     assert alert is not None
-    assert alert.get("role") == "alert"
+    assert "alert-icon" in alert["class"]
     assert "Search failed" in alert.get_text()
 
 
@@ -461,32 +479,37 @@ def test_combobox_no_error_alert_without_search_url():
 
 
 @pytest.mark.unit
-def test_combobox_input_wires_error_handlers():
-    """The combobox-input toggles `hasError` on responseError/sendError so
-    the alert appears, and clears it on the next request."""
+def test_combobox_input_wires_loading_and_error_handlers():
+    """The combobox-input toggles `loading` and `hasError` on every
+    request lifecycle."""
     widget = ComboBox(search_url="/search/")
     soup = render_widget(widget, name="tags", attrs={"id": "id_tags"})
     trigger = soup.find("input", class_="combobox-input")
-    assert "hasError = false" in trigger["hx-on::before-request"]
-    assert "hasError = true" in trigger["hx-on::response-error"]
-    assert "hasError = true" in trigger["hx-on::send-error"]
+    before = trigger["hx-on::before-request"]
+    err = trigger["hx-on::response-error"]
+    assert "loading = true" in before
+    assert "hasError = false" in before
+    assert "loading = false" in err
+    assert "hasError = true" in err
 
 
 @pytest.mark.unit
-def test_combobox_listbox_hidden_on_error_when_search_url():
-    """The listbox hides while the error alert is shown."""
+def test_combobox_listbox_hidden_while_loading_or_error():
+    """The listbox stays hidden while loading or in error state."""
     widget = ComboBox(search_url="/search/")
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_listbox")
-    assert listbox.get("x-show") == "!hasError"
+    assert listbox.get("x-show") == "!loading && !hasError"
+    assert "loading = false" in listbox["hx-on::after-swap"]
 
 
 @pytest.mark.unit
-def test_combobox_xdata_has_error_flag_when_search_url():
-    """`hasError: false` is part of the Alpine x-data state."""
+def test_combobox_xdata_has_loading_and_error_flags_when_search_url():
+    """`loading: true` and `hasError: false` are part of the Alpine x-data."""
     widget = ComboBox(search_url="/search/")
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     wrapper = soup.find("div", class_="combobox")
+    assert "loading: true" in wrapper["x-data"]
     assert "hasError: false" in wrapper["x-data"]
 
 
@@ -1024,7 +1047,7 @@ def test_combobox_keyboard_escape_closes_dropdown(combobox_page):
 def test_combobox_skeleton_visible_on_initial_load(combobox_page):
     """Skeleton rows render in every htmx-mode ComboBox on first page load."""
     htmx_combo = combobox_page.locator(".dropdown.combobox").nth(4)
-    assert htmx_combo.locator("li.formwork-skeleton-row").count() == 4
+    assert htmx_combo.locator(".formwork-skeleton .formwork-skeleton-row").count() == 4
 
 
 @pytest.mark.e2e
@@ -1036,7 +1059,7 @@ def test_combobox_skeleton_replaced_after_first_load(combobox_page):
     inp = combobox_page.locator('input[name="language_htmx"]')
     inp.click()
     expect(combo.locator("ul button")).to_have_count(6, timeout=3000)
-    assert combo.locator("li.formwork-skeleton-row").count() == 0
+    expect(combo.locator(".formwork-skeleton")).to_be_hidden()
 
 
 @pytest.mark.e2e

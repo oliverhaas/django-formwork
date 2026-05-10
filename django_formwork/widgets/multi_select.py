@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from django import forms
 
-from ._base import _NOT_SET
+from ._base import _NOT_SET, _resolve_search_expectations, _skeleton_rows
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -57,12 +57,18 @@ class MultiSelect(forms.SelectMultiple):
         show_search: bool | None = None,
         search_fields: Sequence[str] | None = None,
         search_decorator: Callable | object = _NOT_SET,
+        expected_count: int | None = None,
+        expected_icons: bool = False,
+        expected_descriptions: bool = False,
     ) -> None:
         super().__init__(attrs=attrs, choices=choices)
         self.search_url = search_url
         self.show_search = show_search
         self.search_fields = tuple(search_fields) if search_fields else None
         self.search_decorator = search_decorator
+        self.expected_count = expected_count
+        self.expected_icons = expected_icons
+        self.expected_descriptions = expected_descriptions
         self._registry_key: str | None = None
 
     def get_context(self, name: str, value: list[str] | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
@@ -76,12 +82,25 @@ class MultiSelect(forms.SelectMultiple):
             from django.urls import reverse
 
             search_url = reverse("formwork:search", kwargs={"key": self._registry_key})
+        # Resolve expected counts/shape — drives skeleton + initial search visibility.
+        expected_count, expected_icons, expected_descriptions = _resolve_search_expectations(
+            self._registry_key,
+            self.expected_count,
+            self.expected_icons,
+            self.expected_descriptions,
+        )
         if self.show_search is not None:
             context["widget"]["show_search"] = self.show_search
+        elif search_url and expected_count is not None:
+            context["widget"]["show_search"] = expected_count >= self.search_threshold
         else:
             context["widget"]["show_search"] = total >= self.search_threshold or bool(search_url)
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         context["widget"]["search_url"] = search_url
+        context["widget"]["expected_count"] = expected_count
+        context["widget"]["expected_icons"] = expected_icons
+        context["widget"]["expected_descriptions"] = expected_descriptions
+        context["widget"]["skeleton_rows"] = _skeleton_rows(expected_count) if search_url else []
         # Read icon from FormworkChoiceLabel.
         for _group, options, _index in context["widget"]["optgroups"]:
             for option in options:

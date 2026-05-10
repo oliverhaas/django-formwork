@@ -512,31 +512,68 @@ def test_search_select_no_alpine_no_results_when_search_url():
 
 @pytest.mark.unit
 def test_search_select_renders_skeleton_when_search_url():
-    """4 skeleton placeholder rows are rendered inside the listbox on first
-    full page load when search_url is set, so the dropdown reads as 'loading'
-    rather than empty before the first focus-triggered htmx swap."""
+    """The smart skeleton container sits beside the listbox, with one row
+    per ``widget.skeleton_rows`` slot so the dropdown is shaped like the
+    eventual response from first paint."""
     widget = SearchSelect(search_url="/search/", choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    listbox = soup.find("ul", id="id_test_listbox")
-    rows = listbox.find_all("li", class_="formwork-skeleton-row")
-    assert len(rows) == 4
-    for row in rows:
-        assert row.find("span", class_="formwork-skeleton") is not None
+    skeleton = soup.find("div", class_="formwork-skeleton")
+    assert skeleton is not None
+    assert skeleton.get("x-show") == "loading && !hasError"
+    rows = skeleton.find_all("div", class_="formwork-skeleton-row")
+    assert len(rows) == 4  # default when no expected_count provided
+
+
+@pytest.mark.unit
+def test_search_select_skeleton_row_count_follows_expected_count():
+    """expected_count drives the row count, capped at 5 so the skeleton
+    never reads as a wall of bars."""
+    soup = render_widget(SearchSelect(search_url="/search/", expected_count=2), attrs={"id": "id_x"})
+    assert len(soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-row")) == 2
+    soup = render_widget(SearchSelect(search_url="/search/", expected_count=50), attrs={"id": "id_x"})
+    assert len(soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-row")) == 5
+
+
+@pytest.mark.unit
+def test_search_select_skeleton_includes_icon_placeholder_when_expected():
+    """expected_icons adds an icon placeholder to each skeleton row so the
+    dropdown leaves room for the eventual icon column."""
+    soup = render_widget(
+        SearchSelect(search_url="/search/", expected_icons=True),
+        attrs={"id": "id_x"},
+    )
+    row = soup.find("div", class_="formwork-skeleton-row")
+    assert row.find("span", class_="formwork-skeleton-icon") is not None
+    soup_no_icon = render_widget(SearchSelect(search_url="/search/"), attrs={"id": "id_y"})
+    row_no_icon = soup_no_icon.find("div", class_="formwork-skeleton-row")
+    assert row_no_icon.find("span", class_="formwork-skeleton-icon") is None
+
+
+@pytest.mark.unit
+def test_search_select_skeleton_includes_description_placeholder_when_expected():
+    """expected_descriptions adds a second narrow shimmer line so two-line
+    options pre-allocate vertical space."""
+    soup = render_widget(
+        SearchSelect(search_url="/search/", expected_descriptions=True),
+        attrs={"id": "id_x"},
+    )
+    row = soup.find("div", class_="formwork-skeleton-row")
+    assert row.find("span", class_="formwork-skeleton-desc") is not None
 
 
 @pytest.mark.unit
 def test_search_select_no_skeleton_without_search_url():
-    """Skeleton placeholders are NOT rendered when there is no server-side
-    search — the listbox renders real options instead."""
+    """No skeleton container when there is no server-side search."""
     widget = SearchSelect(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    assert soup.find("li", class_="formwork-skeleton-row") is None
+    assert soup.find("div", class_="formwork-skeleton") is None
 
 
 @pytest.mark.unit
 def test_search_select_renders_error_alert_when_search_url():
     """Error alert wrapper is present when search_url is set, hidden by
-    default via x-show='hasError', and contains the user-visible message."""
+    default via x-show='hasError', and contains the user-visible message
+    plus a DaisyUI error icon."""
     widget = SearchSelect(search_url="/search/", choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     wrapper = soup.find("div", class_="formwork-search-error")
@@ -545,49 +582,74 @@ def test_search_select_renders_error_alert_when_search_url():
     alert = wrapper.find("div", class_="alert")
     assert alert is not None
     assert alert.get("role") == "alert"
+    assert "alert-icon" in alert["class"]
     assert "Search failed" in alert.get_text()
 
 
 @pytest.mark.unit
 def test_search_select_no_error_alert_without_search_url():
-    """No error-alert wrapper when there is no server-side search — there
-    is nothing to fail."""
+    """No error-alert wrapper when there is no server-side search."""
     widget = SearchSelect(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     assert soup.find("div", class_="formwork-search-error") is None
 
 
 @pytest.mark.unit
-def test_search_select_search_input_wires_error_handlers():
-    """The htmx search input toggles the Alpine `hasError` flag so the alert
-    appears on responseError/sendError and clears on the next request."""
+def test_search_select_search_input_wires_loading_and_error_handlers():
+    """The htmx search input toggles the Alpine `loading` and `hasError`
+    flags so the skeleton/alert react to every request lifecycle."""
     widget = SearchSelect(search_url="/search/", choices=[])
     soup = render_widget(widget, name="city", attrs={"id": "id_city"})
     search = soup.find("div", class_="dropdown-content").find("input", {"type": "text"})
-    assert "hasError = false" in search["hx-on::before-request"]
-    assert "hasError = true" in search["hx-on::response-error"]
-    assert "hasError = true" in search["hx-on::send-error"]
+    before = search["hx-on::before-request"]
+    err = search["hx-on::response-error"]
+    send_err = search["hx-on::send-error"]
+    assert "loading = true" in before
+    assert "hasError = false" in before
+    assert "loading = false" in err
+    assert "hasError = true" in err
+    assert "loading = false" in send_err
+    assert "hasError = true" in send_err
 
 
 @pytest.mark.unit
-def test_search_select_listbox_hidden_on_error_when_search_url():
-    """The listbox hides while the error alert is shown, so the alert takes
-    over the dropdown space without the (possibly stale) options peeking
-    through."""
+def test_search_select_listbox_hidden_while_loading_or_error():
+    """The listbox stays hidden while loading or in an error state, so
+    the skeleton/alert take over the dropdown space."""
     widget = SearchSelect(search_url="/search/", choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_listbox")
-    assert listbox.get("x-show") == "!hasError"
+    assert listbox.get("x-show") == "!loading && !hasError"
+    assert "loading = false" in listbox["hx-on::after-swap"]
 
 
 @pytest.mark.unit
-def test_search_select_xdata_has_error_flag_when_search_url():
-    """`hasError: false` is initialised in the Alpine x-data so x-show
-    expressions resolve cleanly on first render."""
+def test_search_select_xdata_has_loading_and_error_flags_when_search_url():
+    """`loading: true` and `hasError: false` are initialised in x-data."""
     widget = SearchSelect(search_url="/search/", choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="search-select")
+    assert "loading: true" in details["x-data"]
     assert "hasError: false" in details["x-data"]
+
+
+@pytest.mark.unit
+def test_search_select_show_search_visible_from_first_render_when_count_meets_threshold():
+    """expected_count >= search_threshold opens the search input from the
+    first page render — no waiting for the OOB total-count swap."""
+    widget = SearchSelect(search_url="/search/", expected_count=30)
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    details = soup.find("details", class_="search-select")
+    assert "showSearch: true" in details["x-data"]
+
+
+@pytest.mark.unit
+def test_search_select_show_search_hidden_when_count_below_threshold():
+    """A small expected_count keeps the search input hidden."""
+    widget = SearchSelect(search_url="/search/", expected_count=5)
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    details = soup.find("details", class_="search-select")
+    assert "showSearch: false" in details["x-data"]
 
 
 @pytest.mark.unit
@@ -1426,7 +1488,7 @@ def test_search_select_skeleton_visible_on_initial_load(search_select_page):
     """Skeleton rows render in every htmx-mode SearchSelect on first page load,
     before any user interaction."""
     htmx_dropdown = search_select_page.locator("details.dropdown.search-select").nth(3)
-    rows = htmx_dropdown.locator("li.formwork-skeleton-row")
+    rows = htmx_dropdown.locator(".formwork-skeleton .formwork-skeleton-row")
     assert rows.count() == 4
 
 
@@ -1449,7 +1511,7 @@ def test_search_select_skeleton_replaced_after_first_load(search_select_page):
         search.dispatchEvent(new Event('focus'));
     }""")
     expect(sel.locator("ul button")).to_have_count(4, timeout=3000)
-    assert sel.locator("li.formwork-skeleton-row").count() == 0
+    expect(sel.locator(".formwork-skeleton")).to_be_hidden()
 
 
 @pytest.mark.e2e

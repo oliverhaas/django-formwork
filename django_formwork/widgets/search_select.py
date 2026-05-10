@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from django import forms
 
-from ._base import _NOT_SET
+from ._base import _NOT_SET, _resolve_search_expectations, _skeleton_rows
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -56,12 +56,18 @@ class SearchSelect(forms.Select):
         show_search: bool | None = None,
         search_fields: Sequence[str] | None = None,
         search_decorator: Callable | object = _NOT_SET,
+        expected_count: int | None = None,
+        expected_icons: bool = False,
+        expected_descriptions: bool = False,
     ) -> None:
         super().__init__(attrs=attrs, choices=choices)
         self.search_url = search_url
         self.show_search = show_search
         self.search_fields = tuple(search_fields) if search_fields else None
         self.search_decorator = search_decorator
+        self.expected_count = expected_count
+        self.expected_icons = expected_icons
+        self.expected_descriptions = expected_descriptions
         self._registry_key: str | None = None
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
@@ -100,11 +106,35 @@ class SearchSelect(forms.Select):
             search_url = reverse("formwork:search", kwargs={"key": self._registry_key})
         context["widget"]["search_url"] = search_url
         context["widget"]["search_threshold"] = self.search_threshold
+        # Resolve expected counts/shape — for server-side widgets this drives
+        # the loading skeleton and the initial visibility of the search input.
+        expected_count, expected_icons, expected_descriptions = self._resolve_expectations()
         if self.show_search is not None:
             context["widget"]["show_search"] = self.show_search
+        elif search_url and expected_count is not None:
+            # Decide up-front from the expected count instead of waiting for an OOB swap.
+            context["widget"]["show_search"] = expected_count >= self.search_threshold
         elif search_url:
-            # Server-side search: start hidden, let OOB total-count swap decide.
+            # Server-side search without an expected count hint: start hidden,
+            # let OOB total-count swap decide.
             context["widget"]["show_search"] = False
         else:
             context["widget"]["show_search"] = total >= self.search_threshold
+        context["widget"]["expected_count"] = expected_count
+        context["widget"]["expected_icons"] = expected_icons
+        context["widget"]["expected_descriptions"] = expected_descriptions
+        context["widget"]["skeleton_rows"] = _skeleton_rows(expected_count) if search_url else []
         return context
+
+    def _resolve_expectations(self) -> tuple[int | None, bool, bool]:
+        """Return ``(expected_count, expected_icons, expected_descriptions)``.
+
+        Falls back to auto-registered metadata so most callers don't need to
+        repeat what the registry already knows.
+        """
+        return _resolve_search_expectations(
+            self._registry_key,
+            self.expected_count,
+            self.expected_icons,
+            self.expected_descriptions,
+        )

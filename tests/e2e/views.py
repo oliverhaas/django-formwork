@@ -479,10 +479,19 @@ class SearchSelectForm(FormworkForm):
         ),
     )
     city_failing = forms.ChoiceField(
-        widget=SearchSelect(search_url="/e2e/search/failing/"),
+        widget=SearchSelect(
+            search_url="/e2e/search/failing/",
+            expected_count=30,
+            expected_icons=True,
+            expected_descriptions=True,
+        ),
         required=False,
         label="City (server search, slow + always fails)",
-        help_text="Endpoint sleeps 3s and returns HTTP 500 — demonstrates skeleton on first load and the error alert.",
+        help_text=(
+            "Endpoint sleeps 3s and returns HTTP 500. "
+            "expected_count=30 + expected_icons + expected_descriptions render a smart skeleton "
+            "and pre-show the search input, so the dropdown is shaped like the eventual response from first paint."
+        ),
     )
 
 
@@ -544,10 +553,18 @@ class MultiSelectForm(FormworkForm):
         help_text="Grouped MultiSelect — optgroup headers, keyboard nav, Enter toggles without closing.",
     )
     languages_failing = forms.MultipleChoiceField(
-        widget=MultiSelect(search_url="/e2e/search/failing/"),
+        widget=MultiSelect(
+            search_url="/e2e/search/failing/",
+            expected_count=8,
+            expected_icons=True,
+        ),
         required=False,
         label="Languages (server search, slow + always fails)",
-        help_text="Endpoint sleeps 3s and returns HTTP 500 — demonstrates skeleton on first load and the error alert.",
+        help_text=(
+            "Endpoint sleeps 3s and returns HTTP 500. "
+            "expected_count=8 + expected_icons render a smaller skeleton with checkbox + icon "
+            "placeholders so the dropdown reads as a multi-select from first paint."
+        ),
     )
 
 
@@ -663,10 +680,15 @@ class ComboBoxForm(FormworkForm):
         widget=ComboBox(
             search_url="/e2e/search/failing/",
             attrs={"placeholder": "Server search (always fails)"},
+            expected_count=12,
+            expected_descriptions=True,
         ),
         required=False,
         label="Language (server search, slow + always fails)",
-        help_text="Endpoint sleeps 3s and returns HTTP 500 — demonstrates skeleton on first load and the error alert.",
+        help_text=(
+            "Endpoint sleeps 3s and returns HTTP 500. "
+            "expected_count=12 + expected_descriptions render a skeleton with two-line rows."
+        ),
     )
 
 

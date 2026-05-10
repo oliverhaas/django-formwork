@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
 
-from ._base import _NOT_SET
+from ._base import _NOT_SET, _resolve_search_expectations, _skeleton_rows
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -50,6 +50,9 @@ class ComboBox(forms.TextInput):
         icons: dict[str, str] | None = None,
         descriptions: dict[str, str] | None = None,
         attrs: dict[str, Any] | None = None,
+        expected_count: int | None = None,
+        expected_icons: bool = False,
+        expected_descriptions: bool = False,
     ) -> None:
         super().__init__(attrs)
         self.suggestions = suggestions or []
@@ -58,6 +61,9 @@ class ComboBox(forms.TextInput):
         self.search_decorator = search_decorator
         self.icons = icons or {}
         self.descriptions = descriptions or {}
+        self.expected_count = expected_count
+        self.expected_icons = expected_icons
+        self.expected_descriptions = expected_descriptions
         self._registry_key: str | None = None
 
     def _suggestion_groups(self) -> list[tuple[str, list[dict[str, str]]]]:
@@ -101,4 +107,15 @@ class ComboBox(forms.TextInput):
             {s: self.icons[s] for s in flat_texts if s in self.icons},
             ensure_ascii=False,
         )
+        # Smart loading skeleton hints (only meaningful for server-side search).
+        expected_count, expected_icons, expected_descriptions = _resolve_search_expectations(
+            self._registry_key,
+            self.expected_count,
+            self.expected_icons,
+            self.expected_descriptions,
+        )
+        context["widget"]["expected_count"] = expected_count
+        context["widget"]["expected_icons"] = expected_icons
+        context["widget"]["expected_descriptions"] = expected_descriptions
+        context["widget"]["skeleton_rows"] = _skeleton_rows(expected_count) if search_url else []
         return context

@@ -12,6 +12,55 @@ _KB = 1024
 _MB = 1024 * 1024
 
 
+def _skeleton_row_count(expected_count: int | None) -> int:
+    """Pick a row count that approximates how full the dropdown will look.
+
+    Capped between 1 and 5 so the dropdown always reads as "loading a list"
+    rather than "loading nothing" or "loading a wall."  Falls back to 4 when
+    no hint is provided.
+    """
+    if expected_count is None:
+        return 4
+    return max(1, min(expected_count, 5))
+
+
+def _skeleton_rows(expected_count: int | None) -> list[int]:
+    """Return a list usable in template ``{% for _ in widget.skeleton_rows %}``."""
+    return list(range(_skeleton_row_count(expected_count)))
+
+
+def _resolve_search_expectations(
+    registry_key: str | None,
+    expected_count: int | None,
+    expected_icons: bool,  # noqa: FBT001 — internal helper, kwargs would only obscure the call site
+    expected_descriptions: bool,  # noqa: FBT001
+) -> tuple[int | None, bool, bool]:
+    """Resolve ``(expected_count, expected_icons, expected_descriptions)``.
+
+    Looks up auto-registered metadata when the widget didn't supply hints.
+    The count comes from the queryset factory, the icon/description flags
+    from whether ``icon_from_instance`` / ``description_from_instance`` were
+    registered.
+    """
+    if registry_key is None:
+        return expected_count, expected_icons, expected_descriptions
+    from django_formwork.registry import get_registration
+
+    reg = get_registration(registry_key)
+    if reg is None:
+        return expected_count, expected_icons, expected_descriptions
+    if expected_count is None and reg.queryset_factory is not None:
+        try:
+            expected_count = reg.queryset_factory().count()
+        except Exception:  # noqa: BLE001 — count is a hint, never block render
+            expected_count = None
+    if not expected_icons and reg.icon_from_instance is not None:
+        expected_icons = True
+    if not expected_descriptions and reg.description_from_instance is not None:
+        expected_descriptions = True
+    return expected_count, expected_icons, expected_descriptions
+
+
 def _format_size(size: int) -> str:
     """Format a byte count for human-readable display."""
     if size < _KB:

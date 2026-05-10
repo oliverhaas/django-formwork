@@ -5,8 +5,9 @@
   value: '{{ (widget.value if widget.value is not none else '')|escapejs }}',
   label: '{{ widget.selected_label|escapejs }}',
   icon: '{{ widget.selected_icon|escapejs }}',
+  {% if widget.search_url %}loading: true,
   hasError: false,
-  highlightedEl: null,
+  {% endif %}highlightedEl: null,
   get noResults() {
     if (!this.search) return false;
     const q = this.search.toLowerCase();
@@ -82,26 +83,24 @@
 }" @toggle="if ($el.open) { {% if widget.search_url %}if (!$el.dataset.loaded) { $el.dataset.loaded = '1'; requestAnimationFrame(() => $refs.search.dispatchEvent(new Event('focus'))); } {% endif %}const _s = $refs.search; const _show = showSearch; setTimeout(() => { if (_show && _s) _s.focus(); }, 0); } else { _clearHighlight(); }" @keydown.arrow-down="if ($el.open) { $event.preventDefault(); nav(1); }" @keydown.arrow-up="if ($el.open) { $event.preventDefault(); nav(-1); }" @keydown.enter="if ($el.open) { $event.preventDefault(); confirm(); }">
   <summary{% if id %} id="{{ id }}_trigger"{% endif %} class="text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}" :class="!displayText && 'formwork-placeholder'"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
     <span x-show="icon" x-html="icon" x-cloak class="shrink-0"></span>
-    <span x-text="displayText || 'Select\u2026'">{% if widget.selected_label %}{{ widget.selected_label }}{% else %}Select&#x2026;{% endif %}</span>
+    <span x-text="displayText || 'Select…'">{% if widget.selected_label %}{{ widget.selected_label }}{% else %}Select&#x2026;{% endif %}</span>
   </summary>
   <input type="hidden" name="{{ widget.name }}" value="{{ widget.value if widget.value is not none else '' }}" :value="value"{% if id %} id="{{ id }}"{% endif %}>{% if widget.search_url and id %}
-  <input type="hidden"  id="{{ id }}_total" value="0">{% endif %}
+  <input type="hidden"  id="{{ id }}_total" value="{{ widget.expected_count if widget.expected_count is not none else 0 }}">{% endif %}
   <div class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
     <div x-show="showSearch" x-cloak class="p-1.5 border-b border-base-300{% if widget.search_url %} flex items-center gap-1{% endif %}">
-      <input x-ref="search" x-model="search" @input="_clearHighlight()" type="text" class="{% if widget.search_url %}grow{% else %}w-full{% endif %} bg-transparent px-2 py-1 focus:outline-1 focus:outline-base-content/30 rounded" placeholder="Search&#x2026;" aria-label="Search" @click.stop{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'search_select'; event.detail.parameters.name = '{{ widget.name }}'" hx-on::before-request="Alpine.$data(this.closest('[x-data]')).hasError = false" hx-on::response-error="Alpine.$data(this.closest('[x-data]')).hasError = true" hx-on::send-error="Alpine.$data(this.closest('[x-data]')).hasError = true" hx-indicator="#{{ id }}_spinner"{% endif %}>
+      <input x-ref="search" x-model="search" @input="_clearHighlight()" type="text" class="{% if widget.search_url %}grow{% else %}w-full{% endif %} bg-transparent px-2 py-1 focus:outline-1 focus:outline-base-content/30 rounded" placeholder="Search&#x2026;" aria-label="Search" @click.stop{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'search_select'; event.detail.parameters.name = '{{ widget.name }}'" hx-on::before-request="const d = Alpine.$data(this.closest('[x-data]')); d.loading = true; d.hasError = false" hx-on::response-error="const d = Alpine.$data(this.closest('[x-data]')); d.loading = false; d.hasError = true" hx-on::send-error="const d = Alpine.$data(this.closest('[x-data]')); d.loading = false; d.hasError = true" hx-indicator="#{{ id }}_spinner"{% endif %}>
       {% if widget.search_url %}<span{% if id %} id="{{ id }}_spinner"{% endif %} class="htmx-indicator"><span class="loading loading-spinner loading-xs"></span></span>{% endif %}
     </div>
-    <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1"{% if widget.search_url %} x-show="!hasError"{% endif %} @click="const btn = $event.target.closest('[data-value]'); if (btn) pick(btn.dataset.value, btn.dataset.label, btn.dataset.icon || '')"{% if widget.search_url %} hx-on::after-swap="Alpine.$data(this.closest('[x-data]'))._checkTotalCount()"{% endif %}>
-      {% if widget.search_url %}<li class="formwork-skeleton-row"><span class="formwork-skeleton"></span></li>
-      <li class="formwork-skeleton-row"><span class="formwork-skeleton"></span></li>
-      <li class="formwork-skeleton-row"><span class="formwork-skeleton"></span></li>
-      <li class="formwork-skeleton-row"><span class="formwork-skeleton"></span></li>{% else %}{% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title" x-show="!search || [{% for option in options %}'{{ option.label|escapejs }}'{% if not loop.last %},{% endif %}{% endfor %}].some(l => l.toLowerCase().includes(search.toLowerCase()))">{{ group }}</li>{% endif %}{% for option in options %}{% if option.value != "" %}
+    <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1"{% if widget.search_url %} x-show="!loading && !hasError"{% endif %} @click="const btn = $event.target.closest('[data-value]'); if (btn) pick(btn.dataset.value, btn.dataset.label, btn.dataset.icon || '')"{% if widget.search_url %} hx-on::after-swap="const d = Alpine.$data(this.closest('[x-data]')); d.loading = false; d._checkTotalCount()"{% endif %}>
+      {% if not widget.search_url %}{% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title" x-show="!search || [{% for option in options %}'{{ option.label|escapejs }}'{% if not loop.last %},{% endif %}{% endfor %}].some(l => l.toLowerCase().includes(search.toLowerCase()))">{{ group }}</li>{% endif %}{% for option in options %}{% if option.value != "" %}
       <li x-show="!search || '{{ option.label|escapejs }}'.toLowerCase().includes(search.toLowerCase())" role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ option.value|escapejs }}" data-label="{{ option.label|escapejs }}"{% if option.icon %} data-icon="{{ option.icon }}"{% endif %}>
         <span class="formwork-check shrink-0 opacity-0" :class="value === '{{ option.value|escapejs }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>{% if option.icon %}<span class="shrink-0">{{ option.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ option.label }}</span>{% if option.description %}<span class="text-xs text-base-content/50">{{ option.description }}</span>{% endif %}</span>
       </button></li>{% endif %}{% endfor %}{% endfor %}{% endif %}
     </ul>
-    {% if widget.search_url %}<div x-show="hasError" x-cloak class="formwork-search-error">
-      <div role="alert" class="alert">Search failed. Please try again.</div>
+    {% if widget.search_url %}<div x-show="loading && !hasError" x-cloak class="formwork-skeleton" aria-hidden="true">{% for _ in widget.skeleton_rows %}<div class="formwork-skeleton-row">{% if widget.expected_icons %}<span class="formwork-skeleton-icon"></span>{% endif %}<span class="formwork-skeleton-text"></span>{% if widget.expected_descriptions %}<span class="formwork-skeleton-desc"></span>{% endif %}</div>{% endfor %}</div>
+    <div x-show="hasError" x-cloak class="formwork-search-error">
+      <div role="alert" class="alert alert-icon">Search failed. Please try again.</div>
     </div>{% endif %}
     {% if not widget.search_url %}<p x-show="noResults" x-cloak class="px-3 py-2 text-base-content/50">No results</p>{% endif %}
   </div>

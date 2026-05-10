@@ -744,15 +744,55 @@ details.dropdown.search-select > .dropdown-content {
    (see after closing brace) so it beats the opacity-0 utility in HTML. */
 
 
-/* Server-side search loading skeleton: shown inside the listbox on first
-   full page load when search_url is set, before the first focus-triggered
-   htmx request swaps in real options. */
-.formwork-skeleton-row {
-    @apply flex items-center px-3 py-1.5;
+/* Server-side search loading skeleton: shown in place of the listbox
+   while an htmx request is in flight (and on first full page load when
+   no data has arrived yet).  Row count and shape are driven by widget
+   context — expected_count, expected_icons, expected_descriptions —
+   so the skeleton roughly mirrors what the response will look like.
+
+   Multi-line rows (icon + text + description) get a 2-column grid so
+   the description sits under the text, not next to it. */
+.formwork-skeleton {
+    @apply max-h-60 overflow-hidden p-1;
 }
 
-.formwork-skeleton {
-    @apply skeleton h-4 w-full block;
+.formwork-skeleton-row {
+    @apply flex items-center gap-2 px-3 py-1.5;
+}
+
+.formwork-skeleton-row:has(.formwork-skeleton-desc) {
+    @apply grid items-center gap-x-2 gap-y-1;
+    grid-template-columns: auto 1fr;
+}
+
+.formwork-skeleton-row:has(.formwork-skeleton-icon):has(.formwork-skeleton-desc) {
+    grid-template-columns: auto 1fr;
+}
+
+.formwork-skeleton-icon {
+    @apply skeleton shrink-0 size-5 rounded-md;
+    grid-row: span 2;
+}
+
+.formwork-skeleton-text {
+    @apply skeleton h-3 rounded-sm;
+    width: var(--fw-skeleton-text-w, 60%);
+}
+
+.formwork-skeleton-desc {
+    @apply skeleton h-2 rounded-sm;
+    width: var(--fw-skeleton-desc-w, 40%);
+}
+
+/* Stagger row widths so the skeleton doesn't read as a column of bars. */
+.formwork-skeleton-row:nth-child(3n) { --fw-skeleton-text-w: 75%; --fw-skeleton-desc-w: 50%; }
+.formwork-skeleton-row:nth-child(3n+1) { --fw-skeleton-text-w: 55%; --fw-skeleton-desc-w: 35%; }
+.formwork-skeleton-row:nth-child(3n+2) { --fw-skeleton-text-w: 65%; --fw-skeleton-desc-w: 45%; }
+
+/* MultiSelect rows leave room for the checkbox/checkmark column. */
+.formwork-skeleton-row-multi::before {
+    content: "";
+    @apply skeleton size-3 rounded-sm shrink-0;
 }
 
 /* Server-side search error state: replaces the listbox when an htmx
@@ -762,8 +802,13 @@ details.dropdown.search-select > .dropdown-content {
     @apply px-2 py-2;
 }
 
+/* alert-icon's ::before pseudo reads --icon-url; iconx's icon-* classes
+   set mask-image directly, which would mask the whole alert. Override
+   --icon-url here so the X icon lands on ::before only and the text
+   stays visible. */
 .formwork-search-error > .alert {
     @apply alert-error alert-soft;
+    --icon-url: url("/static/icons/lucide/circle-x.svg");
 }
 
 
