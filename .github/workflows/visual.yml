@@ -14,8 +14,19 @@ permissions:
 jobs:
   screenshots:
     runs-on: ubuntu-latest
+    # Skip runs on the bot's own auto-update branches to prevent loops.
+    # `pull_request.branches-ignore` filters the BASE branch, not the head,
+    # so we use a job-level if: instead.
+    if: ${{ !startsWith(github.head_ref, 'chore/update-screenshots-') }}
     steps:
-      - uses: actions/checkout@v6
+      # ---------- Phase A: setup + run ----------
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+          # Use the PR head SHA so we have the source-branch tip locally
+          # (default for pull_request is GitHub's synthetic merge ref).
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -46,22 +57,24 @@ jobs:
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             uv run pytest tests/widgets/ -m screenshot --update-screenshots --no-cov -q
           else
+            set +e
             uv run pytest tests/widgets/ -m screenshot --no-cov -q
+            echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+            set -e
           fi
 
       - name: Upload diff artifacts
-        if: failure()
+        if: github.event_name == 'pull_request' && steps.screenshots.outputs.exit_code != '0'
         uses: actions/upload-artifact@v7
         with:
           name: screenshot-diffs
           path: test-results/*
           retention-days: 14
 
-      # On schedule/manual: create or update baseline PR if screenshots changed,
-      # close stale PR if no changes remain.
-      - name: Check for baseline changes
+      # ---------- Phase B: schedule / workflow_dispatch flow ----------
+      - name: Check for baseline changes (schedule path)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        id: diff
+        id: schedule_diff
         run: |
           if git diff --quiet tests/widgets/screenshots/; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -69,19 +82,23 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create baseline update PR
-        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.diff.outputs.changed == 'true'
+      - name: Open or update scheduled baseline PR
+        if: |
+          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+          && steps.schedule_diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          BRANCH="chore/update-screenshot-baselines"
+          BRANCH="chore/update-screenshots-scheduled"
           git checkout -B "$BRANCH"
           git add tests/widgets/screenshots/
           git commit -m "chore: update screenshot baselines [auto]"
-          git push -f origin "$BRANCH"
-          # Create or update PR
+          git push --force origin "$BRANCH"
           if gh pr list --head "$BRANCH" --state open --json number -q '.[0].number' | grep -q .; then
-            echo "PR already exists, force-pushed update."
+            echo "Scheduled baseline PR already exists; force-pushed update."
           else
             gh pr create \
               --title "chore: update screenshot baselines [auto]" \
@@ -89,28 +106,27 @@ jobs:
               --head "$BRANCH" \
               --base main
           fi
+
+      - name: Close stale scheduled baseline PR
+        if: |
+          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+          && steps.schedule_diff.outputs.changed == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Close stale baseline PR
-        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.diff.outputs.changed == 'false'
         run: |
-          BRANCH="chore/update-screenshot-baselines"
+          BRANCH="chore/update-screenshots-scheduled"
           PR_NUMBER=$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')
           if [ -n "$PR_NUMBER" ]; then
             gh pr close "$PR_NUMBER" --comment "Baselines match — no update needed." --delete-branch
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # On PR: if screenshots fail, create baseline update PR targeting source branch.
-      - name: Regenerate baselines for PR
-        if: github.event_name == 'pull_request' && failure() && steps.screenshots.outcome == 'failure'
-        run: |
-          uv run pytest tests/widgets/ -m screenshot --update-screenshots --no-cov -q || true
+      # ---------- Phase C: pull_request flow ----------
+      - name: Regenerate baselines for failing PR
+        if: github.event_name == 'pull_request' && steps.screenshots.outputs.exit_code != '0'
+        run: uv run pytest tests/widgets/ -m screenshot --update-screenshots --no-cov -q || true
 
       - name: Check for PR baseline changes
-        if: github.event_name == 'pull_request' && failure() && steps.screenshots.outcome == 'failure'
+        if: github.event_name == 'pull_request' && steps.screenshots.outputs.exit_code != '0'
         id: pr_diff
         run: |
           if git diff --quiet tests/widgets/screenshots/; then
@@ -119,44 +135,94 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create baseline update PR for source branch
-        if: github.event_name == 'pull_request' && failure() && steps.screenshots.outcome == 'failure' && steps.pr_diff.outputs.changed == 'true'
+      - name: Open or update child baseline PR
+        if: |
+          github.event_name == 'pull_request'
+          && steps.screenshots.outputs.exit_code != '0'
+          && steps.pr_diff.outputs.changed == 'true'
+        id: child_pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          SOURCE_BRANCH="${{ github.head_ref }}"
+
+          SOURCE_BRANCH="${GITHUB_HEAD_REF}"
           UPDATE_BRANCH="chore/update-screenshots-${SOURCE_BRANCH}"
-          git checkout -B "$UPDATE_BRANCH"
+
+          # Anchor commit to the source-branch tip (avoids the synthetic merge ref).
+          git fetch origin "$SOURCE_BRANCH"
+          git reset --soft "origin/$SOURCE_BRANCH"
+          git reset -- .
           git add tests/widgets/screenshots/
           git commit -m "chore: update screenshot baselines for ${SOURCE_BRANCH} [auto]"
-          git push -f origin "$UPDATE_BRANCH"
-          # Create or update PR
-          EXISTING_PR=$(gh pr list --head "$UPDATE_BRANCH" --state open --json url -q '.[0].url')
-          if [ -n "$EXISTING_PR" ]; then
-            echo "PR already exists at $EXISTING_PR, force-pushed update."
-            UPDATE_PR_URL="$EXISTING_PR"
-          else
-            UPDATE_PR_URL=$(gh pr create \
+          git checkout -B "$UPDATE_BRANCH"
+          git push --force origin "$UPDATE_BRANCH"
+
+          # Find or create the child PR. `gh pr create` returns the PR URL on
+          # stdout (no --json support on that subcommand), so we always look up
+          # the number with a follow-up `gh pr list`.
+          CHILD_PR=$(gh pr list --head "$UPDATE_BRANCH" --state open --json number -q '.[0].number')
+          if [ -z "$CHILD_PR" ]; then
+            gh pr create \
               --title "chore: update screenshot baselines [auto]" \
               --body "Automated screenshot baseline update for PR #${{ github.event.pull_request.number }}." \
               --head "$UPDATE_BRANCH" \
-              --base "$SOURCE_BRANCH")
+              --base "$SOURCE_BRANCH"
+            CHILD_PR=$(gh pr list --head "$UPDATE_BRANCH" --state open --json number -q '.[0].number')
+          else
+            echo "Child PR #${CHILD_PR} already exists; force-pushed update."
           fi
-          # Comment on the original PR
-          gh pr comment "${{ github.event.pull_request.number }}" \
-            --body "Visual changes detected. Review and merge baseline update: ${UPDATE_PR_URL}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "child_pr=${CHILD_PR}" >> "$GITHUB_OUTPUT"
 
-      # On PR: close stale baseline update PR if screenshots now match.
-      - name: Close stale PR baseline update
-        if: github.event_name == 'pull_request' && success()
-        run: |
-          SOURCE_BRANCH="${{ github.head_ref }}"
-          UPDATE_BRANCH="chore/update-screenshots-${SOURCE_BRANCH}"
-          PR_NUMBER=$(gh pr list --head "$UPDATE_BRANCH" --state open --json number -q '.[0].number')
-          if [ -n "$PR_NUMBER" ]; then
-            gh pr close "$PR_NUMBER" --comment "Screenshots now match baseline — update no longer needed." --delete-branch
-          fi
+      - name: Sticky-comment parent PR
+        if: |
+          github.event_name == 'pull_request'
+          && steps.screenshots.outputs.exit_code != '0'
+          && steps.pr_diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          CHILD_PR="${{ steps.child_pr.outputs.child_pr }}"
+          MARKER="<!-- formwork:screenshot-notify -->"
+          BODY="${MARKER}
+          **Screenshot tests failed.** A baseline-update PR has been opened: #${CHILD_PR}
+
+          Review and merge it into this branch if the visual changes are intentional."
+
+          EXISTING=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -1)
+          if [ -n "$EXISTING" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${EXISTING}" -f body="$BODY"
+          else
+            gh pr comment "$PR_NUMBER" --body "$BODY"
+          fi
+
+      - name: Fail the job when screenshots regressed
+        if: github.event_name == 'pull_request' && steps.screenshots.outputs.exit_code != '0'
+        run: exit 1
+
+      - name: Close stale child PR and clean sticky comment (PR pass)
+        if: github.event_name == 'pull_request' && steps.screenshots.outputs.exit_code == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          SOURCE_BRANCH="${GITHUB_HEAD_REF}"
+          UPDATE_BRANCH="chore/update-screenshots-${SOURCE_BRANCH}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          MARKER="<!-- formwork:screenshot-notify -->"
+
+          CHILD_PR=$(gh pr list --head "$UPDATE_BRANCH" --state open --json number -q '.[0].number')
+          if [ -n "$CHILD_PR" ]; then
+            gh pr close "$CHILD_PR" --comment "Screenshots now match baseline — update no longer needed." --delete-branch
+          fi
+
+          EXISTING=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -1)
+          if [ -n "$EXISTING" ]; then
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/issues/comments/${EXISTING}"
+          fi
