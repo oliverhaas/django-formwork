@@ -433,6 +433,42 @@ class SearchSelectForm(FormworkForm):
         required=False,
         label="Country (server search, icons + descriptions)",
     )
+    city_grouped = forms.ChoiceField(
+        choices=[
+            ("", ""),
+            (
+                "Europe",
+                [
+                    ("ldn", "London"),
+                    ("par", "Paris"),
+                    ("ber", "Berlin"),
+                ],
+            ),
+            (
+                "Asia",
+                [
+                    ("tyo", "Tokyo"),
+                    ("sel", "Seoul"),
+                    ("bkk", "Bangkok"),
+                ],
+            ),
+            (
+                "Americas",
+                [
+                    ("nyc", FormworkChoiceLabel("New York", description="The Big Apple")),
+                    ("sao", "São Paulo"),
+                    ("mex", "Mexico City"),
+                ],
+            ),
+        ],
+        widget=SearchSelect,
+        required=False,
+        label="City by region (grouped)",
+        help_text=(
+            "Grouped SearchSelect — optgroup headers shown as section titles, "
+            "auto-hide when search filters out their children."
+        ),
+    )
 
 
 class MultiSelectForm(FormworkForm):
