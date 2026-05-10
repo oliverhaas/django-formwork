@@ -502,6 +502,57 @@ def test_search_select_no_icon_element_when_not_provided():
     assert len(icons) == 0
 
 
+# ─── Level 2b: Optgroup rendering ────────────────────────────────────────
+
+
+@pytest.mark.unit
+def test_search_select_renders_group_headers():
+    """Grouped choices produce <li class='menu-title'> headers per non-empty group."""
+    widget = SearchSelect(
+        choices=[
+            ("", ""),
+            ("Europe", [("ldn", "London"), ("par", "Paris")]),
+            ("Asia", [("tyo", "Tokyo")]),
+        ],
+    )
+    soup = render_widget(widget, attrs={"id": "id_city"})
+    titles = [li.get_text(strip=True) for li in soup.find_all("li", class_="menu-title")]
+    assert titles == ["Europe", "Asia"]
+
+
+@pytest.mark.unit
+def test_search_select_no_group_headers_for_flat_choices():
+    """Flat choices produce no menu-title headers."""
+    widget = SearchSelect(choices=[("", ""), ("nyc", "New York"), ("ldn", "London")])
+    soup = render_widget(widget, attrs={"id": "id_city"})
+    assert soup.find_all("li", class_="menu-title") == []
+
+
+@pytest.mark.unit
+def test_search_select_grouped_options_keep_icons_and_descriptions():
+    """FormworkChoiceLabel icons/descriptions render inside grouped options."""
+    widget = SearchSelect(
+        choices=[
+            ("", ""),
+            (
+                "Europe",
+                [
+                    (
+                        "ldn",
+                        FormworkChoiceLabel("London", icon="\U0001f1ec\U0001f1e7", description="UK capital"),
+                    ),
+                ],
+            ),
+        ],
+    )
+    soup = render_widget(widget, attrs={"id": "id_city"})
+    button = soup.find("button", attrs={"data-value": "ldn"})
+    assert button is not None
+    assert "London" in button.get_text()
+    assert "UK capital" in button.get_text()
+    assert "\U0001f1ec\U0001f1e7" in button.decode()
+
+
 # ─── Level 3: Form integration ───────────────────────────────────────────
 
 
