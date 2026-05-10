@@ -209,7 +209,7 @@ class TestComplexFormMorphResilience:
         })()""",
         )
         page.wait_for_timeout(500)
-        # Idiomorph preserves open attribute on <details>
+        # htmx 4 morph (with formwork's morphIgnore) preserves open attribute on <details>
         assert page.evaluate("document.querySelector('details.search-select').open")
 
     def test_auto_validate_shows_error_without_submit(self, complex_page):

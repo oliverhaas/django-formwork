@@ -67,14 +67,12 @@ For quick prototyping without a build step, use the pre-compiled file instead:
 For dynamic widgets (server-side search, password reveal, combo boxes, etc.):
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/htmx.org@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/idiomorph@0.7"></script>
+<script src="https://cdn.jsdelivr.net/npm/htmx.org@4.0.0-beta3"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3"></script>
 {% load formwork %}
 {% formwork_js %}
 ```
 
-- **htmx** — Powers server-side search and validation
-- **idiomorph** — DOM morphing for htmx responses (preserves form state)
+- **htmx 4** — Powers server-side search and validation, with built-in `morphInner`/`morphOuter` swap strategies (no separate idiomorph dependency)
 - **Alpine.js** — Client-side interactivity for custom widgets
-- **formwork.js** — Configures idiomorph to preserve Alpine state during morphs
+- **formwork.js** — Registers an htmx morph extension that preserves Alpine state, focused input values, and `<details>` open state across morph swaps

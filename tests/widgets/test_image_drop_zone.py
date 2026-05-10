@@ -364,7 +364,7 @@ def test_image_drop_zone_has_icon(uploads_page):
 #
 # ImageDropZone relies on Alpine.js FileReader-based preview (client-side
 # blob URL).  After a form morph the server-rendered HTML has no
-# preview, and idiomorph would normally clear it.  However the /uploads/
+# preview, and htmx's morph would normally clear it.  However the /uploads/
 # page does not include htmx morph wiring, so morph resilience cannot
 # currently be tested end-to-end.  These tests are left as a gap pending
 # a dedicated uploads morph page.

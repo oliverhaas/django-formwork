@@ -3,8 +3,7 @@
       action="{% url 'wizard' %}"
       hx-post="{% url 'wizard' %}"
       hx-target="#wizard-form"
-      hx-swap="morph"
-      hx-ext="morph">
+      hx-swap="outerMorph">
   {% csrf_token %}
   <input type="hidden" name="step" value="{{ step }}">
   {{ form }}

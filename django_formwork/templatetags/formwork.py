@@ -21,7 +21,7 @@ def formwork_css() -> str:
 
 @register.simple_tag
 def formwork_js() -> str:
-    """Output a ``<script>`` tag for the formwork idiomorph helper.
+    """Output a ``<script>`` tag for the formwork htmx morph configuration.
 
     Usage::
 

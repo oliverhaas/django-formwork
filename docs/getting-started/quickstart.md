@@ -161,6 +161,6 @@ country = forms.ChoiceField(
 <!-- CSS link tag -->
 {% formwork_css %}
 
-<!-- JS script tag (idiomorph morph config) -->
+<!-- JS script tag (htmx 4 morph configuration) -->
 {% formwork_js %}
 ```

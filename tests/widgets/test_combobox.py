@@ -478,8 +478,8 @@ def test_combobox_input_wires_loading_and_error_handlers():
     widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="tags", attrs={"id": "id_tags"})
     trigger = soup.find("input", class_="combobox-input")
-    before = trigger["hx-on::before-request"]
-    err = trigger["hx-on::response-error"]
+    before = trigger["hx-on::before:request"]
+    err = trigger["hx-on::response:error"]
     assert "loading = true" in before
     assert "hasError = false" in before
     assert "loading = false" in err
@@ -493,7 +493,7 @@ def test_combobox_listbox_hidden_while_loading_or_error():
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_listbox")
     assert listbox.get("x-show") == "!loading && !hasError"
-    assert "loading = false" in listbox["hx-on::after-swap"]
+    assert "loading = false" in listbox["hx-on::after:settle"]
 
 
 @pytest.mark.unit

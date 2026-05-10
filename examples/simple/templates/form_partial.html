@@ -2,8 +2,7 @@
       method="post"
       hx-post="{% url 'contact' %}"
       hx-target="#contact-form"
-      hx-swap="morph"
-      hx-ext="morph"
+      hx-swap="outerMorph"
       data-formwork-dirty>
   {% csrf_token %}
   {{ form }}

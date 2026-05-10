@@ -11,7 +11,7 @@ Django Formwork is a form rendering library that gives your Django forms [DaisyU
 - **Zero-config styling** — Set `FORM_RENDERER` once and all forms get DaisyUI styling
 - **Admin-safe** — Django admin is unaffected (it renders widgets directly, not forms)
 - **Custom widgets** — Toggle switches, star ratings, password reveal, searchable dropdowns, combo boxes, file drop zones, and more
-- **htmx integration** — Server-side search, textarea validation, and full-form morphing with idiomorph
+- **htmx 4 integration** — Server-side search, textarea validation, and full-form morphing with htmx's built-in `outerMorph` swap
 - **CSS `@apply` architecture** — All DaisyUI classes are applied via CSS, not in Python or templates. Users can override with Tailwind utilities
 
 ## Requirements

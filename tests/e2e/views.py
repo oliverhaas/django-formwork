@@ -1032,8 +1032,7 @@ _HEAD = """\
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/formwork/formwork-dist.css">
-<script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>
-<script src="https://unpkg.com/idiomorph@0.7/dist/idiomorph-ext.min.js"></script>
+<script src="https://unpkg.com/htmx.org@4.0.0-beta3/dist/htmx.min.js"></script>
 <script src="/static/formwork/formwork.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>"""
 
@@ -1076,16 +1075,14 @@ _THEME_SWITCHER = (
 def _form_html(url, form_id):
     return (
         f'<form id="{form_id}" method="post" enctype="multipart/form-data" '
-        f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
-        f'hx-ext="morph">\n'
+        f'hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}">\n'
         "  {% csrf_token %}\n"
         "  {{ form }}\n"
         '  <div class="flex gap-2 mt-4">\n'
         '    <button type="submit" class="btn btn-primary">Submit</button>\n'
         "    {% if saved %}\n"
         f'    <button type="button" class="btn btn-error ml-auto" '
-        f'hx-delete="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
-        f'hx-ext="morph">Delete</button>\n'
+        f'hx-delete="{url}" hx-swap="outerMorph" hx-target="#{form_id}">Delete</button>\n'
         "    {% endif %}\n"
         "  </div>\n"
         "</form>"
@@ -1095,17 +1092,20 @@ def _form_html(url, form_id):
 def _complex_form_html(url, form_id):
     return (
         f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate '
-        f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
-        f'hx-ext="morph" hx-sync="this:replace" '
-        f'hx-trigger="input delay:1500ms, change delay:300ms, submit">\n'
+        f'hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}" '
+        f'hx-sync="this:replace" '
+        f'hx-trigger="input delay:1500ms, change delay:300ms, submit" '
+        # In htmx 4, each trigger spec has its own delay timer.  Pending
+        # input/change timers from earlier typing would fire AFTER the
+        # submit POST and clobber its result.  Clear them on submit.
+        f'hx-on:submit="for (const s of this._htmx?.triggerSpecs || []) {{ if (s.timeout) {{ clearTimeout(s.timeout); s.timeout = null; }} }}">\n'
         "  {% csrf_token %}\n"
         "  {{ form }}\n"
         '  <div class="flex gap-2 mt-4">\n'
         f'    <button type="submit" name="_submit" value="1" class="btn btn-primary">Submit</button>\n'
         "    {% if saved %}\n"
         f'    <button type="button" class="btn btn-error ml-auto" '
-        f'hx-delete="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
-        f'hx-ext="morph">Delete</button>\n'
+        f'hx-delete="{url}" hx-swap="outerMorph" hx-target="#{form_id}">Delete</button>\n'
         "    {% endif %}\n"
         "  </div>\n"
         "</form>"
@@ -1113,24 +1113,32 @@ def _complex_form_html(url, form_id):
 
 
 def _autosave_form_html(url, form_id):
+    # Cancel pending auto-save timers before any explicit (non-input)
+    # action — submit, reset, delete — so they don't fire afterward and
+    # clobber the result.  htmx 4 keeps timers per-spec, so we walk the
+    # form's specs.
+    cancel_timers = (
+        "for (const s of this.closest('form')._htmx?.triggerSpecs || []) "
+        "{ if (s.timeout) { clearTimeout(s.timeout); s.timeout = null; } }"
+    )
     return (
         f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate '
-        f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
-        f'hx-ext="morph" '
+        f'hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}" '
         f'hx-trigger="input delay:500ms, change delay:200ms">\n'
         "  {% csrf_token %}\n"
         "  {{ form }}\n"
         '  <div class="flex gap-2 mt-4">\n'
         f'    <button type="submit" class="btn btn-primary" '
-        f'hx-post="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
-        f"""hx-ext="morph" hx-vals='{{"_submit": "1"}}'>Submit</button>\n"""
+        f'hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}" '
+        f'hx-on:click="{cancel_timers}" '
+        f"""hx-vals='{{"_submit": "1"}}'>Submit</button>\n"""
         "    {% if saved %}\n"
         f'    <button type="button" class="btn" '
-        f'hx-delete="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
-        f'hx-ext="morph">Reset</button>\n'
+        f'hx-delete="{url}" hx-swap="outerMorph" hx-target="#{form_id}" '
+        f'hx-on:click="{cancel_timers}">Reset</button>\n'
         f'    <button type="button" class="btn btn-error ml-auto" '
-        f'hx-delete="{url}" hx-swap="morph:outerHTML" hx-target="#{form_id}" '
-        f'hx-ext="morph">Delete</button>\n'
+        f'hx-delete="{url}" hx-swap="outerMorph" hx-target="#{form_id}" '
+        f'hx-on:click="{cancel_timers}">Delete</button>\n'
         "    {% endif %}\n"
         "  </div>\n"
         "</form>"
@@ -1326,7 +1334,7 @@ _PAGES = [
         "autosave",
         "/autosave/",
         "Auto-Save Form",
-        "Auto-saves on every field change \u2014 server-side validation with idiomorph morphing",
+        "Auto-saves on every field change \u2014 server-side validation with htmx morph swap",
     ),
     (
         "icon-modifiers",
@@ -1357,7 +1365,7 @@ _INDEX_HTML = (
     '<div class="max-w-2xl mx-auto flex flex-col gap-8">\n'
     '  <h1 class="text-2xl font-bold">Formwork Showcase</h1>\n' + _LAZY_CARDS + "\n</div>\n"
     "<script>\n"
-    '  document.body.addEventListener("htmx:afterSettle", function(e) {\n'
+    '  document.body.addEventListener("htmx:after:settle", function(e) {\n'
     "    if (window.Alpine) Alpine.initTree(e.detail.target);\n"
     "  });\n"
     "</script>\n"

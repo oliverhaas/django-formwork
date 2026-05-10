@@ -586,9 +586,9 @@ def test_search_select_search_input_wires_loading_and_error_handlers():
     widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="city", attrs={"id": "id_city"})
     search = soup.find("div", class_="dropdown-content").find("input", {"type": "text"})
-    before = search["hx-on::before-request"]
-    err = search["hx-on::response-error"]
-    send_err = search["hx-on::send-error"]
+    before = search["hx-on::before:request"]
+    err = search["hx-on::response:error"]
+    send_err = search["hx-on::error"]
     assert "loading = true" in before
     assert "hasError = false" in before
     assert "loading = false" in err
@@ -605,7 +605,12 @@ def test_search_select_listbox_hidden_while_loading_or_error():
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_listbox")
     assert listbox.get("x-show") == "!loading && !hasError"
-    assert "loading = false" in listbox["hx-on::after-swap"]
+    # `loading = false` is set after-swap on the htmx source (the search input)
+    # because htmx 4 fires per-target `after:settle` separately for OOB
+    # tasks; only the source's `after:swap` runs once after every swap.
+    search = soup.find("div", class_="dropdown-content").find("input", {"type": "text"})
+    assert "loading = false" in search["hx-on::after:swap"]
+    assert "_checkTotalCount" in search["hx-on::after:swap"]
 
 
 @pytest.mark.unit

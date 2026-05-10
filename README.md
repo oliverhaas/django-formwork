@@ -13,7 +13,7 @@ Better Django forms — modern styling out of the box, then htmx integration for
 - **Zero-config styling** — Set `FORM_RENDERER` once and all forms get [DaisyUI](https://daisyui.com/) styling
 - **Admin-safe** — Django admin is unaffected
 - **Custom widgets** — Toggle, Range, Rating, PasswordReveal, SearchSelect, MultiSelect, ComboBox, DataList, FileDropZone, ImageDropZone, ValidatedTextarea
-- **htmx integration** — Server-side search, textarea validation, full-form morphing with idiomorph
+- **htmx 4 integration** — Server-side search, textarea validation, full-form morphing with htmx's built-in `outerMorph` swap
 - **CSS `@apply` architecture** — All DaisyUI classes applied via CSS, easily overridable with Tailwind utilities
 
 ## Quick Start

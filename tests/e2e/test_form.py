@@ -55,13 +55,18 @@ class TestFormStructure:
 
 
 class TestMorphInfrastructure:
-    """Verify htmx, idiomorph, and morph swap work correctly."""
+    """Verify htmx 4 morph swap and the formwork-morph extension are registered."""
 
     def test_htmx_loaded(self, basic_page):
         assert basic_page.evaluate("typeof htmx") == "object"
 
-    def test_idiomorph_loaded(self, basic_page):
-        assert basic_page.evaluate("typeof Idiomorph") == "object"
+    def test_formwork_morph_extension_registered(self, basic_page):
+        assert (
+            basic_page.evaluate(
+                "htmx.config.morphIgnore && htmx.config.morphIgnore.includes('x-data')",
+            )
+            is True
+        )
 
     def test_morph_swap_works(self, basic_page):
         """After htmx POST, errors appear (form morphed in place)."""

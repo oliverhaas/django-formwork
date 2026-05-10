@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Migrated to htmx 4** — The package now targets htmx 4 (currently beta). The standalone `idiomorph-ext.min.js` dependency is gone (htmx 4 has morph in core). User-facing changes:
+    - Form templates now use `hx-swap="outerMorph"` (was `hx-swap="morph:outerHTML"` + `hx-ext="morph"`)
+    - Bundled examples and the e2e harness load `htmx.org@4.0.0-beta3` (was `@2`)
+    - `formwork.js` registers a `formwork-morph` htmx extension instead of monkey-patching `Idiomorph.morph()`
+    - All `hx-on::` attribute event names switch from dash to colon (`config-request` → `config:request`, etc.); `hx-on::send-error` consolidates into `hx-on::error`
+    - `htmx:afterSwap` / `htmx:afterSettle` event listeners renamed to `htmx:after:swap` / `htmx:after:settle`
+- Users on htmx 2 should pin the previous django-formwork version.
+
 ## 0.1.0a1 (2026-03-15)
 
 First alpha release.
@@ -27,5 +39,5 @@ First alpha release.
 - **Server-side views:**
     - `FormworkSearchView` — Base view for dropdown search endpoints
     - `FormworkValidateView` — Base view for textarea validation with `<mark>` highlighting
-- **Idiomorph integration** (`formwork.js`) — Preserves Alpine.js state, `<details>` open state, `x-text`/`x-html` content, and `x-for`/`x-if` generated nodes during htmx morph swaps
+- **htmx morph integration** (`formwork.js`) — Registers a `formwork-morph` extension that preserves Alpine.js state, `<details>` open state, `x-text`/`x-html` content, focused-input values, and `x-for`/`x-if` generated nodes during htmx morph swaps
 - Django 5.2, 6.0 support; Python 3.12, 3.13, 3.14

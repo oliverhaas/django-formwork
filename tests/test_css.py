@@ -30,11 +30,12 @@ class TestStaticFiles:
         path = Path(result)
         assert path.stat().st_size > 0
 
-    def test_js_wraps_idiomorph_morph(self):
+    def test_js_registers_htmx_morph_extension(self):
         result = find("formwork/formwork.js")
         assert result is not None
         content = Path(result).read_text()
-        assert "Idiomorph.morph" in content
+        assert "htmx.registerExtension" in content
+        assert "htmx_before_morph_node" in content
 
     def test_js_blocks_x_data(self):
         result = find("formwork/formwork.js")
@@ -46,7 +47,9 @@ class TestStaticFiles:
         result = find("formwork/formwork.js")
         assert result is not None
         content = Path(result).read_text()
-        assert "DETAILS" in content
+        # `open` is added to htmx.config.morphIgnore so the user-toggled
+        # state of <details> dropdowns is preserved across morph swaps.
+        assert '"open"' in content
 
     def test_css_has_btn_icon(self):
         result = find("formwork/formwork.css")

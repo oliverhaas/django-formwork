@@ -222,32 +222,32 @@ def test_htmx_params_none():
 
 @pytest.mark.unit
 def test_htmx_config_request_text_param():
-    """hx-on::config-request injects text=this.value."""
+    """hx-on::config:request injects text=this.value."""
     widget = ValidatedTextarea(validate_url="/validate/")
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
     textarea = soup.find("textarea")
-    config = textarea["hx-on::config-request"]
-    assert "event.detail.parameters.text = this.value" in config
+    config = textarea["hx-on::config:request"]
+    assert "event.detail.ctx.request.body.set('text', this.value)" in config
 
 
 @pytest.mark.unit
 def test_htmx_config_request_field_name():
-    """hx-on::config-request injects field_name param."""
+    """hx-on::config:request injects field_name param."""
     widget = ValidatedTextarea(validate_url="/validate/")
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
     textarea = soup.find("textarea")
-    config = textarea["hx-on::config-request"]
-    assert "event.detail.parameters.field_name = 'content'" in config
+    config = textarea["hx-on::config:request"]
+    assert "event.detail.ctx.request.body.set('field_name', 'content')" in config
 
 
 @pytest.mark.unit
 def test_htmx_config_request_errors_id():
-    """hx-on::config-request injects errors_id param."""
+    """hx-on::config:request injects errors_id param."""
     widget = ValidatedTextarea(validate_url="/validate/")
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
     textarea = soup.find("textarea")
-    config = textarea["hx-on::config-request"]
-    assert "event.detail.parameters.errors_id = 'id_content_errors'" in config
+    config = textarea["hx-on::config:request"]
+    assert "event.detail.ctx.request.body.set('errors_id', 'id_content_errors')" in config
 
 
 @pytest.mark.unit
@@ -359,13 +359,17 @@ def test_aria_invalid_alpine_binding_present():
 
 
 @pytest.mark.unit
-def test_highlights_div_has_after_settle_handler():
-    """Highlights div carries hx-on::after-settle to update hasErrors after htmx response."""
+def test_textarea_has_after_swap_handler():
+    """Textarea carries hx-on::after:swap to update hasErrors after htmx response.
+
+    htmx 4 fires after:swap on the source (textarea) once all main+OOB swaps
+    have completed, so the handler reads the up-to-date errors div content.
+    """
     widget = ValidatedTextarea(validate_url="/validate/")
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    highlights = soup.find("div", class_="validated-textarea-highlights")
-    assert highlights.has_attr("hx-on::after-settle")
-    assert "hasErrors" in highlights["hx-on::after-settle"]
+    textarea = soup.find("textarea")
+    assert textarea.has_attr("hx-on::after:swap")
+    assert "hasErrors" in textarea["hx-on::after:swap"]
 
 
 # ─── Level 3: Form integration ───────────────────────────────────────────────

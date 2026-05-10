@@ -311,7 +311,7 @@ class TestRequiredFieldAsterisk:
 
 
 class TestMorphingIds:
-    """All elements have stable IDs for idiomorph matching."""
+    """All elements have stable IDs for htmx morph matching."""
 
     def test_fieldset_has_id(self):
         class F(FormworkForm):

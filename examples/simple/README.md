@@ -21,4 +21,4 @@ Open http://localhost:8000/ in your browser.
 - `formwork.css` as the single Tailwind input (includes DaisyUI + icons)
 - Standard widgets (TextInput, EmailInput, Textarea) auto-styled by CSS
 - Custom widgets: Toggle, Range, Rating, PasswordReveal, SearchSelect, MultiSelect, ComboBox, DataList
-- htmx form submission with idiomorph morphing (errors appear without page reload)
+- htmx 4 form submission with `outerMorph` swap (errors appear without page reload)
