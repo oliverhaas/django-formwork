@@ -43,7 +43,7 @@
     this._v++;
     this._notify();
   }
-}" @toggle="if ($el.open) { {% if widget.search_url %}if (!$el.dataset.loaded) { $el.dataset.loaded = '1'; requestAnimationFrame(() => $refs.search.dispatchEvent(new Event('focus'))); } {% endif %}$nextTick(() => { if (this.showSearch && $refs.search) $refs.search.focus(); }); }">
+}" @toggle="if ($el.open) { {% if widget.search_url %}if (!$el.dataset.loaded) { $el.dataset.loaded = '1'; requestAnimationFrame(() => $refs.search.dispatchEvent(new Event('focus'))); } {% endif %}const _s = $refs.search; const _show = showSearch; setTimeout(() => { if (_show && _s) _s.focus(); }, 0); }">
   <summary{% if id %} id="{{ id }}_trigger"{% endif %} class="text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}" :class="!displayText && 'formwork-placeholder'"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
     <span x-show="icon" x-html="icon" x-cloak class="shrink-0"></span>
     <span x-text="displayText || 'Select\u2026'">{% if widget.selected_label %}{{ widget.selected_label }}{% else %}Select&#x2026;{% endif %}</span>
