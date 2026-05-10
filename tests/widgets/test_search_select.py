@@ -1085,6 +1085,51 @@ def test_search_select_htmx_icons_pick_sets_value(search_select_page):
     assert hidden.input_value() == "fr"
 
 
+# ─── Level 5b: E2e — grouped (optgroup) SearchSelect ─────────────────────
+#
+# city_grouped is the 7th SearchSelect on the page (nth(6)).
+
+
+@pytest.mark.e2e
+def test_search_select_grouped_shows_headers(search_select_page):
+    """Open the grouped SearchSelect; all three group headers are visible."""
+    sel = search_select_page.locator("details.dropdown.search-select").nth(6)
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        dds[6].open = true;
+        dds[6].dispatchEvent(new Event('toggle'));
+    }""")
+    search_select_page.wait_for_timeout(200)
+
+    headers = sel.locator("li.menu-title")
+    assert headers.count() == 3
+    visible_texts = [h.inner_text().strip() for h in headers.all() if h.is_visible()]
+    assert visible_texts == ["Europe", "Asia", "Americas"]
+
+
+@pytest.mark.e2e
+def test_search_select_grouped_search_hides_empty_groups(search_select_page):
+    """Typing 'lon' hides Asia and Americas headers (no children match)."""
+    sel = search_select_page.locator("details.dropdown.search-select").nth(6)
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        dds[6].open = true;
+        dds[6].dispatchEvent(new Event('toggle'));
+    }""")
+    search_select_page.wait_for_timeout(200)
+
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        const search = dds[6].querySelector('.dropdown-content input[type="text"]');
+        search.value = 'lon';
+        search.dispatchEvent(new Event('input', {bubbles: true}));
+    }""")
+    search_select_page.wait_for_timeout(200)
+
+    visible_headers = [h.inner_text().strip() for h in sel.locator("li.menu-title").all() if h.is_visible()]
+    assert visible_headers == ["Europe"]
+
+
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # The /search-select/ page marks all fields as required=False, so no
