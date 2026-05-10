@@ -45,3 +45,5 @@ django_formwork/static/iconx/
 
 # Root-level static/ (created by iconx or example builds)
 /static/
+
+scheduled_tasks.lock

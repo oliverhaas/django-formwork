@@ -73,6 +73,6 @@ For dynamic widgets (server-side search, password reveal, combo boxes, etc.):
 {% formwork_js %}
 ```
 
-- **htmx 4** — Powers server-side search and validation, with built-in `morphInner`/`morphOuter` swap strategies (no separate idiomorph dependency)
+- **htmx 4** — Powers server-side search and validation, with built-in `innerMorph`/`outerMorph` swap strategies (no separate idiomorph dependency)
 - **Alpine.js** — Client-side interactivity for custom widgets
 - **formwork.js** — Registers an htmx morph extension that preserves Alpine state, focused input values, and `<details>` open state across morph swaps

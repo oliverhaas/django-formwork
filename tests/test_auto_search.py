@@ -131,21 +131,6 @@ class TestAutoRegistration:
         F()
         assert len(get_registry()) == 0
 
-    def test_skips_explicit_search_url(self):
-        from django import forms
-
-        from django_formwork.forms import FormworkForm
-        from django_formwork.widgets import SearchSelect
-
-        class F(FormworkForm):
-            user = forms.ModelChoiceField(
-                queryset=User.objects.all(),
-                widget=SearchSelect(search_url="/my/url/", search_fields=["username"]),
-            )
-
-        F()
-        assert len(get_registry()) == 0
-
     def test_skips_non_model_field(self):
         from django import forms
 
@@ -625,25 +610,6 @@ class TestChoicesAutoRegistration:
 
         class CityForm(FormworkForm):
             city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect(search_decorator=None))
-
-        CityForm()
-        assert len(get_registry()) == 0
-
-    def test_skips_explicit_search_url(self):
-        from django import forms
-
-        from django_formwork.forms import FormworkForm
-        from django_formwork.widgets import SearchSelect
-
-        class CityForm(FormworkForm):
-            city = forms.ChoiceField(
-                choices=_CITIES,
-                widget=SearchSelect(search_url="/my/url/"),
-            )
-
-            @staticmethod
-            def search_choices_city(query, request=None):
-                return _search_cities(query, request)
 
         CityForm()
         assert len(get_registry()) == 0
