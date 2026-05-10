@@ -82,7 +82,7 @@ class FormworkSearchView(View):
     #: handle form submission.  Alpine directives sync checked state with
     #: the parent ``x-data`` scope (the widget wrapper).
     MULTISELECT_TEMPLATE = """{% for item in results %}
-<li><label class="flex items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200">
+<li><label class="flex items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200" data-value="{{ item.value|escapejs }}">
   <input type="checkbox" value="{{ item.value }}" class="multiselect hidden" x-init="$el.checked = selected.has('{{ item.value|escapejs }}')" @change="toggle('{{ item.value|escapejs }}', '{{ item.label|escapejs }}', '{{ item.icon|escapejs }}')">
   <span class="formwork-check shrink-0 opacity-0" aria-hidden="true">&#x2713;</span>
   {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="select-none">{{ item.label }}</span>

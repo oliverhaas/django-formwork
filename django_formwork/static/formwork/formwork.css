@@ -684,8 +684,10 @@ details.multiselect[open] > summary[aria-invalid="true"] {
     @apply border-error outline-error;
 }
 
-/* SearchSelect keyboard navigation: highlight the focused option. */
-details.search-select [data-value].highlighted {
+/* SearchSelect / MultiSelect / ComboBox keyboard navigation: highlight focused option. */
+details.search-select [data-value].highlighted,
+details.multiselect [data-value].highlighted,
+.dropdown.combobox [data-suggestion].highlighted {
     @apply bg-base-200;
 }
 

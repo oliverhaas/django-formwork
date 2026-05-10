@@ -503,6 +503,38 @@ class MultiSelectForm(FormworkForm):
         required=False,
         label="Languages (server-side search)",
     )
+    cities_grouped = forms.MultipleChoiceField(
+        choices=[
+            (
+                "Europe",
+                [
+                    ("ldn", FormworkChoiceLabel("London", icon="\U0001f1ec\U0001f1e7")),
+                    ("par", FormworkChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7")),
+                    ("ber", FormworkChoiceLabel("Berlin", icon="\U0001f1e9\U0001f1ea")),
+                ],
+            ),
+            (
+                "Asia",
+                [
+                    ("tyo", FormworkChoiceLabel("Tokyo", icon="\U0001f1ef\U0001f1f5")),
+                    ("sel", FormworkChoiceLabel("Seoul", icon="\U0001f1f0\U0001f1f7")),
+                    ("bkk", FormworkChoiceLabel("Bangkok", icon="\U0001f1f9\U0001f1ed")),
+                ],
+            ),
+            (
+                "Americas",
+                [
+                    ("nyc", FormworkChoiceLabel("New York", icon="\U0001f1fa\U0001f1f8")),
+                    ("sao", FormworkChoiceLabel("São Paulo", icon="\U0001f1e7\U0001f1f7")),
+                    ("mex", FormworkChoiceLabel("Mexico City", icon="\U0001f1f2\U0001f1fd")),
+                ],
+            ),
+        ],
+        widget=MultiSelect(show_search=True),
+        required=False,
+        label="Cities by region (grouped)",
+        help_text="Grouped MultiSelect — optgroup headers, keyboard nav, Enter toggles without closing.",
+    )
 
 
 class ComboBoxForm(FormworkForm):
@@ -591,6 +623,27 @@ class ComboBoxForm(FormworkForm):
         ),
         required=False,
         label="Food (icons + descriptions)",
+    )
+    food_grouped = forms.CharField(
+        widget=ComboBox(
+            suggestions=[
+                ("Italian", ["Pizza", "Pasta", "Risotto"]),
+                ("Japanese", ["Sushi", "Ramen", "Tempura"]),
+                ("Mexican", ["Tacos", "Burrito", "Enchilada"]),
+            ],
+            icons={
+                "Pizza": "\U0001f355",
+                "Pasta": "\U0001f35d",
+                "Sushi": "\U0001f363",
+                "Ramen": "\U0001f35c",
+                "Tacos": "\U0001f32e",
+                "Burrito": "\U0001f32f",
+            },
+            attrs={"placeholder": "Pick a dish (grouped)"},
+        ),
+        required=False,
+        label="Food by cuisine (grouped)",
+        help_text="Grouped ComboBox — suggestions grouped by cuisine, optgroup headers hide on filter.",
     )
 
 
