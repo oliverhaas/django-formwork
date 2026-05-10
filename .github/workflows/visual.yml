@@ -48,6 +48,14 @@ jobs:
       - name: Install Playwright browsers
         run: uv run playwright install --with-deps chromium
 
+      - name: Generate iconx CSS
+        # formwork.css imports ../iconx/icons.css, which is gitignored and
+        # generated on demand by `manage.py formwork install`.
+        env:
+          DJANGO_SETTINGS_MODULE: settings.base
+          PYTHONPATH: tests
+        run: uv run python -m django formwork install
+
       - name: Build CSS
         run: npx @tailwindcss/cli -i tests/e2e/app.css -o django_formwork/static/formwork/formwork-dist.css
 
