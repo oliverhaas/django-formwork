@@ -211,7 +211,7 @@ invalid-method-override = "ignore"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "settings.base"
-addopts = "--cov=django_formwork --cov-report=term-missing --cov-report=xml --no-cov-on-fail"
+addopts = "--cov=django_formwork --cov-report=term-missing --cov-report=xml --no-cov-on-fail -n auto"
 pythonpath = ["tests"]
 testpaths = ["tests"]
 xfail_strict = true
