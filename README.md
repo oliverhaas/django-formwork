@@ -44,6 +44,15 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 
 Full documentation at [oliverhaas.github.io/django-formwork](https://oliverhaas.github.io/django-formwork/).
 
+## Contributing
+
+Screenshot baselines under `tests/widgets/screenshots/` are stored via [Git LFS](https://git-lfs.com/). Before cloning, install git-lfs and initialize it once globally:
+
+    sudo apt install git-lfs   # or `brew install git-lfs`
+    git lfs install
+
+If you cloned before installing LFS, run `git lfs install && git lfs pull` to fetch the real PNG bytes (otherwise files appear as ~130-byte text pointers).
+
 ## License
 
 BSD 3-Clause. See [LICENSE](LICENSE).
