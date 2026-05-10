@@ -1239,3 +1239,16 @@ def test_search_select_screenshot_selected(search_select_page, assert_screenshot
     search_select_page.wait_for_timeout(100)
     wrapper = search_select_page.locator("#id_city_plain_field")
     assert_screenshot(wrapper, "search-select-selected.png")
+
+
+@pytest.mark.screenshot
+def test_search_select_screenshot_grouped_open(search_select_page, assert_screenshot):
+    """Visual snapshot: grouped SearchSelect with dropdown open showing optgroup headers."""
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        dds[6].open = true;
+        dds[6].dispatchEvent(new Event('toggle'));
+    }""")
+    search_select_page.wait_for_timeout(200)
+    wrapper = search_select_page.locator("#id_city_grouped_field")
+    assert_screenshot(wrapper, "search-select-grouped-open.png", capture_dropdown=True)
