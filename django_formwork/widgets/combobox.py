@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
 
@@ -75,11 +75,10 @@ class ComboBox(forms.TextInput):
             }
 
         if self.suggestions and isinstance(self.suggestions[0], (tuple, list)):
-            groups = []
-            for group, items in self.suggestions:  # type: ignore[misc]
-                groups.append((group, [_build(s) for s in items]))
-            return groups
-        return [("", [_build(s) for s in self.suggestions])]  # type: ignore[arg-type]
+            grouped = cast("list[tuple[str, list[str]]]", self.suggestions)
+            return [(group, [_build(s) for s in items]) for group, items in grouped]
+        flat = cast("list[str]", self.suggestions)
+        return [("", [_build(s) for s in flat])]
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
