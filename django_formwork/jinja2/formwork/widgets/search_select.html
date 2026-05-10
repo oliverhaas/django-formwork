@@ -5,6 +5,7 @@
   value: '{{ (widget.value if widget.value is not none else '')|escapejs }}',
   label: '{{ widget.selected_label|escapejs }}',
   icon: '{{ widget.selected_icon|escapejs }}',
+  highlightedEl: null,
   get noResults() {
     if (!this.search) return false;
     const q = this.search.toLowerCase();
@@ -26,12 +27,45 @@
     const el = document.getElementById('{{ id }}_total');
     if (el) this.showSearch = parseInt(el.value, 10) >= {{ widget.search_threshold }};
   },
+  _visibleOptions() {
+    return [...this.$refs.options.querySelectorAll('[data-value]')].filter(b => b.offsetParent !== null);
+  },
+  _clearHighlight() {
+    if (this.highlightedEl) {
+      this.highlightedEl.classList.remove('highlighted');
+      this.highlightedEl = null;
+    }
+  },
+  nav(dir) {
+    const visible = this._visibleOptions();
+    if (!visible.length) return;
+    let idx = visible.indexOf(this.highlightedEl);
+    if (idx === -1) {
+      idx = dir > 0 ? 0 : visible.length - 1;
+    } else {
+      idx = (idx + dir + visible.length) % visible.length;
+    }
+    this._clearHighlight();
+    this.highlightedEl = visible[idx];
+    this.highlightedEl.classList.add('highlighted');
+    this.highlightedEl.scrollIntoView({block: 'nearest'});
+  },
+  confirm() {
+    let target = this.highlightedEl;
+    if (!target || target.offsetParent === null) {
+      target = this._visibleOptions()[0];
+    }
+    if (target) {
+      this.pick(target.dataset.value, target.dataset.label, target.dataset.icon || '');
+    }
+  },
   pick(val, lbl, ic) {
     this.value = val;
     this.label = lbl;
     this.icon = ic || '';
     this.search = '';
     this._v++;
+    this._clearHighlight();
     this.$root.open = false;
     this._notify();
   },
@@ -41,9 +75,10 @@
     this.icon = '';
     this.search = '';
     this._v++;
+    this._clearHighlight();
     this._notify();
   }
-}" @toggle="if ($el.open) { {% if widget.search_url %}if (!$el.dataset.loaded) { $el.dataset.loaded = '1'; requestAnimationFrame(() => $refs.search.dispatchEvent(new Event('focus'))); } {% endif %}const _s = $refs.search; const _show = showSearch; setTimeout(() => { if (_show && _s) _s.focus(); }, 0); }">
+}" @toggle="if ($el.open) { {% if widget.search_url %}if (!$el.dataset.loaded) { $el.dataset.loaded = '1'; requestAnimationFrame(() => $refs.search.dispatchEvent(new Event('focus'))); } {% endif %}const _s = $refs.search; const _show = showSearch; setTimeout(() => { if (_show && _s) _s.focus(); }, 0); } else { _clearHighlight(); }" @keydown.arrow-down="if ($el.open) { $event.preventDefault(); nav(1); }" @keydown.arrow-up="if ($el.open) { $event.preventDefault(); nav(-1); }" @keydown.enter="if ($el.open) { $event.preventDefault(); confirm(); }">
   <summary{% if id %} id="{{ id }}_trigger"{% endif %} class="text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}" :class="!displayText && 'formwork-placeholder'"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
     <span x-show="icon" x-html="icon" x-cloak class="shrink-0"></span>
     <span x-text="displayText || 'Select\u2026'">{% if widget.selected_label %}{{ widget.selected_label }}{% else %}Select&#x2026;{% endif %}</span>
@@ -52,7 +87,7 @@
   <input type="hidden"  id="{{ id }}_total" value="0">{% endif %}
   <div class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
     <div x-show="showSearch" x-cloak class="p-1.5 border-b border-base-300{% if widget.search_url %} flex items-center gap-1{% endif %}">
-      <input x-ref="search" x-model="search" type="text" class="{% if widget.search_url %}grow{% else %}w-full{% endif %} bg-transparent px-2 py-1 focus:outline-1 focus:outline-base-content/30 rounded" placeholder="Search&#x2026;" aria-label="Search" @click.stop{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'search_select'; event.detail.parameters.name = '{{ widget.name }}'" hx-indicator="#{{ id }}_spinner"{% endif %}>
+      <input x-ref="search" x-model="search" @input="_clearHighlight()" type="text" class="{% if widget.search_url %}grow{% else %}w-full{% endif %} bg-transparent px-2 py-1 focus:outline-1 focus:outline-base-content/30 rounded" placeholder="Search&#x2026;" aria-label="Search" @click.stop{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'search_select'; event.detail.parameters.name = '{{ widget.name }}'" hx-indicator="#{{ id }}_spinner"{% endif %}>
       {% if widget.search_url %}<span{% if id %} id="{{ id }}_spinner"{% endif %} class="htmx-indicator"><span class="loading loading-spinner loading-xs"></span></span>{% endif %}
     </div>
     <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1" @click="const btn = $event.target.closest('[data-value]'); if (btn) pick(btn.dataset.value, btn.dataset.label, btn.dataset.icon || '')"{% if widget.search_url %} hx-on::after-swap="Alpine.$data(this.closest('[x-data]'))._checkTotalCount()"{% endif %}>
