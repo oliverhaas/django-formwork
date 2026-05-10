@@ -1015,3 +1015,12 @@ fieldset.formwork-dirty label.password-reveal {
 label:has(> input.hidden:checked) > .formwork-check {
     opacity: 1;
 }
+
+/* Grouped dropdowns: indent options so they sit visually under the optgroup
+   header.  Unlayered + !important so it beats Tailwind's px-3 utility, which
+   lives in @layer utilities (higher precedence than unlayered styles). */
+details.search-select ul:has(li.menu-title) li:not(.menu-title) > button,
+details.multiselect ul:has(li.menu-title) li:not(.menu-title) > label,
+.dropdown.combobox ul:has(li.menu-title) li:not(.menu-title) > button {
+    padding-left: 1.5rem !important;
+}

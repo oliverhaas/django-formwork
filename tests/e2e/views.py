@@ -468,7 +468,7 @@ class SearchSelectForm(FormworkForm):
                 ],
             ),
         ],
-        widget=SearchSelect,
+        widget=SearchSelect(show_search=True),
         required=False,
         label="City by region (grouped)",
         help_text=(

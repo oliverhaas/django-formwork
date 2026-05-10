@@ -156,6 +156,91 @@ def test_combobox_get_context_with_value_none():
     assert ctx["widget"]["name"] == "field"
 
 
+# ─── Level 1b: Grouped suggestions (Python API) ──────────────────────────
+
+
+@pytest.mark.unit
+def test_combobox_suggestion_groups_flat_input():
+    """A flat list of strings is wrapped in a single unnamed group."""
+    widget = ComboBox(suggestions=["A", "B"])
+    groups = widget._suggestion_groups()
+    assert len(groups) == 1
+    name, items = groups[0]
+    assert name == ""
+    assert [it["text"] for it in items] == ["A", "B"]
+
+
+@pytest.mark.unit
+def test_combobox_suggestion_groups_grouped_input():
+    """Grouped suggestions ``[(name, [items])]`` are preserved as-is."""
+    widget = ComboBox(suggestions=[("Italian", ["Pizza", "Pasta"]), ("Asian", ["Sushi"])])
+    groups = widget._suggestion_groups()
+    assert [g[0] for g in groups] == ["Italian", "Asian"]
+    assert [it["text"] for it in groups[0][1]] == ["Pizza", "Pasta"]
+    assert [it["text"] for it in groups[1][1]] == ["Sushi"]
+
+
+@pytest.mark.unit
+def test_combobox_suggestion_groups_empty():
+    """No suggestions produces a single empty group."""
+    widget = ComboBox()
+    groups = widget._suggestion_groups()
+    assert groups == [("", [])]
+
+
+@pytest.mark.unit
+def test_combobox_suggestion_groups_icons_descriptions_attached():
+    """Icons and descriptions populate per-item across groups."""
+    widget = ComboBox(
+        suggestions=[("G1", ["A"]), ("G2", ["B"])],
+        icons={"A": mark_safe("<svg/>"), "B": mark_safe("<svg2/>")},
+        descriptions={"A": "alpha", "B": "beta"},
+    )
+    groups = widget._suggestion_groups()
+    assert groups[0][1][0]["icon"] == "<svg/>"
+    assert groups[0][1][0]["description"] == "alpha"
+    assert groups[1][1][0]["icon"] == "<svg2/>"
+    assert groups[1][1][0]["description"] == "beta"
+
+
+@pytest.mark.unit
+def test_combobox_get_context_grouped_populates_suggestion_groups():
+    """get_context exposes the grouped structure under ``suggestion_groups``."""
+    widget = ComboBox(suggestions=[("Cuisine", ["Pizza", "Sushi"])])
+    ctx = widget.get_context("test", "", {})
+    groups = ctx["widget"]["suggestion_groups"]
+    assert len(groups) == 1
+    name, items = groups[0]
+    assert name == "Cuisine"
+    assert [it["text"] for it in items] == ["Pizza", "Sushi"]
+
+
+@pytest.mark.unit
+def test_combobox_get_context_grouped_keeps_flat_suggestions():
+    """For backward compatibility, ``suggestions`` is still a flat list."""
+    widget = ComboBox(suggestions=[("G1", ["A", "B"]), ("G2", ["C"])])
+    ctx = widget.get_context("test", "", {})
+    flat = ctx["widget"]["suggestions"]
+    assert [it["text"] for it in flat] == ["A", "B", "C"]
+
+
+@pytest.mark.unit
+def test_combobox_get_context_grouped_icons_json_includes_all_groups():
+    """``icons_json`` contains icons for items spread across multiple groups."""
+    import json as _json
+
+    widget = ComboBox(
+        suggestions=[("G1", ["A"]), ("G2", ["B"])],
+        icons={"A": "🍕", "B": "🍣"},
+    )
+    ctx = widget.get_context("test", "", {})
+    icon_map = _json.loads(ctx["widget"]["icons_json"])
+    assert icon_map == {"A": "🍕", "B": "🍣"}
+
+
+# ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
+
+
 @pytest.mark.unit
 def test_combobox_renders_without_id():
     """Widget renders without an id attribute."""
@@ -389,6 +474,97 @@ def test_combobox_empty_suggestions_renders_no_buttons():
     assert len(buttons) == 0
 
 
+# ─── Level 2b: Grouped suggestions (HTML rendering) ──────────────────────
+
+
+@pytest.mark.unit
+def test_combobox_grouped_renders_group_headers():
+    """Grouped suggestions render a ``<li class='menu-title'>`` per group."""
+    widget = ComboBox(
+        suggestions=[("Italian", ["Pizza", "Pasta"]), ("Asian", ["Sushi"])],
+    )
+    soup = render_widget(widget, name="food", attrs={"id": "id_food"})
+    headers = soup.find_all("li", class_="menu-title")
+    assert [h.text.strip() for h in headers] == ["Italian", "Asian"]
+
+
+@pytest.mark.unit
+def test_combobox_no_group_headers_for_flat_suggestions():
+    """A flat suggestion list never produces ``menu-title`` headers."""
+    widget = ComboBox(suggestions=["A", "B", "C"])
+    soup = render_widget(widget, name="test")
+    headers = soup.find_all("li", class_="menu-title")
+    assert headers == []
+
+
+@pytest.mark.unit
+def test_combobox_grouped_options_keep_icons():
+    """Each option inside a group still renders its icon."""
+    widget = ComboBox(
+        suggestions=[("G1", ["Pizza"]), ("G2", ["Sushi"])],
+        icons={"Pizza": mark_safe("<svg>p</svg>"), "Sushi": mark_safe("<svg>s</svg>")},
+    )
+    soup = render_widget(widget, name="food")
+    buttons = soup.find_all("button", {"data-suggestion": True})
+    assert {b["data-suggestion"] for b in buttons} == {"Pizza", "Sushi"}
+    # Icons appear as data-icon attribute
+    assert {b.get("data-icon", "") for b in buttons} == {"<svg>p</svg>", "<svg>s</svg>"}
+
+
+@pytest.mark.unit
+def test_combobox_grouped_group_header_xshow_includes_child_labels():
+    """Group ``<li>`` ``x-show`` lists the child labels for matching."""
+    widget = ComboBox(suggestions=[("Italian", ["Pizza", "Pasta"])])
+    soup = render_widget(widget, name="food")
+    header = soup.find("li", class_="menu-title")
+    xshow = header["x-show"]
+    assert "'Pizza'" in xshow
+    assert "'Pasta'" in xshow
+    assert "matches(l)" in xshow
+
+
+@pytest.mark.unit
+def test_combobox_grouped_renders_all_suggestion_buttons():
+    """All items across all groups render as suggestion buttons."""
+    widget = ComboBox(
+        suggestions=[("G1", ["A", "B"]), ("G2", ["C"])],
+    )
+    soup = render_widget(widget, name="test")
+    buttons = soup.find_all("button", {"data-suggestion": True})
+    assert {b["data-suggestion"] for b in buttons} == {"A", "B", "C"}
+
+
+# ─── Level 2c: Keyboard navigation scaffolding ───────────────────────────
+
+
+@pytest.mark.unit
+def test_combobox_keydown_handlers_on_wrapper():
+    """The combobox wrapper has @keydown handlers for arrows and enter."""
+    widget = ComboBox(suggestions=["A"])
+    html = widget.render("test", "")
+    assert "@keydown.arrow-down" in html
+    assert "@keydown.arrow-up" in html
+    assert "@keydown.enter" in html
+    assert "@keydown.escape" in html
+
+
+@pytest.mark.unit
+def test_combobox_xdata_has_nav_methods():
+    """The Alpine x-data declares the methods used by keyboard navigation."""
+    widget = ComboBox(suggestions=["A"])
+    html = widget.render("test", "")
+    for method in ("nav(", "confirm(", "_clearHighlight(", "_visibleOptions("):
+        assert method in html, f"missing {method!r} in x-data"
+
+
+@pytest.mark.unit
+def test_combobox_xdata_tracks_highlighted_el():
+    """The Alpine x-data exposes a ``highlightedEl`` slot for nav state."""
+    widget = ComboBox(suggestions=["A"])
+    html = widget.render("test", "")
+    assert "highlightedEl" in html
+
+
 # ─── Level 3: Form integration ───────────────────────────────────────────
 
 
@@ -450,6 +626,24 @@ def test_combobox_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
     """ComboBox produces equivalent HTML when rendered via DTL and Jinja2."""
     soup_dtl = render_form(ComboBoxForm(), renderer=dtl_renderer)
     soup_jinja2 = render_form(ComboBoxForm(), renderer=jinja2_renderer)
+    assert_html_equivalent(soup_dtl, soup_jinja2)
+
+
+@pytest.mark.integration
+def test_combobox_grouped_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
+    """Grouped ComboBox renders identically via DTL and Jinja2."""
+
+    class GroupedComboBoxForm(FormworkForm):
+        food = forms.CharField(
+            widget=ComboBox(
+                suggestions=[("Italian", ["Pizza", "Pasta"]), ("Asian", ["Sushi"])],
+                icons={"Pizza": mark_safe("<i>p</i>")},
+            ),
+            required=False,
+        )
+
+    soup_dtl = render_form(GroupedComboBoxForm(), renderer=dtl_renderer)
+    soup_jinja2 = render_form(GroupedComboBoxForm(), renderer=jinja2_renderer)
     assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
@@ -539,6 +733,207 @@ def test_combobox_multiple_toggle_off(combobox_page):
     assert "Pizza" not in inp.input_value()
 
 
+# ─── Level 5b: E2e — grouped ComboBox ────────────────────────────────────
+#
+# food_grouped is the 8th ComboBox on the page (nth(7)).
+
+
+@pytest.mark.e2e
+def test_combobox_grouped_shows_headers(combobox_page):
+    """Grouped ComboBox shows ``menu-title`` headers for each cuisine."""
+    combo = combobox_page.locator(".dropdown.combobox").nth(7)
+    inp = combobox_page.locator('input[name="food_grouped"]')
+    inp.click()
+    combobox_page.wait_for_timeout(150)
+    headers = [h.inner_text().strip() for h in combo.locator("li.menu-title").all() if h.is_visible()]
+    assert headers == ["Italian", "Japanese", "Mexican"]
+
+
+@pytest.mark.e2e
+def test_combobox_grouped_filter_hides_empty_groups(combobox_page):
+    """Typing 'pi' (matches only 'Pizza') hides Japanese and Mexican headers."""
+    combo = combobox_page.locator(".dropdown.combobox").nth(7)
+    inp = combobox_page.locator('input[name="food_grouped"]')
+    inp.click()
+    inp.fill("pi")
+    combobox_page.wait_for_timeout(150)
+    visible_headers = [h.inner_text().strip() for h in combo.locator("li.menu-title").all() if h.is_visible()]
+    assert visible_headers == ["Italian"]
+
+
+@pytest.mark.e2e
+def test_combobox_grouped_pick_from_group(combobox_page):
+    """Picking a suggestion inside a group sets the input value."""
+    combo = combobox_page.locator(".dropdown.combobox").nth(7)
+    inp = combobox_page.locator('input[name="food_grouped"]')
+    inp.click()
+    combobox_page.wait_for_timeout(150)
+    combo.locator("button[data-suggestion='Sushi']").click()
+    combobox_page.wait_for_timeout(100)
+    assert inp.input_value() == "Sushi"
+
+
+# ─── Level 5c: E2e — keyboard navigation ─────────────────────────────────
+#
+# Keyboard handlers live on the wrapper ``<div class='dropdown combobox'>``,
+# so the input must be focused (dropdown open) for events to bubble up.
+
+
+def _open_combobox(page, name: str):
+    """Open a ComboBox by clicking its input; returns input + wrapper locators."""
+    inp = page.locator(f'input[name="{name}"]')
+    inp.click()
+    page.wait_for_timeout(150)
+    return inp
+
+
+@pytest.mark.e2e
+def test_combobox_keyboard_arrowdown_highlights_first(combobox_page):
+    """ArrowDown highlights the first visible suggestion."""
+    inp = _open_combobox(combobox_page, "language_single")
+    inp.press("ArrowDown")
+    combobox_page.wait_for_timeout(100)
+    highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
+    assert highlighted.count() == 1
+    assert highlighted.first.get_attribute("data-suggestion") == "Python"
+
+
+@pytest.mark.e2e
+def test_combobox_keyboard_arrowdown_navigates(combobox_page):
+    """Each ArrowDown moves to the next suggestion."""
+    inp = _open_combobox(combobox_page, "language_single")
+    inp.press("ArrowDown")
+    inp.press("ArrowDown")
+    combobox_page.wait_for_timeout(50)
+    highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
+    assert highlighted.first.get_attribute("data-suggestion") == "JavaScript"
+
+
+@pytest.mark.e2e
+def test_combobox_keyboard_arrowdown_wraps_to_first(combobox_page):
+    """ArrowDown past the last suggestion wraps back to the first."""
+    inp = _open_combobox(combobox_page, "language_single")
+    # 6 options: Python, JavaScript, Go, Rust, TypeScript, Ruby
+    for _ in range(7):
+        inp.press("ArrowDown")
+    combobox_page.wait_for_timeout(50)
+    highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
+    assert highlighted.first.get_attribute("data-suggestion") == "Python"
+
+
+@pytest.mark.e2e
+def test_combobox_keyboard_arrowup_wraps_to_last(combobox_page):
+    """ArrowUp from no highlight goes to the last visible suggestion."""
+    inp = _open_combobox(combobox_page, "language_single")
+    inp.press("ArrowUp")
+    combobox_page.wait_for_timeout(50)
+    highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
+    assert highlighted.first.get_attribute("data-suggestion") == "Ruby"
+
+
+@pytest.mark.e2e
+def test_combobox_keyboard_filter_skips_hidden_options(combobox_page):
+    """After filtering, ArrowDown only highlights visible (matching) options."""
+    inp = _open_combobox(combobox_page, "language_single")
+    inp.fill("Ru")  # Matches Rust + Ruby
+    combobox_page.wait_for_timeout(150)
+    inp.press("ArrowDown")
+    combobox_page.wait_for_timeout(50)
+    inp.press("ArrowDown")
+    combobox_page.wait_for_timeout(50)
+    inp.press("ArrowDown")  # Should wrap back to Rust
+    combobox_page.wait_for_timeout(50)
+    highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
+    val = highlighted.first.get_attribute("data-suggestion")
+    assert val == "Rust"
+
+
+@pytest.mark.e2e
+def test_combobox_single_keyboard_enter_picks_and_closes(combobox_page):
+    """Single-mode: Enter on highlighted option sets value and closes dropdown."""
+    inp = _open_combobox(combobox_page, "language_single")
+    inp.press("ArrowDown")
+    inp.press("ArrowDown")  # JavaScript
+    combobox_page.wait_for_timeout(50)
+    inp.press("Enter")
+    combobox_page.wait_for_timeout(150)
+    assert inp.input_value() == "JavaScript"
+    # Dropdown should be closed (open=false)
+    is_open = combobox_page.evaluate(
+        "() => Alpine.$data(document.querySelectorAll('.dropdown.combobox')[0]).open",
+    )
+    assert is_open is False
+
+
+@pytest.mark.e2e
+def test_combobox_single_keyboard_enter_no_highlight_picks_first(combobox_page):
+    """With no highlight, Enter picks the first visible suggestion."""
+    inp = _open_combobox(combobox_page, "language_single")
+    inp.fill("Go")
+    combobox_page.wait_for_timeout(150)
+    inp.press("Enter")
+    combobox_page.wait_for_timeout(150)
+    assert inp.input_value() == "Go"
+
+
+@pytest.mark.e2e
+def test_combobox_multiple_keyboard_enter_toggles_keeps_open(combobox_page):
+    """Multi-mode: Enter on highlighted toggles into the comma list, dropdown stays open."""
+    inp = _open_combobox(combobox_page, "toppings_multi")
+    inp.press("ArrowDown")  # Pizza
+    combobox_page.wait_for_timeout(50)
+    inp.press("Enter")
+    combobox_page.wait_for_timeout(150)
+    val = inp.input_value()
+    assert "Pizza" in val
+    is_open = combobox_page.evaluate(
+        "() => Alpine.$data(document.querySelectorAll('.dropdown.combobox')[1]).open",
+    )
+    assert is_open is True
+
+
+@pytest.mark.e2e
+def test_combobox_multiple_keyboard_enter_toggles_off(combobox_page):
+    """Multi-mode: pressing Enter again on the same value removes it."""
+    inp = _open_combobox(combobox_page, "toppings_multi")
+    inp.press("ArrowDown")
+    inp.press("Enter")  # Add Pizza
+    combobox_page.wait_for_timeout(150)
+    assert "Pizza" in inp.input_value()
+    # ArrowDown to Pizza again. Note: after Enter, Alpine clears the highlight
+    # (in pick()), so we restart navigation.
+    inp.press("ArrowDown")  # Pizza highlighted again
+    combobox_page.wait_for_timeout(50)
+    inp.press("Enter")  # Toggle Pizza off
+    combobox_page.wait_for_timeout(150)
+    assert "Pizza" not in inp.input_value()
+
+
+@pytest.mark.e2e
+def test_combobox_keyboard_close_clears_highlight(combobox_page):
+    """Closing the dropdown via Escape clears ``.highlighted`` from the DOM."""
+    inp = _open_combobox(combobox_page, "language_single")
+    inp.press("ArrowDown")
+    combobox_page.wait_for_timeout(50)
+    combo = combobox_page.locator(".dropdown.combobox").first
+    assert combo.locator("[data-suggestion].highlighted").count() == 1
+    inp.press("Escape")
+    combobox_page.wait_for_timeout(150)
+    assert combo.locator("[data-suggestion].highlighted").count() == 0
+
+
+@pytest.mark.e2e
+def test_combobox_keyboard_escape_closes_dropdown(combobox_page):
+    """Escape closes the dropdown (open=false)."""
+    inp = _open_combobox(combobox_page, "language_single")
+    inp.press("Escape")
+    combobox_page.wait_for_timeout(150)
+    is_open = combobox_page.evaluate(
+        "() => Alpine.$data(document.querySelectorAll('.dropdown.combobox')[0]).open",
+    )
+    assert is_open is False
+
+
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # The /combobox/ page has no required ComboBox fields (all required=False),
@@ -607,6 +1002,29 @@ def test_combobox_screenshot_open_dropdown(combobox_page, assert_screenshot):
     combobox_page.wait_for_timeout(150)
     wrapper = combobox_page.locator(".dropdown.combobox").first
     assert_screenshot(wrapper, "combobox-open.png", capture_dropdown=True)
+
+
+@pytest.mark.screenshot
+def test_combobox_screenshot_grouped_open(combobox_page, assert_screenshot):
+    """Visual snapshot: grouped ComboBox with dropdown open showing optgroup headers."""
+    inp = combobox_page.locator('input[name="food_grouped"]')
+    inp.click()
+    combobox_page.wait_for_timeout(150)
+    wrapper = combobox_page.locator("#id_food_grouped_combobox")
+    assert_screenshot(wrapper, "combobox-grouped-open.png", capture_dropdown=True)
+
+
+@pytest.mark.screenshot
+def test_combobox_screenshot_keyboard_highlighted(combobox_page, assert_screenshot):
+    """Visual snapshot: ComboBox with a suggestion highlighted via keyboard."""
+    inp = combobox_page.locator('input[name="language_single"]')
+    inp.click()
+    combobox_page.wait_for_timeout(150)
+    inp.press("ArrowDown")  # Highlight first option
+    inp.press("ArrowDown")  # JavaScript
+    combobox_page.wait_for_timeout(50)
+    wrapper = combobox_page.locator(".dropdown.combobox").first
+    assert_screenshot(wrapper, "combobox-keyboard-highlighted.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot

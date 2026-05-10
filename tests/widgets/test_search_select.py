@@ -383,6 +383,37 @@ def test_search_select_no_results_element():
     assert no_results.get("x-show") == "noResults"
 
 
+# ─── Level 2b: Keyboard navigation scaffolding ───────────────────────────
+
+
+@pytest.mark.unit
+def test_search_select_keydown_handlers_on_wrapper():
+    """The ``<details>`` wrapper has @keydown handlers for arrows and enter."""
+    widget = SearchSelect(choices=[("a", "Alpha")])
+    html = widget.render("test", "")
+    assert "@keydown.arrow-down" in html
+    assert "@keydown.arrow-up" in html
+    assert "@keydown.enter" in html
+
+
+@pytest.mark.unit
+def test_search_select_xdata_has_nav_methods():
+    """Both client- and htmx-mode x-data declare the nav methods."""
+    plain = SearchSelect(choices=[("a", "A")]).render("test", "")
+    htmx_mode = SearchSelect(search_url="/s/", choices=[]).render("test", "")
+    for html in (plain, htmx_mode):
+        for method in ("nav(", "confirm(", "_clearHighlight(", "_visibleOptions("):
+            assert method in html, f"missing {method!r}"
+
+
+@pytest.mark.unit
+def test_search_select_xdata_tracks_highlighted_el():
+    """The Alpine x-data declares ``highlightedEl`` for nav state."""
+    widget = SearchSelect(choices=[("a", "A")])
+    html = widget.render("test", "")
+    assert "highlightedEl" in html
+
+
 @pytest.mark.unit
 def test_search_select_aria_invalid_on_summary():
     """aria-invalid='true' propagates to the summary trigger element."""
@@ -1130,6 +1161,166 @@ def test_search_select_grouped_search_hides_empty_groups(search_select_page):
     assert visible_headers == ["Europe"]
 
 
+# ─── Level 5c: E2e — search auto-focus ───────────────────────────────────
+#
+# The second SearchSelect (city_many) has 21 choices, above the default
+# search threshold of 20, so it shows a search input.
+
+
+@pytest.mark.e2e
+def test_search_select_search_auto_focus_on_open(search_select_page):
+    """Opening a SearchSelect with a search box auto-focuses the input."""
+    from playwright.sync_api import expect
+
+    sel = search_select_page.locator("details.dropdown.search-select").nth(1)
+    sel.locator("summary").click()
+    search_select_page.wait_for_timeout(100)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    expect(search).to_be_focused(timeout=2000)
+
+
+@pytest.mark.e2e
+def test_search_select_search_refocus_on_reopen(search_select_page):
+    """Closing then reopening a search-enabled SearchSelect re-focuses the input."""
+    from playwright.sync_api import expect
+
+    sel = search_select_page.locator("details.dropdown.search-select").nth(1)
+    sel.locator("summary").click()
+    search_select_page.wait_for_timeout(100)
+    sel.locator("summary").click()  # close
+    search_select_page.wait_for_timeout(100)
+    sel.locator("summary").click()  # reopen
+    search_select_page.wait_for_timeout(100)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    expect(search).to_be_focused(timeout=2000)
+
+
+@pytest.mark.e2e
+def test_search_select_no_search_no_focus_error(search_select_page):
+    """Opening a search-less SearchSelect does not raise any console error."""
+    errors: list[str] = []
+    search_select_page.on("pageerror", lambda e: errors.append(str(e)))
+
+    sel = search_select_page.locator("details.dropdown.search-select").first
+    sel.locator("summary").click()
+    search_select_page.wait_for_timeout(150)
+    assert errors == []
+
+
+# ─── Level 5d: E2e — keyboard navigation ─────────────────────────────────
+#
+# Uses the grouped SearchSelect (nth(6)) which has 9 fixed-size options
+# in 3 groups and a search input.  Keyboard handlers are on the <details>
+# root; the search input is auto-focused on open so events bubble up.
+
+
+def _open_grouped_search(page):
+    sel = page.locator("details.dropdown.search-select").nth(6)
+    sel.locator("summary").click()
+    page.wait_for_timeout(200)
+    return sel
+
+
+@pytest.mark.e2e
+def test_search_select_keyboard_arrowdown_highlights_first(search_select_page):
+    """ArrowDown highlights the first visible option."""
+    sel = _open_grouped_search(search_select_page)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    search.press("ArrowDown")
+    search_select_page.wait_for_timeout(50)
+    highlighted = sel.locator("[data-value].highlighted")
+    assert highlighted.count() == 1
+    assert highlighted.first.get_attribute("data-value") == "ldn"
+
+
+@pytest.mark.e2e
+def test_search_select_keyboard_arrowdown_navigates(search_select_page):
+    """Each ArrowDown moves to the next option, skipping group headers."""
+    sel = _open_grouped_search(search_select_page)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    for _ in range(3):  # ldn, par, ber
+        search.press("ArrowDown")
+    search.press("ArrowDown")  # tyo (next group)
+    search_select_page.wait_for_timeout(50)
+    assert sel.locator("[data-value].highlighted").first.get_attribute("data-value") == "tyo"
+
+
+@pytest.mark.e2e
+def test_search_select_keyboard_arrowdown_wraps_to_first(search_select_page):
+    """ArrowDown past the last option wraps to the first."""
+    sel = _open_grouped_search(search_select_page)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    for _ in range(10):  # 9 + 1 wrap
+        search.press("ArrowDown")
+    search_select_page.wait_for_timeout(50)
+    assert sel.locator("[data-value].highlighted").first.get_attribute("data-value") == "ldn"
+
+
+@pytest.mark.e2e
+def test_search_select_keyboard_arrowup_wraps_to_last(search_select_page):
+    """ArrowUp from no highlight goes to the last visible option."""
+    sel = _open_grouped_search(search_select_page)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    search.press("ArrowUp")
+    search_select_page.wait_for_timeout(50)
+    assert sel.locator("[data-value].highlighted").first.get_attribute("data-value") == "mex"
+
+
+@pytest.mark.e2e
+def test_search_select_keyboard_filter_skips_hidden_options(search_select_page):
+    """After filtering, ArrowDown only highlights visible (matching) options."""
+    sel = _open_grouped_search(search_select_page)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    search.fill("lon")  # Matches only "London"
+    search_select_page.wait_for_timeout(150)
+    search.press("ArrowDown")
+    search.press("ArrowDown")  # Wrap around (only one visible)
+    search_select_page.wait_for_timeout(50)
+    highlighted = sel.locator("[data-value].highlighted")
+    assert highlighted.count() == 1
+    assert highlighted.first.get_attribute("data-value") == "ldn"
+
+
+@pytest.mark.e2e
+def test_search_select_keyboard_enter_picks_and_closes(search_select_page):
+    """Enter on highlighted option sets value and closes the dropdown."""
+    sel = _open_grouped_search(search_select_page)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    search.press("ArrowDown")  # ldn
+    search.press("ArrowDown")  # par
+    search.press("Enter")
+    search_select_page.wait_for_timeout(150)
+    hidden = sel.locator('input[type="hidden"][name]')
+    assert hidden.input_value() == "par"
+    assert sel.get_attribute("open") is None
+
+
+@pytest.mark.e2e
+def test_search_select_keyboard_enter_no_highlight_picks_first(search_select_page):
+    """With no highlight, Enter picks the first visible option."""
+    sel = _open_grouped_search(search_select_page)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    search.fill("tok")
+    search_select_page.wait_for_timeout(150)
+    search.press("Enter")
+    search_select_page.wait_for_timeout(150)
+    hidden = sel.locator('input[type="hidden"][name]')
+    assert hidden.input_value() == "tyo"
+
+
+@pytest.mark.e2e
+def test_search_select_keyboard_close_clears_highlight(search_select_page):
+    """Closing the dropdown via summary click clears ``.highlighted``."""
+    sel = _open_grouped_search(search_select_page)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    search.press("ArrowDown")
+    search_select_page.wait_for_timeout(50)
+    assert sel.locator("[data-value].highlighted").count() == 1
+    sel.locator("summary").click()
+    search_select_page.wait_for_timeout(150)
+    assert sel.locator("[data-value].highlighted").count() == 0
+
+
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # The /search-select/ page marks all fields as required=False, so no
@@ -1252,3 +1443,16 @@ def test_search_select_screenshot_grouped_open(search_select_page, assert_screen
     search_select_page.wait_for_timeout(200)
     wrapper = search_select_page.locator("#id_city_grouped_field")
     assert_screenshot(wrapper, "search-select-grouped-open.png", capture_dropdown=True)
+
+
+@pytest.mark.screenshot
+def test_search_select_screenshot_keyboard_highlighted(search_select_page, assert_screenshot):
+    """Visual snapshot: SearchSelect with an option highlighted via keyboard."""
+    sel = search_select_page.locator("details.dropdown.search-select").nth(6)
+    sel.locator("summary").click()
+    search_select_page.wait_for_timeout(200)
+    search = sel.locator('.dropdown-content input[type="text"]')
+    search.press("ArrowDown")  # Highlight ldn
+    search_select_page.wait_for_timeout(50)
+    wrapper = search_select_page.locator("#id_city_grouped_field")
+    assert_screenshot(wrapper, "search-select-keyboard-highlighted.png", capture_dropdown=True)
