@@ -1,6 +1,7 @@
 {% with id=widget.attrs.id %}<details class="dropdown multiselect"{% if id %} id="{{ id }}_multiselect"{% endif %} x-data="{% if widget.search_url %}{
   _v: 0,
   search: '',
+  hasError: false,
   highlightedEl: null,
   selected: new Map({{ widget.initial_selected_json }}),
   toggle(value, label, icon) {
@@ -89,17 +90,23 @@
       <input type="hidden" name="{{ widget.name }}" :value="val">
     </template>{% endif %}
     {% if widget.search_url or widget.show_search %}<div class="p-1.5 border-b border-base-300{% if widget.search_url %} flex items-center gap-1{% endif %}">
-      <input x-ref="search" x-model="search" @input="_clearHighlight()" type="text" class="{% if widget.search_url %}grow{% else %}w-full{% endif %} bg-transparent px-2 py-1 focus:outline-1 focus:outline-base-content/30 rounded" placeholder="Search&#x2026;" aria-label="Search" @click.stop{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_options" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'multiselect'; event.detail.parameters.name = '{{ widget.name }}'" hx-indicator="#{{ id }}_spinner"{% endif %}>
+      <input x-ref="search" x-model="search" @input="_clearHighlight()" type="text" class="{% if widget.search_url %}grow{% else %}w-full{% endif %} bg-transparent px-2 py-1 focus:outline-1 focus:outline-base-content/30 rounded" placeholder="Search&#x2026;" aria-label="Search" @click.stop{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_options" hx-swap="innerHTML" hx-params="none" hx-on::config-request="event.detail.parameters.q = this.value; event.detail.parameters.type = 'multiselect'; event.detail.parameters.name = '{{ widget.name }}'" hx-on::before-request="Alpine.$data(this.closest('[x-data]')).hasError = false" hx-on::response-error="Alpine.$data(this.closest('[x-data]')).hasError = true" hx-on::send-error="Alpine.$data(this.closest('[x-data]')).hasError = true" hx-indicator="#{{ id }}_spinner"{% endif %}>
       {% if widget.search_url %}<span{% if id %} id="{{ id }}_spinner"{% endif %} class="htmx-indicator"><span class="loading loading-spinner loading-xs"></span></span>{% endif %}
     </div>{% endif %}
-    <ul x-ref="options"{% if widget.search_url %} id="{{ id }}_options"{% endif %} role="listbox" @change="_v++" class="max-h-60 overflow-y-auto p-1">
-      {% if not widget.search_url %}{% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title"{% if widget.show_search %} x-show="!search || [{% for option in options %}'{{ option.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}].some(l => l.toLowerCase().includes(search.toLowerCase()))"{% endif %}>{{ group }}</li>{% endif %}{% for option in options %}
+    <ul x-ref="options"{% if widget.search_url %} id="{{ id }}_options"{% endif %} role="listbox"{% if widget.search_url %} x-show="!hasError"{% endif %} @change="_v++" class="max-h-60 overflow-y-auto p-1">
+      {% if widget.search_url %}<li class="formwork-skeleton-row"><span class="formwork-skeleton"></span></li>
+      <li class="formwork-skeleton-row"><span class="formwork-skeleton"></span></li>
+      <li class="formwork-skeleton-row"><span class="formwork-skeleton"></span></li>
+      <li class="formwork-skeleton-row"><span class="formwork-skeleton"></span></li>{% else %}{% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title"{% if widget.show_search %} x-show="!search || [{% for option in options %}'{{ option.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}].some(l => l.toLowerCase().includes(search.toLowerCase()))"{% endif %}>{{ group }}</li>{% endif %}{% for option in options %}
       <li{% if widget.show_search %} x-show="!search || '{{ option.label|escapejs }}'.toLowerCase().includes(search.toLowerCase())"{% endif %}><label class="flex items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200" data-value="{{ option.value|escapejs }}"{% if option.attrs.id %} for="{{ option.attrs.id }}"{% endif %}>
         <input type="checkbox" name="{{ widget.name }}" value="{{ option.value|stringformat:'s' }}"{% if option.attrs.id %} id="{{ option.attrs.id }}"{% endif %} class="multiselect hidden"{% if option.selected %} checked{% endif %}>
         <span class="formwork-check shrink-0 opacity-0" aria-hidden="true">&#x2713;</span>
         {% if option.icon %}<span class="shrink-0">{{ option.icon }}</span>{% endif %}<span class="select-none">{{ option.label }}</span>
       </label></li>{% endfor %}{% endfor %}{% endif %}
     </ul>
+    {% if widget.search_url %}<div x-show="hasError" x-cloak class="formwork-search-error">
+      <div role="alert" class="alert">Search failed. Please try again.</div>
+    </div>{% endif %}
     {% if widget.show_search and not widget.search_url %}<p x-show="noResults" x-cloak class="px-3 py-2 text-base-content/50">No results</p>{% endif %}
   </div>
 </details>{% endwith %}

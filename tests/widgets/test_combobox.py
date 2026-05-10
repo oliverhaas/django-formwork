@@ -418,6 +418,79 @@ def test_combobox_no_alpine_no_results_when_search_url():
 
 
 @pytest.mark.unit
+def test_combobox_renders_skeleton_when_search_url():
+    """4 skeleton rows render inside the listbox before the first htmx swap
+    so the dropdown reads as 'loading' rather than empty on initial load."""
+    widget = ComboBox(search_url="/search/")
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    listbox = soup.find("ul", id="id_test_listbox")
+    rows = listbox.find_all("li", class_="formwork-skeleton-row")
+    assert len(rows) == 4
+    for row in rows:
+        assert row.find("span", class_="formwork-skeleton") is not None
+
+
+@pytest.mark.unit
+def test_combobox_no_skeleton_without_search_url():
+    """No skeleton rows when there is no server-side search."""
+    widget = ComboBox(suggestions=["Alpha"])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    assert soup.find("li", class_="formwork-skeleton-row") is None
+
+
+@pytest.mark.unit
+def test_combobox_renders_error_alert_when_search_url():
+    """Error alert wrapper is present (Alpine-hidden) when search_url is set."""
+    widget = ComboBox(search_url="/search/")
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    wrapper = soup.find("div", class_="formwork-search-error")
+    assert wrapper is not None
+    assert wrapper.get("x-show") == "hasError"
+    alert = wrapper.find("div", class_="alert")
+    assert alert is not None
+    assert alert.get("role") == "alert"
+    assert "Search failed" in alert.get_text()
+
+
+@pytest.mark.unit
+def test_combobox_no_error_alert_without_search_url():
+    """No error-alert wrapper without server-side search."""
+    widget = ComboBox(suggestions=["Alpha"])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    assert soup.find("div", class_="formwork-search-error") is None
+
+
+@pytest.mark.unit
+def test_combobox_input_wires_error_handlers():
+    """The combobox-input toggles `hasError` on responseError/sendError so
+    the alert appears, and clears it on the next request."""
+    widget = ComboBox(search_url="/search/")
+    soup = render_widget(widget, name="tags", attrs={"id": "id_tags"})
+    trigger = soup.find("input", class_="combobox-input")
+    assert "hasError = false" in trigger["hx-on::before-request"]
+    assert "hasError = true" in trigger["hx-on::response-error"]
+    assert "hasError = true" in trigger["hx-on::send-error"]
+
+
+@pytest.mark.unit
+def test_combobox_listbox_hidden_on_error_when_search_url():
+    """The listbox hides while the error alert is shown."""
+    widget = ComboBox(search_url="/search/")
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    listbox = soup.find("ul", id="id_test_listbox")
+    assert listbox.get("x-show") == "!hasError"
+
+
+@pytest.mark.unit
+def test_combobox_xdata_has_error_flag_when_search_url():
+    """`hasError: false` is part of the Alpine x-data state."""
+    widget = ComboBox(search_url="/search/")
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    wrapper = soup.find("div", class_="combobox")
+    assert "hasError: false" in wrapper["x-data"]
+
+
+@pytest.mark.unit
 def test_combobox_icon_rendering():
     """Icons are rendered inline in suggestion buttons."""
     widget = ComboBox(
@@ -939,6 +1012,60 @@ def test_combobox_keyboard_escape_closes_dropdown(combobox_page):
 # The /combobox/ page has no required ComboBox fields (all required=False),
 # so dedicated error-flow tests cannot be triggered without a separate page.
 # Skipped until a required-field variant of the ComboBox page is available.
+
+
+# ─── Level 6b: E2e — server-side search loading + failure UX ─────────────
+#
+# Indices on /combobox/:  4 = language_htmx (working),
+#                         8 = language_failing (slow + always 500).
+
+
+@pytest.mark.e2e
+def test_combobox_skeleton_visible_on_initial_load(combobox_page):
+    """Skeleton rows render in every htmx-mode ComboBox on first page load."""
+    htmx_combo = combobox_page.locator(".dropdown.combobox").nth(4)
+    assert htmx_combo.locator("li.formwork-skeleton-row").count() == 4
+
+
+@pytest.mark.e2e
+def test_combobox_skeleton_replaced_after_first_load(combobox_page):
+    """First successful focus-triggered request swaps the skeleton out for real options."""
+    from playwright.sync_api import expect
+
+    combo = combobox_page.locator(".dropdown.combobox").nth(4)
+    inp = combobox_page.locator('input[name="language_htmx"]')
+    inp.click()
+    expect(combo.locator("ul button")).to_have_count(6, timeout=3000)
+    assert combo.locator("li.formwork-skeleton-row").count() == 0
+
+
+@pytest.mark.e2e
+def test_combobox_failing_search_shows_error_alert(combobox_page):
+    """When the search endpoint returns 500, the error alert replaces the listbox."""
+    from playwright.sync_api import expect
+
+    combo = combobox_page.locator(".dropdown.combobox").nth(8)
+    inp = combobox_page.locator('input[name="language_failing"]')
+    inp.click()
+    alert = combo.locator(".formwork-search-error .alert")
+    expect(alert).to_be_visible(timeout=6000)
+    assert "Search failed" in alert.text_content()
+    expect(combo.locator("ul[role='listbox']")).to_be_hidden()
+
+
+@pytest.mark.e2e
+def test_combobox_input_works_after_error(combobox_page):
+    """Typing in the combobox input after a failure dismisses the alert via
+    before-request — the input itself stays usable for retries."""
+    from playwright.sync_api import expect
+
+    combo = combobox_page.locator(".dropdown.combobox").nth(8)
+    inp = combobox_page.locator('input[name="language_failing"]')
+    inp.click()
+    alert = combo.locator(".formwork-search-error .alert")
+    expect(alert).to_be_visible(timeout=6000)
+    inp.fill("x")
+    expect(alert).to_be_hidden(timeout=2000)
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────

@@ -511,6 +511,86 @@ def test_search_select_no_alpine_no_results_when_search_url():
 
 
 @pytest.mark.unit
+def test_search_select_renders_skeleton_when_search_url():
+    """4 skeleton placeholder rows are rendered inside the listbox on first
+    full page load when search_url is set, so the dropdown reads as 'loading'
+    rather than empty before the first focus-triggered htmx swap."""
+    widget = SearchSelect(search_url="/search/", choices=[])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    listbox = soup.find("ul", id="id_test_listbox")
+    rows = listbox.find_all("li", class_="formwork-skeleton-row")
+    assert len(rows) == 4
+    for row in rows:
+        assert row.find("span", class_="formwork-skeleton") is not None
+
+
+@pytest.mark.unit
+def test_search_select_no_skeleton_without_search_url():
+    """Skeleton placeholders are NOT rendered when there is no server-side
+    search — the listbox renders real options instead."""
+    widget = SearchSelect(choices=[("a", "Alpha")])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    assert soup.find("li", class_="formwork-skeleton-row") is None
+
+
+@pytest.mark.unit
+def test_search_select_renders_error_alert_when_search_url():
+    """Error alert wrapper is present when search_url is set, hidden by
+    default via x-show='hasError', and contains the user-visible message."""
+    widget = SearchSelect(search_url="/search/", choices=[])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    wrapper = soup.find("div", class_="formwork-search-error")
+    assert wrapper is not None
+    assert wrapper.get("x-show") == "hasError"
+    alert = wrapper.find("div", class_="alert")
+    assert alert is not None
+    assert alert.get("role") == "alert"
+    assert "Search failed" in alert.get_text()
+
+
+@pytest.mark.unit
+def test_search_select_no_error_alert_without_search_url():
+    """No error-alert wrapper when there is no server-side search — there
+    is nothing to fail."""
+    widget = SearchSelect(choices=[("a", "Alpha")])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    assert soup.find("div", class_="formwork-search-error") is None
+
+
+@pytest.mark.unit
+def test_search_select_search_input_wires_error_handlers():
+    """The htmx search input toggles the Alpine `hasError` flag so the alert
+    appears on responseError/sendError and clears on the next request."""
+    widget = SearchSelect(search_url="/search/", choices=[])
+    soup = render_widget(widget, name="city", attrs={"id": "id_city"})
+    search = soup.find("div", class_="dropdown-content").find("input", {"type": "text"})
+    assert "hasError = false" in search["hx-on::before-request"]
+    assert "hasError = true" in search["hx-on::response-error"]
+    assert "hasError = true" in search["hx-on::send-error"]
+
+
+@pytest.mark.unit
+def test_search_select_listbox_hidden_on_error_when_search_url():
+    """The listbox hides while the error alert is shown, so the alert takes
+    over the dropdown space without the (possibly stale) options peeking
+    through."""
+    widget = SearchSelect(search_url="/search/", choices=[])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    listbox = soup.find("ul", id="id_test_listbox")
+    assert listbox.get("x-show") == "!hasError"
+
+
+@pytest.mark.unit
+def test_search_select_xdata_has_error_flag_when_search_url():
+    """`hasError: false` is initialised in the Alpine x-data so x-show
+    expressions resolve cleanly on first render."""
+    widget = SearchSelect(search_url="/search/", choices=[])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    details = soup.find("details", class_="search-select")
+    assert "hasError: false" in details["x-data"]
+
+
+@pytest.mark.unit
 def test_search_select_icon_rendered_in_option():
     """FormworkChoiceLabel icons appear in the rendered option buttons."""
     widget = SearchSelect(
@@ -1328,6 +1408,105 @@ def test_search_select_keyboard_close_clears_highlight(search_select_page):
 # a required SearchSelect would be needed for a proper error-flow test.
 # Skipped until that page exists — tracked as part of the broader error-
 # state test work.
+
+
+# ─── Level 6b: E2e — server-side search loading + failure UX ─────────────
+#
+# Skeleton placeholders show on first full page load before the first
+# focus-triggered htmx request swaps in real options.  When the search
+# endpoint fails, an error alert replaces the listbox while the search
+# input stays usable so the user can retry.
+#
+# Indices on /search-select/:  3 = city_htmx (working),
+#                              7 = city_failing (slow + always 500).
+
+
+@pytest.mark.e2e
+def test_search_select_skeleton_visible_on_initial_load(search_select_page):
+    """Skeleton rows render in every htmx-mode SearchSelect on first page load,
+    before any user interaction."""
+    htmx_dropdown = search_select_page.locator("details.dropdown.search-select").nth(3)
+    rows = htmx_dropdown.locator("li.formwork-skeleton-row")
+    assert rows.count() == 4
+
+
+@pytest.mark.e2e
+def test_search_select_skeleton_replaced_after_first_load(search_select_page):
+    """First successful focus-triggered request swaps the skeleton out for real options."""
+    from playwright.sync_api import expect
+
+    sel = search_select_page.locator("details.dropdown.search-select").nth(3)
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        dds[3].open = true;
+        dds[3].dispatchEvent(new Event('toggle'));
+    }""")
+    search_select_page.wait_for_timeout(200)
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        const search = dds[3].querySelector('.dropdown-content input[type="text"]');
+        search.focus();
+        search.dispatchEvent(new Event('focus'));
+    }""")
+    expect(sel.locator("ul button")).to_have_count(4, timeout=3000)
+    assert sel.locator("li.formwork-skeleton-row").count() == 0
+
+
+@pytest.mark.e2e
+def test_search_select_failing_search_shows_error_alert(search_select_page):
+    """When the search endpoint returns 500, the error alert appears in
+    place of the listbox and the alert carries the failure message."""
+    from playwright.sync_api import expect
+
+    sel = search_select_page.locator("details.dropdown.search-select").nth(7)
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        dds[7].open = true;
+        dds[7].dispatchEvent(new Event('toggle'));
+    }""")
+    search_select_page.wait_for_timeout(200)
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        const search = dds[7].querySelector('.dropdown-content input[type="text"]');
+        search.focus();
+        search.dispatchEvent(new Event('focus'));
+    }""")
+    alert = sel.locator(".formwork-search-error .alert")
+    expect(alert).to_be_visible(timeout=6000)
+    assert "Search failed" in alert.text_content()
+    expect(sel.locator("ul[role='listbox']")).to_be_hidden()
+
+
+@pytest.mark.e2e
+def test_search_select_search_input_works_after_error(search_select_page):
+    """The search input remains usable after a failure: typing again clears
+    the alert (via before-request) so the dropdown can recover."""
+    from playwright.sync_api import expect
+
+    sel = search_select_page.locator("details.dropdown.search-select").nth(7)
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        dds[7].open = true;
+        dds[7].dispatchEvent(new Event('toggle'));
+    }""")
+    search_select_page.wait_for_timeout(200)
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        const search = dds[7].querySelector('.dropdown-content input[type="text"]');
+        search.focus();
+        search.dispatchEvent(new Event('focus'));
+    }""")
+    alert = sel.locator(".formwork-search-error .alert")
+    expect(alert).to_be_visible(timeout=6000)
+    # Type to fire another request — before-request should reset hasError,
+    # hiding the alert while the next (also-slow) request is in flight.
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        const search = dds[7].querySelector('.dropdown-content input[type="text"]');
+        search.value = 'x';
+        search.dispatchEvent(new Event('input', {bubbles: true}));
+    }""")
+    expect(alert).to_be_hidden(timeout=2000)
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────

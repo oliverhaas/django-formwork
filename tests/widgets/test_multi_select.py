@@ -620,6 +620,79 @@ def test_multi_select_htmx_wrapper_has_id():
 
 
 @pytest.mark.unit
+def test_multi_select_renders_skeleton_when_search_url():
+    """4 skeleton rows render inside the listbox before the first htmx swap
+    so the dropdown reads as 'loading' rather than empty on initial load."""
+    widget = MultiSelect(search_url="/search/", choices=[])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    listbox = soup.find("ul", id="id_test_options")
+    rows = listbox.find_all("li", class_="formwork-skeleton-row")
+    assert len(rows) == 4
+    for row in rows:
+        assert row.find("span", class_="formwork-skeleton") is not None
+
+
+@pytest.mark.unit
+def test_multi_select_no_skeleton_without_search_url():
+    """Skeleton rows are absent when there is no server-side search."""
+    widget = MultiSelect(choices=[("a", "Alpha")])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    assert soup.find("li", class_="formwork-skeleton-row") is None
+
+
+@pytest.mark.unit
+def test_multi_select_renders_error_alert_when_search_url():
+    """Error alert wrapper is present (and Alpine-hidden) when search_url is set."""
+    widget = MultiSelect(search_url="/search/", choices=[])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    wrapper = soup.find("div", class_="formwork-search-error")
+    assert wrapper is not None
+    assert wrapper.get("x-show") == "hasError"
+    alert = wrapper.find("div", class_="alert")
+    assert alert is not None
+    assert alert.get("role") == "alert"
+    assert "Search failed" in alert.get_text()
+
+
+@pytest.mark.unit
+def test_multi_select_no_error_alert_without_search_url():
+    """No error-alert wrapper without server-side search."""
+    widget = MultiSelect(choices=[("a", "Alpha")])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    assert soup.find("div", class_="formwork-search-error") is None
+
+
+@pytest.mark.unit
+def test_multi_select_search_input_wires_error_handlers():
+    """The htmx search input toggles `hasError` on responseError/sendError
+    and clears it on the next request."""
+    widget = MultiSelect(search_url="/search/", choices=[])
+    soup = render_widget(widget, name="lang", attrs={"id": "id_lang"})
+    search = soup.find("input", {"type": "text"})
+    assert "hasError = false" in search["hx-on::before-request"]
+    assert "hasError = true" in search["hx-on::response-error"]
+    assert "hasError = true" in search["hx-on::send-error"]
+
+
+@pytest.mark.unit
+def test_multi_select_listbox_hidden_on_error_when_search_url():
+    """The listbox hides while the error alert is shown so it owns the dropdown space."""
+    widget = MultiSelect(search_url="/search/", choices=[])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    listbox = soup.find("ul", id="id_test_options")
+    assert listbox.get("x-show") == "!hasError"
+
+
+@pytest.mark.unit
+def test_multi_select_xdata_has_error_flag_when_search_url():
+    """`hasError: false` is part of the Alpine x-data state."""
+    widget = MultiSelect(search_url="/search/", choices=[])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    details = soup.find("details", class_="multiselect")
+    assert "hasError: false" in details["x-data"]
+
+
+@pytest.mark.unit
 def test_multi_select_icons_rendered():
     """FormworkChoiceLabel icons appear in the rendered HTML."""
     widget = MultiSelect(
@@ -1098,6 +1171,95 @@ def test_multi_select_keyboard_close_clears_highlight(multi_select_page):
 # submitting without values does not trigger visible validation errors.
 # A dedicated error-flow test would require a page with a required=True
 # MultiSelect — that page does not exist yet.  Tracked as a coverage gap.
+
+
+# ─── Level 6b: E2e — server-side search loading + failure UX ─────────────
+#
+# Indices on /multi-select/:  2 = languages_htmx (working),
+#                             4 = languages_failing (slow + always 500).
+
+
+@pytest.mark.e2e
+def test_multi_select_skeleton_visible_on_initial_load(multi_select_page):
+    """Skeleton rows render in every htmx-mode MultiSelect on first page load."""
+    htmx_dropdown = multi_select_page.locator("details.dropdown.multiselect").nth(2)
+    assert htmx_dropdown.locator("li.formwork-skeleton-row").count() == 4
+
+
+@pytest.mark.e2e
+def test_multi_select_skeleton_replaced_after_first_load(multi_select_page):
+    """First successful focus-triggered request swaps the skeleton out for real options."""
+    from playwright.sync_api import expect
+
+    multi = multi_select_page.locator("details.dropdown.multiselect").nth(2)
+    multi_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        dds[2].open = true;
+        dds[2].dispatchEvent(new Event('toggle'));
+    }""")
+    multi_select_page.wait_for_timeout(200)
+    multi_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const search = dds[2].querySelector('.dropdown-content input[type="text"]');
+        search.focus();
+        search.dispatchEvent(new Event('focus'));
+    }""")
+    expect(multi.locator("ul[role='listbox'] label")).to_have_count(6, timeout=3000)
+    assert multi.locator("li.formwork-skeleton-row").count() == 0
+
+
+@pytest.mark.e2e
+def test_multi_select_failing_search_shows_error_alert(multi_select_page):
+    """When the search endpoint returns 500, the error alert replaces the listbox."""
+    from playwright.sync_api import expect
+
+    multi = multi_select_page.locator("details.dropdown.multiselect").nth(4)
+    multi_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        dds[4].open = true;
+        dds[4].dispatchEvent(new Event('toggle'));
+    }""")
+    multi_select_page.wait_for_timeout(200)
+    multi_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const search = dds[4].querySelector('.dropdown-content input[type="text"]');
+        search.focus();
+        search.dispatchEvent(new Event('focus'));
+    }""")
+    alert = multi.locator(".formwork-search-error .alert")
+    expect(alert).to_be_visible(timeout=6000)
+    assert "Search failed" in alert.text_content()
+    expect(multi.locator("ul[role='listbox']")).to_be_hidden()
+
+
+@pytest.mark.e2e
+def test_multi_select_search_input_works_after_error(multi_select_page):
+    """Typing in the search input after a failure dismisses the alert via
+    before-request — the dropdown stays usable."""
+    from playwright.sync_api import expect
+
+    multi = multi_select_page.locator("details.dropdown.multiselect").nth(4)
+    multi_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        dds[4].open = true;
+        dds[4].dispatchEvent(new Event('toggle'));
+    }""")
+    multi_select_page.wait_for_timeout(200)
+    multi_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const search = dds[4].querySelector('.dropdown-content input[type="text"]');
+        search.focus();
+        search.dispatchEvent(new Event('focus'));
+    }""")
+    alert = multi.locator(".formwork-search-error .alert")
+    expect(alert).to_be_visible(timeout=6000)
+    multi_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const search = dds[4].querySelector('.dropdown-content input[type="text"]');
+        search.value = 'x';
+        search.dispatchEvent(new Event('input', {bubbles: true}));
+    }""")
+    expect(alert).to_be_hidden(timeout=2000)
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────

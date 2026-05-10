@@ -1,5 +1,7 @@
 """Views for e2e testing. widget showcase with one page per topic."""
 
+import time
+
 from django import forms
 from django.forms.models import construct_instance
 from django.http import HttpRequest, HttpResponse
@@ -476,6 +478,12 @@ class SearchSelectForm(FormworkForm):
             "auto-hide when search filters out their children."
         ),
     )
+    city_failing = forms.ChoiceField(
+        widget=SearchSelect(search_url="/e2e/search/failing/"),
+        required=False,
+        label="City (server search, slow + always fails)",
+        help_text="Endpoint sleeps 3s and returns HTTP 500 — demonstrates skeleton on first load and the error alert.",
+    )
 
 
 class MultiSelectForm(FormworkForm):
@@ -534,6 +542,12 @@ class MultiSelectForm(FormworkForm):
         required=False,
         label="Cities by region (grouped)",
         help_text="Grouped MultiSelect — optgroup headers, keyboard nav, Enter toggles without closing.",
+    )
+    languages_failing = forms.MultipleChoiceField(
+        widget=MultiSelect(search_url="/e2e/search/failing/"),
+        required=False,
+        label="Languages (server search, slow + always fails)",
+        help_text="Endpoint sleeps 3s and returns HTTP 500 — demonstrates skeleton on first load and the error alert.",
     )
 
 
@@ -644,6 +658,15 @@ class ComboBoxForm(FormworkForm):
         required=False,
         label="Food by cuisine (grouped)",
         help_text="Grouped ComboBox — suggestions grouped by cuisine, optgroup headers hide on filter.",
+    )
+    language_failing = forms.CharField(
+        widget=ComboBox(
+            search_url="/e2e/search/failing/",
+            attrs={"placeholder": "Server search (always fails)"},
+        ),
+        required=False,
+        label="Language (server search, slow + always fails)",
+        help_text="Endpoint sleeps 3s and returns HTTP 500 — demonstrates skeleton on first load and the error alert.",
     )
 
 
@@ -942,6 +965,16 @@ class E2ECountrySearchView(FormworkSearchView):
         if not query:
             return E2E_COUNTRIES_SEARCH
         return [c for c in E2E_COUNTRIES_SEARCH if query.lower() in c["label"].lower()]
+
+
+class E2EFailingSearchView(FormworkSearchView):
+    """Sleeps 3 seconds then returns HTTP 500 — exercises the slow-then-fail
+    path for dropdown widgets so the skeleton, spinner, and error alert all
+    have a deterministic window to observe."""
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        time.sleep(3)
+        return HttpResponse("Simulated upstream failure", status=500)
 
 
 class E2EBioValidateView(FormworkValidateView):

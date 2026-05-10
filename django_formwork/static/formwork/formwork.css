@@ -744,6 +744,29 @@ details.dropdown.search-select > .dropdown-content {
    (see after closing brace) so it beats the opacity-0 utility in HTML. */
 
 
+/* Server-side search loading skeleton: shown inside the listbox on first
+   full page load when search_url is set, before the first focus-triggered
+   htmx request swaps in real options. */
+.formwork-skeleton-row {
+    @apply flex items-center px-3 py-1.5;
+}
+
+.formwork-skeleton {
+    @apply skeleton h-4 w-full block;
+}
+
+/* Server-side search error state: replaces the listbox when an htmx
+   search request fails (responseError or sendError).  The search input
+   stays usable so the user can retry. */
+.formwork-search-error {
+    @apply px-2 py-2;
+}
+
+.formwork-search-error > .alert {
+    @apply alert-error alert-soft;
+}
+
+
 /* ================================================================
    Error tooltips
    DaisyUI tooltip component wraps the widget when errors are present.
