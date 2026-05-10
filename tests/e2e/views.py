@@ -909,28 +909,38 @@ E2E_LANGUAGES_ICONS = [
 ]
 
 
-class E2ECitySearchView(FormworkSearchView):
+class _E2ESlowSearchView(FormworkSearchView):
+    """Base for e2e server-side search views: sleeps 3s before responding so
+    the loading skeleton has a deterministic window to render. Demo-only —
+    real apps would not artificially slow their search endpoints."""
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        time.sleep(3)
+        return super().get(request)
+
+
+class E2ECitySearchView(_E2ESlowSearchView):
     def get_results(self, query, **kwargs):
         if not query:
             return E2E_CITIES
         return [c for c in E2E_CITIES if query.lower() in c["label"].lower()]
 
 
-class E2ECityManySearchView(FormworkSearchView):
+class E2ECityManySearchView(_E2ESlowSearchView):
     def get_results(self, query, **kwargs):
         if not query:
             return E2E_CITIES_MANY
         return [c for c in E2E_CITIES_MANY if query.lower() in c["label"].lower()]
 
 
-class E2ELanguageSearchView(FormworkSearchView):
+class E2ELanguageSearchView(_E2ESlowSearchView):
     def get_results(self, query, **kwargs):
         if not query:
             return E2E_LANGUAGES
         return [lang for lang in E2E_LANGUAGES if query.lower() in lang["label"].lower()]
 
 
-class E2ELanguageIconsSearchView(FormworkSearchView):
+class E2ELanguageIconsSearchView(_E2ESlowSearchView):
     def get_results(self, query, **kwargs):
         if not query:
             return E2E_LANGUAGES_ICONS
@@ -982,7 +992,7 @@ E2E_COUNTRIES_SEARCH = [
 ]
 
 
-class E2ECountrySearchView(FormworkSearchView):
+class E2ECountrySearchView(_E2ESlowSearchView):
     def get_results(self, query, **kwargs):
         if not query:
             return E2E_COUNTRIES_SEARCH

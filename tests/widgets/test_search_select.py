@@ -583,6 +583,7 @@ def test_search_select_renders_error_alert_when_search_url():
     assert alert is not None
     assert alert.get("role") == "alert"
     assert "alert-icon" in alert["class"]
+    assert "icon-circle-x" in alert["class"]
     assert "Search failed" in alert.get_text()
 
 
@@ -1000,7 +1001,7 @@ def test_search_select_htmx_open_loads_results(search_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    search_select_page.wait_for_timeout(1000)
+    search_select_page.wait_for_timeout(4000)
     buttons = sel.locator("ul button")
     assert buttons.count() >= 1
 
@@ -1023,15 +1024,15 @@ def test_search_select_htmx_filters_via_htmx(search_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    search_select_page.wait_for_timeout(1000)
-    expect(sel.locator("ul button")).to_have_count(4, timeout=3000)
+    search_select_page.wait_for_timeout(4000)
+    expect(sel.locator("ul button")).to_have_count(4, timeout=6000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         const search = dds[3].querySelector('.dropdown-content input[type="text"]');
         search.value = 'Tok';
         search.dispatchEvent(new Event('input', {bubbles: true}));
     }""")
-    expect(sel.locator("ul button")).to_have_count(1, timeout=3000)
+    expect(sel.locator("ul button")).to_have_count(1, timeout=6000)
     assert "Tokyo" in sel.locator("ul button").first.text_content()
 
 
@@ -1052,14 +1053,14 @@ def test_search_select_htmx_pick_sets_value(search_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    search_select_page.wait_for_timeout(1000)
+    search_select_page.wait_for_timeout(4000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         const search = dds[3].querySelector('.dropdown-content input[type="text"]');
         search.value = 'Lon';
         search.dispatchEvent(new Event('input', {bubbles: true}));
     }""")
-    search_select_page.wait_for_timeout(1000)
+    search_select_page.wait_for_timeout(4000)
     sel.locator("ul button", has_text="London").click()
     search_select_page.wait_for_timeout(200)
     assert hidden.input_value() == "ldn"
@@ -1083,8 +1084,8 @@ def test_search_select_htmx_no_results_message(search_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    search_select_page.wait_for_timeout(1000)
-    expect(sel.locator("ul button")).to_have_count(4, timeout=3000)
+    search_select_page.wait_for_timeout(4000)
+    expect(sel.locator("ul button")).to_have_count(4, timeout=6000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         const search = dds[3].querySelector('.dropdown-content input[type="text"]');
@@ -1094,7 +1095,7 @@ def test_search_select_htmx_no_results_message(search_select_page):
         });
     }""")
     no_results = sel.locator("li", has_text="No results")
-    expect(no_results).to_be_visible(timeout=3000)
+    expect(no_results).to_be_visible(timeout=6000)
 
 
 @pytest.mark.e2e
@@ -1108,9 +1109,9 @@ def test_search_select_htmx_many_open_loads_all(search_select_page):
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(2000)
+    search_select_page.wait_for_timeout(4000)
     buttons = sel.locator("ul button")
-    expect(buttons).to_have_count(24, timeout=3000)
+    expect(buttons).to_have_count(24, timeout=6000)
 
 
 @pytest.mark.e2e
@@ -1124,9 +1125,9 @@ def test_search_select_htmx_many_search_input_shown_above_threshold(search_selec
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(2000)
+    search_select_page.wait_for_timeout(4000)
     search_wrapper = sel.locator(".dropdown-content > div").first
-    expect(search_wrapper).to_be_visible(timeout=3000)
+    expect(search_wrapper).to_be_visible(timeout=6000)
 
 
 @pytest.mark.e2e
@@ -1140,14 +1141,14 @@ def test_search_select_htmx_many_filters_via_htmx(search_select_page):
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(2000)
+    search_select_page.wait_for_timeout(4000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         const search = dds[4].querySelector('.dropdown-content input[type="text"]');
         search.value = 'Ber';
         search.dispatchEvent(new Event('input', {bubbles: true}));
     }""")
-    expect(sel.locator("ul button")).to_have_count(1, timeout=3000)
+    expect(sel.locator("ul button")).to_have_count(1, timeout=6000)
     assert "Berlin" in sel.locator("ul button").first.text_content()
 
 
@@ -1169,9 +1170,9 @@ def test_search_select_htmx_icons_loads_results(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(2000)
+    search_select_page.wait_for_timeout(4000)
     buttons = sel.locator("ul button")
-    expect(buttons).to_have_count(31, timeout=3000)
+    expect(buttons).to_have_count(31, timeout=6000)
 
 
 @pytest.mark.e2e
@@ -1185,9 +1186,9 @@ def test_search_select_htmx_icons_search_input_shown(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(2000)
+    search_select_page.wait_for_timeout(4000)
     search_wrapper = sel.locator(".dropdown-content > div").first
-    expect(search_wrapper).to_be_visible(timeout=3000)
+    expect(search_wrapper).to_be_visible(timeout=6000)
 
 
 @pytest.mark.e2e
@@ -1199,7 +1200,7 @@ def test_search_select_htmx_icons_results_have_icons(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(2000)
+    search_select_page.wait_for_timeout(4000)
     first_button = sel.locator("ul button").first
     icon_span = first_button.locator("span.shrink-0").first
     assert icon_span.text_content().strip() != ""
@@ -1214,7 +1215,7 @@ def test_search_select_htmx_icons_results_have_descriptions(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(2000)
+    search_select_page.wait_for_timeout(4000)
     descs = sel.locator("ul button span.text-xs")
     assert descs.count() >= 1
     assert descs.first.text_content().strip() != ""
@@ -1231,14 +1232,14 @@ def test_search_select_htmx_icons_filters(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(2000)
+    search_select_page.wait_for_timeout(4000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
         const search = dds[5].querySelector('.dropdown-content input[type="text"]');
         search.value = 'Jap';
         search.dispatchEvent(new Event('input', {bubbles: true}));
     }""")
-    expect(sel.locator("ul button")).to_have_count(1, timeout=3000)
+    expect(sel.locator("ul button")).to_have_count(1, timeout=6000)
     assert "Japan" in sel.locator("ul button").first.text_content()
 
 
@@ -1252,7 +1253,7 @@ def test_search_select_htmx_icons_pick_sets_value(search_select_page):
         dds[5].open = true;
         dds[5].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(2000)
+    search_select_page.wait_for_timeout(4000)
     sel.locator("ul button", has_text="France").click()
     search_select_page.wait_for_timeout(200)
     assert hidden.input_value() == "fr"
@@ -1510,7 +1511,7 @@ def test_search_select_skeleton_replaced_after_first_load(search_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    expect(sel.locator("ul button")).to_have_count(4, timeout=3000)
+    expect(sel.locator("ul button")).to_have_count(4, timeout=6000)
     expect(sel.locator(".formwork-skeleton")).to_be_hidden()
 
 

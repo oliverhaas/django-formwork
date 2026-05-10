@@ -751,17 +751,22 @@ details.dropdown.search-select > .dropdown-content {
    so the skeleton roughly mirrors what the response will look like.
 
    Multi-line rows (icon + text + description) get a 2-column grid so
-   the description sits under the text, not next to it. */
+   the description sits under the text, not next to it.
+
+   Sizes mirror the eventual options:  text bar ≈ option label height,
+   description bar ≈ description text height, icon square ≈ icon glyph.
+   The shimmer color is bumped from DaisyUI's default base-300 to a
+   base-content tint so it's visible against base-100 surfaces. */
 .formwork-skeleton {
     @apply max-h-60 overflow-hidden p-1;
 }
 
 .formwork-skeleton-row {
-    @apply flex items-center gap-2 px-3 py-1.5;
+    @apply flex items-center gap-3 px-3 py-2;
 }
 
 .formwork-skeleton-row:has(.formwork-skeleton-desc) {
-    @apply grid items-center gap-x-2 gap-y-1;
+    @apply grid items-center gap-x-3 gap-y-1.5;
     grid-template-columns: auto 1fr;
 }
 
@@ -770,17 +775,17 @@ details.dropdown.search-select > .dropdown-content {
 }
 
 .formwork-skeleton-icon {
-    @apply skeleton shrink-0 size-5 rounded-md;
+    @apply skeleton shrink-0 size-6 rounded-md;
     grid-row: span 2;
 }
 
 .formwork-skeleton-text {
-    @apply skeleton h-3 rounded-sm;
+    @apply skeleton h-4 rounded;
     width: var(--fw-skeleton-text-w, 60%);
 }
 
 .formwork-skeleton-desc {
-    @apply skeleton h-2 rounded-sm;
+    @apply skeleton h-3 rounded;
     width: var(--fw-skeleton-desc-w, 40%);
 }
 
@@ -792,7 +797,14 @@ details.dropdown.search-select > .dropdown-content {
 /* MultiSelect rows leave room for the checkbox/checkmark column. */
 .formwork-skeleton-row-multi::before {
     content: "";
-    @apply skeleton size-3 rounded-sm shrink-0;
+    @apply skeleton size-4 rounded shrink-0;
+}
+
+/* DaisyUI's .skeleton uses base-300 over base-100 — too low contrast on
+   white surfaces.  Boost to a base-content tint inside our skeleton. */
+.formwork-skeleton .skeleton,
+.formwork-skeleton-row-multi::before {
+    background-color: color-mix(in oklab, var(--color-base-content) 18%, var(--color-base-100));
 }
 
 /* Server-side search error state: replaces the listbox when an htmx
@@ -802,13 +814,8 @@ details.dropdown.search-select > .dropdown-content {
     @apply px-2 py-2;
 }
 
-/* alert-icon's ::before pseudo reads --icon-url; iconx's icon-* classes
-   set mask-image directly, which would mask the whole alert. Override
-   --icon-url here so the X icon lands on ::before only and the text
-   stays visible. */
 .formwork-search-error > .alert {
     @apply alert-error alert-soft;
-    --icon-url: url("/static/icons/lucide/circle-x.svg");
 }
 
 
@@ -995,6 +1002,45 @@ fieldset.formwork-dirty label.password-reveal {
 }
 
 } /* @layer components */
+
+
+/* ================================================================
+   iconx ↔ btn-icon / alert-icon bridge
+
+   iconx's mono-base rule turns any element carrying an `.icon-*` class
+   into the icon itself: it sets `background-color: currentColor` plus
+   `mask-image: url(...)`, `mask-size`, `mask-repeat`, `mask-position`
+   and `mask-mode`.  That's exactly what we want for a bare span or
+   `<i>` icon, but on a button or alert it nukes the background colour
+   and masks the entire element away.
+
+   When a `.btn-icon`, `.btn-icon-end` or `.alert-icon` is in play we
+   instead want the glyph on the ::before / ::after pseudo, so:
+     1. undo every iconx-mono-base property on the host element, and
+     2. mirror iconx's mask URL into `--icon-url`, which the pseudo
+        reads via `var(--icon-url)`.
+
+   Only icons actually used with btn-icon / alert-icon need the
+   `--icon-url` mapping; standalone icons keep iconx's default. */
+.btn-icon, .btn-icon-end, .alert-icon {
+    background-color: revert-layer;
+    mask-image: none;
+    mask-size: revert-layer;
+    mask-repeat: revert-layer;
+    mask-position: revert-layer;
+    mask-mode: revert-layer;
+}
+
+.icon-upload         { --icon-url: url("/static/icons/lucide/upload.svg"); }
+.icon-pencil         { --icon-url: url("/static/icons/lucide/pencil.svg"); }
+.icon-chevron-right  { --icon-url: url("/static/icons/lucide/chevron-right.svg"); }
+.icon-search         { --icon-url: url("/static/icons/lucide/search.svg"); }
+.icon-info           { --icon-url: url("/static/icons/lucide/info.svg"); }
+.icon-circle-alert   { --icon-url: url("/static/icons/lucide/circle-alert.svg"); }
+.icon-circle-check   { --icon-url: url("/static/icons/lucide/circle-check.svg"); }
+.icon-circle-x       { --icon-url: url("/static/icons/lucide/circle-x.svg"); }
+.icon-triangle-alert { --icon-url: url("/static/icons/lucide/triangle-alert.svg"); }
+
 
 /* ================================================================
    Button loading state (btn-loading)

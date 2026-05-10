@@ -92,7 +92,7 @@
     </ul>
     {% if widget.search_url %}<div x-show="loading && !hasError" x-cloak class="formwork-skeleton" aria-hidden="true">{% for _ in widget.skeleton_rows %}<div class="formwork-skeleton-row">{% if widget.expected_icons %}<span class="formwork-skeleton-icon"></span>{% endif %}<span class="formwork-skeleton-text"></span>{% if widget.expected_descriptions %}<span class="formwork-skeleton-desc"></span>{% endif %}</div>{% endfor %}</div>
     <div x-show="hasError" x-cloak class="formwork-search-error">
-      <div role="alert" class="alert alert-icon">Search failed. Please try again.</div>
+      <div role="alert" class="alert alert-icon icon-circle-x">Search failed. Please try again.</div>
     </div>{% endif %}
     {% if not widget.search_url %}<p x-show="noResults" x-cloak class="px-3 py-2 text-base-content/50">No results</p>{% endif %}
   </div>

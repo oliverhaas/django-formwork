@@ -467,6 +467,7 @@ def test_combobox_renders_error_alert_with_icon_when_search_url():
     alert = wrapper.find("div", class_="alert")
     assert alert is not None
     assert "alert-icon" in alert["class"]
+    assert "icon-circle-x" in alert["class"]
     assert "Search failed" in alert.get_text()
 
 
@@ -1058,7 +1059,7 @@ def test_combobox_skeleton_replaced_after_first_load(combobox_page):
     combo = combobox_page.locator(".dropdown.combobox").nth(4)
     inp = combobox_page.locator('input[name="language_htmx"]')
     inp.click()
-    expect(combo.locator("ul button")).to_have_count(6, timeout=3000)
+    expect(combo.locator("ul button")).to_have_count(6, timeout=6000)
     expect(combo.locator(".formwork-skeleton")).to_be_hidden()
 
 

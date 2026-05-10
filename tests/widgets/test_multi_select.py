@@ -669,6 +669,7 @@ def test_multi_select_renders_error_alert_with_icon_when_search_url():
     alert = wrapper.find("div", class_="alert")
     assert alert is not None
     assert "alert-icon" in alert["class"]
+    assert "icon-circle-x" in alert["class"]
     assert "Search failed" in alert.get_text()
 
 
@@ -917,7 +918,7 @@ def test_multi_select_htmx_open_loads_results(multi_select_page):
     from playwright.sync_api import expect
 
     checkboxes = multi.locator('input[type="checkbox"]')
-    expect(checkboxes.first).to_be_attached(timeout=3000)
+    expect(checkboxes.first).to_be_attached(timeout=6000)
     assert checkboxes.count() >= 1
 
 
@@ -937,7 +938,7 @@ def test_multi_select_htmx_select_creates_hidden_inputs(multi_select_page):
     }""")
     from playwright.sync_api import expect
 
-    expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=3000)
+    expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=6000)
     multi_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.multiselect');
         const cbs = dds[2].querySelectorAll('input[type="checkbox"]');
@@ -1227,7 +1228,7 @@ def test_multi_select_skeleton_replaced_after_first_load(multi_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    expect(multi.locator("ul[role='listbox'] label")).to_have_count(6, timeout=3000)
+    expect(multi.locator("ul[role='listbox'] label")).to_have_count(6, timeout=6000)
     expect(multi.locator(".formwork-skeleton")).to_be_hidden()
 
 
