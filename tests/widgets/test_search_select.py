@@ -617,6 +617,26 @@ def test_search_select_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
     assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
+@pytest.mark.integration
+def test_search_select_grouped_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
+    """Grouped SearchSelect produces equivalent HTML via DTL and Jinja2."""
+
+    class GroupedForm(FormworkForm):
+        city = forms.ChoiceField(
+            choices=[
+                ("", ""),
+                ("Europe", [("ldn", "London"), ("par", "Paris")]),
+                ("Asia", [("tyo", "Tokyo")]),
+            ],
+            widget=SearchSelect,
+            required=False,
+        )
+
+    soup_dtl = render_form(GroupedForm(), renderer=dtl_renderer)
+    soup_jinja2 = render_form(GroupedForm(), renderer=jinja2_renderer)
+    assert_html_equivalent(soup_dtl, soup_jinja2)
+
+
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
 
 
