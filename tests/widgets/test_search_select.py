@@ -529,6 +529,29 @@ def test_search_select_no_group_headers_for_flat_choices():
 
 
 @pytest.mark.unit
+def test_search_select_group_header_xshow_includes_child_labels():
+    """Group <li class='menu-title'> has an x-show whose JS array contains
+    every child option label, so it auto-hides when no child matches search."""
+    widget = SearchSelect(
+        choices=[
+            ("", ""),
+            ("Europe", [("ldn", "London"), ("par", "Paris"), ("ber", "Berlin")]),
+            ("Asia", [("tyo", "Tokyo")]),
+        ],
+    )
+    soup = render_widget(widget, attrs={"id": "id_city"})
+    titles = soup.find_all("li", class_="menu-title")
+    assert len(titles) == 2
+
+    europe = next(t for t in titles if "Europe" in t.get_text())
+    xshow = europe.get("x-show", "")
+    assert "London" in xshow
+    assert "Paris" in xshow
+    assert "Berlin" in xshow
+    assert "search" in xshow
+
+
+@pytest.mark.unit
 def test_search_select_grouped_options_keep_icons_and_descriptions():
     """FormworkChoiceLabel icons/descriptions render inside grouped options."""
     widget = SearchSelect(
