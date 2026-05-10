@@ -439,25 +439,32 @@ class SearchSelectForm(FormworkForm):
             (
                 "Europe",
                 [
-                    ("ldn", "London"),
-                    ("par", "Paris"),
-                    ("ber", "Berlin"),
+                    ("ldn", FormworkChoiceLabel("London", icon="\U0001f1ec\U0001f1e7")),
+                    ("par", FormworkChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7")),
+                    ("ber", FormworkChoiceLabel("Berlin", icon="\U0001f1e9\U0001f1ea")),
                 ],
             ),
             (
                 "Asia",
                 [
-                    ("tyo", "Tokyo"),
-                    ("sel", "Seoul"),
-                    ("bkk", "Bangkok"),
+                    ("tyo", FormworkChoiceLabel("Tokyo", icon="\U0001f1ef\U0001f1f5")),
+                    ("sel", FormworkChoiceLabel("Seoul", icon="\U0001f1f0\U0001f1f7")),
+                    ("bkk", FormworkChoiceLabel("Bangkok", icon="\U0001f1f9\U0001f1ed")),
                 ],
             ),
             (
                 "Americas",
                 [
-                    ("nyc", FormworkChoiceLabel("New York", description="The Big Apple")),
-                    ("sao", "São Paulo"),
-                    ("mex", "Mexico City"),
+                    (
+                        "nyc",
+                        FormworkChoiceLabel(
+                            "New York",
+                            icon="\U0001f1fa\U0001f1f8",
+                            description="The Big Apple",
+                        ),
+                    ),
+                    ("sao", FormworkChoiceLabel("São Paulo", icon="\U0001f1e7\U0001f1f7")),
+                    ("mex", FormworkChoiceLabel("Mexico City", icon="\U0001f1f2\U0001f1fd")),
                 ],
             ),
         ],
