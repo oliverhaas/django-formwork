@@ -43,7 +43,7 @@ class ComboBox(forms.TextInput):
     def __init__(  # noqa: PLR0913
         self,
         *,
-        suggestions: list[str] | None = None,
+        suggestions: list[str] | list[tuple[str, list[str]]] | None = None,
         multiple: bool = False,
         search_url: str | None = None,
         search_decorator: Callable | object = _NOT_SET,
@@ -60,12 +60,33 @@ class ComboBox(forms.TextInput):
         self.descriptions = descriptions or {}
         self._registry_key: str | None = None
 
+    def _suggestion_groups(self) -> list[tuple[str, list[dict[str, str]]]]:
+        """Normalize ``suggestions`` to a list of ``(group, items)`` tuples.
+
+        Flat ``["a", "b"]`` becomes ``[("", [...])]``; grouped
+        ``[("Group", ["a", "b"])]`` is preserved.
+        """
+
+        def _build(text: str) -> dict[str, str]:
+            return {
+                "text": text,
+                "icon": self.icons.get(text, ""),
+                "description": self.descriptions.get(text, ""),
+            }
+
+        if self.suggestions and isinstance(self.suggestions[0], (tuple, list)):
+            groups = []
+            for group, items in self.suggestions:  # type: ignore[misc]
+                groups.append((group, [_build(s) for s in items]))
+            return groups
+        return [("", [_build(s) for s in self.suggestions])]  # type: ignore[arg-type]
+
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
-        context["widget"]["suggestions"] = [
-            {"text": s, "icon": self.icons.get(s, ""), "description": self.descriptions.get(s, "")}
-            for s in self.suggestions
-        ]
+        groups = self._suggestion_groups()
+        # Flat list for backward compatibility with the existing template loop.
+        context["widget"]["suggestions"] = [item for _g, items in groups for item in items]
+        context["widget"]["suggestion_groups"] = groups
         context["widget"]["multiple"] = self.multiple
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         # Resolve search URL: explicit > auto-registered > none.
@@ -76,8 +97,9 @@ class ComboBox(forms.TextInput):
             search_url = reverse("formwork:search", kwargs={"key": self._registry_key})
         context["widget"]["search_url"] = search_url
         # Build initial icon map from current value for unfocused display.
+        flat_texts = [item["text"] for item in context["widget"]["suggestions"]]
         context["widget"]["icons_json"] = json.dumps(
-            {s: self.icons[s] for s in self.suggestions if s in self.icons},
+            {s: self.icons[s] for s in flat_texts if s in self.icons},
             ensure_ascii=False,
         )
         return context
