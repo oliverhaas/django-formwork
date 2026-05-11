@@ -744,62 +744,6 @@ details.dropdown.search-select > .dropdown-content {
    (see after closing brace) so it beats the opacity-0 utility in HTML. */
 
 
-/* Server-side search loading skeleton: shown in place of the listbox
-   while an htmx request is in flight (and on first full page load when
-   no data has arrived yet).  Row count and shape are driven by widget
-   context — expected_count, expected_icons, expected_descriptions —
-   so the skeleton roughly mirrors what the response will look like.
-
-   Multi-line rows (icon + text + description) get a 2-column grid so
-   the description sits under the text, not next to it.
-
-   Sizes mirror the eventual options:  text bar ≈ option label height,
-   description bar ≈ description text height, icon square ≈ icon glyph.
-   The shimmer color is bumped from DaisyUI's default base-300 to a
-   base-content tint so it's visible against base-100 surfaces. */
-.formwork-skeleton {
-    @apply max-h-60 overflow-hidden p-1;
-}
-
-.formwork-skeleton-row {
-    @apply flex items-center gap-3 px-3 py-2;
-}
-
-.formwork-skeleton-row:has(.formwork-skeleton-desc) {
-    @apply grid items-center gap-x-3 gap-y-1.5;
-    grid-template-columns: auto 1fr;
-}
-
-.formwork-skeleton-row:has(.formwork-skeleton-icon):has(.formwork-skeleton-desc) {
-    grid-template-columns: auto 1fr;
-}
-
-.formwork-skeleton-icon {
-    @apply skeleton shrink-0 size-6 rounded-md;
-    grid-row: span 2;
-}
-
-.formwork-skeleton-text {
-    @apply skeleton h-4 rounded;
-    width: var(--fw-skeleton-text-w, 60%);
-}
-
-.formwork-skeleton-desc {
-    @apply skeleton h-3 rounded;
-    width: var(--fw-skeleton-desc-w, 40%);
-}
-
-/* Stagger row widths so the skeleton doesn't read as a column of bars. */
-.formwork-skeleton-row:nth-child(3n) { --fw-skeleton-text-w: 75%; --fw-skeleton-desc-w: 50%; }
-.formwork-skeleton-row:nth-child(3n+1) { --fw-skeleton-text-w: 55%; --fw-skeleton-desc-w: 35%; }
-.formwork-skeleton-row:nth-child(3n+2) { --fw-skeleton-text-w: 65%; --fw-skeleton-desc-w: 45%; }
-
-/* MultiSelect rows leave room for the checkbox/checkmark column. */
-.formwork-skeleton-row-multi::before {
-    content: "";
-    @apply skeleton size-4 rounded shrink-0;
-}
-
 /* ================================================================
    Error tooltips
    DaisyUI tooltip component wraps the widget when errors are present.

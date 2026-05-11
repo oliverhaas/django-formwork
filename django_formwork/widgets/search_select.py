@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from django import forms
 
-from ._base import _NOT_SET, _resolve_search_expectations, _resolve_skeleton_options, _skeleton_rows
+from ._base import _NOT_SET, _resolve_initial_results
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -104,20 +104,16 @@ class SearchSelect(forms.Select):
             search_url = reverse("formwork:search", kwargs={"key": self._registry_key})
         context["widget"]["search_url"] = search_url
         context["widget"]["search_threshold"] = self.search_threshold
-        # Derive skeleton + search-input expectations entirely from the registry.
-        expected_count, expected_icons, expected_descriptions = _resolve_search_expectations(self._registry_key)
+        # Server-side search: pre-render the first ``max_results`` options
+        # directly in the listbox so the dropdown opens with real data; htmx
+        # replaces them on first focus.  Total count drives the
+        # ``show_search`` decision.
+        registry_total, initial_options = _resolve_initial_results(self._registry_key)
         if self.show_search is not None:
             context["widget"]["show_search"] = self.show_search
-        elif search_url and expected_count is not None:
-            context["widget"]["show_search"] = expected_count >= self.search_threshold
-        elif search_url:
-            # Server-side search without a count hint: start hidden, OOB total-count swap decides.
-            context["widget"]["show_search"] = False
+        elif search_url and registry_total is not None:
+            context["widget"]["show_search"] = registry_total >= self.search_threshold
         else:
             context["widget"]["show_search"] = total >= self.search_threshold
-        context["widget"]["expected_count"] = expected_count
-        context["widget"]["expected_icons"] = expected_icons
-        context["widget"]["expected_descriptions"] = expected_descriptions
-        context["widget"]["skeleton_rows"] = _skeleton_rows(expected_count) if search_url else []
-        context["widget"]["skeleton_options"] = _resolve_skeleton_options(self._registry_key) if search_url else []
+        context["widget"]["initial_options"] = initial_options if search_url else []
         return context

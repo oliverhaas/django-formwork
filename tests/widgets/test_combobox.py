@@ -345,12 +345,15 @@ def test_combobox_alpine_x_data():
 
 
 @pytest.mark.unit
-def test_combobox_no_results_element():
-    """A 'No results' paragraph is rendered for client-side mode."""
+def test_combobox_no_results_alert():
+    """A DaisyUI alert-info alert-soft is rendered for client-side mode."""
     widget = ComboBox(suggestions=["Alpha"])
     soup = render_widget(widget, name="test")
-    no_results = soup.find("p", string="No results")
-    assert no_results is not None
+    alert = soup.find("div", attrs={"role": "status"})
+    assert alert is not None
+    assert "alert" in alert["class"]
+    assert "alert-info" in alert["class"]
+    assert "No results" in alert.get_text()
 
 
 @pytest.mark.unit
@@ -393,12 +396,14 @@ def test_combobox_no_htmx_attrs_without_search_url():
 
 
 @pytest.mark.unit
-def test_combobox_no_client_suggestions_when_search_url():
-    """When search_url is set, client-side suggestion buttons are not rendered."""
-    widget = make_server_widget(ComboBox, suggestions=["Alpha"])
+def test_combobox_static_suggestions_ignored_when_search_url():
+    """When server search is wired, static ``suggestions`` are ignored —
+    the listbox renders pre-rendered registry options instead.  ``count=0``
+    here so the listbox renders empty."""
+    widget = make_server_widget(ComboBox, count=0, suggestions=["Alpha"])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    buttons = soup.find_all("button", {"type": "button"})
-    assert len(buttons) == 0
+    listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
+    assert listbox.find_all("li", attrs={"role": "option"}) == []
 
 
 @pytest.mark.unit
@@ -411,41 +416,44 @@ def test_combobox_no_alpine_no_results_when_search_url():
 
 
 @pytest.mark.unit
-def test_combobox_renders_skeleton_when_registered():
-    """The skeleton container is rendered alongside the listbox when registered."""
-    widget = make_server_widget(ComboBox)
+def test_combobox_prerenders_initial_options_when_registered():
+    """The first ``max_results`` registry items are baked into the listbox
+    so the dropdown opens with real suggestions — htmx replaces them on
+    first focus."""
+    widget = make_server_widget(ComboBox, count=3)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    skeleton = soup.find("div", class_="formwork-skeleton")
-    assert skeleton is not None
-    assert skeleton.get("x-show") == "loading && !hasError"
-    items = skeleton.find_all("div", class_="formwork-skeleton-item")
-    assert items, "expected real-data skeleton rows to render"
+    listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
+    items = listbox.find_all("li", attrs={"role": "option"})
+    assert len(items) == 3
+    first = items[0].find("button")
+    assert first["data-suggestion"] == "Item 0"
 
 
 @pytest.mark.unit
-def test_combobox_skeleton_row_count_follows_registry_count():
-    """The skeleton renders one row per registry item, capped at 5."""
-    soup = render_widget(make_server_widget(ComboBox, count=3), attrs={"id": "id_x"})
-    rows = soup.find("div", class_="formwork-skeleton").find_all("div", class_="formwork-skeleton-item")
-    assert len(rows) == 3
+def test_combobox_prerendered_count_caps_at_registry_max_results():
+    """Pre-rendered options never exceed ``reg.max_results`` (default 50)."""
+    widget = make_server_widget(ComboBox, count=120)
+    soup = render_widget(widget, attrs={"id": "id_x"})
+    assert len(soup.find("ul", attrs={"id": "id_x_listbox"}).find_all("li", attrs={"role": "option"})) == 50
 
 
 @pytest.mark.unit
-def test_combobox_skeleton_includes_description_placeholder_when_registry_has_descriptions():
-    """When the registry exposes descriptions, skeleton rows include a second shimmer line."""
-    soup = render_widget(make_server_widget(ComboBox, descriptions=True), attrs={"id": "id_x"})
-    row = soup.find("div", class_="formwork-skeleton-item")
-    desc_span = row.find("span", class_="text-xs")
-    assert desc_span is not None
-    assert "skeleton" in desc_span.get("class", [])
+def test_combobox_prerendered_options_include_descriptions_when_registry_has_descriptions():
+    """When ``description_from_instance`` is registered, pre-rendered options carry a description span."""
+    widget = make_server_widget(ComboBox, count=1, descriptions=True)
+    soup = render_widget(widget, attrs={"id": "id_x"})
+    first = soup.find("li", attrs={"role": "option"})
+    desc = first.find("span", class_="text-xs")
+    assert desc is not None
+    assert "desc 0" in desc.get_text()
 
 
 @pytest.mark.unit
-def test_combobox_no_skeleton_without_search_url():
-    """No skeleton container without server-side search."""
+def test_combobox_no_prerendered_options_without_search_url():
+    """No server-search → no pre-rendered options (the listbox shows static suggestions instead)."""
     widget = ComboBox(suggestions=["Alpha"])
-    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    assert soup.find("div", class_="formwork-skeleton") is None
+    ctx = widget.get_context("test", "", {"id": "id_test"})
+    assert ctx["widget"]["initial_options"] == []
 
 
 @pytest.mark.unit
@@ -471,38 +479,33 @@ def test_combobox_no_error_alert_without_search_url():
 
 
 @pytest.mark.unit
-def test_combobox_input_wires_loading_and_error_handlers():
-    """The combobox-input toggles `loading` and `hasError` on every
-    request lifecycle."""
+def test_combobox_input_wires_error_handlers():
+    """The combobox-input toggles ``hasError`` on every request lifecycle."""
     widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="tags", attrs={"id": "id_tags"})
     trigger = soup.find("input", class_="combobox-input")
-    before = trigger["hx-on::before:request"]
-    err = trigger["hx-on::response:error"]
-    assert "loading = true" in before
-    assert "hasError = false" in before
-    assert "loading = false" in err
-    assert "hasError = true" in err
+    assert "hasError = false" in trigger["hx-on::before:request"]
+    assert "hasError = true" in trigger["hx-on::response:error"]
+    assert "hasError = true" in trigger["hx-on::error"]
 
 
 @pytest.mark.unit
-def test_combobox_listbox_hidden_while_loading_or_error():
-    """The listbox stays hidden while loading or in error state."""
+def test_combobox_listbox_hidden_only_on_error():
+    """The listbox stays visible at all times except when an error occurs."""
     widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_listbox")
-    assert listbox.get("x-show") == "!loading && !hasError"
-    assert "loading = false" in listbox["hx-on::after:settle"]
+    assert listbox.get("x-show") == "!hasError"
 
 
 @pytest.mark.unit
-def test_combobox_xdata_has_loading_and_error_flags_when_search_url():
-    """`loading: true` and `hasError: false` are part of the Alpine x-data."""
+def test_combobox_xdata_has_error_flag_when_search_url():
+    """``hasError: false`` is part of the Alpine x-data when server search is wired."""
     widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     wrapper = soup.find("div", class_="combobox")
-    assert "loading: true" in wrapper["x-data"]
     assert "hasError: false" in wrapper["x-data"]
+    assert "loading:" not in wrapper["x-data"]
 
 
 @pytest.mark.unit
@@ -1036,27 +1039,29 @@ def test_combobox_keyboard_escape_closes_dropdown(combobox_page):
 
 
 @pytest.mark.e2e
-def test_combobox_skeleton_visible_on_initial_load(combobox_page):
-    """Skeleton rows render in every htmx-mode ComboBox on first page load.
+def test_combobox_prerenders_options_on_initial_load(combobox_page):
+    """Real options render in every htmx-mode ComboBox on first page load,
+    before any user interaction — no skeleton flicker.
 
     The combobox at index 4 wires ``search_choices_language_htmx`` against
-    ``E2E_LANGUAGES`` (6 entries), so the real-data skeleton renders 5
-    items (sliced to ``max_results``).
+    ``E2E_LANGUAGES`` (6 entries), all of which are baked in (default
+    ``reg.max_results`` is 50).
     """
     htmx_combo = combobox_page.locator(".dropdown.combobox").nth(4)
-    assert htmx_combo.locator(".formwork-skeleton .formwork-skeleton-item").count() == 5
+    items = htmx_combo.locator("ul[role='listbox'] > li[role='option']")
+    assert items.count() == 6
 
 
 @pytest.mark.e2e
-def test_combobox_skeleton_replaced_after_first_load(combobox_page):
-    """First successful focus-triggered request swaps the skeleton out for real options."""
+def test_combobox_options_refresh_on_first_focus(combobox_page):
+    """First focus fires htmx; the swap replaces pre-rendered options with
+    the fresh response — same count, same listbox."""
     from playwright.sync_api import expect
 
     combo = combobox_page.locator(".dropdown.combobox").nth(4)
     inp = combobox_page.locator('input[name="language_htmx"]')
     inp.click()
     expect(combo.locator("ul button")).to_have_count(6, timeout=10000)
-    expect(combo.locator(".formwork-skeleton")).to_be_hidden()
 
 
 @pytest.mark.e2e

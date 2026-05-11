@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
 
-from ._base import _NOT_SET, _resolve_search_expectations, _resolve_skeleton_options, _skeleton_rows
+from ._base import _NOT_SET, _resolve_initial_results
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -104,10 +104,8 @@ class ComboBox(forms.TextInput):
             {s: self.icons[s] for s in flat_texts if s in self.icons},
             ensure_ascii=False,
         )
-        expected_count, expected_icons, expected_descriptions = _resolve_search_expectations(self._registry_key)
-        context["widget"]["expected_count"] = expected_count
-        context["widget"]["expected_icons"] = expected_icons
-        context["widget"]["expected_descriptions"] = expected_descriptions
-        context["widget"]["skeleton_rows"] = _skeleton_rows(expected_count) if search_url else []
-        context["widget"]["skeleton_options"] = _resolve_skeleton_options(self._registry_key) if search_url else []
+        # Pre-render the first ``max_results`` suggestions in the dropdown
+        # so it opens with real data; htmx replaces them on first focus.
+        _total, initial_options = _resolve_initial_results(self._registry_key)
+        context["widget"]["initial_options"] = initial_options if search_url else []
         return context

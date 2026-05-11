@@ -505,21 +505,15 @@ class TestFormworkSearchViewErrorHandling:
         response = CitySearchView.as_view()(request)
         assert response.status_code == 200
 
-    def test_total_count_oob_with_field_name(self):
-        """search_select with name param includes OOB total count element."""
+    def test_no_oob_total_count_in_response(self):
+        """The response is just the option markup — no OOB total swap.
+        Widgets know the total at render time from the registry, so the
+        view doesn't need to push it.
+        """
         request = factory.get("/search/", {"q": "", "type": "search_select", "name": "city"})
         response = CitySearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
-        total = soup.find("input", {"id": "id_city_total"})
-        assert total is not None
-        assert total["value"] == "4"
-
-    def test_no_total_count_without_field_name(self):
-        """search_select without name param omits OOB total count."""
-        request = factory.get("/search/", {"q": "", "type": "search_select"})
-        response = CitySearchView.as_view()(request)
-        soup = BeautifulSoup(response.content, "html.parser")
-        assert soup.find("input", {"hx-swap-oob": "true"}) is None
+        assert soup.find(attrs={"hx-swap-oob": True}) is None
 
     def test_query_truncated_to_max_length(self):
         """Queries longer than MAX_QUERY_LENGTH are truncated."""

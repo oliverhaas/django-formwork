@@ -402,16 +402,15 @@ class TestFormworkAutoSearchView:
         response = FormworkAutoSearchView.as_view()(request, key=key)
         assert response.status_code == 200
 
-    def test_total_count_oob(self, registered_key):
+    def test_no_oob_total_count_in_response(self, registered_key):
+        """The response is just the option markup — no OOB total swap.
+        Widgets know the total at render time from the registry."""
         from django_formwork.views import FormworkAutoSearchView
 
         request = factory.get("/search/", {"q": "", "type": "search_select", "name": "user"})
         response = FormworkAutoSearchView.as_view()(request, key=registered_key)
         soup = BeautifulSoup(response.content, "html.parser")
-        total_input = soup.find("input", {"type": "hidden"})
-        assert total_input is not None
-        assert total_input["value"] == "3"
-        assert total_input.get("hx-swap-oob") == "true"
+        assert soup.find(attrs={"hx-swap-oob": True}) is None
 
     def test_custom_label_from_instance(self):
         from django_formwork.views import FormworkAutoSearchView
@@ -692,16 +691,15 @@ class TestAutoSearchViewChoices:
         assert len(buttons) == 1
         assert "New York" in buttons[0].get_text()
 
-    def test_total_count_oob(self, choices_key):
+    def test_no_oob_total_count_in_response(self, choices_key):
+        """The response is just option markup — no OOB total swap.
+        Widgets know the total at render time from the registry."""
         from django_formwork.views import FormworkAutoSearchView
 
         request = factory.get("/search/", {"q": "lon", "type": "search_select", "name": "city"})
         response = FormworkAutoSearchView.as_view()(request, key=choices_key)
         soup = BeautifulSoup(response.content, "html.parser")
-        total_input = soup.find("input", {"type": "hidden"})
-        assert total_input is not None
-        # Total is always the UNFILTERED count.
-        assert total_input["value"] == "5"
+        assert soup.find(attrs={"hx-swap-oob": True}) is None
 
     def test_no_results(self, choices_key):
         from django_formwork.views import FormworkAutoSearchView

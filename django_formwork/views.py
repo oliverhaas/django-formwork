@@ -63,31 +63,48 @@ class FormworkSearchView(View):
       (plain strings are auto-escaped)
     """
 
+    #: ``<li>``-wrapped DaisyUI alert used as the "no results" row in all three
+    #: response templates.  Wrapped in ``<li>`` so it remains a valid child of
+    #: the swap target ``<ul>``; ``role="status"`` announces non-urgent state.
+    _NO_RESULTS_HTML = '<li><div role="status" class="alert alert-info alert-soft m-1.5">No results.</div></li>'
+
     #: Template for SearchSelect results (value + label, for select-style)
-    SEARCH_SELECT_TEMPLATE = """{% for item in results %}
+    SEARCH_SELECT_TEMPLATE = (
+        """{% for item in results %}
 <li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value }}" data-label="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon }}"{% endif %}>
   <span class="formwork-check shrink-0 opacity-0" :class="value === '{{ item.value }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>{% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
-{% if not results %}<li class="px-3 py-2 text-base-content/50">No results</li>{% endif %}"""
+{% if not results %}"""
+        + _NO_RESULTS_HTML
+        + "{% endif %}"
+    )
 
     #: Template for ComboBox results (label only, for autocomplete-style)
-    COMBOBOX_TEMPLATE = """{% for item in results %}
+    COMBOBOX_TEMPLATE = (
+        """{% for item in results %}
 <li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon }}"{% endif %}>
   {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
-{% if not results %}<li class="px-3 py-2 text-base-content/50">No results</li>{% endif %}"""
+{% if not results %}"""
+        + _NO_RESULTS_HTML
+        + "{% endif %}"
+    )
 
     #: Template for MultiSelect results (checkbox options).
     #: Checkboxes have no ``name`` — hidden inputs in the widget template
     #: handle form submission.  Alpine directives sync checked state with
     #: the parent ``x-data`` scope (the widget wrapper).
-    MULTISELECT_TEMPLATE = """{% for item in results %}
+    MULTISELECT_TEMPLATE = (
+        """{% for item in results %}
 <li><label class="flex items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200" data-value="{{ item.value|escapejs }}">
   <input type="checkbox" value="{{ item.value }}" class="multiselect hidden" x-init="$el.checked = selected.has('{{ item.value|escapejs }}')" @change="toggle('{{ item.value|escapejs }}', '{{ item.label|escapejs }}', '{{ item.icon|escapejs }}')">
   <span class="formwork-check shrink-0 opacity-0" aria-hidden="true">&#x2713;</span>
   {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="select-none">{{ item.label }}</span>
 </label></li>{% endfor %}
-{% if not results %}<li class="px-3 py-2 text-base-content/50">No results</li>{% endif %}"""
+{% if not results %}"""
+        + _NO_RESULTS_HTML
+        + "{% endif %}"
+    )
 
     #: Which template to use.  Set by the widget type or override in subclass.
     widget_type: str = "search_select"
@@ -133,22 +150,6 @@ class FormworkSearchView(View):
     #: Maximum query length (bytes). Longer queries are truncated.
     MAX_QUERY_LENGTH = 200
 
-    def get_total_count(self, **kwargs: Any) -> int | None:
-        """Return the total number of unfiltered results.
-
-        Used by widgets to decide whether to show a search input
-        (when the count exceeds ``search_threshold``).  The count is
-        embedded as a hidden ``<li>`` in every response.
-
-        Override this in your subclass if counting is cheaper than
-        fetching all results.  The default calls ``get_results("")``
-        and returns the length.
-
-        Returns:
-            Total count, or ``None`` to omit the count element.
-        """
-        return len(self.get_results("", **kwargs))
-
     def get(self, request: HttpRequest) -> HttpResponse:
         query = request.GET.get("q", "").strip()[: self.MAX_QUERY_LENGTH]
         widget_type = request.GET.get("type", self.widget_type)
@@ -157,18 +158,10 @@ class FormworkSearchView(View):
         if widget_type not in self.VALID_WIDGET_TYPES:
             widget_type = self.widget_type
 
-        total = self.get_total_count(request=request)
         results = self.get_results(query, request=request)
-
         template = self._get_template(widget_type)
         html = template.render(Context({"results": results, "field_name": field_name}))
-        parts = [html.strip()]
-        if total is not None and field_name and widget_type == "search_select":
-            widget_id = f"id_{field_name}"
-            parts.append(
-                f'<input id="{widget_id}_total" type="hidden" value="{total}" hx-swap-oob="true">',
-            )
-        return HttpResponse("".join(parts))
+        return HttpResponse(html.strip())
 
 
 class FormworkAutoSearchView(FormworkSearchView):
@@ -253,16 +246,6 @@ class FormworkAutoSearchView(FormworkSearchView):
                 result["description"] = reg.description_from_instance(obj)
             results.append(result)
         return results
-
-    def get_total_count(self, **kwargs: Any) -> int:
-        reg = self.registration
-        if reg is None:  # pragma: no cover
-            return 0
-        if reg.search_func:
-            return len(self._normalize_results(reg.search_func("", kwargs.get("request"))))
-        if reg.queryset_factory is None:  # pragma: no cover
-            return 0
-        return reg.queryset_factory().count()
 
 
 # SECURITY: CSRF-exempt because this view performs read-only validation
