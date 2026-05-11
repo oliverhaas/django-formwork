@@ -800,25 +800,6 @@ details.dropdown.search-select > .dropdown-content {
     @apply skeleton size-4 rounded shrink-0;
 }
 
-/* DaisyUI's .skeleton uses base-300 over base-100 — too low contrast on
-   white surfaces.  Boost to a base-content tint inside our skeleton. */
-.formwork-skeleton .skeleton,
-.formwork-skeleton-row-multi::before {
-    background-color: color-mix(in oklab, var(--color-base-content) 18%, var(--color-base-100));
-}
-
-/* Server-side search error state: replaces the listbox when an htmx
-   search request fails (responseError or sendError).  The search input
-   stays usable so the user can retry. */
-.formwork-search-error {
-    @apply px-2 py-2;
-}
-
-.formwork-search-error > .alert {
-    @apply alert-error alert-soft;
-}
-
-
 /* ================================================================
    Error tooltips
    DaisyUI tooltip component wraps the widget when errors are present.

@@ -449,26 +449,25 @@ def test_combobox_no_skeleton_without_search_url():
 
 
 @pytest.mark.unit
-def test_combobox_renders_error_alert_with_icon_when_search_url():
-    """Error alert carries DaisyUI alert-icon + icon-circle-x."""
+def test_combobox_renders_error_alert_when_search_url():
+    """The error alert is rendered as a plain DaisyUI alert, hidden by
+    default via x-show='hasError'."""
     widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    wrapper = soup.find("div", class_="formwork-search-error")
-    assert wrapper is not None
-    assert wrapper.get("x-show") == "hasError"
-    alert = wrapper.find("div", class_="alert")
+    alert = soup.find("div", attrs={"role": "alert"})
     assert alert is not None
-    assert "alert-icon" in alert["class"]
-    assert "icon-circle-x" in alert["class"]
+    assert alert.get("x-show") == "hasError"
+    assert "alert" in alert["class"]
+    assert "alert-error" in alert["class"]
     assert "Search failed" in alert.get_text()
 
 
 @pytest.mark.unit
 def test_combobox_no_error_alert_without_search_url():
-    """No error-alert wrapper without server-side search."""
+    """No error alert without server-side search."""
     widget = ComboBox(suggestions=["Alpha"])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    assert soup.find("div", class_="formwork-search-error") is None
+    assert soup.find("div", attrs={"role": "alert"}) is None
 
 
 @pytest.mark.unit
@@ -1038,9 +1037,14 @@ def test_combobox_keyboard_escape_closes_dropdown(combobox_page):
 
 @pytest.mark.e2e
 def test_combobox_skeleton_visible_on_initial_load(combobox_page):
-    """Skeleton rows render in every htmx-mode ComboBox on first page load."""
+    """Skeleton rows render in every htmx-mode ComboBox on first page load.
+
+    The combobox at index 4 wires ``search_choices_language_htmx`` against
+    ``E2E_LANGUAGES`` (6 entries), so the real-data skeleton renders 5
+    items (sliced to ``max_results``).
+    """
     htmx_combo = combobox_page.locator(".dropdown.combobox").nth(4)
-    assert htmx_combo.locator(".formwork-skeleton .formwork-skeleton-row").count() == 4
+    assert htmx_combo.locator(".formwork-skeleton .formwork-skeleton-item").count() == 5
 
 
 @pytest.mark.e2e
@@ -1063,7 +1067,7 @@ def test_combobox_failing_search_shows_error_alert(combobox_page):
     combo = combobox_page.locator(".dropdown.combobox").nth(8)
     inp = combobox_page.locator('input[name="language_failing"]')
     inp.click()
-    alert = combo.locator(".formwork-search-error .alert")
+    alert = combo.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
     assert "Search failed" in alert.text_content()
     expect(combo.locator("ul[role='listbox']")).to_be_hidden()
@@ -1071,17 +1075,23 @@ def test_combobox_failing_search_shows_error_alert(combobox_page):
 
 @pytest.mark.e2e
 def test_combobox_input_works_after_error(combobox_page):
-    """Typing in the combobox input after a failure dismisses the alert via
-    before-request — the input itself stays usable for retries."""
+    """The combobox input remains usable after a failure — typing fires a
+    new request and the value lands in the input."""
     from playwright.sync_api import expect
 
     combo = combobox_page.locator(".dropdown.combobox").nth(8)
     inp = combobox_page.locator('input[name="language_failing"]')
+    requests: list[str] = []
+    combobox_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
     inp.click()
-    alert = combo.locator(".formwork-search-error .alert")
+    alert = combo.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
+    initial_count = len(requests)
     inp.fill("x")
-    expect(alert).to_be_hidden(timeout=2000)
+    # 300ms input-changed debounce + buffer for the request to fire.
+    combobox_page.wait_for_timeout(500)
+    assert len(requests) > initial_count, "expected typing to fire a new search request"
+    assert inp.input_value() == "x"
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────

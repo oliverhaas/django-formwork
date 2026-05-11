@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from django_formwork.registry import SearchRegistration
 
 # Sentinel: distinguishes "developer didn't pass search_decorator" from
 # "developer explicitly passed None" (= no decorator, public endpoint).
@@ -29,6 +32,19 @@ def _skeleton_rows(expected_count: int | None) -> list[int]:
     return list(range(_skeleton_row_count(expected_count)))
 
 
+# Cache the first call to ``_resolve_skeleton_options`` per registry key.
+# The skeleton is shape-only and doesn't change between requests, so a
+# process-lifetime cache avoids paying for ``search_func("")`` on every
+# render (matters for any non-trivial choices-backed search).  Cleared via
+# ``_clear_skeleton_cache()`` in tests.
+_skeleton_cache: dict[str, list[dict[str, Any]]] = {}
+
+
+def _clear_skeleton_cache() -> None:
+    """Drop the skeleton cache (intended for test isolation)."""
+    _skeleton_cache.clear()
+
+
 def _resolve_skeleton_options(
     registry_key: str | None,
     max_results: int = 5,
@@ -37,31 +53,76 @@ def _resolve_skeleton_options(
 
     Used to render a pixel-perfect loading skeleton that exactly matches
     the eventual response: same row layout, same icon column, same label
-    widths.  Returns an empty list when no registry is attached or no
-    queryset factory is registered (search_func-only registrations need a
-    request and are skipped here — callers should fall back to the
-    approximate skeleton in that case).
+    widths.  Works for both backings:
+
+    - **Model-backed**: pulls ``max_results`` instances from
+      ``queryset_factory()``.
+    - **Choices-backed**: calls ``search_func("")`` and slices the result.
+
+    Returns an empty list when no registration is attached.  The result
+    is cached per registry key (see ``_skeleton_cache``).
     """
     if registry_key is None:
         return []
+    if registry_key in _skeleton_cache:
+        return _skeleton_cache[registry_key]
     from django_formwork.registry import get_registration
 
     reg = get_registration(registry_key)
-    if reg is None or reg.queryset_factory is None:
+    if reg is None:
         return []
     try:
-        qs = reg.queryset_factory()[:max_results]
-        results: list[dict[str, Any]] = []
-        for obj in qs:
-            entry: dict[str, Any] = {
-                "value": str(getattr(obj, reg.to_field_name)),
-                "label": str(reg.label_from_instance(obj)) if reg.label_from_instance else str(obj),
-                "icon": reg.icon_from_instance(obj) if reg.icon_from_instance else "",
-                "description": reg.description_from_instance(obj) if reg.description_from_instance else "",
-            }
-            results.append(entry)
+        if reg.queryset_factory is not None:
+            results = _skeleton_from_queryset(reg, max_results)
+        elif reg.search_func is not None:
+            results = _skeleton_from_search_func(reg, max_results)
+        else:
+            results = []
     except Exception:  # noqa: BLE001 — skeleton is a hint, never block render
-        return []
+        results = []
+    # Cache even an empty result so a slow / failing ``search_func`` isn't
+    # called on every render.
+    _skeleton_cache[registry_key] = results
+    return results
+
+
+def _skeleton_from_queryset(reg: SearchRegistration, max_results: int) -> list[dict[str, Any]]:
+    return [
+        {
+            "value": str(getattr(obj, reg.to_field_name)),
+            "label": str(reg.label_from_instance(obj)) if reg.label_from_instance else str(obj),
+            "icon": reg.icon_from_instance(obj) if reg.icon_from_instance else "",
+            "description": reg.description_from_instance(obj) if reg.description_from_instance else "",
+        }
+        for obj in reg.queryset_factory()[:max_results]  # type: ignore[misc]
+    ]
+
+
+def _skeleton_from_search_func(reg: SearchRegistration, max_results: int) -> list[dict[str, Any]]:
+    # ``search_func`` may be slow (e.g. external API).  Caching at the
+    # caller avoids paying that cost on every render — but the first
+    # render of each form still pays it once.
+    raw = reg.search_func("", None) or []
+    results: list[dict[str, Any]] = []
+    for item in raw[:max_results]:
+        if isinstance(item, dict):
+            results.append(
+                {
+                    "value": str(item.get("value", "")),
+                    "label": str(item.get("label", "")),
+                    "icon": item.get("icon", "") or "",
+                    "description": item.get("description", "") or "",
+                },
+            )
+        else:
+            results.append(
+                {
+                    "value": str(item[0]),
+                    "label": str(item[1]),
+                    "icon": "",
+                    "description": "",
+                },
+            )
     return results
 
 

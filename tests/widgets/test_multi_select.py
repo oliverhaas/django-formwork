@@ -653,26 +653,25 @@ def test_multi_select_no_skeleton_without_search_url():
 
 
 @pytest.mark.unit
-def test_multi_select_renders_error_alert_with_icon_when_search_url():
-    """Error alert wrapper carries DaisyUI alert-icon + icon-circle-x."""
+def test_multi_select_renders_error_alert_when_search_url():
+    """The error alert is rendered as a plain DaisyUI alert, hidden by
+    default via x-show='hasError'."""
     widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    wrapper = soup.find("div", class_="formwork-search-error")
-    assert wrapper is not None
-    assert wrapper.get("x-show") == "hasError"
-    alert = wrapper.find("div", class_="alert")
+    alert = soup.find("div", attrs={"role": "alert"})
     assert alert is not None
-    assert "alert-icon" in alert["class"]
-    assert "icon-circle-x" in alert["class"]
+    assert alert.get("x-show") == "hasError"
+    assert "alert" in alert["class"]
+    assert "alert-error" in alert["class"]
     assert "Search failed" in alert.get_text()
 
 
 @pytest.mark.unit
 def test_multi_select_no_error_alert_without_search_url():
-    """No error-alert wrapper without server-side search."""
+    """No error alert without server-side search."""
     widget = MultiSelect(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    assert soup.find("div", class_="formwork-search-error") is None
+    assert soup.find("div", attrs={"role": "alert"}) is None
 
 
 @pytest.mark.unit
@@ -1199,9 +1198,14 @@ def test_multi_select_keyboard_close_clears_highlight(multi_select_page):
 
 @pytest.mark.e2e
 def test_multi_select_skeleton_visible_on_initial_load(multi_select_page):
-    """Skeleton rows render in every htmx-mode MultiSelect on first page load."""
+    """Skeleton rows render in every htmx-mode MultiSelect on first page load.
+
+    The dropdown at index 2 wires ``search_choices_languages_htmx`` against
+    ``E2E_LANGUAGES`` (6 entries), so the real-data skeleton renders 5
+    items (sliced to ``max_results``).
+    """
     htmx_dropdown = multi_select_page.locator("details.dropdown.multiselect").nth(2)
-    assert htmx_dropdown.locator(".formwork-skeleton .formwork-skeleton-row").count() == 4
+    assert htmx_dropdown.locator(".formwork-skeleton .formwork-skeleton-item").count() == 5
 
 
 @pytest.mark.e2e
@@ -1238,7 +1242,7 @@ def test_multi_select_failing_search_shows_error_alert(multi_select_page):
         search.focus();
         search.dispatchEvent(new Event('focus'));
     }""")
-    alert = multi.locator(".formwork-search-error .alert")
+    alert = multi.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
     assert "Search failed" in alert.text_content()
     expect(multi.locator("ul[role='listbox']")).to_be_hidden()
@@ -1246,32 +1250,36 @@ def test_multi_select_failing_search_shows_error_alert(multi_select_page):
 
 @pytest.mark.e2e
 def test_multi_select_search_input_works_after_error(multi_select_page):
-    """Typing in the search input after a failure dismisses the alert via
-    before-request — the dropdown stays usable."""
+    """The search input remains usable after a failure — typing fires a new
+    request and the value lands in the input."""
     from playwright.sync_api import expect
 
     multi = multi_select_page.locator("details.dropdown.multiselect").nth(4)
+    requests: list[str] = []
+    multi_select_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
     multi_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.multiselect');
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
-    multi_select_page.wait_for_timeout(200)
+    alert = multi.locator('[role="alert"].alert-error')
+    expect(alert).to_be_visible(timeout=10000)
+    initial_count = len(requests)
     multi_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.multiselect');
         const search = dds[4].querySelector('.dropdown-content input[type="text"]');
         search.focus();
-        search.dispatchEvent(new Event('focus'));
-    }""")
-    alert = multi.locator(".formwork-search-error .alert")
-    expect(alert).to_be_visible(timeout=10000)
-    multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
-        const search = dds[4].querySelector('.dropdown-content input[type="text"]');
         search.value = 'x';
         search.dispatchEvent(new Event('input', {bubbles: true}));
     }""")
-    expect(alert).to_be_hidden(timeout=2000)
+    # 300ms input-changed debounce + buffer for the request to fire.
+    multi_select_page.wait_for_timeout(500)
+    assert len(requests) > initial_count, "expected typing to fire a new search request"
+    val = multi_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        return dds[4].querySelector('.dropdown-content input[type="text"]').value;
+    }""")
+    assert val == "x"
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────

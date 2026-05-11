@@ -1,7 +1,5 @@
 """Views for e2e testing. widget showcase with one page per topic."""
 
-import time
-
 from django import forms
 from django.forms.models import construct_instance
 from django.http import HttpRequest, HttpResponse
@@ -525,25 +523,25 @@ class SearchSelectForm(FormworkForm):
     city_failing = forms.ChoiceField(
         widget=SearchSelect(search_decorator=None),
         required=False,
-        label="City (server search, slow + always fails)",
-        help_text="Endpoint sleeps 3s and raises — exercises the error UX.",
+        label="City (server search, always fails)",
+        help_text="Endpoint always raises — exercises the error UX.",
     )
 
     @staticmethod
     def search_choices_city_htmx(query, request=None):
-        return _slow_search(query, E2E_CITIES)
+        return _filter_search(query, E2E_CITIES)
 
     @staticmethod
     def search_choices_city_htmx_many(query, request=None):
-        return _slow_search(query, E2E_CITIES_MANY)
+        return _filter_search(query, E2E_CITIES_MANY)
 
     @staticmethod
     def search_choices_country_htmx_icons(query, request=None):
-        return _slow_search(query, E2E_COUNTRIES_SEARCH)
+        return _filter_search(query, E2E_COUNTRIES_SEARCH)
 
     @staticmethod
     def search_choices_city_failing(query, request=None):
-        _slow_fail()
+        _raise_failure()
 
 
 class MultiSelectForm(FormworkForm):
@@ -606,17 +604,17 @@ class MultiSelectForm(FormworkForm):
     languages_failing = forms.MultipleChoiceField(
         widget=MultiSelect(search_decorator=None),
         required=False,
-        label="Languages (server search, slow + always fails)",
-        help_text="Endpoint sleeps 3s and raises — exercises the error UX.",
+        label="Languages (server search, always fails)",
+        help_text="Endpoint always raises — exercises the error UX.",
     )
 
     @staticmethod
     def search_choices_languages_htmx(query, request=None):
-        return _slow_search(query, E2E_LANGUAGES)
+        return _filter_search(query, E2E_LANGUAGES)
 
     @staticmethod
     def search_choices_languages_failing(query, request=None):
-        _slow_fail()
+        _raise_failure()
 
 
 class ComboBoxForm(FormworkForm):
@@ -733,21 +731,21 @@ class ComboBoxForm(FormworkForm):
             attrs={"placeholder": "Server search (always fails)"},
         ),
         required=False,
-        label="Language (server search, slow + always fails)",
-        help_text="Endpoint sleeps 3s and raises — exercises the error UX.",
+        label="Language (server search, always fails)",
+        help_text="Endpoint always raises — exercises the error UX.",
     )
 
     @staticmethod
     def search_choices_language_htmx(query, request=None):
-        return _slow_search(query, E2E_LANGUAGES)
+        return _filter_search(query, E2E_LANGUAGES)
 
     @staticmethod
     def search_choices_language_htmx_icons(query, request=None):
-        return _slow_search(query, E2E_LANGUAGES_ICONS)
+        return _filter_search(query, E2E_LANGUAGES_ICONS)
 
     @staticmethod
     def search_choices_language_failing(query, request=None):
-        _slow_fail()
+        _raise_failure()
 
 
 class UploadsForm(FormworkForm):
@@ -868,11 +866,11 @@ class ComplexForm(FormworkForm):
 
     @staticmethod
     def search_choices_country(query, request=None):
-        return _slow_search(query, E2E_COUNTRIES_SEARCH)
+        return _filter_search(query, E2E_COUNTRIES_SEARCH)
 
     @staticmethod
     def search_choices_languages(query, request=None):
-        return _slow_search(query, E2E_LANGUAGES)
+        return _filter_search(query, E2E_LANGUAGES)
 
     start_date = forms.DateField(
         widget=forms.DateInput(attrs={"type": "date"}),
@@ -976,20 +974,19 @@ E2E_LANGUAGES_ICONS = [
 ]
 
 
-def _slow_search(query, results):
-    """Sleep 3s and filter ``results`` by ``query`` — simulates a slow
-    upstream so the loading skeleton has a deterministic window to render.
-    Demo-only; real apps would not artificially slow their search endpoints.
+def _filter_search(query, results):
+    """Filter ``results`` by case-insensitive substring match on ``label``.
+
+    Throttle in DevTools (Network panel → "Slow 3G" or custom) if you want
+    to observe the loading skeleton in a manual demo.
     """
-    time.sleep(3)
     if not query:
         return results
     return [r for r in results if query.lower() in r["label"].lower()]
 
 
-def _slow_fail():
-    """Sleep 3s then raise — exercises the failure UX (htmx 500 → alert)."""
-    time.sleep(3)
+def _raise_failure():
+    """Raise to exercise the failure UX (htmx 500 → alert)."""
     raise RuntimeError("Simulated upstream failure")
 
 

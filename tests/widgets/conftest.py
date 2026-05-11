@@ -158,9 +158,11 @@ def _clean_widget_registry():
     """Drop any registry entries created by ``attach_server_search`` so tests
     don't leak state across the module."""
     from django_formwork.registry import get_registry
+    from django_formwork.widgets._base import _clear_skeleton_cache
 
     yield
     get_registry().clear()
+    _clear_skeleton_cache()
 
 
 @pytest.fixture(params=["dtl", "jinja2"], ids=["dtl", "jinja2"])
