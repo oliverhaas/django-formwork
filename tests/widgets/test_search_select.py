@@ -486,11 +486,24 @@ def test_search_select_no_htmx_attrs_without_search_url():
 def test_search_select_static_choices_ignored_when_search_url():
     """Static ``choices`` are ignored when server search is wired — the
     listbox renders pre-rendered registry options instead.  ``count=0``
-    here so the listbox renders empty."""
+    here so the listbox renders the empty-state alert (no options)."""
     widget = make_server_widget(SearchSelect, count=0, choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
     assert listbox.find_all("li", attrs={"role": "option"}) == []
+
+
+@pytest.mark.unit
+def test_search_select_renders_no_results_alert_when_initial_options_empty():
+    """An empty initial set still communicates state — the listbox carries
+    the same ``role=status`` alert that the htmx response would render."""
+    widget = make_server_widget(SearchSelect, count=0)
+    soup = render_widget(widget, attrs={"id": "id_test"})
+    listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
+    alert = listbox.find("div", attrs={"role": "status"})
+    assert alert is not None
+    assert "alert-info" in alert["class"]
+    assert "No results" in alert.get_text()
 
 
 @pytest.mark.unit
