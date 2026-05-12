@@ -66,7 +66,11 @@ class FormworkSearchView(View):
     #: ``<li>``-wrapped DaisyUI alert used as the "no results" row in all three
     #: response templates.  Wrapped in ``<li>`` so it remains a valid child of
     #: the swap target ``<ul>``; ``role="status"`` announces non-urgent state.
-    _NO_RESULTS_HTML = '<li><div role="status" class="alert alert-info alert-soft m-1.5">No results.</div></li>'
+    #:
+    #: ``m-0.5`` (not ``m-1.5``) compensates for the listbox's ``p-1`` so the
+    #: alert lands at the same offset from the dropdown edge as the sibling
+    #: ``role="alert"`` error alert (which sits directly in ``dropdown-content``).
+    _NO_RESULTS_HTML = '<li><div role="status" class="alert alert-info alert-soft m-0.5">No results.</div></li>'
 
     #: Template for SearchSelect results (value + label, for select-style)
     SEARCH_SELECT_TEMPLATE = (
