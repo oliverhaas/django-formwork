@@ -1,4 +1,4 @@
-{% with id=widget.attrs.id %}<details class="dropdown search-select"{% if id %} id="{{ id }}_searchselect"{% endif %} x-data="{
+<details class="dropdown search-select"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_searchselect"{% endif %} x-data="{
   _v: 0,
   search: '',
   showSearch: {{ widget.show_search|yesno:'true,false' }},
@@ -76,17 +76,17 @@
     this._notify();
   }
 }" @toggle="if ($el.open) { {% if widget.search_url %}if (!$el.dataset.loaded) { $el.dataset.loaded = '1'; requestAnimationFrame(() => $refs.search.dispatchEvent(new Event('focus'))); } {% endif %}const _s = $refs.search; const _show = showSearch; setTimeout(() => { if (_show && _s) _s.focus(); }, 0); } else { _clearHighlight(); }" @keydown.arrow-down="if ($el.open) { $event.preventDefault(); nav(1); }" @keydown.arrow-up="if ($el.open) { $event.preventDefault(); nav(-1); }" @keydown.enter="if ($el.open) { $event.preventDefault(); confirm(); }">
-  <summary{% if id %} id="{{ id }}_trigger"{% endif %} class="text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}" :class="!displayText && 'formwork-placeholder'"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
+  <summary{% if widget.attrs.id %} id="{{ widget.attrs.id }}_trigger"{% endif %} class="text-left{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}" :class="!displayText && 'formwork-placeholder'"{% if widget.aria_invalid %} aria-invalid="{{ widget.aria_invalid }}"{% endif %}>
     <span x-show="icon" x-html="icon" x-cloak class="shrink-0"></span>
     <span x-text="displayText || 'Select…'">{% if widget.selected_label %}{{ widget.selected_label }}{% else %}Select&#x2026;{% endif %}</span>
   </summary>
-  <input type="hidden" name="{{ widget.name }}" value="{{ widget.value|default:"" }}" :value="value"{% if id %} id="{{ id }}"{% endif %}>
+  <input type="hidden" name="{{ widget.name }}" value="{{ widget.value|default:"" }}" :value="value"{% if widget.attrs.id %} id="{{ widget.attrs.id }}"{% endif %}>
   <div class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 text-sm">
     <div x-show="showSearch" x-cloak class="p-1.5 border-b border-base-300{% if widget.search_url %} flex items-center gap-1{% endif %}">
-      <input x-ref="search" x-model="search" @input="_clearHighlight()" type="text" class="{% if widget.search_url %}grow{% else %}w-full{% endif %} bg-transparent px-2 py-1 focus:outline-1 focus:outline-base-content/30 rounded" placeholder="Search&#x2026;" aria-label="Search" @click.stop{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config:request="event.detail.ctx.request.body.set('q', this.value); event.detail.ctx.request.body.set('type', 'search_select'); event.detail.ctx.request.body.set('name', '{{ widget.name }}')" hx-on::before:request="Alpine.$data(this.closest('[x-data]')).hasError = false" hx-on::response:error="Alpine.$data(this.closest('[x-data]')).hasError = true" hx-on::error="Alpine.$data(this.closest('[x-data]')).hasError = true" hx-indicator="#{{ id }}_spinner"{% endif %}>
-      {% if widget.search_url %}<span{% if id %} id="{{ id }}_spinner"{% endif %} class="htmx-indicator pr-2"><span class="loading loading-spinner loading-xs"></span></span>{% endif %}
+      <input x-ref="search" x-model="search" @input="_clearHighlight()" type="text" class="{% if widget.search_url %}grow{% else %}w-full{% endif %} bg-transparent px-2 py-1 focus:outline-1 focus:outline-base-content/30 rounded" placeholder="Search&#x2026;" aria-label="Search" @click.stop{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms, focus" hx-target="#{{ widget.attrs.id }}_listbox" hx-swap="innerHTML" hx-params="none" hx-on::config:request="event.detail.ctx.request.body.set('q', this.value); event.detail.ctx.request.body.set('type', 'search_select'); event.detail.ctx.request.body.set('name', '{{ widget.name }}')" hx-on::before:request="Alpine.$data(this.closest('[x-data]')).hasError = false" hx-on::response:error="Alpine.$data(this.closest('[x-data]')).hasError = true" hx-on::error="Alpine.$data(this.closest('[x-data]')).hasError = true" hx-indicator="#{{ widget.attrs.id }}_spinner"{% endif %}>
+      {% if widget.search_url %}<span{% if widget.attrs.id %} id="{{ widget.attrs.id }}_spinner"{% endif %} class="htmx-indicator pr-2"><span class="loading loading-spinner loading-xs"></span></span>{% endif %}
     </div>
-    <ul x-ref="options"{% if id %} id="{{ id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1"{% if widget.search_url %} x-show="!hasError"{% endif %} @click="const btn = $event.target.closest('[data-value]'); if (btn) pick(btn.dataset.value, btn.dataset.label, btn.dataset.icon || '')">
+    <ul x-ref="options"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_listbox"{% endif %} role="listbox" class="max-h-60 overflow-y-auto p-1"{% if widget.search_url %} x-show="!hasError"{% endif %} @click="const btn = $event.target.closest('[data-value]'); if (btn) pick(btn.dataset.value, btn.dataset.label, btn.dataset.icon || '')">
       {% if widget.search_url %}{% for option in widget.initial_options %}<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ option.value|escapejs }}" data-label="{{ option.label|escapejs }}"{% if option.icon %} data-icon="{{ option.icon }}"{% endif %}>
         <span class="formwork-check shrink-0 opacity-0" :class="value === '{{ option.value|escapejs }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>{% if option.icon %}<span class="shrink-0">{{ option.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ option.label }}</span>{% if option.description %}<span class="text-xs text-base-content/50">{{ option.description }}</span>{% endif %}</span>
       </button></li>{% endfor %}{% if not widget.initial_options %}<li><div role="status" class="alert alert-info alert-soft m-0.5">No results.</div></li>{% endif %}{% else %}{% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title" x-show="!search || [{% for option in options %}'{{ option.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}].some(l => l.toLowerCase().includes(search.toLowerCase()))">{{ group }}</li>{% endif %}{% for option in options %}{% if option.value != "" %}
@@ -97,4 +97,4 @@
     {% if widget.search_url %}<div x-show="hasError" x-cloak role="alert" class="alert alert-error alert-soft m-1.5">Search failed. Please try again.</div>{% endif %}
     {% if not widget.search_url %}<div x-show="noResults" x-cloak role="status" class="alert alert-info alert-soft m-1.5">No results.</div>{% endif %}
   </div>
-</details>{% endwith %}
+</details>
