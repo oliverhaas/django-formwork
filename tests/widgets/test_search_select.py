@@ -306,30 +306,30 @@ def test_search_select_empty_option_excluded():
 
 @pytest.mark.unit
 def test_search_select_alpine_x_data():
-    """The wrapper <details> element has an x-data attribute."""
+    """The wrapper <details> binds to the formworkSearchSelect Alpine.data component."""
     widget = SearchSelect(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test")
-    wrapper = soup.find("details", attrs={"x-data": True})
+    wrapper = soup.find("details", attrs={"x-data": "formworkSearchSelect"})
     assert wrapper is not None
 
 
 @pytest.mark.unit
-def test_search_select_show_search_false_in_x_data():
-    """x-data contains showSearch: false when below threshold."""
+def test_search_select_show_search_false_in_data_attr():
+    """data-show-search is 'false' on the wrapper when below threshold."""
     widget = SearchSelect(choices=[("a", "Alpha"), ("b", "Beta")])
     soup = render_widget(widget, name="test")
     details = soup.find("details")
-    assert "showSearch: false" in details.get("x-data", "")
+    assert details.get("data-show-search") == "false"
 
 
 @pytest.mark.unit
-def test_search_select_selected_label_in_x_data():
-    """Selected option label appears in x-data when value is pre-set."""
+def test_search_select_selected_label_in_data_attr():
+    """Selected option label appears in data-label when value is pre-set."""
     widget = SearchSelect(choices=[("a", "Alpha"), ("b", "Beta")])
     soup = render_widget(widget, name="test", value="b")
-    wrapper = soup.find("details", attrs={"x-data": True})
-    x_data = wrapper["x-data"]
-    assert "label: 'Beta'" in x_data
+    wrapper = soup.find("details", attrs={"x-data": "formworkSearchSelect"})
+    assert wrapper["data-label"] == "Beta"
+    assert wrapper["data-value"] == "b"
 
 
 @pytest.mark.unit
@@ -387,21 +387,22 @@ def test_search_select_keydown_handlers_on_wrapper():
 
 
 @pytest.mark.unit
-def test_search_select_xdata_has_nav_methods():
-    """Both client- and htmx-mode x-data declare the nav methods."""
+def test_search_select_xdata_binds_alpine_component():
+    """Both client- and htmx-mode templates bind to the formworkSearchSelect component."""
     plain = SearchSelect(choices=[("a", "A")]).render("test", "")
     htmx_mode = make_server_widget(SearchSelect, choices=[]).render("test", "")
     for html in (plain, htmx_mode):
-        for method in ("nav(", "confirm(", "_clearHighlight(", "_visibleOptions("):
-            assert method in html, f"missing {method!r}"
+        assert 'x-data="formworkSearchSelect"' in html
 
 
 @pytest.mark.unit
-def test_search_select_xdata_tracks_highlighted_el():
-    """The Alpine x-data declares ``highlightedEl`` for nav state."""
+def test_search_select_keydown_invokes_nav_methods():
+    """Inline keydown handlers reference the nav/confirm methods on the component."""
     widget = SearchSelect(choices=[("a", "A")])
     html = widget.render("test", "")
-    assert "highlightedEl" in html
+    assert "nav(1)" in html
+    assert "nav(-1)" in html
+    assert "confirm()" in html
 
 
 @pytest.mark.unit
@@ -619,14 +620,12 @@ def test_search_select_listbox_hidden_only_on_error():
 
 
 @pytest.mark.unit
-def test_search_select_xdata_has_error_flag_when_search_url():
-    """``hasError: false`` is initialised in x-data when server search is wired."""
+def test_search_select_has_search_url_flag_when_search_url():
+    """data-has-search-url is 'true' when server search is wired."""
     widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="search-select")
-    assert "hasError: false" in details["x-data"]
-    # ``loading`` flag is no longer used — the spinner is driven by htmx-indicator.
-    assert "loading:" not in details["x-data"]
+    assert details["data-has-search-url"] == "true"
 
 
 @pytest.mark.unit
@@ -635,7 +634,7 @@ def test_search_select_show_search_visible_from_first_render_when_count_meets_th
     widget = make_server_widget(SearchSelect, count=30)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="search-select")
-    assert "showSearch: true" in details["x-data"]
+    assert details["data-show-search"] == "true"
 
 
 @pytest.mark.unit
@@ -644,7 +643,7 @@ def test_search_select_show_search_hidden_when_count_below_threshold():
     widget = make_server_widget(SearchSelect, count=5)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="search-select")
-    assert "showSearch: false" in details["x-data"]
+    assert details["data-show-search"] == "false"
 
 
 @pytest.mark.unit

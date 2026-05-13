@@ -306,21 +306,22 @@ def test_multi_select_keydown_handlers_on_wrapper():
 
 
 @pytest.mark.unit
-def test_multi_select_xdata_has_nav_methods():
-    """The Alpine x-data declares the methods used by keyboard navigation."""
+def test_multi_select_keydown_invokes_nav_methods():
+    """Inline keydown handlers reference the nav/confirm methods on the component."""
     widget = MultiSelect(choices=[("a", "A")])
     html = widget.render("test", [])
-    for method in ("nav(", "confirm(", "_clearHighlight(", "_visibleOptions("):
-        assert method in html, f"missing {method!r}"
+    assert "nav(1)" in html
+    assert "nav(-1)" in html
+    assert "confirm()" in html
 
 
 @pytest.mark.unit
-def test_multi_select_xdata_tracks_highlighted_el():
-    """Both client- and htmx-mode x-data declare ``highlightedEl``."""
+def test_multi_select_xdata_binds_alpine_component():
+    """Both client- and htmx-mode templates bind to the formworkMultiSelect component."""
     plain = MultiSelect(choices=[("a", "A")]).render("test", [])
     htmx_mode = make_server_widget(MultiSelect, choices=[("a", "A")]).render("test", [])
-    assert "highlightedEl" in plain
-    assert "highlightedEl" in htmx_mode
+    assert 'x-data="formworkMultiSelect"' in plain
+    assert 'x-data="formworkMultiSelect"' in htmx_mode
 
 
 @pytest.mark.unit
@@ -456,10 +457,10 @@ def test_multi_select_checkmark_before_label_text():
 
 @pytest.mark.unit
 def test_multi_select_alpine_x_data():
-    """The <details> wrapper carries an x-data attribute for Alpine."""
+    """The <details> wrapper binds to the formworkMultiSelect Alpine.data component."""
     widget = MultiSelect(choices=[("a", "A")])
     soup = render_widget(widget, name="test")
-    wrapper = soup.find("details", attrs={"x-data": True})
+    wrapper = soup.find("details", attrs={"x-data": "formworkMultiSelect"})
     assert wrapper is not None
 
 
@@ -601,14 +602,16 @@ def test_multi_select_renders_no_results_alert_when_initial_options_empty():
 
 
 @pytest.mark.unit
-def test_multi_select_htmx_mode_uses_alpine_map():
-    """htmx mode Alpine x-data uses a Map for selected values tracking."""
+def test_multi_select_htmx_mode_passes_initial_selected_json():
+    """htmx mode renders the initial-selected map as JSON on a data attribute,
+    which the Alpine.data component hydrates into a Map."""
     widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details")
-    x_data = details["x-data"]
-    assert "selected: new Map(" in x_data
-    assert "toggle(" in x_data
+    assert details["x-data"] == "formworkMultiSelect"
+    assert details["data-has-search-url"] == "true"
+    # data-initial-selected holds a JSON array (empty here — nothing pre-selected).
+    assert json.loads(details["data-initial-selected"]) == []
 
 
 @pytest.mark.unit
@@ -720,13 +723,12 @@ def test_multi_select_listbox_hidden_only_on_error():
 
 
 @pytest.mark.unit
-def test_multi_select_xdata_has_error_flag_when_search_url():
-    """``hasError: false`` is part of the Alpine x-data when server search is wired."""
+def test_multi_select_has_search_url_flag_when_search_url():
+    """data-has-search-url='true' selects the Map-tracked branch of the component."""
     widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="multiselect")
-    assert "hasError: false" in details["x-data"]
-    assert "loading:" not in details["x-data"]
+    assert details["data-has-search-url"] == "true"
 
 
 @pytest.mark.unit

@@ -337,10 +337,10 @@ def test_combobox_custom_placeholder():
 
 @pytest.mark.unit
 def test_combobox_alpine_x_data():
-    """Wrapper div has x-data Alpine directive."""
+    """Wrapper div binds to the formworkComboBox Alpine.data component."""
     widget = ComboBox(suggestions=["Alpha"])
     soup = render_widget(widget, name="test")
-    wrapper = soup.find("div", attrs={"x-data": True})
+    wrapper = soup.find("div", attrs={"x-data": "formworkComboBox"})
     assert wrapper is not None
 
 
@@ -512,13 +512,13 @@ def test_combobox_listbox_hidden_only_on_error():
 
 
 @pytest.mark.unit
-def test_combobox_xdata_has_error_flag_when_search_url():
-    """``hasError: false`` is part of the Alpine x-data when server search is wired."""
+def test_combobox_binds_alpine_component_when_search_url():
+    """The wrapper binds to the formworkComboBox component regardless of search_url —
+    hasError state lives in the component, not the markup."""
     widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     wrapper = soup.find("div", class_="combobox")
-    assert "hasError: false" in wrapper["x-data"]
-    assert "loading:" not in wrapper["x-data"]
+    assert wrapper["x-data"] == "formworkComboBox"
 
 
 @pytest.mark.unit
@@ -653,20 +653,22 @@ def test_combobox_keydown_handlers_on_wrapper():
 
 
 @pytest.mark.unit
-def test_combobox_xdata_has_nav_methods():
-    """The Alpine x-data declares the methods used by keyboard navigation."""
+def test_combobox_keydown_invokes_nav_methods():
+    """Inline keydown handlers reference the nav/confirm methods on the component."""
     widget = ComboBox(suggestions=["A"])
     html = widget.render("test", "")
-    for method in ("nav(", "confirm(", "_clearHighlight(", "_visibleOptions("):
-        assert method in html, f"missing {method!r} in x-data"
+    assert "nav(1)" in html
+    assert "nav(-1)" in html
+    assert "confirm()" in html
 
 
 @pytest.mark.unit
-def test_combobox_xdata_tracks_highlighted_el():
-    """The Alpine x-data exposes a ``highlightedEl`` slot for nav state."""
+def test_combobox_xdata_binds_alpine_component():
+    """Wrapper binds to the formworkComboBox component (state including
+    highlightedEl is defined in the JS module)."""
     widget = ComboBox(suggestions=["A"])
     html = widget.render("test", "")
-    assert "highlightedEl" in html
+    assert 'x-data="formworkComboBox"' in html
 
 
 # ─── Level 3: Form integration ───────────────────────────────────────────
