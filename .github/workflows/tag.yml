@@ -53,8 +53,28 @@ jobs:
       - name: Set up Python
         run: uv python install 3.14
 
-      - name: Install dependencies
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install Python dependencies
         run: uv sync --group dev
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: uv run playwright install --with-deps chromium
+
+      - name: Generate iconx CSS
+        env:
+          DJANGO_SETTINGS_MODULE: settings.base
+          PYTHONPATH: tests
+        run: uv run python -m django formwork install
+
+      - name: Build CSS bundle for e2e
+        run: npx @tailwindcss/cli -i tests/e2e/app.css -o django_formwork/static/formwork/formwork-dist.css
 
       - name: Run ruff check
         run: uv run ruff check
@@ -68,8 +88,8 @@ jobs:
       - name: Run ty check
         run: uv run ty check django_formwork/
 
-      - name: Run tests (unit + integration; e2e already validated by CI)
-        run: uv run pytest tests/ -m "not e2e and not screenshot" -n auto
+      - name: Run tests
+        run: uv run pytest tests/ -m "not screenshot" -n auto
 
   tag-and-trigger:
     needs: [check-version, test]
