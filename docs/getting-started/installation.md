@@ -64,7 +64,7 @@ For quick prototyping without a build step, use the pre-compiled file instead:
 
 ### htmx + Alpine.js (optional)
 
-For dynamic widgets (server-side search, password reveal, combo boxes, etc.):
+Needed by the dynamic widgets (server-side search, password reveal, combo boxes, validated textarea):
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@4.0.0-beta3"></script>
@@ -73,6 +73,15 @@ For dynamic widgets (server-side search, password reveal, combo boxes, etc.):
 {% formwork_js %}
 ```
 
-- **htmx 4** — Powers server-side search and validation, with built-in `innerMorph`/`outerMorph` swap strategies (no separate idiomorph dependency)
-- **Alpine.js** — Client-side interactivity for custom widgets
-- **formwork.js** — Registers an htmx morph extension that preserves Alpine state, focused input values, and `<details>` open state across morph swaps
+- **htmx 4** powers server-side search and validation. Its built-in `outerMorph` swap replaces the standalone idiomorph dependency from older versions.
+- **Alpine.js** drives the client-side state of dropdowns, password reveal, and the drop zones.
+- **`{% formwork_js %}`** loads `formwork.js` as an ES module. The file imports `formwork-core.js` (htmx morph extension, dirty-tracking, native-validation disabling) plus the per-widget Alpine.data components.
+
+### JS loading paths
+
+`{% formwork_js %}` is the easy path: one tag, everything loaded. Two alternatives are also supported:
+
+- **Per-form Media** — each of `SearchSelect`, `MultiSelect`, `ComboBox` declares `class Media: js = ...`, so `{{ form.media }}` includes only the widget JS the form actually uses. In this mode load `{% formwork_core_js %}` separately for the core (morph, dirty-tracking, validation disabling).
+- **JS bundler** — `import "/static/formwork/formwork.js"` (or alias it) from a vite/webpack/esbuild entry. The bundler resolves the chain and produces a single output; no `{% formwork_js %}` needed.
+
+ES module URL deduplication makes the paths safely composable; combining `{% formwork_js %}` and `{% formwork_core_js %}` on the same page still executes the core only once.

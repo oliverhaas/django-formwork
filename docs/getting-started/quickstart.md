@@ -134,24 +134,50 @@ content = forms.CharField(
 
 ## Server-side search
 
-For large datasets, use htmx-powered server-side search:
+`SearchSelect`, `MultiSelect`, and `ComboBox` register a search endpoint automatically when used on a `FormworkForm`. Wire the URL pattern once:
 
 ```python
-# views.py
-from django_formwork.views import FormworkSearchView
+# urls.py
+from django.urls import include, path
 
-class CountrySearchView(FormworkSearchView):
-    def get_results(self, query, **kwargs):
-        countries = Country.objects.filter(name__icontains=query)[:20]
-        return [{"value": c.code, "label": c.name} for c in countries]
+urlpatterns = [
+    path("__formwork__/", include("django_formwork.urls")),
+]
 ```
+
+Then pick one of the two registration paths.
+
+**Model-backed** — pair the widget with `search_fields` against a queryset:
 
 ```python
-# forms.py
-country = forms.ChoiceField(
-    widget=SearchSelect(search_url=reverse_lazy("country-search")),
-)
+from django.contrib.auth.decorators import login_required
+from django_formwork.forms import FormworkForm
+from django_formwork.widgets import SearchSelect
+
+class CityForm(FormworkForm):
+    city = forms.ModelChoiceField(
+        queryset=City.objects.all(),
+        widget=SearchSelect(
+            search_fields=["name", "country__name"],
+            search_decorator=login_required,
+        ),
+    )
 ```
+
+**Choices-backed** — define a `search_choices_<fieldname>` method on the form:
+
+```python
+class TagForm(FormworkForm):
+    tags = forms.ChoiceField(widget=SearchSelect)
+
+    def search_choices_tags(self, query, request):
+        return [
+            {"value": t.slug, "label": t.name}
+            for t in Tag.objects.filter(name__icontains=query)[:20]
+        ]
+```
+
+`search_decorator` is required when using `search_fields` and protects the auto-generated endpoint; pass `None` explicitly for a public endpoint. See the [views reference](../reference/views.md) for details and for `FormworkSearchView` if you'd rather write the endpoint by hand.
 
 ## Template tags
 

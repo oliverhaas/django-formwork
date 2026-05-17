@@ -1,5 +1,5 @@
 site_name: Django Formwork
-site_description: Better Django forms — modern styling out of the box, then HTMX integration for dynamic behavior
+site_description: DaisyUI-styled Django forms with htmx-powered widgets
 site_url: https://oliverhaas.github.io/django-formwork/
 repo_url: https://github.com/oliverhaas/django-formwork
 repo_name: oliverhaas/django-formwork
@@ -56,6 +56,7 @@ nav:
       - Quick Start: getting-started/quickstart.md
   - Reference:
       - Architecture: architecture.md
+      - Widgets: reference/widgets.md
       - Views: reference/views.md
       - Browser Support: reference/browser-support.md
       - Changelog: reference/changelog.md

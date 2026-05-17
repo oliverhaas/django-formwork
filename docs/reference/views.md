@@ -4,51 +4,11 @@ Formwork provides three class-based views for server-side search and validation.
 
 ## FormworkSearchView
 
-Base view for server-side widget search. It handles GET requests, calls `get_results()`, and returns an HTML fragment that htmx swaps into the widget's option list.
+Base view for the registry-driven search endpoint. `FormworkAutoSearchView` (below) inherits from it and serves every auto-registered widget; you'd subclass `FormworkSearchView` directly only if you want to render the formwork response templates (the `<li>` fragments that htmx swaps in) from a custom endpoint of your own — e.g. for a non-formwork widget that reuses the same look.
 
-### Usage
+### Response templates
 
-Subclass it and implement `get_results()`:
-
-```python
-# views.py
-from django_formwork.views import FormworkSearchView
-
-class CitySearchView(FormworkSearchView):
-    def get_results(self, query: str, **kwargs) -> list[dict]:
-        cities = City.objects.filter(name__icontains=query)[:20]
-        return [{"value": str(c.pk), "label": c.name} for c in cities]
-```
-
-```python
-# urls.py
-urlpatterns = [
-    path("search/cities/", CitySearchView.as_view(), name="city-search"),
-]
-```
-
-```python
-# forms.py
-from django.urls import reverse_lazy
-from django_formwork.widgets import SearchSelect
-
-city = forms.ChoiceField(
-    widget=SearchSelect(search_url=reverse_lazy("city-search")),
-)
-```
-
-### Result dict keys
-
-| Key | Required | Description |
-|---|---|---|
-| `label` | Yes | Display text shown in the dropdown |
-| `value` | For SearchSelect | Submitted form value |
-| `icon` | No | Icon markup; wrap in `mark_safe()`, plain strings are auto-escaped |
-| `description` | No | Secondary line of text shown below the label |
-
-### Customising templates
-
-The HTML fragment is rendered by one of three inline templates, selected by the `type` query parameter (sent automatically by the widget):
+The HTML fragment is rendered by one of three class-level Django templates, selected by the `type` query parameter the widget sends:
 
 | Template attribute | Widget | Purpose |
 |---|---|---|
@@ -56,30 +16,20 @@ The HTML fragment is rendered by one of three inline templates, selected by the 
 | `COMBOBOX_TEMPLATE` | `ComboBox` | Label only, for autocomplete suggestions |
 | `MULTISELECT_TEMPLATE` | `MultiSelect` | Checkbox options that sync with Alpine.js widget state |
 
-Override any of these as class attributes on your subclass to change the rendered markup.
+Override any of these on your subclass to change the rendered markup. Implementing `get_results(query, **kwargs)` is the per-request hook.
+
+### Result dict keys
+
+| Key | Required | Description |
+|---|---|---|
+| `label` | Yes | Display text shown in the dropdown |
+| `value` | For SearchSelect / MultiSelect | Submitted form value |
+| `icon` | No | Icon markup; wrap in `mark_safe()`, plain strings are auto-escaped |
+| `description` | No | Secondary line of text shown below the label |
 
 ### `MAX_QUERY_LENGTH`
 
-Queries longer than `MAX_QUERY_LENGTH` (default: `200`) characters are silently truncated before being passed to `get_results()`. Override this class attribute to change the limit:
-
-```python
-class CitySearchView(FormworkSearchView):
-    MAX_QUERY_LENGTH = 100  # stricter limit
-
-    def get_results(self, query: str, **kwargs) -> list[dict]:
-        ...
-```
-
-### `get_total_count()`
-
-Called once per request (before `get_results`) to determine the total number of unfiltered results. The widget uses this count to decide whether to show its search input (shown when count exceeds `search_threshold`, default 20 for `SearchSelect`).
-
-By default `get_total_count()` calls `get_results("")` and returns `len()`. Override it if counting is cheaper than fetching:
-
-```python
-def get_total_count(self, **kwargs) -> int:
-    return City.objects.count()
-```
+Queries longer than `MAX_QUERY_LENGTH` (default `200`) are truncated before being passed to `get_results()`. Override the class attribute to change the limit.
 
 ---
 

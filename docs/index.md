@@ -1,27 +1,22 @@
-# Django Formwork
+# django-formwork
 
-Better Django forms — modern styling out of the box, then htmx integration for dynamic behavior.
+DaisyUI-styled Django forms with htmx-powered widgets. Drop-in renderer, a set of custom widgets, and a per-page bundle for the htmx morph extension and Alpine integration.
 
-## What is Formwork?
+## What's in the box
 
-Django Formwork is a form rendering library that gives your Django forms [DaisyUI](https://daisyui.com/) styling automatically. No widget subclassing, no manual CSS classes — just render `{{ form }}` and get styled forms.
-
-**Key features:**
-
-- **Zero-config styling** — Set `FORM_RENDERER` once and all forms get DaisyUI styling
-- **Admin-safe** — Django admin is unaffected (it renders widgets directly, not forms)
-- **Custom widgets** — Toggle switches, star ratings, password reveal, searchable dropdowns, combo boxes, file drop zones, and more
-- **htmx 4 integration** — Server-side search, textarea validation, and full-form morphing with htmx's built-in `outerMorph` swap
-- **CSS `@apply` architecture** — All DaisyUI classes are applied via CSS, not in Python or templates. Users can override with Tailwind utilities
+- **Renderer** — `FormworkRenderer` overrides the form and field templates so `{{ form }}` and `{{ field.as_field_group }}` produce DaisyUI markup. Set `FORM_RENDERER` globally, or opt in per form via `FormworkForm` / `FormworkModelForm`.
+- **Custom widgets** — Toggle, Range, Rating, PasswordReveal, SearchSelect, MultiSelect, ComboBox, DataList, FileDropZone, ImageDropZone, ValidatedTextarea.
+- **htmx 4 integration** — auto-registered server-side search endpoints for dropdown widgets, server-side textarea validation, and a `formwork-morph` extension that preserves Alpine state, focused inputs, and `<details>` open state across full-form morphs.
+- **Admin-safe** — Django admin renders widgets directly, never forms or field groups, so the renderer override doesn't affect admin pages.
 
 ## Requirements
 
-- Python 3.12+
-- Django 5.2+
+- Python 3.14+
+- Django 6.0
 - [DaisyUI](https://daisyui.com/) 5 (CSS framework, included by you)
-- [Tailwind CSS](https://tailwindcss.com/) 4+ (for building `formwork.css`)
+- [Tailwind CSS](https://tailwindcss.com/) 4 (for building `formwork.css`)
 
-## Quick Start
+## Quick start
 
 ```bash
 pip install django-formwork
@@ -29,10 +24,7 @@ pip install django-formwork
 
 ```python
 # settings.py
-INSTALLED_APPS = [
-    ...,
-    "django_formwork",
-]
+INSTALLED_APPS = [..., "django_formwork"]
 FORM_RENDERER = "django_formwork.FormworkRenderer"
 ```
 
@@ -50,4 +42,4 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 {% formwork_js %}
 ```
 
-That's it. Every form in your project now renders with DaisyUI styling.
+Every form in the project now renders with DaisyUI styling.

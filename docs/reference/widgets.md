@@ -6,7 +6,7 @@ All widgets are in `django_formwork.widgets` and can be imported directly:
 from django_formwork.widgets import Toggle, Range, Rating, ...
 ```
 
-DaisyUI component classes (`input`, `select`, etc.) are applied via CSS `@apply` in `formwork.css`, not in Python or HTML templates. Widget classes and structural selectors are used for independent styling.
+DaisyUI component-layer classes (`alert-error`, `btn`, etc.) appear directly in widget templates. Only the utility-layer DaisyUI classes (`.input`, `.select`) are applied via `@apply` in `formwork.css`, because they live in `@layer utilities` and would otherwise beat user component-layer overrides. For built-in Django widgets (text input, select, etc.) we don't override the template; CSS selectors in `formwork.css` handle the styling.
 
 ---
 
@@ -121,7 +121,7 @@ password = forms.CharField(widget=PasswordReveal)
 
 Multi-select dropdown with checkboxes. Renders a DaisyUI-styled dropdown button that opens a panel of checkboxes. Uses Alpine.js for open/close state and selected-count display. Submitted values are tracked in Alpine state and sent via hidden inputs.
 
-When `search_url` is provided (or auto-registration is used), the search input uses htmx to fetch options from the server.
+When `search_fields` is provided (or the form defines `search_choices_<fieldname>`), an htmx-powered search endpoint is auto-registered. See [server-side search](views.md#formworkautosearchview).
 
 ### Parameters
 
@@ -129,13 +129,11 @@ When `search_url` is provided (or auto-registration is used), the search input u
 |---|---|---|---|
 | `attrs` | `dict \| None` | `None` | HTML attributes |
 | `choices` | `tuple` | `()` | Initial choices |
-| `search_url` | `str \| None` | `None` | URL for server-side htmx search |
-| `icons` | `dict[str, str] \| None` | `None` | Map of `value → icon HTML`; wrap values in `mark_safe()` |
-| `show_search` | `bool \| None` | `None` | Force show/hide search input; `None` = auto (shows when ≥20 options or `search_url` set) |
+| `show_search` | `bool \| None` | `None` | Force show/hide search input; `None` = auto (shows when ≥20 options or a registry search endpoint is wired) |
 | `search_fields` | `Sequence[str] \| None` | `None` | Model field paths for auto-registration (e.g. `["name", "country__name"]`) |
-| `search_decorator` | `Callable \| None` | *(required)* | Auth decorator for the auto-registered endpoint (see note below) |
-| `icon_from_instance` | `Callable \| None` | `None` | Called with each model instance; return icon HTML |
-| `description_from_instance` | `Callable \| None` | `None` | Called with each model instance; return secondary text |
+| `search_decorator` | `Callable \| None` | *(required if `search_fields` is set)* | Auth decorator for the auto-registered endpoint (see note below) |
+
+`FormworkModelMultipleChoiceField` adds optional `icon_from_instance` and `description_from_instance` callbacks for model-backed dropdowns.
 
 ### Usage
 
@@ -146,12 +144,7 @@ languages = forms.MultipleChoiceField(
     widget=MultiSelect,
 )
 
-# Server-side search via explicit URL:
-languages = forms.MultipleChoiceField(
-    widget=MultiSelect(search_url=reverse_lazy("lang-search")),
-)
-
-# Auto-registration with model queryset:
+# Auto-registered server-side search (model queryset):
 class TagForm(FormworkForm):
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
@@ -160,6 +153,13 @@ class TagForm(FormworkForm):
             search_decorator=login_required,
         ),
     )
+
+# Auto-registered server-side search (custom callback):
+class LangForm(FormworkForm):
+    languages = forms.MultipleChoiceField(widget=MultiSelect)
+
+    def search_choices_languages(self, query, request):
+        return [{"value": k, "label": v} for k, v in _langs(query)]
 ```
 
 **Requires Alpine.js and htmx** (for server-side search).
@@ -174,7 +174,7 @@ Single-select dropdown with text search/filter. Renders a DaisyUI-styled dropdow
 
 This is a `<select>` replacement — the submitted value is a key from the choices list, not free text.
 
-When `search_url` is provided (or auto-registration is used), the search input uses htmx to fetch matching options from the server.
+When `search_fields` is provided (or the form defines `search_choices_<fieldname>`), an htmx-powered search endpoint is auto-registered. See [server-side search](views.md#formworkautosearchview).
 
 ### Parameters
 
@@ -182,32 +182,28 @@ When `search_url` is provided (or auto-registration is used), the search input u
 |---|---|---|---|
 | `attrs` | `dict \| None` | `None` | HTML attributes |
 | `choices` | `tuple` | `()` | Initial choices |
-| `search_url` | `str \| None` | `None` | URL for server-side htmx search |
-| `icons` | `dict[str, str] \| None` | `None` | Map of `value → icon HTML`; wrap values in `mark_safe()` |
-| `descriptions` | `dict[str, str] \| None` | `None` | Map of `value → description text` shown below labels |
 | `show_search` | `bool \| None` | `None` | Force show/hide search input; `None` = auto (shows when ≥20 options) |
 | `search_fields` | `Sequence[str] \| None` | `None` | Model field paths for auto-registration |
-| `search_decorator` | `Callable \| None` | *(required)* | Auth decorator for the auto-registered endpoint (see note below) |
-| `icon_from_instance` | `Callable \| None` | `None` | Called with each model instance; return icon HTML |
-| `description_from_instance` | `Callable \| None` | `None` | Called with each model instance; return secondary text |
+| `search_decorator` | `Callable \| None` | *(required if `search_fields` is set)* | Auth decorator for the auto-registered endpoint (see note below) |
+
+For icons/descriptions on choice labels, wrap the label in [`FormworkChoiceLabel`](https://github.com/oliverhaas/django-formwork/blob/main/django_formwork/fields.py); for model-backed widgets, use `FormworkModelChoiceField` and pass `icon_from_instance` / `description_from_instance`.
 
 ### Usage
 
 ```python
 # Static choices with icons:
 from django.utils.html import mark_safe
+from django_formwork.fields import FormworkChoiceLabel
 
 city = forms.ChoiceField(
-    choices=[("nyc", "New York"), ("ldn", "London")],
-    widget=SearchSelect(icons={"nyc": mark_safe("<span>🗽</span>")}),
+    choices=[
+        ("nyc", FormworkChoiceLabel("New York", icon=mark_safe("<span>🗽</span>"))),
+        ("ldn", "London"),
+    ],
+    widget=SearchSelect,
 )
 
-# Server-side search via explicit URL:
-city = forms.ChoiceField(
-    widget=SearchSelect(search_url=reverse_lazy("city-search")),
-)
-
-# Auto-registration with model queryset:
+# Auto-registered server-side search (model queryset):
 class CityForm(FormworkForm):
     city = forms.ModelChoiceField(
         queryset=City.objects.all(),
@@ -235,12 +231,11 @@ In multiple mode (`multiple=True`), accepts comma-separated values and filters s
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `attrs` | `dict \| None` | `None` | HTML attributes |
-| `suggestions` | `list[str] \| None` | `None` | Static suggestion strings |
+| `suggestions` | `list[str] \| list[tuple[str, list[str]]] \| None` | `None` | Static suggestions, either flat or grouped as `(group, items)` |
 | `multiple` | `bool` | `False` | Accept comma-separated values; suggestions filter per segment |
-| `search_url` | `str \| None` | `None` | URL for server-side htmx suggestions |
-| `search_decorator` | `Callable \| None` | *(required)* | Auth decorator for the auto-registered endpoint (see note below) |
 | `icons` | `dict[str, str] \| None` | `None` | Map of `suggestion text → icon HTML` |
 | `descriptions` | `dict[str, str] \| None` | `None` | Map of `suggestion text → description text` |
+| `search_decorator` | `Callable \| None` | *(required if the form provides `search_choices_<fieldname>`)* | Auth decorator for the auto-registered endpoint |
 
 ### Usage
 
@@ -258,10 +253,12 @@ tags = forms.CharField(
     ),
 )
 
-# Server-side suggestions:
-tags = forms.CharField(
-    widget=ComboBox(search_url=reverse_lazy("tag-suggestions")),
-)
+# Auto-registered server-side suggestions:
+class TagForm(FormworkForm):
+    tags = forms.CharField(widget=ComboBox(search_decorator=login_required))
+
+    def search_choices_tags(self, query, request):
+        return [{"label": t.name} for t in Tag.objects.filter(name__icontains=query)[:20]]
 ```
 
 **Requires Alpine.js** and htmx (for server-side suggestions).
@@ -394,11 +391,7 @@ See [`FormworkValidateView`](views.md#formworkvalidateview) for implementing the
 
 ## `search_decorator` parameter
 
-`SearchSelect`, `MultiSelect`, and `ComboBox` all accept a `search_decorator` parameter when using auto-registration (i.e. when `search_fields` is set on the widget, or when the form defines `search_choices_<fieldname>`).
-
-This parameter is **required** for auto-registered endpoints. Omitting it raises `ImproperlyConfigured` at registration time — formwork refuses to silently expose an unauthenticated search endpoint.
-
-Pass a standard Django auth decorator:
+`SearchSelect`, `MultiSelect`, and `ComboBox` accept a `search_decorator` parameter that protects the auto-registered endpoint. It's required as soon as a registration path is in use — either `search_fields` on the widget, or `search_choices_<fieldname>` on the form. Omitting it raises `ImproperlyConfigured` at registration time; formwork refuses to silently expose an unauthenticated search endpoint.
 
 ```python
 from django.contrib.auth.decorators import login_required, permission_required
@@ -414,18 +407,12 @@ widget=SearchSelect(
     search_fields=["name"],
     search_decorator=permission_required("myapp.view_city"),
 )
-```
 
-To explicitly allow unauthenticated access (public endpoint), pass `None`:
-
-```python
+# Public endpoint (explicit opt-in):
 widget=SearchSelect(
     search_fields=["name"],
-    search_decorator=None,  # public — no auth required
+    search_decorator=None,
 )
 ```
 
-The decorator is applied to the `FormworkAutoSearchView.dispatch` method for each registered endpoint.
-
-!!! note "Manual search URLs"
-    When using `search_url=reverse_lazy("my-view")` pointing to your own `FormworkSearchView` subclass, `search_decorator` has no effect — access control is handled by your URL configuration and the view itself.
+The decorator is applied to the `FormworkAutoSearchView.dispatch` method for each registered endpoint. To skip auto-registration entirely and write your own endpoint, see [`FormworkSearchView`](views.md#formworksearchview).
