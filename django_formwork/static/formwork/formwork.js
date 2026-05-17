@@ -1,409 +1,113 @@
 /**
- * formwork.js — htmx 4 morph configuration for django-formwork.
+ * formwork.js — formwork core + widget Alpine.data registrations (bundle).
  *
- * Configures htmx 4's built-in morph (innerMorph/outerMorph swap styles) to
- * preserve Alpine.js reactive state, focused-input values, <details> open
- * state, and Alpine-template-generated DOM nodes during full-form morphs.
+ * This is an ES module that imports each formwork widget's Alpine.data
+ * component from `widgets/*.js`, plus the htmx morph configuration,
+ * dirty-tracking, and native-validation-disabling logic that powers
+ * formwork forms.
  *
- * Also disables native browser validation on forms that have formwork
- * error tooltips (CSP-safe replacement for an inline <script>).
+ * Two loading options:
  *
- * Include this script on pages that use htmx morph swaps with formwork
- * forms:
+ *   1. {% formwork_js %} — emits this file as <script type="module">.
+ *      One request, everything loaded.
  *
- *   {% load formwork %}
- *   {% formwork_js %}
+ *   2. {{ form.media }} — per-widget Media.js loads widget JS files
+ *      individually as modules.  In that mode you ALSO need
+ *      {% formwork_js %} for the core morph/dirty/validation logic;
+ *      duplicate Alpine.data registrations are harmless (idempotent).
  *
  * Prerequisites (loaded by the user, BEFORE this script):
  *   - htmx 4.x
  *   - Alpine.js 3.x (if using Alpine-powered widgets)
  */
-(() => {
-  // --- Disable native validation on forms with formwork error tooltips ---
-  // Previously an inline <script> in the form template; moved here for CSP.
-  const disableNativeValidation = () => {
-    for (const form of document.querySelectorAll("form")) {
-      if (form.querySelector(".formwork-errors")) {
-        form.noValidate = true;
+
+import "./widgets/search_select.js";
+import "./widgets/multi_select.js";
+import "./widgets/combo_box.js";
+
+// --- Disable native validation on forms with formwork error tooltips ---
+// Previously an inline <script> in the form template; moved here for CSP.
+const disableNativeValidation = () => {
+  for (const form of document.querySelectorAll("form")) {
+    if (form.querySelector(".formwork-errors")) {
+      form.noValidate = true;
+    }
+  }
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", disableNativeValidation);
+} else {
+  disableNativeValidation();
+}
+document.addEventListener("htmx:after:swap", disableNativeValidation);
+
+// --- Dirty-field highlighting (opt-in via data-formwork-dirty) ---
+// Tracks each field's initial value and toggles a .formwork-dirty class
+// on the containing fieldset when the current value differs.
+
+const DIRTY_CLS = "formwork-dirty";
+
+const getFieldValue = (el) => {
+  if (el.type === "checkbox" || el.type === "radio") return el.checked ? el.value : "";
+  return el.value;
+};
+
+const initDirtyTracking = (form) => {
+  const baseline = new Map();
+
+  const snapshot = () => {
+    baseline.clear();
+    for (const el of form.elements) {
+      if (!el.name || el.type === "hidden") continue;
+      // Radio groups: track the checked value under the group name.
+      if (el.type === "radio") {
+        if (el.checked) baseline.set(el.name, el.value);
+        if (!baseline.has(el.name)) baseline.set(el.name, "");
+      } else {
+        baseline.set(el.id || el.name, getFieldValue(el));
       }
     }
   };
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", disableNativeValidation);
-  } else {
-    disableNativeValidation();
+  const check = (el) => {
+    const fieldset = el.closest("fieldset.fieldset");
+    if (!fieldset) return;
+    const key = el.type === "radio" ? el.name : (el.id || el.name);
+    const initial = baseline.get(key) ?? "";
+    const current = el.type === "radio"
+      ? (form.querySelector(`input[name="${el.name}"]:checked`)?.value ?? "")
+      : getFieldValue(el);
+    fieldset.classList.toggle(DIRTY_CLS, current !== initial);
+  };
+
+  snapshot();
+  form.addEventListener("input", (e) => check(e.target));
+  form.addEventListener("change", (e) => check(e.target));
+
+  // Re-snapshot after successful morph (new server-rendered values = new baseline).
+  form.addEventListener("htmx:after:swap", () => requestAnimationFrame(snapshot));
+
+  // Expose snapshot for programmatic reset.
+  form._formworkDirtySnapshot = snapshot;
+};
+
+const initAllDirtyForms = () => {
+  for (const form of document.querySelectorAll("form[data-formwork-dirty]")) {
+    if (!form._formworkDirtySnapshot) initDirtyTracking(form);
   }
-  document.addEventListener("htmx:after:swap", disableNativeValidation);
+};
 
-  // --- Dirty-field highlighting (opt-in via data-formwork-dirty) ---
-  // Tracks each field's initial value and toggles a .formwork-dirty class
-  // on the containing fieldset when the current value differs.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initAllDirtyForms);
+} else {
+  initAllDirtyForms();
+}
+document.addEventListener("htmx:after:swap", initAllDirtyForms);
 
-  const DIRTY_CLS = "formwork-dirty";
+// --- htmx 4 morph configuration ---
 
-  const getFieldValue = (el) => {
-    if (el.type === "checkbox" || el.type === "radio") return el.checked ? el.value : "";
-    return el.value;
-  };
-
-  const initDirtyTracking = (form) => {
-    const baseline = new Map();
-
-    const snapshot = () => {
-      baseline.clear();
-      for (const el of form.elements) {
-        if (!el.name || el.type === "hidden") continue;
-        // Radio groups: track the checked value under the group name.
-        if (el.type === "radio") {
-          if (el.checked) baseline.set(el.name, el.value);
-          if (!baseline.has(el.name)) baseline.set(el.name, "");
-        } else {
-          baseline.set(el.id || el.name, getFieldValue(el));
-        }
-      }
-    };
-
-    const check = (el) => {
-      const fieldset = el.closest("fieldset.fieldset");
-      if (!fieldset) return;
-      const key = el.type === "radio" ? el.name : (el.id || el.name);
-      const initial = baseline.get(key) ?? "";
-      const current = el.type === "radio"
-        ? (form.querySelector(`input[name="${el.name}"]:checked`)?.value ?? "")
-        : getFieldValue(el);
-      fieldset.classList.toggle(DIRTY_CLS, current !== initial);
-    };
-
-    snapshot();
-    form.addEventListener("input", (e) => check(e.target));
-    form.addEventListener("change", (e) => check(e.target));
-
-    // Re-snapshot after successful morph (new server-rendered values = new baseline).
-    form.addEventListener("htmx:after:swap", () => requestAnimationFrame(snapshot));
-
-    // Expose snapshot for programmatic reset.
-    form._formworkDirtySnapshot = snapshot;
-  };
-
-  const initAllDirtyForms = () => {
-    for (const form of document.querySelectorAll("form[data-formwork-dirty]")) {
-      if (!form._formworkDirtySnapshot) initDirtyTracking(form);
-    }
-  };
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initAllDirtyForms);
-  } else {
-    initAllDirtyForms();
-  }
-  document.addEventListener("htmx:after:swap", initAllDirtyForms);
-
-  // --- Dropdown Alpine.data components ---
-  // Shared keyboard nav + highlight helpers, closure-private, used by
-  // formworkSearchSelect, formworkMultiSelect, and formworkComboBox.
-
-  const visibleOptions = (component, selector) =>
-    [...component.$refs.options.querySelectorAll(selector)]
-      .filter((b) => b.offsetParent !== null);
-
-  const clearHighlight = (component) => {
-    if (component.highlightedEl) {
-      component.highlightedEl.classList.remove("highlighted");
-      component.highlightedEl = null;
-    }
-  };
-
-  const keyboardNav = (component, dir, selector) => {
-    const visible = visibleOptions(component, selector);
-    if (!visible.length) return;
-    let idx = visible.indexOf(component.highlightedEl);
-    if (idx === -1) idx = dir > 0 ? 0 : visible.length - 1;
-    else idx = (idx + dir + visible.length) % visible.length;
-    clearHighlight(component);
-    component.highlightedEl = visible[idx];
-    component.highlightedEl.classList.add("highlighted");
-    component.highlightedEl.scrollIntoView({ block: "nearest" });
-  };
-
-  document.addEventListener("alpine:init", () => {
-    // SearchSelect: single-value dropdown with text filter.  Server-rendered
-    // state arrives on data-* attrs: value, label, icon, show-search, and a
-    // has-search-url flag that controls the htmx prefetch behaviour.
-    Alpine.data("formworkSearchSelect", () => ({
-      _v: 0,
-      search: "",
-      showSearch: false,
-      value: "",
-      label: "",
-      icon: "",
-      hasError: false,
-      highlightedEl: null,
-
-      init() {
-        const el = this.$el;
-        this.showSearch = el.dataset.showSearch === "true";
-        this.value = el.dataset.value || "";
-        this.label = el.dataset.label || "";
-        this.icon = el.dataset.icon || "";
-      },
-
-      onToggle() {
-        const el = this.$el;
-        if (el.open) {
-          const s = this.$refs.search;
-          if (el.dataset.hasSearchUrl === "true" && !el.dataset.loaded) {
-            el.dataset.loaded = "1";
-            requestAnimationFrame(() => s?.dispatchEvent(new Event("focus")));
-          }
-          if (this.showSearch) setTimeout(() => s?.focus(), 0);
-        } else {
-          clearHighlight(this);
-        }
-      },
-
-      get noResults() {
-        if (!this.search) return false;
-        const q = this.search.toLowerCase();
-        return ![...this.$refs.options.querySelectorAll(".select-none")].some(
-          (s) => s.textContent.trim().toLowerCase().includes(q),
-        );
-      },
-      get displayText() {
-        this._v;
-        return this.label || "";
-      },
-      _notify() {
-        this.$nextTick(() => {
-          const inp = this.$root.querySelector("input[type=hidden]");
-          if (inp) inp.dispatchEvent(new Event("change", { bubbles: true }));
-        });
-      },
-      _visibleOptions() {
-        return visibleOptions(this, "[data-value]");
-      },
-      _clearHighlight() {
-        clearHighlight(this);
-      },
-      nav(dir) {
-        keyboardNav(this, dir, "[data-value]");
-      },
-      confirm() {
-        let target = this.highlightedEl;
-        if (!target || target.offsetParent === null) target = this._visibleOptions()[0];
-        if (target) this.pick(target.dataset.value, target.dataset.label, target.dataset.icon || "");
-      },
-      pick(val, lbl, ic) {
-        this.value = val;
-        this.label = lbl;
-        this.icon = ic || "";
-        this.search = "";
-        this._v++;
-        clearHighlight(this);
-        this.$root.open = false;
-        this._notify();
-      },
-      clear() {
-        this.value = "";
-        this.label = "";
-        this.icon = "";
-        this.search = "";
-        this._v++;
-        clearHighlight(this);
-        this._notify();
-      },
-    }));
-
-    // MultiSelect: multi-value dropdown with checkboxes.  Two internal
-    // branches: htmx-driven mode (`hasSearchUrl=true`) tracks selections in
-    // a Map populated from data-initial-selected; client-only mode reads
-    // checked checkboxes from the DOM.  The Map branch is needed because
-    // server-rendered HTML doesn't include all options, so client-side
-    // checkbox state is the only source of truth for selection.
-    Alpine.data("formworkMultiSelect", () => ({
-      _v: 0,
-      search: "",
-      hasError: false,
-      highlightedEl: null,
-      hasSearchUrl: false,
-      selected: null,
-
-      init() {
-        const el = this.$el;
-        this.hasSearchUrl = el.dataset.hasSearchUrl === "true";
-        if (this.hasSearchUrl) {
-          this.selected = new Map(JSON.parse(el.dataset.initialSelected || "[]"));
-        }
-      },
-
-      onToggle() {
-        const el = this.$el;
-        if (el.open) {
-          const s = this.$refs.search;
-          if (s) setTimeout(() => s.focus(), 0);
-        } else {
-          clearHighlight(this);
-        }
-      },
-
-      toggle(value, label, icon) {
-        if (this.selected.has(value)) this.selected.delete(value);
-        else this.selected.set(value, [label, icon || ""]);
-        this._v++;
-        this.$nextTick(() => this.$root.dispatchEvent(new Event("change", { bubbles: true })));
-      },
-
-      get noResults() {
-        if (!this.search) return false;
-        if (this.hasSearchUrl) return !this.$refs.options.querySelector(".select-none");
-        const q = this.search.toLowerCase();
-        return ![...this.$refs.options.querySelectorAll(".select-none")].some(
-          (s) => s.textContent.trim().toLowerCase().includes(q),
-        );
-      },
-      get displayText() {
-        this._v;
-        if (this.hasSearchUrl) {
-          if (!this.selected.size) return "";
-          if (this.selected.size > 3) return this.selected.size + " selected";
-          return [...this.selected.values()]
-            .map(([lbl, ic]) => (ic ? ic + " " + lbl : lbl))
-            .join(", ");
-        }
-        const checked = [...this.$refs.options.querySelectorAll("input:checked")];
-        if (!checked.length) return "";
-        if (checked.length > 3) return checked.length + " selected";
-        return checked.map((input) => {
-          const label = input.parentElement;
-          const ic = label.querySelector(".shrink-0:not(.formwork-check)");
-          const text = label.querySelector(".select-none").textContent.trim();
-          return ic ? ic.textContent.trim() + " " + text : text;
-        }).join(", ");
-      },
-      _visibleOptions() {
-        return visibleOptions(this, "[data-value]");
-      },
-      _clearHighlight() {
-        clearHighlight(this);
-      },
-      nav(dir) {
-        keyboardNav(this, dir, "[data-value]");
-      },
-      confirm() {
-        let target = this.highlightedEl;
-        if (!target || target.offsetParent === null) target = this._visibleOptions()[0];
-        if (target) target.click();
-      },
-    }));
-
-    // ComboBox: free-text input with autocomplete suggestions.  In multiple
-    // mode the input holds comma-separated values; the *segment* after the
-    // last comma is what's being typed.  iconMap is hydrated from
-    // data-icons and grows as the user picks icon-bearing suggestions.
-    Alpine.data("formworkComboBox", () => ({
-      open: false,
-      focused: false,
-      _v: 0,
-      hasError: false,
-      highlightedEl: null,
-      multiple: false,
-      iconMap: {},
-
-      init() {
-        const el = this.$el;
-        this.multiple = el.dataset.multiple === "true";
-        try {
-          this.iconMap = JSON.parse(el.dataset.icons || "{}");
-        } catch {
-          this.iconMap = {};
-        }
-      },
-
-      get noResults() {
-        this._v;
-        const q = this.currentSegment;
-        if (!q) return false;
-        return ![...this.$refs.options.querySelectorAll(".select-none")].some(
-          (s) => s.textContent.trim().toLowerCase().includes(q),
-        );
-      },
-      get currentSegment() {
-        this._v;
-        const v = this.$refs.input?.value || "";
-        if (!this.multiple) return v.toLowerCase();
-        const parts = v.split(",");
-        return parts[parts.length - 1].trim().toLowerCase();
-      },
-      get displayParts() {
-        this._v;
-        const v = this.$refs.input?.value || "";
-        if (!v.trim()) return [];
-        if (this.multiple) {
-          return v.split(",").map((s) => s.trim()).filter(Boolean).map(
-            (t) => ({ text: t, icon: this.iconMap[t] || "" }),
-          );
-        }
-        const ic = this.iconMap[v.trim()] || "";
-        return ic ? [{ text: v.trim(), icon: ic }] : [];
-      },
-      matches(label) {
-        const q = this.currentSegment;
-        return !q || label.toLowerCase().includes(q);
-      },
-      isSelected(text) {
-        if (!this.multiple) return false;
-        this._v;
-        const v = this.$refs.input?.value || "";
-        const all = v.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-        const sep = v.endsWith(",") || v.endsWith(", ") || !all.length;
-        return (sep ? all : all.slice(0, -1)).includes(text.toLowerCase());
-      },
-      pick(text, icon) {
-        if (icon) this.iconMap[text] = icon;
-        const inp = this.$refs.input;
-        if (this.multiple) {
-          const v = inp.value || "";
-          const all = v.split(",").map((s) => s.trim()).filter(Boolean);
-          const sep = v.endsWith(",") || v.endsWith(", ") || !all.length;
-          const confirmed = sep ? [...all] : all.slice(0, -1);
-          const idx = confirmed.findIndex((c) => c.toLowerCase() === text.toLowerCase());
-          if (idx >= 0) confirmed.splice(idx, 1);
-          else confirmed.push(text);
-          inp.value = confirmed.length ? confirmed.join(", ") + ", " : "";
-          this._v++;
-          clearHighlight(this);
-          inp.focus();
-          inp.dispatchEvent(new Event("input", { bubbles: true }));
-        } else {
-          inp.value = text;
-          this._v++;
-          clearHighlight(this);
-          this.open = false;
-        }
-      },
-      _visibleOptions() {
-        return visibleOptions(this, "[data-suggestion]");
-      },
-      _clearHighlight() {
-        clearHighlight(this);
-      },
-      nav(dir) {
-        keyboardNav(this, dir, "[data-suggestion]");
-      },
-      confirm() {
-        let target = this.highlightedEl;
-        if (!target || target.offsetParent === null) target = this._visibleOptions()[0];
-        if (target) this.pick(target.dataset.suggestion, target.dataset.icon || "");
-      },
-    }));
-  });
-
-  // --- htmx 4 morph configuration ---
-
-  if (typeof htmx === "undefined") {
-    return;
-  }
-
+if (typeof htmx !== "undefined") {
   // Globally ignored attributes during morph:
   //   x-data — re-applying it makes Alpine re-init the component and lose
   //            reactive state.
@@ -517,4 +221,4 @@
       return true;
     },
   });
-})();
+}

@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **`formwork.js` is now an ES module** — `{% formwork_js %}` emits `<script type="module" src="...">` so the file's internal imports of `widgets/search_select.js`, `widgets/multi_select.js`, and `widgets/combo_box.js` resolve. Users who reference `formwork.js` directly (without using the template tag) must add `type="module"` to their `<script>` tag.
+- **Per-widget `Media.js`** — `SearchSelect`, `MultiSelect`, and `ComboBox` now declare `class Media: js = ...` so their Alpine.data component code is included automatically via `{{ form.media }}`. Users who prefer per-form loading can use that instead of `{% formwork_js %}`; in that case `{% formwork_js %}` is still required for the core htmx morph / dirty-tracking / native-validation-disabling logic. Duplicate Alpine.data registrations are harmless (idempotent).
 - **Migrated to htmx 4** — The package now targets htmx 4 (currently beta). The standalone `idiomorph-ext.min.js` dependency is gone (htmx 4 has morph in core). User-facing changes:
     - Form templates now use `hx-swap="outerMorph"` (was `hx-swap="morph:outerHTML"` + `hx-ext="morph"`)
     - Bundled examples and the e2e harness load `htmx.org@4.0.0-beta3` (was `@2`)

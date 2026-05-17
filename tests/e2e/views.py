@@ -1030,7 +1030,7 @@ _HEAD = """\
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/formwork/formwork-dist.css">
 <script src="https://unpkg.com/htmx.org@4.0.0-beta3/dist/htmx.min.js"></script>
-<script src="/static/formwork/formwork.js"></script>
+<script type="module" src="/static/formwork/formwork.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>"""
 
 _THEMES = [

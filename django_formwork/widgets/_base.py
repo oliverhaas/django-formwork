@@ -15,6 +15,25 @@ _KB = 1024
 _MB = 1024 * 1024
 
 
+class _ModuleScript(str):
+    """Static path that ``forms.Media`` renders as ``<script type="module">``.
+
+    Django's ``Media.render_js`` calls ``path.__html__()`` when the path
+    object provides it; otherwise it emits a plain ``<script src=...>``.
+    Subclassing ``str`` keeps the instance interoperable with the rest of
+    Django's media plumbing (deduplication, ordering, ``__add__``) while
+    overriding only the rendered HTML.
+    """
+
+    __slots__ = ()
+
+    def __html__(self) -> str:
+        from django.templatetags.static import static
+        from django.utils.html import format_html
+
+        return format_html('<script type="module" src="{}"></script>', static(self))
+
+
 def _resolve_initial_results(registry_key: str | None) -> tuple[int | None, list[dict[str, Any]]]:
     """Resolve ``(total_count, initial_options)`` from the registry for first-page render.
 

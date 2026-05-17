@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from django import forms
 
-from ._base import _NOT_SET, _resolve_initial_results
+from ._base import _NOT_SET, _ModuleScript, _resolve_initial_results
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -51,6 +51,9 @@ class MultiSelect(forms.SelectMultiple):
     template_name = "formwork/widgets/multi_select.html"
     option_inherits_attrs = False
     search_threshold = 20
+
+    class Media:
+        js = (_ModuleScript("formwork/widgets/multi_select.js"),)
 
     def __init__(
         self,

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
 
-from ._base import _NOT_SET, _resolve_initial_results
+from ._base import _NOT_SET, _ModuleScript, _resolve_initial_results
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -44,6 +44,9 @@ class ComboBox(forms.TextInput):
     """
 
     template_name = "formwork/widgets/combo_box.html"
+
+    class Media:
+        js = (_ModuleScript("formwork/widgets/combo_box.js"),)
 
     def __init__(  # noqa: PLR0913
         self,
