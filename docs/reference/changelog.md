@@ -4,7 +4,9 @@
 
 ### Fixed
 
-- **Failed server-side searches no longer flash the response body into the listbox.** htmx 4 (beta) changed its `noSwap` default to `[204, 304]`, so 4xx/5xx responses started getting swapped into the swap target — for our dropdowns that meant the Django debug HTML (or any error body) briefly painted in the listbox before our `hasError` handler hid it. Each dropdown's htmx-enabled input now carries `hx-on::before:swap="if (event.detail.ctx?.response?.status >= 400) event.preventDefault()"` to cancel the swap before it lands.
+- **Failed server-side searches no longer flash response body / stale prerender into the listbox.** Two related fixes:
+    - htmx 4 (beta) changed its `noSwap` default to `[204, 304]`, so 4xx/5xx responses started getting swapped into the swap target — for our dropdowns that meant the Django debug HTML (or any error body) briefly painted in the listbox before our `hasError` handler hid it. Each dropdown's htmx-enabled input now cancels the swap on `before:swap` when `event.detail.ctx.response.status >= 400`.
+    - The `hasError = false` reset on `before:request` made the listbox visible again between request and a failed response, briefly re-showing the prerendered "No results" alert. That reset moved into `before:swap` (for status < 400 only), so `hasError` now stays `true` across consecutive failures and only clears when a successful swap actually happens.
 
 ### Changed
 

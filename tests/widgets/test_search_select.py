@@ -598,13 +598,18 @@ def test_search_select_no_error_alert_without_search_url():
 
 @pytest.mark.unit
 def test_search_select_search_input_wires_error_handlers():
-    """The htmx search input toggles ``hasError`` on every request
-    lifecycle so the alert hides while the next request is in flight
-    and reappears on failure."""
+    """The htmx search input toggles ``hasError`` on the response side
+    only: it clears in ``before:swap`` when the swap will succeed
+    (status < 400) and sets back to ``true`` on ``response:error`` /
+    ``error``.  Resetting on ``before:request`` was removed because it
+    briefly re-showed the prerendered listbox between request and
+    response, producing a 'No results' flicker."""
     widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="city", attrs={"id": "id_city"})
     search = soup.find("div", class_="dropdown-content").find("input", {"type": "text"})
-    assert "hasError = false" in search["hx-on::before:request"]
+    assert "hx-on::before:request" not in search.attrs
+    assert "preventDefault" in search["hx-on::before:swap"]
+    assert "hasError = false" in search["hx-on::before:swap"]
     assert "hasError = true" in search["hx-on::response:error"]
     assert "hasError = true" in search["hx-on::error"]
 

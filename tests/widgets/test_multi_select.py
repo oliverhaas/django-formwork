@@ -704,11 +704,16 @@ def test_multi_select_no_error_alert_without_search_url():
 
 @pytest.mark.unit
 def test_multi_select_search_input_wires_error_handlers():
-    """The htmx search input toggles ``hasError`` on every request lifecycle."""
+    """``hasError`` clears in ``before:swap`` on success and sets on
+    error events.  The ``before:request`` reset was removed to avoid
+    briefly re-showing the prerendered listbox between request and
+    failed response."""
     widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="lang", attrs={"id": "id_lang"})
     search = soup.find("input", {"type": "text"})
-    assert "hasError = false" in search["hx-on::before:request"]
+    assert "hx-on::before:request" not in search.attrs
+    assert "preventDefault" in search["hx-on::before:swap"]
+    assert "hasError = false" in search["hx-on::before:swap"]
     assert "hasError = true" in search["hx-on::response:error"]
     assert "hasError = true" in search["hx-on::error"]
 

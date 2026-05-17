@@ -493,11 +493,16 @@ def test_combobox_no_error_alert_without_search_url():
 
 @pytest.mark.unit
 def test_combobox_input_wires_error_handlers():
-    """The combobox-input toggles ``hasError`` on every request lifecycle."""
+    """``hasError`` clears in ``before:swap`` on success and sets on
+    error events.  The ``before:request`` reset was removed to avoid
+    briefly re-showing the prerendered listbox between request and
+    failed response."""
     widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="tags", attrs={"id": "id_tags"})
     trigger = soup.find("input", class_="combobox-input")
-    assert "hasError = false" in trigger["hx-on::before:request"]
+    assert "hx-on::before:request" not in trigger.attrs
+    assert "preventDefault" in trigger["hx-on::before:swap"]
+    assert "hasError = false" in trigger["hx-on::before:swap"]
     assert "hasError = true" in trigger["hx-on::response:error"]
     assert "hasError = true" in trigger["hx-on::error"]
 
