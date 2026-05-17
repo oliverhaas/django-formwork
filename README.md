@@ -6,7 +6,7 @@
 [![Django](https://img.shields.io/badge/django-6.0-blue.svg)](https://www.djangoproject.com/)
 [![License](https://img.shields.io/pypi/l/django-formwork.svg)](https://github.com/oliverhaas/django-formwork/blob/main/LICENSE)
 
-DaisyUI-styled Django forms with htmx-powered widgets. Drop-in renderer plus a set of custom widgets (search dropdowns, comboboxes, rating, drop zones, validated textarea); no widget subclassing or per-form attribute juggling required.
+django-formwork applies DaisyUI styling to Django forms and ships a small set of widgets that lean on htmx and Alpine.js. Set `FORM_RENDERER` once, include the CSS and JS template tags, and `{{ form }}` produces DaisyUI markup. The admin is unaffected; it renders widgets directly, never `{{ form }}` or `as_field_group()`.
 
 ## Quick start
 
@@ -27,34 +27,32 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 {% formwork_js %}
 ```
 
-Every form in the project now renders with DaisyUI styling. Django admin is unaffected — it renders widgets directly, not forms.
+## Widgets
 
-## What you get
+`Toggle`, `Range`, `Rating`, `PasswordReveal`, `SearchSelect`, `MultiSelect`, `ComboBox`, `DataList`, `FileDropZone`, `ImageDropZone`, `ValidatedTextarea`. The three dropdown widgets auto-register a server-side search endpoint when used on a `FormworkForm`. `ValidatedTextarea` does the same for live server-side text validation.
 
-- **Renderer** — `FormworkRenderer` swaps the form and field templates so `{{ form }}` and `{{ field.as_field_group }}` produce DaisyUI markup. Per-form opt-in is available via `FormworkForm` / `FormworkModelForm`.
-- **Custom widgets** — `Toggle`, `Range`, `Rating`, `PasswordReveal`, `SearchSelect`, `MultiSelect`, `ComboBox`, `DataList`, `FileDropZone`, `ImageDropZone`, `ValidatedTextarea`.
-- **htmx 4 integration** — server-side search and textarea validation, plus a `formwork-morph` extension that preserves Alpine state, focused inputs, and `<details>` open state across full-form morphs.
+## htmx 4 integration
+
+`{% formwork_js %}` loads `formwork.js` as an ES module. It imports `formwork-core.js` (the `formwork-morph` htmx extension, dirty-field tracking, native validation disabling) and each widget's Alpine component. Per-form `{{ form.media }}` and bundler imports are also supported; details are in the installation docs.
 
 ## Requirements
 
-- Python 3.14+
-- Django 6.0
-- DaisyUI 5 + Tailwind CSS 4 (you bring them; we don't bundle)
+Python 3.14+, Django 6.0, DaisyUI 5, Tailwind CSS 4. DaisyUI and Tailwind are not bundled.
 
 ## Documentation
 
-[oliverhaas.github.io/django-formwork](https://oliverhaas.github.io/django-formwork/)
+https://oliverhaas.github.io/django-formwork/
 
 ## Contributing
 
-Screenshot baselines under `tests/widgets/screenshots/` are stored via [Git LFS](https://git-lfs.com/). Install git-lfs once globally before cloning:
+Screenshot baselines under `tests/widgets/screenshots/` use Git LFS. Install it once globally before cloning:
 
 ```bash
-sudo apt install git-lfs   # or `brew install git-lfs`
+sudo apt install git-lfs   # or brew install git-lfs
 git lfs install
 ```
 
-If you cloned before installing LFS, run `git lfs install && git lfs pull` to fetch the real PNG bytes.
+If you cloned before installing LFS, run `git lfs install && git lfs pull` to fetch the PNG bytes.
 
 ## License
 

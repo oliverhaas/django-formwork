@@ -37,10 +37,9 @@ Formwork requires **DaisyUI 5.x**. DaisyUI 4 and earlier use a different compone
 
 ### CSS files
 
-Formwork ships two CSS files:
+Two CSS files ship with the package. `formwork.css` is the Tailwind source: it contains `@apply` directives and has to be processed by the Tailwind CLI or PostCSS plugin as part of your build. Use it in production.
 
-- **`formwork.css`** — Tailwind source file. It contains `@apply` directives and must be processed by the Tailwind CLI or PostCSS plugin as part of your build. Use this for production.
-- **`formwork-dist.css`** — Pre-compiled output. It can be included directly without a build step, useful for quick prototyping or projects that don't use a Tailwind build pipeline. It is a snapshot and may lag behind `formwork.css` if you customise things.
+`formwork-dist.css` is a pre-compiled snapshot that you can drop in without a build step. It's handy for prototyping or for projects without a Tailwind pipeline, but it may lag behind `formwork.css` if you customise things.
 
 ### Tailwind CSS + DaisyUI setup
 
@@ -64,7 +63,7 @@ For quick prototyping without a build step, use the pre-compiled file instead:
 
 ### htmx + Alpine.js (optional)
 
-Needed by the dynamic widgets (server-side search, password reveal, combo boxes, validated textarea):
+The dynamic widgets (server-side search, password reveal, combo boxes, validated textarea) depend on htmx 4 and Alpine.js. Load them yourself and then include the JS tag:
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@4.0.0-beta3"></script>
@@ -73,15 +72,14 @@ Needed by the dynamic widgets (server-side search, password reveal, combo boxes,
 {% formwork_js %}
 ```
 
-- **htmx 4** powers server-side search and validation. Its built-in `outerMorph` swap replaces the standalone idiomorph dependency from older versions.
-- **Alpine.js** drives the client-side state of dropdowns, password reveal, and the drop zones.
-- **`{% formwork_js %}`** loads `formwork.js` as an ES module. The file imports `formwork-core.js` (htmx morph extension, dirty-tracking, native-validation disabling) plus the per-widget Alpine.data components.
+htmx 4 handles the server-side search and validation requests; its built-in `outerMorph` swap covers what idiomorph used to do in earlier versions. Alpine.js drives the client-side state of the dropdowns, password reveal, and drop zones. `{% formwork_js %}` loads `formwork.js` as an ES module, which in turn imports `formwork-core.js` (the htmx morph extension, dirty-field tracking, and native-validation disabling) plus each widget's Alpine.data component.
 
 ### JS loading paths
 
-`{% formwork_js %}` is the easy path: one tag, everything loaded. Two alternatives are also supported:
+The `{% formwork_js %}` bundle is one tag and covers everything; that's the path most projects want. Two alternatives also work.
 
-- **Per-form Media** — each of `SearchSelect`, `MultiSelect`, `ComboBox` declares `class Media: js = ...`, so `{{ form.media }}` includes only the widget JS the form actually uses. In this mode load `{% formwork_core_js %}` separately for the core (morph, dirty-tracking, validation disabling).
-- **JS bundler** — `import "/static/formwork/formwork.js"` (or alias it) from a vite/webpack/esbuild entry. The bundler resolves the chain and produces a single output; no `{% formwork_js %}` needed.
+For per-form loading via Django's `Media`, use `{{ form.media }}` for the widget JS the form actually contains, and add `{% formwork_core_js %}` for the page-global core (morph, dirty-tracking, validation disabling). `SearchSelect`, `MultiSelect`, and `ComboBox` each declare a `Media` class pointing at their Alpine component file.
 
-ES module URL deduplication makes the paths safely composable; combining `{% formwork_js %}` and `{% formwork_core_js %}` on the same page still executes the core only once.
+For bundler-driven loading, `import "/static/formwork/formwork.js"` from a vite, webpack, or esbuild entry. The bundler walks the chain and emits a single bundle; no template tag is needed.
+
+ES modules are deduplicated by URL, so mixing tags is harmless. Combining `{% formwork_js %}` and `{% formwork_core_js %}` on the same page still executes the core only once.

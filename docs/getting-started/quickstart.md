@@ -28,7 +28,7 @@ class ContactForm(forms.Form):
 {% formwork_js %}
 ```
 
-Each field renders inside a `<fieldset class="fieldset">` with proper labels, help text, and error tooltips.
+Each field renders inside a `<fieldset class="fieldset">` with a label, help text, and an error tooltip.
 
 ## Per-form styling
 
@@ -48,8 +48,6 @@ class ProfileForm(FormworkModelForm):
 ```
 
 ## Custom widgets
-
-Formwork includes widgets that go beyond standard HTML inputs:
 
 ```python
 from django_formwork.widgets import (
@@ -145,9 +143,7 @@ urlpatterns = [
 ]
 ```
 
-Then pick one of the two registration paths.
-
-**Model-backed** — pair the widget with `search_fields` against a queryset:
+There are two registration paths. For model-backed search, pair the widget with `search_fields` against a `ModelChoiceField` queryset:
 
 ```python
 from django.contrib.auth.decorators import login_required
@@ -164,7 +160,7 @@ class CityForm(FormworkForm):
     )
 ```
 
-**Choices-backed** — define a `search_choices_<fieldname>` method on the form:
+For choices-backed search, define a `search_choices_<fieldname>` method on the form:
 
 ```python
 class TagForm(FormworkForm):
@@ -177,7 +173,7 @@ class TagForm(FormworkForm):
         ]
 ```
 
-`search_decorator` is required when using `search_fields` and protects the auto-generated endpoint; pass `None` explicitly for a public endpoint. See the [views reference](../reference/views.md) for details and for `FormworkSearchView` if you'd rather write the endpoint by hand.
+`search_decorator` is required whenever auto-registration is active. It protects the generated endpoint; pass `None` explicitly for a public endpoint. The [views reference](../reference/views.md) covers the decorator and the `FormworkSearchView` base class for hand-written endpoints.
 
 ## Template tags
 
