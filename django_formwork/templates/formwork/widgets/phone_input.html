@@ -1,4 +1,4 @@
-{% with id=widget.attrs.id prefix=widget.subwidgets.0 number=widget.subwidgets.1 %}<div class="phone-input join w-full"{% if id %} id="{{ id }}_phone"{% endif %} x-data="{
+{% with prefix=widget.subwidgets.0 number=widget.subwidgets.1 %}<div class="phone-input join w-full"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_phone"{% endif %} x-data="{
   open: false,
   value: '{{ prefix.value|default:'' }}',
   label: '',

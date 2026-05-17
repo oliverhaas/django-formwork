@@ -2,7 +2,7 @@
 
 django-formwork applies DaisyUI styling to Django forms and ships a small set of widgets that lean on htmx and Alpine.js. Set `FORM_RENDERER` once, include the CSS and JS template tags, and `{{ form }}` produces DaisyUI markup. The admin is unaffected; it renders widgets directly, never `{{ form }}` or `as_field_group()`.
 
-The custom widgets are `Toggle`, `Range`, `Rating`, `PasswordReveal`, `SearchSelect`, `MultiSelect`, `ComboBox`, `DataList`, `FileDropZone`, `ImageDropZone`, and `ValidatedTextarea`. The dropdowns and the validated textarea auto-wire server-side endpoints when paired with a `FormworkForm`.
+The custom widgets are `Toggle`, `Range`, `Rating`, `PasswordReveal`, `SearchSelect`, `MultiSelect`, `ComboBox`, `DataList`, `FileDropZone`, `ImageDropZone`, `ValidatedTextarea`, `DatePicker`, `InputNumber`, `InputMask`, `OTPInput`, `PhoneInput`, and `CountryInput`. The dropdowns and the validated textarea auto-wire server-side endpoints when paired with a `FormworkForm`.
 
 On the JavaScript side, `{% formwork_js %}` loads an ES module that imports `formwork-core.js` (the `formwork-morph` htmx extension, dirty-field tracking, native-validation disabling) plus each widget's Alpine.data component. The same files can also be loaded per-form via `{{ form.media }}` or pulled in by a JS bundler; see the [installation guide](getting-started/installation.md).
 

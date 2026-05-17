@@ -30,21 +30,21 @@ class TestStaticFiles:
         path = Path(result)
         assert path.stat().st_size > 0
 
-    def test_js_registers_htmx_morph_extension(self):
-        result = find("formwork/formwork.js")
+    def test_core_registers_htmx_morph_extension(self):
+        result = find("formwork/formwork-core.js")
         assert result is not None
         content = Path(result).read_text()
         assert "htmx.registerExtension" in content
         assert "htmx_before_morph_node" in content
 
-    def test_js_blocks_x_data(self):
-        result = find("formwork/formwork.js")
+    def test_core_blocks_x_data(self):
+        result = find("formwork/formwork-core.js")
         assert result is not None
         content = Path(result).read_text()
         assert "x-data" in content
 
-    def test_js_preserves_details_open(self):
-        result = find("formwork/formwork.js")
+    def test_core_preserves_details_open(self):
+        result = find("formwork/formwork-core.js")
         assert result is not None
         content = Path(result).read_text()
         # `open` is added to htmx.config.morphIgnore so the user-toggled

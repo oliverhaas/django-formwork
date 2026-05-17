@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from django import forms
 
@@ -11,6 +11,20 @@ from ._base import _NOT_SET, _ModuleScript, _resolve_initial_results
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+def _normalize_suggestions(
+    suggestions: list[str] | list[tuple[str, list[str]]] | None,
+) -> list[tuple[str, list[str]]]:
+    """Return suggestions in grouped form ``[(group, items), ...]``.
+
+    Flat ``["a", "b"]`` is wrapped in a single empty-named group.
+    """
+    if not suggestions:
+        return []
+    if isinstance(suggestions[0], (tuple, list)):
+        return [(str(g), [str(s) for s in items]) for item in suggestions for g, items in [item]]
+    return [("", [str(s) for s in suggestions])]
 
 
 class ComboBox(forms.TextInput):
@@ -80,11 +94,8 @@ class ComboBox(forms.TextInput):
                 "description": self.descriptions.get(text, ""),
             }
 
-        if self.suggestions and isinstance(self.suggestions[0], (tuple, list)):
-            grouped = cast("list[tuple[str, list[str]]]", self.suggestions)
-            return [(group, [_build(s) for s in items]) for group, items in grouped]
-        flat = cast("list[str]", self.suggestions)
-        return [("", [_build(s) for s in flat])]
+        groups = _normalize_suggestions(self.suggestions) or [("", [])]
+        return [(group, [_build(s) for s in items]) for group, items in groups]
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)

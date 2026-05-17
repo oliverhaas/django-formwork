@@ -67,7 +67,8 @@ def _resolve_initial_results(registry_key: str | None) -> tuple[int | None, list
 
 
 def _initial_from_queryset(reg: SearchRegistration) -> tuple[int, list[dict[str, Any]]]:
-    qs = reg.queryset_factory()  # type: ignore[misc]
+    assert reg.queryset_factory is not None  # caller checked  # noqa: S101
+    qs = reg.queryset_factory()
     # NOTE: full ``COUNT(*)`` is wasteful when we only care whether it
     # crosses the search threshold.  Worth a PostgreSQL approximate-count
     # path later (pg_class.reltuples) — left exact for now.
@@ -85,7 +86,8 @@ def _initial_from_queryset(reg: SearchRegistration) -> tuple[int, list[dict[str,
 
 
 def _initial_from_search_func(reg: SearchRegistration) -> tuple[int, list[dict[str, Any]]]:
-    raw = reg.search_func("", None) or []  # type: ignore[misc]
+    assert reg.search_func is not None  # caller checked  # noqa: S101
+    raw = reg.search_func("", None) or []
     total = len(raw)
     items: list[dict[str, Any]] = []
     for item in raw[: reg.max_results]:

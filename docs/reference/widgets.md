@@ -360,6 +360,141 @@ photo = forms.ImageField(
 
 ---
 
+## DatePicker
+
+**Parent class:** `forms.DateInput`
+
+Text input with an Alpine.js calendar dropdown. Submits a date string in `YYYY-MM-DD` format.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `attrs` | `dict \| None` | `None` | HTML attributes for the `<input>` element |
+| `format` | `str \| None` | `"%Y-%m-%d"` | Output format passed to `DateInput` |
+
+### Usage
+
+```python
+due_date = forms.DateField(widget=DatePicker)
+```
+
+**Requires Alpine.js.**
+
+---
+
+## InputNumber
+
+**Parent class:** `forms.NumberInput`
+
+Number input with increment/decrement buttons. Wraps `<input type="number">` with +/- buttons; Alpine.js drives the stepping.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `attrs` | `dict \| None` | `None` | HTML attributes, e.g. `min`, `max`, `step` |
+
+### Usage
+
+```python
+quantity = forms.IntegerField(widget=InputNumber(attrs={"min": "1", "max": "99"}))
+```
+
+**Requires Alpine.js.**
+
+---
+
+## InputMask
+
+**Parent class:** `forms.TextInput`
+
+Text input with a fixed-format mask. Alpine.js enforces the pattern as the user types. Mask tokens: `#` = digit, `A` = letter, `*` = any character.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `attrs` | `dict \| None` | `None` | HTML attributes for the `<input>` element |
+| `mask` | `str` | `""` | Mask pattern, e.g. `"(###) ###-####"` |
+
+### Usage
+
+```python
+phone = forms.CharField(widget=InputMask(mask="(###) ###-####"))
+zip_code = forms.CharField(widget=InputMask(mask="#####"))
+```
+
+**Requires Alpine.js.**
+
+---
+
+## OTPInput
+
+**Parent class:** `forms.TextInput`
+
+One-time password / PIN code input. Renders N single-character inputs that auto-advance on typing; the submitted value is the concatenated string.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `attrs` | `dict \| None` | `None` | HTML attributes for the per-character `<input>` elements |
+| `length` | `int` | `6` | Number of single-character inputs |
+
+### Usage
+
+```python
+code = forms.CharField(widget=OTPInput(length=6))
+```
+
+**Requires Alpine.js.**
+
+---
+
+## PhoneInput
+
+**Parent class:** `forms.MultiWidget`
+
+Phone number input with a country-code dropdown (with flags) next to a text input. The submitted value is `"{dial_code} {number}"`, e.g. `"+1 5551234"`.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `attrs` | `dict \| None` | `None` | HTML attributes for the wrapper |
+| `default_code` | `str` | `"+1"` | Dial code selected when no value is present |
+
+### Usage
+
+```python
+phone = forms.CharField(widget=PhoneInput)
+```
+
+**Requires Alpine.js.**
+
+---
+
+## CountryInput
+
+**Parent class:** `SearchSelect`
+
+Searchable country selector with flag emojis. Pre-loaded with all ISO 3166-1 countries; submits the two-letter country code (e.g. `"US"`, `"DE"`).
+
+### Parameters
+
+Same as [`SearchSelect`](#searchselect). `choices` is fixed to the country list and cannot be overridden.
+
+### Usage
+
+```python
+country = forms.ChoiceField(widget=CountryInput())
+```
+
+**Requires Alpine.js.**
+
+---
+
 ## ValidatedTextarea
 
 **Parent class:** `forms.Textarea`

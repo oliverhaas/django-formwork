@@ -32,28 +32,12 @@ __all__ = [
 class FormworkSearchView(View):
     """Base view for server-side widget search.
 
-    Subclass and implement :meth:`get_results` to return search results.
-    The view renders the results as HTML ``<li>`` elements that htmx swaps
-    into the widget's option list.
-
-    Usage::
-
-        class CitySearchView(FormworkSearchView):
-            def get_results(self, query: str) -> list[dict]:
-                return [
-                    {"value": "nyc", "label": "New York"},
-                    {"value": "ldn", "label": "London"},
-                ]
-
-        # urls.py
-        urlpatterns = [
-            path("search/cities/", CitySearchView.as_view(), name="city-search"),
-        ]
-
-        # forms.py
-        city = forms.ChoiceField(
-            widget=SearchSelect(search_url=reverse_lazy("city-search")),
-        )
+    :class:`FormworkAutoSearchView` (below) is the dispatch view that backs
+    every auto-registered widget — most users never subclass this directly.
+    Subclass :class:`FormworkSearchView` only to render the formwork
+    response templates (the ``<li>`` fragments htmx swaps in) from a custom
+    endpoint of your own — e.g. for a non-formwork widget that reuses the
+    same look.
 
     Results dict keys:
 

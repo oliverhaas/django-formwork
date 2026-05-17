@@ -1,4 +1,4 @@
-{% with id=widget.attrs.id %}<div class="input-number"{% if id %} id="{{ id }}_stepper"{% endif %} x-data="{
+<div class="input-number"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_stepper"{% endif %} x-data="{
   val: {{ widget.value|default:'0' }},
   min: {{ widget.attrs.min|default:'null' }},
   max: {{ widget.attrs.max|default:'null' }},
@@ -10,4 +10,4 @@
   <button type="button" @click="dec()" class="btn" aria-label="Decrease">&minus;</button>
   <input x-ref="input" type="number" name="{{ widget.name }}" :value="val" @input="val = Number($el.value)"{% include "django/forms/widgets/attrs.html" %}>
   <button type="button" @click="inc()" class="btn" aria-label="Increase">&plus;</button>
-</div>{% endwith %}
+</div>

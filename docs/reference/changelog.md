@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.1.0a2
+
+### Added
+
+- Documentation for six widgets that already shipped in 0.1.0a1 but were missing from the reference: `CountryInput`, `DatePicker`, `InputMask`, `InputNumber`, `OTPInput`, `PhoneInput`.
+
+### Changed
+
+- Tightened support window to Python 3.14 and Django 6.0 (was Python 3.12+ / Django 5.2+ in 0.1.0a1). Pin `django-formwork==0.1.0a1` if you need the wider range.
 
 ### Fixed
 

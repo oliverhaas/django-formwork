@@ -1,4 +1,4 @@
-{% with id=widget.attrs.id %}<div class="date-picker" :data-open="open"{% if id %} id="{{ id }}_datepicker"{% endif %} x-data="{
+<div class="date-picker" :data-open="open"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datepicker"{% endif %} x-data="{
   open: false,
   value: '{{ widget.value|default:'' }}',
   month: null,
@@ -65,4 +65,4 @@
       </template>
     </div>
   </div>
-</div>{% endwith %}
+</div>

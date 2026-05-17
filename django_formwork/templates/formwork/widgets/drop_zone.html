@@ -1,4 +1,4 @@
-{% with id=widget.attrs.id %}<div class="dropzone"{% if id %} id="{{ id }}_dropzone"{% endif %} x-data="{
+<div class="dropzone"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_dropzone"{% endif %} x-data="{
   files: [],
   dragging: false,
   error: '',
@@ -56,7 +56,7 @@
   }
 }" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="handleDrop($event)">
   <div class="dropzone-area" :class="dragging && 'dragging'" tabindex="0" role="button" aria-label="Choose files" @keydown.enter.prevent="$refs.input.click()" @keydown.space.prevent="$refs.input.click()">
-    <input x-ref="input" type="file" name="{{ widget.name }}"{% if id %} id="{{ id }}"{% endif %} @change="handleChange($event)"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
+    <input x-ref="input" type="file" name="{{ widget.name }}"{% if widget.attrs.id %} id="{{ widget.attrs.id }}"{% endif %} @change="handleChange($event)"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" and name != "id" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
     <div x-show="!files.length" @click="$refs.input.click()">
       <i class="icon icon-cloud-upload dropzone-prompt-icon"></i>
       <p class="dropzone-prompt-text">Drag and drop files here or <span class="dropzone-browse">browse</span></p>
@@ -83,4 +83,4 @@
     </div>
     <p x-show="error" x-text="error" x-cloak class="dropzone-error"></p>
   </div>
-</div>{% endwith %}
+</div>

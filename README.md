@@ -29,7 +29,7 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 
 ## Widgets
 
-`Toggle`, `Range`, `Rating`, `PasswordReveal`, `SearchSelect`, `MultiSelect`, `ComboBox`, `DataList`, `FileDropZone`, `ImageDropZone`, `ValidatedTextarea`. The three dropdown widgets auto-register a server-side search endpoint when used on a `FormworkForm`. `ValidatedTextarea` does the same for live server-side text validation.
+`Toggle`, `Range`, `Rating`, `PasswordReveal`, `SearchSelect`, `MultiSelect`, `ComboBox`, `DataList`, `FileDropZone`, `ImageDropZone`, `ValidatedTextarea`, `DatePicker`, `InputNumber`, `InputMask`, `OTPInput`, `PhoneInput`, `CountryInput`. The three dropdown widgets auto-register a server-side search endpoint when used on a `FormworkForm`. `ValidatedTextarea` does the same for live server-side text validation.
 
 ## htmx 4 integration
 
