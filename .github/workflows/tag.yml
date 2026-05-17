@@ -68,8 +68,8 @@ jobs:
       - name: Run ty check
         run: uv run ty check django_formwork/
 
-      - name: Run tests
-        run: uv run pytest tests/ -m "not screenshot" -n auto
+      - name: Run tests (unit + integration; e2e already validated by CI)
+        run: uv run pytest tests/ -m "not e2e and not screenshot" -n auto
 
   tag-and-trigger:
     needs: [check-version, test]
