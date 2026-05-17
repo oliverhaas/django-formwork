@@ -322,17 +322,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#whats-in-the-box" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What's in the box
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -707,17 +696,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#whats-in-the-box" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What's in the box
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -760,21 +738,11 @@
 
 
 <h1 id="django-formwork">django-formwork<a class="headerlink" href="#django-formwork" title="Permanent link">&para;</a></h1>
-<p>DaisyUI-styled Django forms with htmx-powered widgets. Drop-in renderer, a set of custom widgets, and a per-page bundle for the htmx morph extension and Alpine integration.</p>
-<h2 id="whats-in-the-box">What's in the box<a class="headerlink" href="#whats-in-the-box" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Renderer</strong> — <code>FormworkRenderer</code> overrides the form and field templates so <code>{{ form }}</code> and <code>{{ field.as_field_group }}</code> produce DaisyUI markup. Set <code>FORM_RENDERER</code> globally, or opt in per form via <code>FormworkForm</code> / <code>FormworkModelForm</code>.</li>
-<li><strong>Custom widgets</strong> — Toggle, Range, Rating, PasswordReveal, SearchSelect, MultiSelect, ComboBox, DataList, FileDropZone, ImageDropZone, ValidatedTextarea.</li>
-<li><strong>htmx 4 integration</strong> — auto-registered server-side search endpoints for dropdown widgets, server-side textarea validation, and a <code>formwork-morph</code> extension that preserves Alpine state, focused inputs, and <code>&lt;details&gt;</code> open state across full-form morphs.</li>
-<li><strong>Admin-safe</strong> — Django admin renders widgets directly, never forms or field groups, so the renderer override doesn't affect admin pages.</li>
-</ul>
+<p>django-formwork applies DaisyUI styling to Django forms and ships a small set of widgets that lean on htmx and Alpine.js. Set <code>FORM_RENDERER</code> once, include the CSS and JS template tags, and <code>{{ form }}</code> produces DaisyUI markup. The admin is unaffected; it renders widgets directly, never <code>{{ form }}</code> or <code>as_field_group()</code>.</p>
+<p>The custom widgets are <code>Toggle</code>, <code>Range</code>, <code>Rating</code>, <code>PasswordReveal</code>, <code>SearchSelect</code>, <code>MultiSelect</code>, <code>ComboBox</code>, <code>DataList</code>, <code>FileDropZone</code>, <code>ImageDropZone</code>, and <code>ValidatedTextarea</code>. The dropdowns and the validated textarea auto-wire server-side endpoints when paired with a <code>FormworkForm</code>.</p>
+<p>On the JavaScript side, <code>{% formwork_js %}</code> loads an ES module that imports <code>formwork-core.js</code> (the <code>formwork-morph</code> htmx extension, dirty-field tracking, native-validation disabling) plus each widget's Alpine.data component. The same files can also be loaded per-form via <code>{{ form.media }}</code> or pulled in by a JS bundler; see the <a href="getting-started/installation/">installation guide</a>.</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Python 3.14+</li>
-<li>Django 6.0</li>
-<li><a href="https://daisyui.com/">DaisyUI</a> 5 (CSS framework, included by you)</li>
-<li><a href="https://tailwindcss.com/">Tailwind CSS</a> 4 (for building <code>formwork.css</code>)</li>
-</ul>
+<p>Python 3.14+, Django 6.0, <a href="https://daisyui.com/">DaisyUI</a> 5, <a href="https://tailwindcss.com/">Tailwind CSS</a> 4. DaisyUI and Tailwind are not bundled.</p>
 <h2 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>django-formwork
 </span></code></pre></div>
@@ -794,7 +762,6 @@
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>{% formwork_js %}
 </span></code></pre></div>
-<p>Every form in the project now renders with DaisyUI styling.</p>
 
 
 

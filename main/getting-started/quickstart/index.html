@@ -850,7 +850,7 @@
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>{% formwork_js %}
 </span></code></pre></div>
-<p>Each field renders inside a <code>&lt;fieldset class="fieldset"&gt;</code> with proper labels, help text, and error tooltips.</p>
+<p>Each field renders inside a <code>&lt;fieldset class="fieldset"&gt;</code> with a label, help text, and an error tooltip.</p>
 <h2 id="per-form-styling">Per-form styling<a class="headerlink" href="#per-form-styling" title="Permanent link">&para;</a></h2>
 <p>If you don't want to set <code>FORM_RENDERER</code> globally, use the form base classes:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.forms</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span><span class="p">,</span> <span class="n">FormworkModelForm</span>
@@ -865,7 +865,6 @@
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;bio&quot;</span><span class="p">,</span> <span class="s2">&quot;avatar&quot;</span><span class="p">]</span>
 </span></code></pre></div>
 <h2 id="custom-widgets">Custom widgets<a class="headerlink" href="#custom-widgets" title="Permanent link">&para;</a></h2>
-<p>Formwork includes widgets that go beyond standard HTML inputs:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">Toggle</span><span class="p">,</span> <span class="n">Range</span><span class="p">,</span> <span class="n">Rating</span><span class="p">,</span> <span class="n">PasswordReveal</span><span class="p">,</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">SearchSelect</span><span class="p">,</span> <span class="n">MultiSelect</span><span class="p">,</span> <span class="n">ComboBox</span><span class="p">,</span> <span class="n">DataList</span><span class="p">,</span>
@@ -949,8 +948,7 @@
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">path</span><span class="p">(</span><span class="s2">&quot;__formwork__/&quot;</span><span class="p">,</span> <span class="n">include</span><span class="p">(</span><span class="s2">&quot;django_formwork.urls&quot;</span><span class="p">)),</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">]</span>
 </span></code></pre></div>
-<p>Then pick one of the two registration paths.</p>
-<p><strong>Model-backed</strong> — pair the widget with <code>search_fields</code> against a queryset:</p>
+<p>There are two registration paths. For model-backed search, pair the widget with <code>search_fields</code> against a <code>ModelChoiceField</code> queryset:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">login_required</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.forms</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">SearchSelect</span>
@@ -964,7 +962,7 @@
 </span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>        <span class="p">),</span>
 </span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="p">)</span>
 </span></code></pre></div>
-<p><strong>Choices-backed</strong> — define a <code>search_choices_&lt;fieldname&gt;</code> method on the form:</p>
+<p>For choices-backed search, define a <code>search_choices_&lt;fieldname&gt;</code> method on the form:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TagForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">tags</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">)</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
@@ -974,7 +972,7 @@
 </span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">Tag</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name__icontains</span><span class="o">=</span><span class="n">query</span><span class="p">)[:</span><span class="mi">20</span><span class="p">]</span>
 </span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="p">]</span>
 </span></code></pre></div>
-<p><code>search_decorator</code> is required when using <code>search_fields</code> and protects the auto-generated endpoint; pass <code>None</code> explicitly for a public endpoint. See the <a href="../../reference/views/">views reference</a> for details and for <code>FormworkSearchView</code> if you'd rather write the endpoint by hand.</p>
+<p><code>search_decorator</code> is required whenever auto-registration is active. It protects the generated endpoint; pass <code>None</code> explicitly for a public endpoint. The <a href="../../reference/views/">views reference</a> covers the decorator and the <code>FormworkSearchView</code> base class for hand-written endpoints.</p>
 <h2 id="template-tags">Template tags<a class="headerlink" href="#template-tags" title="Permanent link">&para;</a></h2>
 <div class="language-html highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>{% load formwork %}
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
