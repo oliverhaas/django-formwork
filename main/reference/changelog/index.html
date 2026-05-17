@@ -616,6 +616,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -714,6 +725,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -779,6 +801,10 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Failed server-side searches no longer flash the response body into the listbox.</strong> htmx 4 (beta) changed its <code>noSwap</code> default to <code>[204, 304]</code>, so 4xx/5xx responses started getting swapped into the swap target — for our dropdowns that meant the Django debug HTML (or any error body) briefly painted in the listbox before our <code>hasError</code> handler hid it. Each dropdown's htmx-enabled input now carries <code>hx-on::before:swap="if (event.detail.ctx?.response?.status &gt;= 400) event.preventDefault()"</code> to cancel the swap before it lands.</li>
+</ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong><code>formwork.js</code> is now an ES module</strong> — <code>{% formwork_js %}</code> emits <code>&lt;script type="module" src="..."&gt;</code> so the file's internal imports of <code>formwork-core.js</code> and <code>widgets/*.js</code> resolve. Users who reference <code>formwork.js</code> directly (without using the template tag) must add <code>type="module"</code> to their <code>&lt;script&gt;</code> tag.</li>
