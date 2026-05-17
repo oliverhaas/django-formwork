@@ -781,6 +781,8 @@
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li><strong><code>formwork.js</code> is now an ES module</strong> — <code>{% formwork_js %}</code> emits <code>&lt;script type="module" src="..."&gt;</code> so the file's internal imports of <code>widgets/search_select.js</code>, <code>widgets/multi_select.js</code>, and <code>widgets/combo_box.js</code> resolve. Users who reference <code>formwork.js</code> directly (without using the template tag) must add <code>type="module"</code> to their <code>&lt;script&gt;</code> tag.</li>
+<li><strong>Per-widget <code>Media.js</code></strong> — <code>SearchSelect</code>, <code>MultiSelect</code>, and <code>ComboBox</code> now declare <code>class Media: js = ...</code> so their Alpine.data component code is included automatically via <code>{{ form.media }}</code>. Users who prefer per-form loading can use that instead of <code>{% formwork_js %}</code>; in that case <code>{% formwork_js %}</code> is still required for the core htmx morph / dirty-tracking / native-validation-disabling logic. Duplicate Alpine.data registrations are harmless (idempotent).</li>
 <li><strong>Migrated to htmx 4</strong> — The package now targets htmx 4 (currently beta). The standalone <code>idiomorph-ext.min.js</code> dependency is gone (htmx 4 has morph in core). User-facing changes:<ul>
 <li>Form templates now use <code>hx-swap="outerMorph"</code> (was <code>hx-swap="morph:outerHTML"</code> + <code>hx-ext="morph"</code>)</li>
 <li>Bundled examples and the e2e harness load <code>htmx.org@4.0.0-beta3</code> (was <code>@2</code>)</li>
