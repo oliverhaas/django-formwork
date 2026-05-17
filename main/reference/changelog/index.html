@@ -803,7 +803,11 @@
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Failed server-side searches no longer flash the response body into the listbox.</strong> htmx 4 (beta) changed its <code>noSwap</code> default to <code>[204, 304]</code>, so 4xx/5xx responses started getting swapped into the swap target — for our dropdowns that meant the Django debug HTML (or any error body) briefly painted in the listbox before our <code>hasError</code> handler hid it. Each dropdown's htmx-enabled input now carries <code>hx-on::before:swap="if (event.detail.ctx?.response?.status &gt;= 400) event.preventDefault()"</code> to cancel the swap before it lands.</li>
+<li><strong>Failed server-side searches no longer flash response body / stale prerender into the listbox.</strong> Two related fixes:<ul>
+<li>htmx 4 (beta) changed its <code>noSwap</code> default to <code>[204, 304]</code>, so 4xx/5xx responses started getting swapped into the swap target — for our dropdowns that meant the Django debug HTML (or any error body) briefly painted in the listbox before our <code>hasError</code> handler hid it. Each dropdown's htmx-enabled input now cancels the swap on <code>before:swap</code> when <code>event.detail.ctx.response.status &gt;= 400</code>.</li>
+<li>The <code>hasError = false</code> reset on <code>before:request</code> made the listbox visible again between request and a failed response, briefly re-showing the prerendered "No results" alert. That reset moved into <code>before:swap</code> (for status &lt; 400 only), so <code>hasError</code> now stays <code>true</code> across consecutive failures and only clears when a successful swap actually happens.</li>
+</ul>
+</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
