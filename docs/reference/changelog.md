@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Failed server-side searches no longer flash the response body into the listbox.** htmx 4 (beta) changed its `noSwap` default to `[204, 304]`, so 4xx/5xx responses started getting swapped into the swap target — for our dropdowns that meant the Django debug HTML (or any error body) briefly painted in the listbox before our `hasError` handler hid it. Each dropdown's htmx-enabled input now carries `hx-on::before:swap="if (event.detail.ctx?.response?.status >= 400) event.preventDefault()"` to cancel the swap before it lands.
+
 ### Changed
 
 - **`formwork.js` is now an ES module** — `{% formwork_js %}` emits `<script type="module" src="...">` so the file's internal imports of `formwork-core.js` and `widgets/*.js` resolve. Users who reference `formwork.js` directly (without using the template tag) must add `type="module"` to their `<script>` tag.
