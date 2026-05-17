@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Better Django forms — modern styling out of the box, then HTMX integration for dynamic behavior">
+        <meta name="description" content="DaisyUI-styled Django forms with htmx-powered widgets">
       
       
       
@@ -482,6 +482,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#js-loading-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JS loading paths
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -600,6 +611,34 @@
     
   
     Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/widgets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Widgets
   
 
     
@@ -808,6 +847,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#js-loading-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JS loading paths
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -873,17 +923,24 @@
 <div class="language-html highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">&quot;stylesheet&quot;</span> <span class="na">href</span><span class="o">=</span><span class="s">&quot;{% static &#39;formwork/formwork-dist.css&#39; %}&quot;</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h3 id="htmx-alpinejs-optional">htmx + Alpine.js (optional)<a class="headerlink" href="#htmx-alpinejs-optional" title="Permanent link">&para;</a></h3>
-<p>For dynamic widgets (server-side search, password reveal, combo boxes, etc.):</p>
+<p>Needed by the dynamic widgets (server-side search, password reveal, combo boxes, validated textarea):</p>
 <div class="language-html highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;https://cdn.jsdelivr.net/npm/htmx.org@4.0.0-beta3&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">defer</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;https://cdn.jsdelivr.net/npm/alpinejs@3&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>{% load formwork %}
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>{% formwork_js %}
 </span></code></pre></div>
 <ul>
-<li><strong>htmx 4</strong> — Powers server-side search and validation, with built-in <code>innerMorph</code>/<code>outerMorph</code> swap strategies (no separate idiomorph dependency)</li>
-<li><strong>Alpine.js</strong> — Client-side interactivity for custom widgets</li>
-<li><strong>formwork.js</strong> — Registers an htmx morph extension that preserves Alpine state, focused input values, and <code>&lt;details&gt;</code> open state across morph swaps</li>
+<li><strong>htmx 4</strong> powers server-side search and validation. Its built-in <code>outerMorph</code> swap replaces the standalone idiomorph dependency from older versions.</li>
+<li><strong>Alpine.js</strong> drives the client-side state of dropdowns, password reveal, and the drop zones.</li>
+<li><strong><code>{% formwork_js %}</code></strong> loads <code>formwork.js</code> as an ES module. The file imports <code>formwork-core.js</code> (htmx morph extension, dirty-tracking, native-validation disabling) plus the per-widget Alpine.data components.</li>
 </ul>
+<h3 id="js-loading-paths">JS loading paths<a class="headerlink" href="#js-loading-paths" title="Permanent link">&para;</a></h3>
+<p><code>{% formwork_js %}</code> is the easy path: one tag, everything loaded. Two alternatives are also supported:</p>
+<ul>
+<li><strong>Per-form Media</strong> — each of <code>SearchSelect</code>, <code>MultiSelect</code>, <code>ComboBox</code> declares <code>class Media: js = ...</code>, so <code>{{ form.media }}</code> includes only the widget JS the form actually uses. In this mode load <code>{% formwork_core_js %}</code> separately for the core (morph, dirty-tracking, validation disabling).</li>
+<li><strong>JS bundler</strong> — <code>import "/static/formwork/formwork.js"</code> (or alias it) from a vite/webpack/esbuild entry. The bundler resolves the chain and produces a single output; no <code>{% formwork_js %}</code> needed.</li>
+</ul>
+<p>ES module URL deduplication makes the paths safely composable; combining <code>{% formwork_js %}</code> and <code>{% formwork_core_js %}</code> on the same page still executes the core only once.</p>
 
 
 

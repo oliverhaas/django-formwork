@@ -6,13 +6,17 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Better Django forms — modern styling out of the box, then HTMX integration for dynamic behavior">
+        <meta name="description" content="DaisyUI-styled Django forms with htmx-powered widgets">
       
       
       
         <link rel="canonical" href="https://oliverhaas.github.io/django-formwork/main/reference/widgets/">
       
       
+        <link rel="prev" href="../../architecture/">
+      
+      
+        <link rel="next" href="../views/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>Widget Reference - Django Formwork</title>
+        <title>Widgets - Django Formwork</title>
       
     
     
@@ -114,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Widget Reference
+              Widgets
             
           </span>
         </div>
@@ -401,8 +405,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -413,13 +419,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -440,7 +444,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -474,6 +478,532 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Widgets
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Widgets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#toggle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Toggle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Toggle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#range" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Range
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Range">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rating
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rating">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#class-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#passwordreveal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PasswordReveal
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PasswordReveal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multiselect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MultiSelect
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MultiSelect">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#searchselect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SearchSelect
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SearchSelect">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combobox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ComboBox
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ComboBox">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#datalist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DataList
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DataList">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filedropzone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FileDropZone
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="FileDropZone">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#imagedropzone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ImageDropZone
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ImageDropZone">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validatedtextarea" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ValidatedTextarea
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ValidatedTextarea">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#search_decorator-parameter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        search_decorator parameter
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1071,7 +1601,7 @@
 <p>All widgets are in <code>django_formwork.widgets</code> and can be imported directly:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Toggle</span><span class="p">,</span> <span class="n">Range</span><span class="p">,</span> <span class="n">Rating</span><span class="p">,</span> <span class="o">...</span>
 </span></code></pre></div>
-<p>DaisyUI component classes (<code>input</code>, <code>select</code>, etc.) are applied via CSS <code>@apply</code> in <code>formwork.css</code>, not in Python or HTML templates. Widget classes and structural selectors are used for independent styling.</p>
+<p>DaisyUI component-layer classes (<code>alert-error</code>, <code>btn</code>, etc.) appear directly in widget templates. Only the utility-layer DaisyUI classes (<code>.input</code>, <code>.select</code>) are applied via <code>@apply</code> in <code>formwork.css</code>, because they live in <code>@layer utilities</code> and would otherwise beat user component-layer overrides. For built-in Django widgets (text input, select, etc.) we don't override the template; CSS selectors in <code>formwork.css</code> handle the styling.</p>
 <hr />
 <h2 id="toggle">Toggle<a class="headerlink" href="#toggle" title="Permanent link">&para;</a></h2>
 <p><strong>Parent class:</strong> <code>forms.CheckboxInput</code></p>
@@ -1211,7 +1741,7 @@
 <h2 id="multiselect">MultiSelect<a class="headerlink" href="#multiselect" title="Permanent link">&para;</a></h2>
 <p><strong>Parent class:</strong> <code>forms.SelectMultiple</code></p>
 <p>Multi-select dropdown with checkboxes. Renders a DaisyUI-styled dropdown button that opens a panel of checkboxes. Uses Alpine.js for open/close state and selected-count display. Submitted values are tracked in Alpine state and sent via hidden inputs.</p>
-<p>When <code>search_url</code> is provided (or auto-registration is used), the search input uses htmx to fetch options from the server.</p>
+<p>When <code>search_fields</code> is provided (or the form defines <code>search_choices_&lt;fieldname&gt;</code>), an htmx-powered search endpoint is auto-registered. See <a href="../views/#formworkautosearchview">server-side search</a>.</p>
 <h3 id="parameters_4">Parameters<a class="headerlink" href="#parameters_4" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1236,22 +1766,10 @@
 <td>Initial choices</td>
 </tr>
 <tr>
-<td><code>search_url</code></td>
-<td><code>str \| None</code></td>
-<td><code>None</code></td>
-<td>URL for server-side htmx search</td>
-</tr>
-<tr>
-<td><code>icons</code></td>
-<td><code>dict[str, str] \| None</code></td>
-<td><code>None</code></td>
-<td>Map of <code>value → icon HTML</code>; wrap values in <code>mark_safe()</code></td>
-</tr>
-<tr>
 <td><code>show_search</code></td>
 <td><code>bool \| None</code></td>
 <td><code>None</code></td>
-<td>Force show/hide search input; <code>None</code> = auto (shows when ≥20 options or <code>search_url</code> set)</td>
+<td>Force show/hide search input; <code>None</code> = auto (shows when ≥20 options or a registry search endpoint is wired)</td>
 </tr>
 <tr>
 <td><code>search_fields</code></td>
@@ -1262,23 +1780,12 @@
 <tr>
 <td><code>search_decorator</code></td>
 <td><code>Callable \| None</code></td>
-<td><em>(required)</em></td>
+<td><em>(required if <code>search_fields</code> is set)</em></td>
 <td>Auth decorator for the auto-registered endpoint (see note below)</td>
-</tr>
-<tr>
-<td><code>icon_from_instance</code></td>
-<td><code>Callable \| None</code></td>
-<td><code>None</code></td>
-<td>Called with each model instance; return icon HTML</td>
-</tr>
-<tr>
-<td><code>description_from_instance</code></td>
-<td><code>Callable \| None</code></td>
-<td><code>None</code></td>
-<td>Called with each model instance; return secondary text</td>
 </tr>
 </tbody>
 </table>
+<p><code>FormworkModelMultipleChoiceField</code> adds optional <code>icon_from_instance</code> and <code>description_from_instance</code> callbacks for model-backed dropdowns.</p>
 <h3 id="usage_4">Usage<a class="headerlink" href="#usage_4" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Static choices:</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">languages</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">MultipleChoiceField</span><span class="p">(</span>
@@ -1286,20 +1793,22 @@
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">MultiSelect</span><span class="p">,</span>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">)</span>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Server-side search via explicit URL:</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">languages</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">MultipleChoiceField</span><span class="p">(</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">MultiSelect</span><span class="p">(</span><span class="n">search_url</span><span class="o">=</span><span class="n">reverse_lazy</span><span class="p">(</span><span class="s2">&quot;lang-search&quot;</span><span class="p">)),</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="p">)</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c1"># Auto-registration with model queryset:</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="k">class</span><span class="w"> </span><span class="nc">TagForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>    <span class="n">tags</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelMultipleChoiceField</span><span class="p">(</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>        <span class="n">queryset</span><span class="o">=</span><span class="n">Tag</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>        <span class="n">widget</span><span class="o">=</span><span class="n">MultiSelect</span><span class="p">(</span>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>            <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
-</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>            <span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">,</span>
-</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>        <span class="p">),</span>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="p">)</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Auto-registered server-side search (model queryset):</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">TagForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="n">tags</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelMultipleChoiceField</span><span class="p">(</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>        <span class="n">queryset</span><span class="o">=</span><span class="n">Tag</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>        <span class="n">widget</span><span class="o">=</span><span class="n">MultiSelect</span><span class="p">(</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>            <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>            <span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">,</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>        <span class="p">),</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    <span class="p">)</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="c1"># Auto-registered server-side search (custom callback):</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="k">class</span><span class="w"> </span><span class="nc">LangForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="n">languages</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">MultipleChoiceField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">MultiSelect</span><span class="p">)</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">search_choices_languages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>        <span class="k">return</span> <span class="p">[{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">k</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="n">v</span><span class="p">}</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">_langs</span><span class="p">(</span><span class="n">query</span><span class="p">)]</span>
 </span></code></pre></div>
 <p><strong>Requires Alpine.js and htmx</strong> (for server-side search).</p>
 <hr />
@@ -1307,7 +1816,7 @@
 <p><strong>Parent class:</strong> <code>forms.Select</code></p>
 <p>Single-select dropdown with text search/filter. Renders a DaisyUI-styled dropdown with a search input. Submits a single key value via a hidden <code>&lt;input&gt;</code> element.</p>
 <p>This is a <code>&lt;select&gt;</code> replacement — the submitted value is a key from the choices list, not free text.</p>
-<p>When <code>search_url</code> is provided (or auto-registration is used), the search input uses htmx to fetch matching options from the server.</p>
+<p>When <code>search_fields</code> is provided (or the form defines <code>search_choices_&lt;fieldname&gt;</code>), an htmx-powered search endpoint is auto-registered. See <a href="../views/#formworkautosearchview">server-side search</a>.</p>
 <h3 id="parameters_5">Parameters<a class="headerlink" href="#parameters_5" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1332,24 +1841,6 @@
 <td>Initial choices</td>
 </tr>
 <tr>
-<td><code>search_url</code></td>
-<td><code>str \| None</code></td>
-<td><code>None</code></td>
-<td>URL for server-side htmx search</td>
-</tr>
-<tr>
-<td><code>icons</code></td>
-<td><code>dict[str, str] \| None</code></td>
-<td><code>None</code></td>
-<td>Map of <code>value → icon HTML</code>; wrap values in <code>mark_safe()</code></td>
-</tr>
-<tr>
-<td><code>descriptions</code></td>
-<td><code>dict[str, str] \| None</code></td>
-<td><code>None</code></td>
-<td>Map of <code>value → description text</code> shown below labels</td>
-</tr>
-<tr>
 <td><code>show_search</code></td>
 <td><code>bool \| None</code></td>
 <td><code>None</code></td>
@@ -1364,46 +1855,34 @@
 <tr>
 <td><code>search_decorator</code></td>
 <td><code>Callable \| None</code></td>
-<td><em>(required)</em></td>
+<td><em>(required if <code>search_fields</code> is set)</em></td>
 <td>Auth decorator for the auto-registered endpoint (see note below)</td>
-</tr>
-<tr>
-<td><code>icon_from_instance</code></td>
-<td><code>Callable \| None</code></td>
-<td><code>None</code></td>
-<td>Called with each model instance; return icon HTML</td>
-</tr>
-<tr>
-<td><code>description_from_instance</code></td>
-<td><code>Callable \| None</code></td>
-<td><code>None</code></td>
-<td>Called with each model instance; return secondary text</td>
 </tr>
 </tbody>
 </table>
+<p>For icons/descriptions on choice labels, wrap the label in <a href="https://github.com/oliverhaas/django-formwork/blob/main/django_formwork/fields.py"><code>FormworkChoiceLabel</code></a>; for model-backed widgets, use <code>FormworkModelChoiceField</code> and pass <code>icon_from_instance</code> / <code>description_from_instance</code>.</p>
 <h3 id="usage_5">Usage<a class="headerlink" href="#usage_5" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Static choices with icons:</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.html</span><span class="w"> </span><span class="kn">import</span> <span class="n">mark_safe</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;nyc&quot;</span><span class="p">,</span> <span class="s2">&quot;New York&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;ldn&quot;</span><span class="p">,</span> <span class="s2">&quot;London&quot;</span><span class="p">)],</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span><span class="n">icons</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;nyc&quot;</span><span class="p">:</span> <span class="n">mark_safe</span><span class="p">(</span><span class="s2">&quot;&lt;span&gt;🗽&lt;/span&gt;&quot;</span><span class="p">)}),</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">)</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="c1"># Server-side search via explicit URL:</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span><span class="n">search_url</span><span class="o">=</span><span class="n">reverse_lazy</span><span class="p">(</span><span class="s2">&quot;city-search&quot;</span><span class="p">)),</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="p">)</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="c1"># Auto-registration with model queryset:</span>
-</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="k">class</span><span class="w"> </span><span class="nc">CityForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
-</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>    <span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
-</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>        <span class="n">queryset</span><span class="o">=</span><span class="n">City</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
-</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>        <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span>
-</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>            <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;country__name&quot;</span><span class="p">],</span>
-</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>            <span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">,</span>
-</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>        <span class="p">),</span>
-</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>    <span class="p">)</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.fields</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkChoiceLabel</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>        <span class="p">(</span><span class="s2">&quot;nyc&quot;</span><span class="p">,</span> <span class="n">FormworkChoiceLabel</span><span class="p">(</span><span class="s2">&quot;New York&quot;</span><span class="p">,</span> <span class="n">icon</span><span class="o">=</span><span class="n">mark_safe</span><span class="p">(</span><span class="s2">&quot;&lt;span&gt;🗽&lt;/span&gt;&quot;</span><span class="p">))),</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>        <span class="p">(</span><span class="s2">&quot;ldn&quot;</span><span class="p">,</span> <span class="s2">&quot;London&quot;</span><span class="p">),</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="p">],</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">,</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="p">)</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="c1"># Auto-registered server-side search (model queryset):</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="k">class</span><span class="w"> </span><span class="nc">CityForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>    <span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>        <span class="n">queryset</span><span class="o">=</span><span class="n">City</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>        <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span>
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>            <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;country__name&quot;</span><span class="p">],</span>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>            <span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">,</span>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>        <span class="p">),</span>
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>    <span class="p">)</span>
 </span></code></pre></div>
 <p><strong>Requires Alpine.js and htmx</strong> (for server-side search).</p>
 <hr />
@@ -1430,27 +1909,15 @@
 </tr>
 <tr>
 <td><code>suggestions</code></td>
-<td><code>list[str] \| None</code></td>
+<td><code>list[str] \| list[tuple[str, list[str]]] \| None</code></td>
 <td><code>None</code></td>
-<td>Static suggestion strings</td>
+<td>Static suggestions, either flat or grouped as <code>(group, items)</code></td>
 </tr>
 <tr>
 <td><code>multiple</code></td>
 <td><code>bool</code></td>
 <td><code>False</code></td>
 <td>Accept comma-separated values; suggestions filter per segment</td>
-</tr>
-<tr>
-<td><code>search_url</code></td>
-<td><code>str \| None</code></td>
-<td><code>None</code></td>
-<td>URL for server-side htmx suggestions</td>
-</tr>
-<tr>
-<td><code>search_decorator</code></td>
-<td><code>Callable \| None</code></td>
-<td><em>(required)</em></td>
-<td>Auth decorator for the auto-registered endpoint (see note below)</td>
 </tr>
 <tr>
 <td><code>icons</code></td>
@@ -1463,6 +1930,12 @@
 <td><code>dict[str, str] \| None</code></td>
 <td><code>None</code></td>
 <td>Map of <code>suggestion text → description text</code></td>
+</tr>
+<tr>
+<td><code>search_decorator</code></td>
+<td><code>Callable \| None</code></td>
+<td><em>(required if the form provides <code>search_choices_&lt;fieldname&gt;</code>)</em></td>
+<td>Auth decorator for the auto-registered endpoint</td>
 </tr>
 </tbody>
 </table>
@@ -1480,10 +1953,12 @@
 </span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    <span class="p">),</span>
 </span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="p">)</span>
 </span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="c1"># Server-side suggestions:</span>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="n">tags</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">ComboBox</span><span class="p">(</span><span class="n">search_url</span><span class="o">=</span><span class="n">reverse_lazy</span><span class="p">(</span><span class="s2">&quot;tag-suggestions&quot;</span><span class="p">)),</span>
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="p">)</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="c1"># Auto-registered server-side suggestions:</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="k">class</span><span class="w"> </span><span class="nc">TagForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="n">tags</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">ComboBox</span><span class="p">(</span><span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">))</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">search_choices_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>        <span class="k">return</span> <span class="p">[{</span><span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">}</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">Tag</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name__icontains</span><span class="o">=</span><span class="n">query</span><span class="p">)[:</span><span class="mi">20</span><span class="p">]]</span>
 </span></code></pre></div>
 <p><strong>Requires Alpine.js</strong> and htmx (for server-side suggestions).</p>
 <hr />
@@ -1650,9 +2125,7 @@
 <p><strong>Requires htmx.</strong></p>
 <hr />
 <h2 id="search_decorator-parameter"><code>search_decorator</code> parameter<a class="headerlink" href="#search_decorator-parameter" title="Permanent link">&para;</a></h2>
-<p><code>SearchSelect</code>, <code>MultiSelect</code>, and <code>ComboBox</code> all accept a <code>search_decorator</code> parameter when using auto-registration (i.e. when <code>search_fields</code> is set on the widget, or when the form defines <code>search_choices_&lt;fieldname&gt;</code>).</p>
-<p>This parameter is <strong>required</strong> for auto-registered endpoints. Omitting it raises <code>ImproperlyConfigured</code> at registration time — formwork refuses to silently expose an unauthenticated search endpoint.</p>
-<p>Pass a standard Django auth decorator:</p>
+<p><code>SearchSelect</code>, <code>MultiSelect</code>, and <code>ComboBox</code> accept a <code>search_decorator</code> parameter that protects the auto-registered endpoint. It's required as soon as a registration path is in use — either <code>search_fields</code> on the widget, or <code>search_choices_&lt;fieldname&gt;</code> on the form. Omitting it raises <code>ImproperlyConfigured</code> at registration time; formwork refuses to silently expose an unauthenticated search endpoint.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">login_required</span><span class="p">,</span> <span class="n">permission_required</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># Require login:</span>
@@ -1666,18 +2139,14 @@
 </span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
 </span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="n">search_decorator</span><span class="o">=</span><span class="n">permission_required</span><span class="p">(</span><span class="s2">&quot;myapp.view_city&quot;</span><span class="p">),</span>
 </span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="p">)</span>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="c1"># Public endpoint (explicit opt-in):</span>
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span>
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>    <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>    <span class="n">search_decorator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="p">)</span>
 </span></code></pre></div>
-<p>To explicitly allow unauthenticated access (public endpoint), pass <code>None</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">search_decorator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># public — no auth required</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="p">)</span>
-</span></code></pre></div>
-<p>The decorator is applied to the <code>FormworkAutoSearchView.dispatch</code> method for each registered endpoint.</p>
-<div class="admonition note">
-<p class="admonition-title">Manual search URLs</p>
-<p>When using <code>search_url=reverse_lazy("my-view")</code> pointing to your own <code>FormworkSearchView</code> subclass, <code>search_decorator</code> has no effect — access control is handled by your URL configuration and the view itself.</p>
-</div>
+<p>The decorator is applied to the <code>FormworkAutoSearchView.dispatch</code> method for each registered endpoint. To skip auto-registration entirely and write your own endpoint, see <a href="../views/#formworksearchview"><code>FormworkSearchView</code></a>.</p>
 
 
 
