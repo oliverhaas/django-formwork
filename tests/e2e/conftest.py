@@ -14,6 +14,19 @@ import pytest
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 
+def pytest_collection_modifyitems(config, items):
+    """Auto-mark every test under tests/e2e/ with the e2e marker.
+
+    Without this hook, ``pytest -m "not e2e"`` would still collect these
+    tests (they get a chromium fixture from pytest-playwright, but the
+    marker is not applied implicitly).  The marker lets the publish gate
+    skip browser-backed tests when no Playwright install is present.
+    """
+    for item in items:
+        if "tests/e2e/" in str(item.fspath) or "tests\\e2e\\" in str(item.fspath):
+            item.add_marker(pytest.mark.e2e)
+
+
 def submit(page):
     """Submit the form via htmx morph and wait for completion."""
     page.evaluate("document.querySelector('form[hx-post]').noValidate = true")
