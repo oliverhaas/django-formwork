@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="DaisyUI-styled Django forms with htmx-powered widgets">
+        <meta name="description" content="An opinionated UI framework for Django, built on Django forms">
       
       
       
@@ -738,8 +738,8 @@
 
 
 <h1 id="django-formwork">django-formwork<a class="headerlink" href="#django-formwork" title="Permanent link">&para;</a></h1>
-<p>django-formwork applies DaisyUI styling to Django forms and ships a small set of widgets that lean on htmx and Alpine.js. Set <code>FORM_RENDERER</code> once, include the CSS and JS template tags, and <code>{{ form }}</code> produces DaisyUI markup. The admin is unaffected; it renders widgets directly, never <code>{{ form }}</code> or <code>as_field_group()</code>.</p>
-<p>The custom widgets are <code>Toggle</code>, <code>Range</code>, <code>Rating</code>, <code>PasswordReveal</code>, <code>SearchSelect</code>, <code>MultiSelect</code>, <code>ComboBox</code>, <code>DataList</code>, <code>FileDropZone</code>, <code>ImageDropZone</code>, <code>ValidatedTextarea</code>, <code>DatePicker</code>, <code>InputNumber</code>, <code>InputMask</code>, <code>OTPInput</code>, <code>PhoneInput</code>, and <code>CountryInput</code>. The dropdowns and the validated textarea auto-wire server-side endpoints when paired with a <code>FormworkForm</code>.</p>
+<p>django-formwork is an opinionated UI framework for Django, built on Django forms. Forms are the central building block of most Django apps — CRUD pages, admin, search filters, sign-ups, content editors — so formwork treats the form as the primary UI surface: define a <code>Form</code> or <code>ModelForm</code> and you get DaisyUI styling, widgets that go beyond Django's built-ins, and the htmx + Alpine wiring that makes them dynamic without bespoke per-page JS. Set <code>FORM_RENDERER</code> once, include the CSS and JS template tags, and <code>{{ form }}</code> produces the full DaisyUI markup. The admin is unaffected; it renders widgets directly, never <code>{{ form }}</code> or <code>as_field_group()</code>.</p>
+<p>The widgets that ship with the framework are <code>Toggle</code>, <code>Range</code>, <code>Rating</code>, <code>PasswordReveal</code>, <code>SearchSelect</code>, <code>MultiSelect</code>, <code>ComboBox</code>, <code>DataList</code>, <code>FileDropZone</code>, <code>ImageDropZone</code>, <code>ValidatedTextarea</code>, <code>DatePicker</code>, <code>InputNumber</code>, <code>InputMask</code>, <code>OTPInput</code>, <code>PhoneInput</code>, and <code>CountryInput</code>. The dropdowns and the validated textarea auto-wire server-side endpoints when paired with a <code>FormworkForm</code>.</p>
 <p>On the JavaScript side, <code>{% formwork_js %}</code> loads an ES module that imports <code>formwork-core.js</code> (the <code>formwork-morph</code> htmx extension, dirty-field tracking, native-validation disabling) plus each widget's Alpine.data component. The same files can also be loaded per-form via <code>{{ form.media }}</code> or pulled in by a JS bundler; see the <a href="getting-started/installation/">installation guide</a>.</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <p>Python 3.14+, Django 6.0, <a href="https://daisyui.com/">DaisyUI</a> 5, <a href="https://tailwindcss.com/">Tailwind CSS</a> 4. DaisyUI and Tailwind are not bundled.</p>
