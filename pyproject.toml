@@ -1,7 +1,7 @@
 [project]
 name = "django-formwork"
 version = "0.1.0a2"
-description = "Better Django forms — modern styling out of the box, then HTMX integration for dynamic behavior"
+description = "An opinionated UI framework for Django, built on Django forms"
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
 requires-python = ">=3.14"

@@ -1,5 +1,5 @@
 site_name: Django Formwork
-site_description: DaisyUI-styled Django forms with htmx-powered widgets
+site_description: An opinionated UI framework for Django, built on Django forms
 site_url: https://oliverhaas.github.io/django-formwork/
 repo_url: https://github.com/oliverhaas/django-formwork
 repo_name: oliverhaas/django-formwork

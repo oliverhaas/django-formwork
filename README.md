@@ -6,7 +6,7 @@
 [![Django](https://img.shields.io/badge/django-6.0-blue.svg)](https://www.djangoproject.com/)
 [![License](https://img.shields.io/pypi/l/django-formwork.svg)](https://github.com/oliverhaas/django-formwork/blob/main/LICENSE)
 
-django-formwork applies DaisyUI styling to Django forms and ships a small set of widgets that lean on htmx and Alpine.js. Set `FORM_RENDERER` once, include the CSS and JS template tags, and `{{ form }}` produces DaisyUI markup. The admin is unaffected; it renders widgets directly, never `{{ form }}` or `as_field_group()`.
+django-formwork is an opinionated UI framework for Django, built on Django forms. Forms are the central building block of most Django apps — CRUD pages, admin, search filters, sign-ups, content editors — so formwork treats the form as the primary UI surface: define a `Form` or `ModelForm` and you get DaisyUI styling, widgets that go beyond Django's built-ins (server-side search dropdowns, drop-zones, OTP, phone, date picker, server-validated textarea, and more), and the htmx + Alpine wiring that makes them dynamic without bespoke per-page JS. Set `FORM_RENDERER` once, include the CSS and JS template tags, and `{{ form }}` produces the full DaisyUI markup. The admin is unaffected; it renders widgets directly, never `{{ form }}` or `as_field_group()`.
 
 ## Quick start
 
