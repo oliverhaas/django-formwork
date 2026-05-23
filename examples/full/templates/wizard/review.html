@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}New project · Review{% endblock %}
+{% block page_title %}New project{% endblock %}
+{% block page_subtitle %}
+  <p class="text-xs text-base-content/50">Step {{ step_index }} of {{ total_steps }} — Review</p>
+{% endblock %}
+{% block topbar_actions %}
+  <a href="{% url 'task_list' %}" class="btn btn-ghost btn-sm">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 border border-base-300 max-w-2xl mx-auto">
+  <div class="card-body p-6 lg:p-8 space-y-6">
+    {% include "wizard/_steps.html" %}
+
+    <div class="space-y-5">
+      {% for section_title, rows in review_data %}
+        <div>
+          <h3 class="text-sm font-semibold mb-2">{{ section_title }}</h3>
+          <dl class="text-sm rounded-box bg-base-200/50 divide-y divide-base-300 border border-base-300">
+            {% for label, value in rows %}
+              <div class="grid grid-cols-[140px_1fr] gap-4 px-4 py-2.5">
+                <dt class="text-base-content/60">{{ label }}</dt>
+                <dd>{{ value }}</dd>
+              </div>
+            {% endfor %}
+          </dl>
+        </div>
+      {% endfor %}
+    </div>
+
+    <form method="post" action="{% url 'wizard_confirm' %}" class="flex justify-between pt-2">
+      {% csrf_token %}
+      <a href="?step={{ step|add:-1 }}" class="btn btn-ghost gap-2">
+        <i class="icon icon-arrow-left size-4"></i> Back
+      </a>
+      <button type="submit" class="btn btn-primary gap-2">
+        <i class="icon icon-check size-4"></i> Create project
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

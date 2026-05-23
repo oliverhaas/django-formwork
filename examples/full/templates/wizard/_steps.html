@@ -1,0 +1,5 @@
+<ul class="steps w-full">
+  {% for title in step_titles %}
+    <li class="step {% if forloop.counter0 <= step %}step-primary{% endif %}">{{ title }}</li>
+  {% endfor %}
+</ul>

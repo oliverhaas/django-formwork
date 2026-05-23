@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load formwork %}
+
+{% block title %}Tasks{% endblock %}
+{% block page_title %}Tasks{% endblock %}
+{% block page_subtitle %}
+  <p class="text-xs text-base-content/50">{{ tasks|length }} task{{ tasks|length|pluralize }} · filter to narrow down</p>
+{% endblock %}
+{% block topbar_actions %}
+  <a href="{% url 'wizard' %}" class="btn btn-ghost btn-sm gap-2">
+    <i class="icon icon-wand-sparkles size-4"></i> New project
+  </a>
+  <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm gap-2">
+    <i class="icon icon-plus size-4"></i> New task
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 border border-base-300">
+  <div class="card-body p-0">
+    <form method="get"
+          hx-get="{% url 'task_list' %}"
+          hx-trigger="input changed delay:300ms from:input, change from:select, change from:input[type=checkbox]"
+          hx-target="#task-rows"
+          hx-swap="outerHTML"
+          hx-push-url="true"
+          class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-end p-4 border-b border-base-300">
+      {{ filter_form }}
+    </form>
+
+    <div class="overflow-x-auto">
+      <table class="table table-hover">
+        <thead>
+          <tr class="text-xs uppercase tracking-wider text-base-content/50">
+            <th class="w-10"></th>
+            <th>Task</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Assignee</th>
+            <th>Tags</th>
+            <th>Due</th>
+            <th class="w-12"></th>
+          </tr>
+        </thead>
+        {% include "tasks/_list_rows.html" %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

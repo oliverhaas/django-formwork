@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load formwork %}
+
+{% block title %}New project · {{ step_title }}{% endblock %}
+{% block page_title %}New project{% endblock %}
+{% block page_subtitle %}
+  <p class="text-xs text-base-content/50">Step {{ step_index }} of {{ total_steps }} — {{ step_title }}</p>
+{% endblock %}
+{% block topbar_actions %}
+  <a href="{% url 'task_list' %}" class="btn btn-ghost btn-sm">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 border border-base-300 max-w-2xl mx-auto">
+  <div class="card-body p-6 lg:p-8 space-y-6">
+    {% include "wizard/_steps.html" %}
+
+    <form method="post" class="space-y-2">
+      {% csrf_token %}
+      <input type="hidden" name="step" value="{{ step }}">
+      {{ form }}
+
+      <div class="flex justify-between pt-4">
+        {% if has_prev %}
+          <a href="?step={{ step|add:-1 }}" class="btn btn-ghost gap-2">
+            <i class="icon icon-arrow-left size-4"></i> Back
+          </a>
+        {% else %}
+          <span></span>
+        {% endif %}
+        <button type="submit" class="btn btn-primary gap-2">
+          Next <i class="icon icon-arrow-right size-4"></i>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

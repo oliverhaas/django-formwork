@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load formwork %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}
+  <p class="text-xs text-base-content/50">
+    {% if task %}Editing task #{{ task.pk }}{% else %}Fill in the fields and save{% endif %}
+  </p>
+{% endblock %}
+{% block topbar_actions %}
+  <a href="{% url 'task_list' %}" class="btn btn-ghost btn-sm gap-2">
+    <i class="icon icon-arrow-left size-4"></i> Back
+  </a>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="grid lg:grid-cols-[1fr_320px] gap-6">
+  {% csrf_token %}
+
+  <div class="card bg-base-100 border border-base-300">
+    <div class="card-body p-6 space-y-1">
+      {{ form }}
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <div class="card bg-base-100 border border-base-300">
+      <div class="card-body p-6">
+        <h3 class="card-title text-sm">Actions</h3>
+        <button type="submit" class="btn btn-primary btn-block gap-2">
+          <i class="icon icon-check size-4"></i> Save
+        </button>
+        {% if task %}
+          <a href="{% url 'task_delete' task.pk %}" class="btn btn-ghost btn-block btn-sm text-error gap-2">
+            <i class="icon icon-trash-2 size-4"></i> Delete task
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if task %}
+      <div class="card bg-base-100 border border-base-300">
+        <div class="card-body p-6">
+          <h3 class="card-title text-sm">Metadata</h3>
+          <dl class="text-sm space-y-2 mt-2">
+            <div class="flex justify-between gap-2">
+              <dt class="text-base-content/50">Created</dt>
+              <dd>{{ task.created_at|date:"M j, Y H:i" }}</dd>
+            </div>
+            <div class="flex justify-between gap-2">
+              <dt class="text-base-content/50">Updated</dt>
+              <dd>{{ task.updated_at|timesince }} ago</dd>
+            </div>
+            <div class="flex justify-between gap-2">
+              <dt class="text-base-content/50">ID</dt>
+              <dd class="font-mono text-xs">#{{ task.pk }}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card bg-primary/5 border border-primary/20">
+      <div class="card-body p-5">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-primary">Widgets in play</h3>
+        <ul class="text-xs space-y-1.5 mt-2 text-base-content/70">
+          <li><code>SearchSelect</code> for priority &amp; status</li>
+          <li><code>MultiSelect</code> for tags (server search)</li>
+          <li><code>DatePicker</code> for due date</li>
+          <li><code>ImageDropZone</code> for cover image</li>
+          <li><code>FileDropZone</code> for attachment</li>
+          <li><code>Rating</code> for quality score</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

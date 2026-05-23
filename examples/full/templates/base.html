@@ -1,29 +1,91 @@
-{% load formwork static %}
-<!DOCTYPE html>
-<html lang="en" data-theme="light">
+{% load formwork static %}<!DOCTYPE html>
+<html lang="en" data-theme="cupcake">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Task Manager{% endblock %}</title>
+  <title>{% block title %}Task Manager{% endblock %} · django-formwork</title>
 
   <link rel="stylesheet" href="{% static 'dist.css' %}">
 
+  <script>
+    // Restore persisted theme before paint to avoid flash-of-default.
+    (function () {
+      const t = localStorage.getItem("theme");
+      if (t) document.documentElement.dataset.theme = t;
+    })();
+  </script>
+
   <script src="https://unpkg.com/htmx.org@4.0.0-beta3/dist/htmx.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
   {% formwork_js %}
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 </head>
-<body class="min-h-screen bg-base-200">
-  <div class="navbar bg-base-100 shadow-sm mb-6">
-    <div class="flex-1">
-      <a href="{% url 'task_list' %}" class="btn btn-ghost text-xl">Task Manager</a>
+<body class="min-h-screen bg-base-200 text-base-content">
+  <div class="drawer lg:drawer-open">
+    <input id="nav-drawer" type="checkbox" class="drawer-toggle">
+
+    <div class="drawer-content flex flex-col min-h-screen">
+      <header class="bg-base-100 border-b border-base-300 sticky top-0 z-20">
+        <div class="px-4 lg:px-8 py-3 flex items-center gap-4">
+          <label for="nav-drawer" class="btn btn-ghost btn-sm lg:hidden" aria-label="open sidebar">
+            <i class="icon icon-menu size-5"></i>
+          </label>
+
+          <div class="flex-1 min-w-0">
+            <h1 class="text-lg font-semibold leading-tight truncate">{% block page_title %}{% endblock %}</h1>
+            {% block page_subtitle %}{% endblock %}
+          </div>
+
+          <div class="flex items-center gap-2">
+            {% block topbar_actions %}{% endblock %}
+
+            <div class="dropdown dropdown-end" x-data>
+              <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-1" aria-label="Theme">
+                <i class="icon icon-palette size-4"></i>
+              </div>
+              <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box shadow-lg border border-base-300 w-44 mt-2 p-1 max-h-80 overflow-y-auto flex-nowrap">
+                {% for theme_name in theme_names %}
+                  <li>
+                    <button type="button" class="capitalize"
+                            @click="document.documentElement.dataset.theme = '{{ theme_name }}'; localStorage.setItem('theme', '{{ theme_name }}'); document.activeElement.blur()">
+                      {{ theme_name }}
+                    </button>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+
+            <div class="avatar avatar-placeholder">
+              <div class="bg-primary text-primary-content rounded-full w-8">
+                <span class="text-xs font-semibold">DV</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="flex-1 px-4 lg:px-8 py-6 max-w-7xl w-full mx-auto">
+        {% if messages %}
+          <div class="space-y-2 mb-6">
+            {% for m in messages %}
+              <div role="alert" class="alert alert-{{ m.tags|default:'info' }} alert-soft">
+                <span>{{ m }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </main>
+
+      <footer class="text-center text-xs text-base-content/50 py-6">
+        django-formwork example · forms-first UI for Django
+      </footer>
     </div>
-    <div class="flex-none gap-2">
-      <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm">New Task</a>
-      <a href="{% url 'wizard' %}" class="btn btn-outline btn-sm">New Project</a>
-    </div>
-  </div>
-  <div class="max-w-4xl mx-auto px-4 pb-8">
-    {% block content %}{% endblock %}
+
+    <aside class="drawer-side z-30">
+      <label for="nav-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
+      {% include "_sidebar.html" %}
+    </aside>
   </div>
 </body>
 </html>

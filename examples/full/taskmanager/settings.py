@@ -15,6 +15,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.staticfiles",
     "django.contrib.sessions",
+    "django.contrib.messages",
     "django_iconx",
     "django_formwork",
     "taskmanager",
@@ -22,6 +23,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
 ]
 
 ROOT_URLCONF = "taskmanager.urls"
@@ -34,6 +36,8 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                "django.contrib.messages.context_processors.messages",
+                "taskmanager.context_processors.nav",
             ],
         },
     },
@@ -43,6 +47,9 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 DATABASES = {
     "default": {

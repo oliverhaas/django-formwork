@@ -1,5 +1,8 @@
 /* Import formwork (includes Tailwind + DaisyUI + icons). */
 @import "../../django_formwork/static/formwork/formwork.css";
 
-/* Scan our templates for Tailwind utility classes. */
+/* Scan our templates AND the whole formwork package so Tailwind picks
+ * up classes referenced in widget templates and widget Python defaults
+ * (e.g. `mask-star-2` on Rating, `toggle` on Toggle, etc.). */
 @source "./templates/";
+@source "../../django_formwork/";

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Delete task{% endblock %}
+{% block page_title %}Delete task{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 border border-base-300 max-w-md mx-auto">
+  <div class="card-body p-6">
+    <div role="alert" class="alert alert-error alert-soft">
+      <i class="icon icon-trash-2 size-5"></i>
+      <span>Delete <strong>{{ task.title }}</strong>? This can't be undone.</span>
+    </div>
+    <form method="post" class="flex justify-end gap-2 mt-4">
+      {% csrf_token %}
+      <a href="{% url 'task_edit' task.pk %}" class="btn btn-ghost btn-sm">Cancel</a>
+      <button type="submit" class="btn btn-error btn-sm">Delete</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

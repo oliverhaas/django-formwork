@@ -1,158 +1,255 @@
 """Views for the task manager example."""
 
-from django.db.models import Q
+from __future__ import annotations
+
+from django.contrib import messages
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from .forms import (
+    SettingsForm,
     TaskFilterForm,
     TaskForm,
-    WizardStep1Form,
-    WizardStep2Form,
-    WizardStep3Form,
+    TaskQuickAddForm,
+    TaskStatusForm,
+    WizardConfigForm,
+    WizardFirstTaskForm,
+    WizardProjectForm,
 )
-from .models import Task
+from .models import Tag, Task
 
-# ─── CRUD ───────────────────────────────────────────────────────────────
+# ─── Dashboard ──────────────────────────────────────────────────────────
+
+
+def dashboard(request):
+    """Stats cards, recent activity, and a quick-add form."""
+    qs = Task.objects.all()
+    by_status = dict(qs.values_list("status").annotate(n=Count("id")))
+    stats = [
+        ("todo", "To do", "neutral", "icon-circle-dashed"),
+        ("in_progress", "In progress", "info", "icon-loader"),
+        ("review", "In review", "warning", "icon-eye"),
+        ("done", "Done", "success", "icon-check"),
+    ]
+    stats_data = [
+        {"key": key, "label": label, "color": color, "icon": icon, "count": by_status.get(key, 0)}
+        for key, label, color, icon in stats
+    ]
+    recent = qs.order_by("-updated_at")[:8]
+
+    if request.method == "POST":
+        form = TaskQuickAddForm(request.POST)
+        if form.is_valid():
+            Task.objects.create(
+                title=form.cleaned_data["title"],
+                priority=form.cleaned_data["priority"],
+            )
+            messages.success(request, "Task added.")
+            return redirect("dashboard")
+    else:
+        form = TaskQuickAddForm()
+
+    return render(
+        request,
+        "dashboard.html",
+        {
+            "stats": stats_data,
+            "total": qs.count(),
+            "recent": recent,
+            "form": form,
+            "now": timezone.now(),
+        },
+    )
+
+
+# ─── Tasks ──────────────────────────────────────────────────────────────
 
 
 def task_list(request):
     """List tasks with htmx search/filter."""
     form = TaskFilterForm(request.GET)
-    tasks = Task.objects.all()
+    tasks = Task.objects.prefetch_related("tags")
 
     if form.is_valid():
         q = form.cleaned_data.get("q")
         status = form.cleaned_data.get("status")
         priority = form.cleaned_data.get("priority")
-
         if q:
-            tasks = tasks.filter(Q(title__icontains=q) | Q(tags__icontains=q))
+            tasks = tasks.filter(Q(title__icontains=q) | Q(tags__name__icontains=q)).distinct()
         if status:
             tasks = tasks.filter(status=status)
         if priority:
             tasks = tasks.filter(priority=priority)
 
-    is_htmx = request.headers.get("HX-Request") == "true"
-    if is_htmx:
-        return render(request, "tasks/task_list_partial.html", {"tasks": tasks})
-    return render(request, "tasks/task_list.html", {"tasks": tasks, "filter_form": form})
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "tasks/_list_rows.html", {"tasks": tasks})
+    return render(request, "tasks/list.html", {"tasks": tasks, "filter_form": form})
 
 
 def task_create(request):
     """Create a new task."""
     if request.method == "POST":
-        form = TaskForm(request.POST)
+        form = TaskForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
+            messages.success(request, "Task created.")
             return redirect("task_list")
-        is_htmx = request.headers.get("HX-Request") == "true"
-        if is_htmx:
-            return render(request, "tasks/task_form_partial.html", {"form": form})
     else:
         form = TaskForm()
-
-    return render(request, "tasks/task_form.html", {"form": form, "title": "New Task"})
+    return render(request, "tasks/form.html", {"form": form, "title": "New task", "task": None})
 
 
 def task_edit(request, pk):
     """Edit an existing task."""
     task = get_object_or_404(Task, pk=pk)
     if request.method == "POST":
-        form = TaskForm(request.POST, instance=task)
+        form = TaskForm(request.POST, request.FILES, instance=task)
         if form.is_valid():
             form.save()
+            messages.success(request, "Task updated.")
             return redirect("task_list")
-        is_htmx = request.headers.get("HX-Request") == "true"
-        if is_htmx:
-            return render(request, "tasks/task_form_partial.html", {"form": form})
     else:
         form = TaskForm(instance=task)
-
-    return render(request, "tasks/task_form.html", {"form": form, "title": f"Edit: {task.title}"})
+    return render(request, "tasks/form.html", {"form": form, "title": task.title, "task": task})
 
 
 def task_delete(request, pk):
-    """Delete a task (POST only)."""
+    """Delete a task."""
     task = get_object_or_404(Task, pk=pk)
     if request.method == "POST":
         task.delete()
         if request.headers.get("HX-Request") == "true":
-            return HttpResponse(status=200, headers={"HX-Redirect": "/"})
+            return HttpResponse(status=200, headers={"HX-Redirect": "/tasks/"})
         return redirect("task_list")
-    return render(request, "tasks/task_confirm_delete.html", {"task": task})
+    return render(request, "tasks/confirm_delete.html", {"task": task})
+
+
+def task_status(request, pk):
+    """Inline status edit — htmx POST returns a single updated row."""
+    task = get_object_or_404(Task, pk=pk)
+    form = TaskStatusForm(request.POST, instance=task)
+    if form.is_valid():
+        form.save()
+    return render(request, "tasks/_list_row.html", {"task": task})
 
 
 # ─── Wizard ─────────────────────────────────────────────────────────────
 
-WIZARD_FORMS = [WizardStep1Form, WizardStep2Form, WizardStep3Form]
-WIZARD_TITLES = ["Project Basics", "Configuration", "Initial Task"]
+WIZARD_FORMS = [WizardProjectForm, WizardConfigForm, WizardFirstTaskForm]
+WIZARD_TITLES = ["Project", "Configuration", "First task"]
 
 
 def wizard(request):
-    """Multi-step project creation wizard using session storage."""
+    """Multi-step project creation wizard backed by session storage."""
     step = int(request.GET.get("step", request.POST.get("step", 0)))
-    step = max(0, min(step, len(WIZARD_FORMS) - 1))
+    step = max(0, min(step, len(WIZARD_FORMS)))
 
-    wizard_data = request.session.get("wizard_data", {})
+    data = request.session.get("wizard_data", {})
 
-    if request.method == "POST":
+    if request.method == "POST" and step < len(WIZARD_FORMS):
         form = WIZARD_FORMS[step](request.POST)
         if form.is_valid():
-            wizard_data[str(step)] = form.cleaned_data
-            request.session["wizard_data"] = wizard_data
+            data[str(step)] = form.cleaned_data
+            request.session["wizard_data"] = data
+            return redirect(f"{request.path}?step={step + 1}")
+        return render(request, "wizard/page.html", _wizard_ctx(step, form, data))
 
-            if step < len(WIZARD_FORMS) - 1:
-                # Advance to next step.
-                next_step = step + 1
-                next_form = WIZARD_FORMS[next_step](initial=wizard_data.get(str(next_step), {}))
-                return render(
-                    request,
-                    "wizard/wizard.html",
-                    _wizard_ctx(next_step, next_form, wizard_data),
-                )
-            # Final step — create the project.
-            result = _finalize_wizard(wizard_data)
-            request.session.pop("wizard_data", None)
-            return render(request, "wizard/wizard_done.html", {"result": result})
+    if step == len(WIZARD_FORMS):  # Review page
+        return render(request, "wizard/review.html", _wizard_ctx(step, None, data))
 
-        # Validation failed — re-render current step.
-        is_htmx = request.headers.get("HX-Request") == "true"
-        template = "wizard/wizard_form_partial.html" if is_htmx else "wizard/wizard.html"
-        return render(request, template, _wizard_ctx(step, form, wizard_data))
-
-    # GET — show the requested step.
-    initial = wizard_data.get(str(step), {})
+    initial = data.get(str(step), {})
     form = WIZARD_FORMS[step](initial=initial)
-    return render(request, "wizard/wizard.html", _wizard_ctx(step, form, wizard_data))
+    return render(request, "wizard/page.html", _wizard_ctx(step, form, data))
 
 
-def _wizard_ctx(step, form, wizard_data):
+def wizard_confirm(request):
+    """Finalise the wizard: create the project task and clear session."""
+    if request.method != "POST":
+        return redirect("wizard")
+    data = request.session.get("wizard_data", {})
+    project = data.get("0", {})
+    first = data.get("2", {})
+
+    task = Task.objects.create(
+        title=first.get("first_task", "Untitled"),
+        priority=first.get("first_task_priority", "medium"),
+        description=f"Project: {project.get('project_name', 'Unnamed')}",
+        due_date=first.get("first_task_due"),
+    )
+    if first.get("first_task_tags"):
+        task.tags.set(first["first_task_tags"])
+
+    request.session.pop("wizard_data", None)
+    messages.success(request, f"Project '{project.get('project_name')}' created.")
+    return redirect("task_edit", pk=task.pk)
+
+
+def _wizard_ctx(step, form, data):
+    total = len(WIZARD_FORMS) + 1  # forms + review
     return {
         "form": form,
         "step": step,
-        "step_title": WIZARD_TITLES[step],
-        "total_steps": len(WIZARD_FORMS),
-        "steps": [(i, WIZARD_TITLES[i], i <= step) for i in range(len(WIZARD_FORMS))],
+        "step_index": step + 1,
+        "step_title": WIZARD_TITLES[step] if step < len(WIZARD_FORMS) else "Review",
+        "step_titles": [*WIZARD_TITLES, "Review"],
+        "total_steps": total,
+        "is_review": step == len(WIZARD_FORMS),
         "has_prev": step > 0,
-        "has_next": step < len(WIZARD_FORMS) - 1,
-        "is_last": step == len(WIZARD_FORMS) - 1,
-        "wizard_data": wizard_data,
+        "wizard_data": data,
+        "review_data": _wizard_summary(data) if step == len(WIZARD_FORMS) else None,
     }
 
 
-def _finalize_wizard(data):
-    """Create a task from the wizard data."""
-    step0 = data.get("0", {})
-    step2 = data.get("2", {})
-    task = Task.objects.create(
-        title=step2.get("first_task", "Untitled"),
-        priority=step2.get("first_task_priority", "medium"),
-        tags=step2.get("first_task_tags", ""),
-        description=f"Project: {step0.get('project_name', 'Unnamed')}",
-    )
-    return {
-        "project_name": step0.get("project_name"),
-        "task": task,
-        "settings": data.get("1", {}),
-    }
+def _wizard_summary(data):
+    project = data.get("0", {})
+    config = data.get("1", {})
+    first = data.get("2", {})
+    tags = first.get("first_task_tags") or []
+    if hasattr(tags, "all"):
+        tags_list = list(tags)
+    else:
+        tags_list = [Tag.objects.filter(pk=t).first() for t in tags]
+    tags_list = [t for t in tags_list if t]
+    return [
+        (
+            "Project",
+            [
+                ("Name", project.get("project_name", "")),
+                ("Description", project.get("project_description", "") or "—"),
+            ],
+        ),
+        (
+            "Configuration",
+            [
+                ("Notifications", "On" if config.get("enable_notifications") else "Off"),
+                ("Max tasks", config.get("max_tasks", "—")),
+                ("Visibility", (config.get("visibility") or "").title() or "—"),
+            ],
+        ),
+        (
+            "First task",
+            [
+                ("Title", first.get("first_task", "")),
+                ("Priority", (first.get("first_task_priority") or "").title()),
+                ("Due", first.get("first_task_due") or "—"),
+                ("Tags", ", ".join(t.name for t in tags_list) or "—"),
+            ],
+        ),
+    ]
+
+
+# ─── Settings ───────────────────────────────────────────────────────────
+
+
+def settings_page(request):
+    """Showcase the remaining widgets in a faux account-settings page."""
+    if request.method == "POST":
+        form = SettingsForm(request.POST, request.FILES)
+        if form.is_valid():
+            messages.success(request, "Settings saved (demo — nothing persisted).")
+            return redirect("settings")
+    else:
+        form = SettingsForm()
+    return render(request, "settings.html", {"form": form})
