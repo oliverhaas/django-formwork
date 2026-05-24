@@ -27,15 +27,21 @@ def dashboard(request):
     """Stats cards, recent activity, and a quick-add form."""
     qs = Task.objects.all()
     by_status = dict(qs.values_list("status").annotate(n=Count("id")))
-    stats = [
-        ("todo", "To do", "neutral", "icon-circle-dashed"),
-        ("in_progress", "In progress", "info", "icon-loader"),
-        ("review", "In review", "warning", "icon-eye"),
-        ("done", "Done", "success", "icon-check"),
-    ]
+    status_icons = {
+        "todo": "icon-circle-dashed",
+        "in_progress": "icon-loader",
+        "review": "icon-eye",
+        "done": "icon-check",
+    }
     stats_data = [
-        {"key": key, "label": label, "color": color, "icon": icon, "count": by_status.get(key, 0)}
-        for key, label, color, icon in stats
+        {
+            "key": key,
+            "label": label,
+            "color": Task.STATUS_COLORS[key],
+            "icon": status_icons[key],
+            "count": by_status.get(key, 0),
+        }
+        for key, label in Task.STATUS_CHOICES
     ]
     recent = qs.order_by("-updated_at")[:8]
 
