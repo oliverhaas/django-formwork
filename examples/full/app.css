@@ -7,10 +7,9 @@
 @source "./templates/";
 @source "../../django_formwork/";
 
-/* Status / priority colour names are interpolated from model dicts at
- * render time (`bg-{{ task.status_color }}`, `badge-{{ ... }}-soft`),
- * so Tailwind never sees the literal classes. Safelist them. */
-@source inline("bg-{primary,secondary,accent,info,success,warning,error,neutral}");
-@source inline("bg-{primary,secondary,accent,info,success,warning,error,neutral}/{10,15}");
-@source inline("text-{primary,secondary,accent,info,success,warning,error,neutral}");
+/* `badge-{{ task.status_color }}` and `badge-{{ task.priority_color }}`
+ * are interpolated from model dicts at render time, so Tailwind's static
+ * scan never sees them. Safelist the eight DaisyUI semantic colours.
+ * Everything else (`bg-base-200`, `text-base-content/70`, ...) appears
+ * as a literal in the templates and gets picked up normally. */
 @source inline("badge-{primary,secondary,accent,info,success,warning,error,neutral}");

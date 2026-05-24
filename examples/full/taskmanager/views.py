@@ -37,7 +37,6 @@ def dashboard(request):
         {
             "key": key,
             "label": label,
-            "color": Task.STATUS_COLORS[key],
             "icon": status_icons[key],
             "count": by_status.get(key, 0),
         }

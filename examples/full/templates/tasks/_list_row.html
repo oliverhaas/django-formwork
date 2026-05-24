@@ -1,7 +1,4 @@
 <tr id="task-row-{{ task.pk }}">
-  <td>
-    <span class="size-2 rounded-full bg-{{ task.priority_color }} inline-block" title="{{ task.priority_label }}"></span>
-  </td>
   <td class="max-w-xs">
     <a href="{% url 'task_edit' task.pk %}" class="font-medium hover:underline">{{ task.title }}</a>
     {% if task.description %}<p class="text-xs text-base-content/50 truncate">{{ task.description }}</p>{% endif %}
@@ -12,7 +9,7 @@
           hx-swap="outerHTML"
           hx-trigger="change">
       {% csrf_token %}
-      <select name="status" class="select select-sm select-ghost bg-{{ task.status_color }}/10 text-{{ task.status_color }} font-medium">
+      <select name="status" class="select select-sm select-ghost">
         {% for value, label in task.STATUS_CHOICES %}
           <option value="{{ value }}" {% if task.status == value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
