@@ -1,2 +1,5 @@
 db.sqlite3
-static/
+# Root-level static/ holds build artifacts (Tailwind dist.css, plus the
+# Lucide icons downloaded by `manage.py formwork install`). App-static
+# dirs like taskmanager/static/ are source and stay tracked.
+/static/

@@ -13,3 +13,13 @@
  * Everything else (`bg-base-200`, `text-base-content/70`, ...) appears
  * as a literal in the templates and gets picked up normally. */
 @source inline("badge-{primary,secondary,accent,info,success,warning,error,neutral}");
+
+/* Custom example-only icon, glued onto the iconx mask-image pipeline so
+ * the same `<i class="icon icon-github size-5">` markup works everywhere.
+ * The `.icon` base + `[class*="icon-"]` shared rule already in
+ * iconx/icons.css set background-color, mask-size, etc.; we just need
+ * to point a fresh selector at our SVG. Lucide doesn't ship brand marks. */
+.icon-github {
+  background-color: currentColor;
+  mask: url("/static/icons/custom/github.svg") center / contain no-repeat;
+}

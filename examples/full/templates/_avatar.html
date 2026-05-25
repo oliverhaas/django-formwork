@@ -1,0 +1,17 @@
+{% comment %}
+  Inline assignee chip: DaisyUI avatar placeholder + name. Accepts a
+  `task` context and an optional `size` ("xs" default | "sm"). Empty
+  assignee renders a dash placeholder instead of an empty pill.
+{% endcomment %}
+{% if task.assignee %}
+  <span class="inline-flex items-center gap-2">
+    <span class="avatar avatar-placeholder">
+      <span class="bg-base-300 text-base-content/80 rounded-full {% if size == 'sm' %}w-7{% else %}w-6{% endif %}">
+        <span class="text-[10px] font-semibold">{{ task.assignee_initials }}</span>
+      </span>
+    </span>
+    <span>{{ task.assignee }}</span>
+  </span>
+{% else %}
+  <span class="text-base-content/40">—</span>
+{% endif %}

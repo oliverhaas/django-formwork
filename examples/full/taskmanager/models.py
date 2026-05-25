@@ -68,6 +68,18 @@ class Task(models.Model):
         return self.title
 
     @property
+    def assignee_initials(self) -> str:
+        """First letters of first + last name, or first two letters of the
+        single name. Empty for unassigned tasks (template handles that case).
+        """
+        parts = self.assignee.split()
+        if not parts:
+            return ""
+        if len(parts) == 1:
+            return parts[0][:2].upper()
+        return (parts[0][:1] + parts[-1][:1]).upper()
+
+    @property
     def status_color(self) -> str:
         return self.STATUS_COLORS.get(self.status, "neutral")
 

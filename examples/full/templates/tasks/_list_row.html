@@ -19,7 +19,7 @@
   <td>
     <span class="badge badge-{{ task.priority_color }} badge-soft badge-sm">{{ task.priority_label }}</span>
   </td>
-  <td class="text-sm">{{ task.assignee|default:"—" }}</td>
+  <td class="text-sm">{% include "_avatar.html" %}</td>
   <td>
     <div class="flex flex-wrap gap-1">
       {% for tag in task.tags.all %}
