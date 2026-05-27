@@ -1,6 +1,6 @@
 """Enriched choice fields for django-formwork.
 
-``FormworkChoiceLabel`` wraps a choice label with optional ``icon`` and
+``ChoiceLabel`` wraps a choice label with optional ``icon`` and
 ``description``.  ``FormworkModelChoiceField`` uses it to produce enriched
 choices from a queryset via ``icon_from_instance`` and
 ``description_from_instance`` callbacks.
@@ -18,19 +18,25 @@ if TYPE_CHECKING:
 
     from django.db.models import Model
 
+__all__ = [
+    "ChoiceLabel",
+    "FormworkModelChoiceField",
+    "FormworkModelMultipleChoiceField",
+]
 
-class FormworkChoiceLabel:
+
+class ChoiceLabel:
     """A string-like choice label that carries optional icon and description.
 
     Any code expecting a plain string (Django admin, built-in widgets,
     templates) sees the label text via ``__str__``.  Widgets that understand
-    ``FormworkChoiceLabel`` can read ``.icon`` and ``.description``.
+    ``ChoiceLabel`` can read ``.icon`` and ``.description``.
 
     Usage::
 
         choices = [
-            ("nyc", FormworkChoiceLabel("New York", icon="building")),
-            ("ldn", FormworkChoiceLabel("London", icon="landmark")),
+            ("nyc", ChoiceLabel("New York", icon="building")),
+            ("ldn", ChoiceLabel("London", icon="landmark")),
         ]
     """
 
@@ -50,12 +56,12 @@ class FormworkChoiceLabel:
             parts.append(f"icon={self.icon!r}")
         if self.description:
             parts.append(f"description={self.description!r}")
-        return f"FormworkChoiceLabel({', '.join(parts)})"
+        return f"ChoiceLabel({', '.join(parts)})"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, str):
             return self.label == other
-        if isinstance(other, FormworkChoiceLabel):
+        if isinstance(other, ChoiceLabel):
             return self.label == other.label and self.icon == other.icon and self.description == other.description
         return NotImplemented
 
@@ -63,13 +69,13 @@ class FormworkChoiceLabel:
         return hash(self.label)
 
 
-class FormworkModelChoiceIterator(ModelChoiceIterator):
-    """Choice iterator that yields ``FormworkChoiceLabel`` instead of plain strings."""
+class _ChoiceIterator(ModelChoiceIterator):
+    """Choice iterator that yields ``ChoiceLabel`` instead of plain strings."""
 
     def choice(self, obj: Model) -> tuple:
         value = self.field.prepare_value(obj)
         field: Any = self.field
-        label = FormworkChoiceLabel(
+        label = ChoiceLabel(
             field.label_from_instance(obj),
             icon=field.icon_from_instance(obj),
             description=field.description_from_instance(obj),
@@ -85,7 +91,7 @@ class FormworkModelChoiceField(ModelChoiceField):
     overridable methods.
     """
 
-    iterator = FormworkModelChoiceIterator
+    iterator = _ChoiceIterator
 
     def __init__(
         self,
@@ -132,7 +138,7 @@ class FormworkModelChoiceField(ModelChoiceField):
 class FormworkModelMultipleChoiceField(ModelMultipleChoiceField):
     """ModelMultipleChoiceField with enriched choice labels."""
 
-    iterator = FormworkModelChoiceIterator
+    iterator = _ChoiceIterator
 
     def __init__(
         self,
@@ -173,11 +179,3 @@ class FormworkModelMultipleChoiceField(ModelMultipleChoiceField):
         new_field.error_messages = field.error_messages
         new_field.validators = field.validators
         return new_field
-
-
-__all__ = [
-    "FormworkChoiceLabel",
-    "FormworkModelChoiceField",
-    "FormworkModelChoiceIterator",
-    "FormworkModelMultipleChoiceField",
-]

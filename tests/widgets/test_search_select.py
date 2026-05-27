@@ -26,7 +26,7 @@ from django import forms
 from django.http import QueryDict
 from django.utils.safestring import mark_safe
 
-from django_formwork.fields import FormworkChoiceLabel
+from django_formwork.fields import ChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import SearchSelect
 
@@ -142,10 +142,10 @@ def test_search_select_get_context_show_search_explicit_overrides():
 
 @pytest.mark.unit
 def test_search_select_get_context_optgroups_with_icons():
-    """Icons from FormworkChoiceLabel are injected into optgroups."""
+    """Icons from ChoiceLabel are injected into optgroups."""
     widget = SearchSelect(
         choices=[
-            ("a", FormworkChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>"))),
+            ("a", ChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>"))),
             ("b", "Beta"),
         ],
     )
@@ -653,10 +653,10 @@ def test_search_select_show_search_hidden_when_count_below_threshold():
 
 @pytest.mark.unit
 def test_search_select_icon_rendered_in_option():
-    """FormworkChoiceLabel icons appear in the rendered option buttons."""
+    """ChoiceLabel icons appear in the rendered option buttons."""
     widget = SearchSelect(
         choices=[
-            ("a", FormworkChoiceLabel("Alpha", icon=mark_safe('<img src="a.svg">'))),
+            ("a", ChoiceLabel("Alpha", icon=mark_safe('<img src="a.svg">'))),
             ("b", "Beta"),
         ],
     )
@@ -667,7 +667,7 @@ def test_search_select_icon_rendered_in_option():
 
 @pytest.mark.unit
 def test_search_select_no_icon_element_when_not_provided():
-    """No <img> elements rendered when no FormworkChoiceLabel icons."""
+    """No <img> elements rendered when no ChoiceLabel icons."""
     widget = SearchSelect(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test")
     icons = soup.find_all("img")
@@ -725,7 +725,7 @@ def test_search_select_group_header_xshow_includes_child_labels():
 
 @pytest.mark.unit
 def test_search_select_grouped_options_keep_icons_and_descriptions():
-    """FormworkChoiceLabel icons/descriptions render inside grouped options."""
+    """ChoiceLabel icons/descriptions render inside grouped options."""
     widget = SearchSelect(
         choices=[
             ("", ""),
@@ -734,7 +734,7 @@ def test_search_select_grouped_options_keep_icons_and_descriptions():
                 [
                     (
                         "ldn",
-                        FormworkChoiceLabel("London", icon="\U0001f1ec\U0001f1e7", description="UK capital"),
+                        ChoiceLabel("London", icon="\U0001f1ec\U0001f1e7", description="UK capital"),
                     ),
                 ],
             ),

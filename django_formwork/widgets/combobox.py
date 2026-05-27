@@ -64,13 +64,13 @@ class ComboBox(forms.TextInput):
 
     def __init__(  # noqa: PLR0913
         self,
+        attrs: dict[str, Any] | None = None,
         *,
         suggestions: list[str] | list[tuple[str, list[str]]] | None = None,
         multiple: bool = False,
         search_decorator: Callable | object = _NOT_SET,
         icons: dict[str, str] | None = None,
         descriptions: dict[str, str] | None = None,
-        attrs: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(attrs)
         self.suggestions = suggestions or []

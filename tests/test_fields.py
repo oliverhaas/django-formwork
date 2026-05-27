@@ -1,4 +1,4 @@
-"""Tests for FormworkChoiceLabel, FormworkModelChoiceField, and FormworkModelMultipleChoiceField."""
+"""Tests for ChoiceLabel, FormworkModelChoiceField, and FormworkModelMultipleChoiceField."""
 
 from __future__ import annotations
 
@@ -6,37 +6,37 @@ import pytest
 from django.contrib.auth.models import Group, User
 
 from django_formwork.fields import (
-    FormworkChoiceLabel,
+    ChoiceLabel,
     FormworkModelChoiceField,
     FormworkModelMultipleChoiceField,
 )
 
 
-class TestFormworkChoiceLabel:
+class TestChoiceLabel:
     def test_str_returns_label(self):
-        label = FormworkChoiceLabel("New York", icon="building", description="East Coast")
+        label = ChoiceLabel("New York", icon="building", description="East Coast")
         assert str(label) == "New York"
 
     def test_icon_attribute(self):
-        label = FormworkChoiceLabel("New York", icon="building")
+        label = ChoiceLabel("New York", icon="building")
         assert label.icon == "building"
 
     def test_description_attribute(self):
-        label = FormworkChoiceLabel("New York", description="East Coast")
+        label = ChoiceLabel("New York", description="East Coast")
         assert label.description == "East Coast"
 
     def test_defaults_empty_strings(self):
-        label = FormworkChoiceLabel("New York")
+        label = ChoiceLabel("New York")
         assert label.icon == ""
         assert label.description == ""
 
     def test_equality_by_str(self):
-        """FormworkChoiceLabel compares equal to its string representation."""
-        label = FormworkChoiceLabel("New York", icon="building")
+        """ChoiceLabel compares equal to its string representation."""
+        label = ChoiceLabel("New York", icon="building")
         assert label == "New York"
 
     def test_repr(self):
-        label = FormworkChoiceLabel("NYC", icon="building", description="East Coast")
+        label = ChoiceLabel("NYC", icon="building", description="East Coast")
         assert "NYC" in repr(label)
 
 
@@ -87,7 +87,7 @@ class TestFormworkModelChoiceField:
         field = FormworkModelChoiceField(queryset=User.objects.all())
         choices = list(field.choices)
         _, label = choices[1]
-        assert isinstance(label, FormworkChoiceLabel)
+        assert isinstance(label, ChoiceLabel)
 
     def test_icon_from_instance_default_empty(self):
         field = FormworkModelChoiceField(queryset=User.objects.all())
@@ -134,12 +134,12 @@ class TestFormworkModelChoiceField:
         assert "@example.com" in label.description
 
     def test_empty_label_is_plain_string(self):
-        """The empty label (first choice) is a regular string, not FormworkChoiceLabel."""
+        """The empty label (first choice) is a regular string, not ChoiceLabel."""
         field = FormworkModelChoiceField(queryset=User.objects.all())
         choices = list(field.choices)
         val, label = choices[0]
         assert val == ""
-        assert not isinstance(label, FormworkChoiceLabel)
+        assert not isinstance(label, ChoiceLabel)
 
     def test_from_field_copies_standard_field(self):
         """from_field creates a FormworkModelChoiceField from a standard ModelChoiceField."""
@@ -165,7 +165,7 @@ class TestFormworkModelMultipleChoiceField:
         field = FormworkModelMultipleChoiceField(queryset=User.objects.all())
         choices = list(field.choices)
         _, label = choices[0]
-        assert isinstance(label, FormworkChoiceLabel)
+        assert isinstance(label, ChoiceLabel)
 
     def test_icon_from_instance_kwarg(self):
         field = FormworkModelMultipleChoiceField(

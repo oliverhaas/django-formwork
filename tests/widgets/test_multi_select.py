@@ -28,7 +28,7 @@ from django import forms
 from django.http import QueryDict
 from django.utils.safestring import mark_safe
 
-from django_formwork.fields import FormworkChoiceLabel
+from django_formwork.fields import ChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import MultiSelect
 
@@ -117,10 +117,10 @@ def test_multi_select_get_context_optgroups_have_icon():
 
 @pytest.mark.unit
 def test_multi_select_get_context_icon_populated():
-    """FormworkChoiceLabel icons are reflected in option['icon']."""
+    """ChoiceLabel icons are reflected in option['icon']."""
     widget = MultiSelect(
         choices=[
-            ("a", FormworkChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>"))),
+            ("a", ChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>"))),
             ("b", "Beta"),
         ],
     )
@@ -276,12 +276,12 @@ def test_multi_select_grouped_no_xshow_when_not_searchable():
 
 @pytest.mark.unit
 def test_multi_select_grouped_options_keep_icons():
-    """Icons from FormworkChoiceLabel render inside grouped option labels."""
+    """Icons from ChoiceLabel render inside grouped option labels."""
     choices = [
         (
             "Group",
             [
-                ("a", FormworkChoiceLabel("Alpha", icon=mark_safe("<svg>a</svg>"))),
+                ("a", ChoiceLabel("Alpha", icon=mark_safe("<svg>a</svg>"))),
                 ("b", "Beta"),
             ],
         ),
@@ -738,10 +738,10 @@ def test_multi_select_has_search_url_flag_when_search_url():
 
 @pytest.mark.unit
 def test_multi_select_icons_rendered():
-    """FormworkChoiceLabel icons appear in the rendered HTML."""
+    """ChoiceLabel icons appear in the rendered HTML."""
     widget = MultiSelect(
         choices=[
-            ("a", FormworkChoiceLabel("Alpha", icon=mark_safe('<img src="a.svg">'))),
+            ("a", ChoiceLabel("Alpha", icon=mark_safe('<img src="a.svg">'))),
             ("b", "Beta"),
         ],
     )
@@ -752,7 +752,7 @@ def test_multi_select_icons_rendered():
 
 @pytest.mark.unit
 def test_multi_select_no_icon_when_not_provided():
-    """No <img> elements rendered when no FormworkChoiceLabel icons."""
+    """No <img> elements rendered when no ChoiceLabel icons."""
     widget = MultiSelect(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test")
     icons = soup.find_all("img")

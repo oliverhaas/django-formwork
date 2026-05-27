@@ -2,7 +2,7 @@
 
 import pytest
 
-from django_formwork.widgets import _format_accept, _format_size
+from django_formwork.widgets._base import _format_accept, _format_size
 
 # ─── _format_size ───────────────────────────────────────────────────────
 

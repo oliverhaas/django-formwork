@@ -7,18 +7,28 @@ except PackageNotFoundError:
 
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
 from django_formwork.fields import (
-    FormworkChoiceLabel,
+    ChoiceLabel,
     FormworkModelChoiceField,
     FormworkModelMultipleChoiceField,
+)
+from django_formwork.forms import (
+    FormworkForm,
+    FormworkJinja2Form,
+    FormworkJinja2ModelForm,
+    FormworkModelForm,
 )
 from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
 
 __all__ = [
     "AsyncFormMixin",
     "AsyncModelFormMixin",
-    "FormworkChoiceLabel",
+    "ChoiceLabel",
+    "FormworkForm",
+    "FormworkJinja2Form",
+    "FormworkJinja2ModelForm",
     "FormworkJinja2Renderer",
     "FormworkModelChoiceField",
+    "FormworkModelForm",
     "FormworkModelMultipleChoiceField",
     "FormworkRenderer",
     "__version__",
