@@ -1,4 +1,4 @@
-"""Tests for async form support (AsyncFormMixin / AsyncModelFormMixin)."""
+"""Tests for async form support on FormworkForm and FormworkModelForm."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from django.core.exceptions import ValidationError
 from django.test import override_settings
 from e2e.models import BasicFormData
 
-from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
 from django_formwork.forms import FormworkForm, FormworkModelForm
 
 pytestmark = pytest.mark.django_db
@@ -74,18 +73,6 @@ class AsyncFormCleanForm(FormworkForm):
         return cleaned
 
 
-class PlainAsyncForm(AsyncFormMixin, forms.Form):
-    """Standalone mixin usage without FormworkForm."""
-
-    name = forms.CharField()
-
-    async def clean_name(self):
-        val = self.cleaned_data["name"]
-        if val == "bad":
-            raise ValidationError("Bad name")
-        return val.upper()
-
-
 class BasicModelForm(FormworkModelForm):
     class Meta:
         model = BasicFormData
@@ -104,16 +91,8 @@ class AsyncModelForm(FormworkModelForm):
         return val
 
 
-class PlainAsyncModelForm(AsyncModelFormMixin, forms.ModelForm):
-    """Standalone mixin usage without FormworkModelForm."""
-
-    class Meta:
-        model = BasicFormData
-        fields = ["name", "email", "message"]
-
-
 # ---------------------------------------------------------------------------
-# AsyncFormMixin tests
+# Async form tests
 # ---------------------------------------------------------------------------
 
 
@@ -200,21 +179,8 @@ class TestAfullClean:
         assert not hasattr(form, "cleaned_data")
 
 
-@pytest.mark.asyncio(loop_scope="class")
-class TestStandaloneMixin:
-    async def test_plain_form_with_mixin(self):
-        form = PlainAsyncForm(data={"name": "alice"})
-        assert await form.ais_valid() is True
-        assert form.cleaned_data["name"] == "ALICE"
-
-    async def test_plain_form_validation_error(self):
-        form = PlainAsyncForm(data={"name": "bad"})
-        assert await form.ais_valid() is False
-        assert "name" in form.errors
-
-
 # ---------------------------------------------------------------------------
-# AsyncModelFormMixin tests
+# Async model form tests
 # ---------------------------------------------------------------------------
 
 
@@ -266,12 +232,6 @@ class TestAsyncModelFormClean:
         form = AsyncModelForm(data={"name": "taken", "email": "a@b.com", "message": "hi"})
         assert await form.ais_valid() is False
         assert "name" in form.errors
-
-    async def test_standalone_model_form_mixin(self):
-        form = PlainAsyncModelForm(data={"name": "alice", "email": "a@b.com", "message": "hi"})
-        assert await form.ais_valid() is True
-        instance = await form.asave()
-        assert instance.pk is not None
 
 
 # ---------------------------------------------------------------------------
