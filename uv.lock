@@ -216,11 +216,29 @@ wheels = [
 ]
 
 [[package]]
+name = "django-filthyfields"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cd/a4/d40f41630ffd37f3d0c8945f90a6e6a83fd2f4c3769170287c7db37da2f3/django_filthyfields-2.2.0.tar.gz", hash = "sha256:db61f041d15429de0b9b2b0f01d753703407c94bf4a1962674c434eceff21f77", size = 105023, upload-time = "2026-06-01T06:26:55.646Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/e6/c23aa017940807b46c60313294fd8328cd513118cd4da6f83f15a25b61e7/django_filthyfields-2.2.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:f01f36dad0cca75447c8471e7f0952121e8b2b3cf4e1fca128cb035bf66471ce", size = 50903, upload-time = "2026-06-01T06:26:48.475Z" },
+    { url = "https://files.pythonhosted.org/packages/97/65/099842cd48d4cc281c565ecabbfb04519ae89c6718f457fa6ed026dcb9fb/django_filthyfields-2.2.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:8edec9e228bdf9c45be20b3d74772653bd27192cf9cf646887e0611d9185ab10", size = 247106, upload-time = "2026-06-01T06:26:49.784Z" },
+    { url = "https://files.pythonhosted.org/packages/d1/d0/c16816bb7020106568a034e00e56f2f17702f18b3e4974a99745b1158562/django_filthyfields-2.2.0-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:b4ac65be0d90e9ea7839427501c101dafdd41d506d6454cc6eabb1babb927cf1", size = 246349, upload-time = "2026-06-01T06:26:51.073Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/eb/3cd0a5364156df21998f5bf7a0e26a059538d3cfdfc61c24b0113cd9d139/django_filthyfields-2.2.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:3109ab9454984d4508cb3c6292da35bfdd160c15f3730c8a6b6e1b6601ea31bb", size = 54141, upload-time = "2026-06-01T06:26:52.179Z" },
+    { url = "https://files.pythonhosted.org/packages/75/e6/05fea064597ee7925c6f3b133dbc19cfbb37ca881ba73f88f4c1a9aa3c8d/django_filthyfields-2.2.0-cp314-cp314t-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:b2e8fbd3da8e3801400d07bdc3b92a3154af6be17909706decbb893cf3dd5328", size = 298905, upload-time = "2026-06-01T06:26:53.157Z" },
+    { url = "https://files.pythonhosted.org/packages/d1/a2/dff3070dac7efe7a304cf4d18a190da953149142071123b610494b57f43d/django_filthyfields-2.2.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:62ac5c2e4d73d95aa8349706bfd5ea54643c7c9777d8e585519d6731aea8521f", size = 296562, upload-time = "2026-06-01T06:26:54.543Z" },
+]
+
+[[package]]
 name = "django-formwork"
 version = "0.1.0a2"
 source = { editable = "." }
 dependencies = [
     { name = "django" },
+    { name = "django-filthyfields" },
     { name = "django-iconx" },
 ]
 
@@ -251,6 +269,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "django", specifier = ">=6.0,<7" },
+    { name = "django-filthyfields", specifier = ">=2.2.0" },
     { name = "django-iconx", specifier = ">=0.2.0" },
 ]
 

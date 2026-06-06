@@ -23,7 +23,11 @@ classifiers = [
   "Topic :: Software Development :: Libraries",
   "Typing :: Typed",
 ]
-dependencies = ["Django>=6.0,<7", "django-iconx>=0.2.0"]
+dependencies = [
+  "Django>=6.0,<7",
+  "django-filthyfields>=2.2.0",
+  "django-iconx>=0.2.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/oliverhaas/django-formwork"
@@ -185,8 +189,11 @@ include = ["django_formwork/forms.py"]
 [tool.ty.overrides.rules]
 # FormworkModelFormMetaclass.__new__ accesses cls.base_fields which ty can't
 # resolve through the metaclass return type.
+# _DirtyOnlyModelFormMixin passes `self` (a bare mixin) to construct_instance
+# (which expects BaseForm); the mixin is only ever composed into one at runtime.
 unresolved-attribute = "ignore"
 invalid-assignment = "ignore"
+invalid-argument-type = "ignore"
 
 [[tool.ty.overrides]]
 include = ["django_formwork/renderers.py"]
