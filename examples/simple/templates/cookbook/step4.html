@@ -1,0 +1,6 @@
+{% extends "cookbook/base.html" %}
+{% block title %}Cookbook · Step 4{% endblock %}
+{% block heading %}Step 4: skip unchanged fields{% endblock %}
+{% block body %}
+{% with action="ck-step4" %}{% include "cookbook/_ticket_form.html" %}{% endwith %}
+{% endblock %}

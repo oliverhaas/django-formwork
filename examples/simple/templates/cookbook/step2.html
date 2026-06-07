@@ -1,0 +1,10 @@
+{% extends "cookbook/base.html" %}
+{% block title %}Cookbook · Step 2{% endblock %}
+{% block heading %}Step 2: richer widgets{% endblock %}
+{% block body %}
+<form method="post">
+  {% csrf_token %}
+  {{ form }}
+  <button type="submit" class="btn btn-primary mt-4">Create</button>
+</form>
+{% endblock %}
