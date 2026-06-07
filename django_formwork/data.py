@@ -212,17 +212,22 @@ def country_choices() -> list[tuple[str, str]]:
     return [(code, f"{flag} {name}") for code, name, flag, _dial in COUNTRIES]
 
 
+# Dial codes shared by several countries (NANP +1, +7) show the anchor
+# country's flag rather than whichever country sorts first alphabetically.
+_PRIMARY_DIAL_CODE = {"+1": "US", "+7": "RU"}
+
+
 def phone_prefix_choices() -> list[tuple[str, str]]:
     """Return (dial_code, 'flag dial_code') choices for PhoneInput.
 
-    Deduplicated and sorted numerically by dial code.
+    Deduplicated and sorted numerically by dial code.  Dial codes shared by
+    several countries use the anchor country's flag (see ``_PRIMARY_DIAL_CODE``).
     """
-    seen: set[str] = set()
-    choices: list[tuple[str, str]] = []
-    for _code, _name, flag, dial in COUNTRIES:
+    flags: dict[str, str] = {}
+    for code, _name, flag, dial in COUNTRIES:
         base_dial = dial.split("-")[0]
-        if base_dial not in seen:
-            seen.add(base_dial)
-            choices.append((base_dial, f"{flag} {base_dial}"))
+        if base_dial not in flags or code == _PRIMARY_DIAL_CODE.get(base_dial):
+            flags[base_dial] = flag
+    choices = [(base, f"{flag} {base}") for base, flag in flags.items()]
     choices.sort(key=lambda c: int(c[0].lstrip("+")))
     return choices
