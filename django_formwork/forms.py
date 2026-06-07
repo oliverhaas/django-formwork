@@ -19,10 +19,13 @@ Search endpoints are automatically registered so that a single
 
 from __future__ import annotations
 
+import inspect
 from typing import TYPE_CHECKING, Any
 
+from asgiref.sync import sync_to_async
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.forms import Form, ModelChoiceField, ModelForm, ModelMultipleChoiceField
-from django.forms.models import ModelFormMetaclass
+from django.forms.models import InlineForeignKeyField, ModelFormMetaclass, construct_instance
 
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
 from django_formwork.fields import FormworkModelChoiceField, FormworkModelMultipleChoiceField
@@ -194,7 +197,163 @@ class _AutoSearchMixin:
         return "search_select"
 
 
-class FormworkForm(AsyncFormMixin, _AutoSearchMixin, Form):
+class _DirtyOnlyFormMixin:
+    """Skip field-level validation for fields the user didn't change.
+
+    When ``validate_dirty_only`` is on (via ``Meta.validate_dirty_only = True``
+    or the ``__init__`` kwarg), ``_clean_fields`` / ``_aclean_fields`` skip
+    fields where ``BoundField._has_changed()`` returns False (the per-field
+    machinery behind ``Form.changed_data``) and carry the bound field's
+    ``initial`` value through to ``cleaned_data``.  ``clean_<name>`` methods
+    are skipped for those fields too.
+    """
+
+    if TYPE_CHECKING:
+        _bound_items: Any
+        cleaned_data: dict[str, Any]
+        add_error: Any
+
+    def __init__(self, *args: Any, validate_dirty_only: bool | None = None, **kwargs: Any) -> None:
+        if validate_dirty_only is None:
+            meta = getattr(type(self), "Meta", None)
+            validate_dirty_only = bool(getattr(meta, "validate_dirty_only", False))
+        self._validate_dirty_only: bool = validate_dirty_only
+        super().__init__(*args, **kwargs)
+
+    def _clean_fields(self) -> None:
+        if not self._validate_dirty_only:
+            super()._clean_fields()  # type: ignore[misc]
+            return
+        for name, bf in self._bound_items():
+            field = bf.field
+            if not bf._has_changed():  # noqa: SLF001
+                self.cleaned_data[name] = bf.initial
+                continue
+            try:
+                self.cleaned_data[name] = field._clean_bound_field(bf)  # noqa: SLF001
+                method = getattr(self, f"clean_{name}", None)
+                if method is not None:
+                    self.cleaned_data[name] = method()
+            except ValidationError as e:
+                self.add_error(name, e)
+
+    async def _aclean_fields(self) -> None:
+        if not self._validate_dirty_only:
+            await super()._aclean_fields()  # type: ignore[misc]
+            return
+        for name, bf in self._bound_items():
+            field = bf.field
+            if not bf._has_changed():  # noqa: SLF001
+                self.cleaned_data[name] = bf.initial
+                continue
+            try:
+                self.cleaned_data[name] = field._clean_bound_field(bf)  # noqa: SLF001
+                method = getattr(self, f"clean_{name}", None)
+                if method is not None:
+                    if inspect.iscoroutinefunction(method):
+                        value = await method()
+                    else:
+                        value = method()
+                    self.cleaned_data[name] = value
+            except ValidationError as e:
+                self.add_error(name, e)
+
+
+class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
+    """Extend dirty-only to ``_post_clean`` / ``_apost_clean``.
+
+    Requires the bound instance to provide ``get_dirty_fields()`` when
+    ``validate_dirty_only`` is on (via :class:`~django_formwork.FormworkModel`
+    or any direct mix of ``filthyfields.DirtyFieldsMixin``).
+    """
+
+    if TYPE_CHECKING:
+        instance: Any
+        fields: Any
+        _meta: Any
+        _validate_unique: bool
+        _validate_constraints: bool
+        _update_errors: Any
+        validate_unique: Any
+        validate_constraints: Any
+        avalidate_unique: Any
+        avalidate_constraints: Any
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        if self._validate_dirty_only and not hasattr(self.instance, "get_dirty_fields"):
+            msg = (
+                f"{type(self).__name__} has validate_dirty_only=True but "
+                f"{type(self.instance).__name__} does not provide get_dirty_fields(). "
+                f"Inherit from django_formwork.FormworkModel (or mix in "
+                f"filthyfields.DirtyFieldsMixin) on the model."
+            )
+            raise ImproperlyConfigured(msg)
+
+    def _get_validation_exclusions(self) -> set[str]:
+        exclude: set[str] = super()._get_validation_exclusions()  # type: ignore[misc]
+        if not self._validate_dirty_only or self.instance._state.adding:  # noqa: SLF001
+            return exclude
+        dirty = set(self.instance.get_dirty_fields())
+        for f in self.instance._meta.fields:  # noqa: SLF001
+            if not f.primary_key and f.name not in dirty:
+                exclude.add(f.name)
+        return exclude
+
+    def _post_clean(self) -> None:
+        # Reordered copy of Django's ModelForm._post_clean(): construct_instance()
+        # runs BEFORE _get_validation_exclusions() so the latter can consult
+        # instance.get_dirty_fields() on the post-form state.
+        opts = self._meta
+        try:
+            self.instance = construct_instance(self, self.instance, opts.fields, opts.exclude)  # type: ignore[arg-type]
+        except ValidationError as e:
+            self._update_errors(e)
+
+        exclude = self._get_validation_exclusions()
+        for name, field in self.fields.items():
+            if isinstance(field, InlineForeignKeyField):
+                exclude.add(name)
+
+        try:
+            self.instance.full_clean(exclude=exclude, validate_unique=False, validate_constraints=False)
+        except ValidationError as e:
+            self._update_errors(e)
+
+        if self._validate_unique:
+            self.validate_unique()
+        if self._validate_constraints:
+            self.validate_constraints()
+
+    async def _apost_clean(self) -> None:
+        # Same reorder as _post_clean(), async variant.
+        opts = self._meta
+        try:
+            self.instance = construct_instance(self, self.instance, opts.fields, opts.exclude)  # type: ignore[arg-type]
+        except ValidationError as e:
+            self._update_errors(e)
+
+        exclude = self._get_validation_exclusions()
+        for name, field in self.fields.items():
+            if isinstance(field, InlineForeignKeyField):
+                exclude.add(name)
+
+        try:
+            await sync_to_async(self.instance.full_clean)(
+                exclude=exclude,
+                validate_unique=False,
+                validate_constraints=False,
+            )
+        except ValidationError as e:
+            self._update_errors(e)
+
+        if self._validate_unique:
+            await self.avalidate_unique()
+        if self._validate_constraints:
+            await self.avalidate_constraints()
+
+
+class FormworkForm(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
     """Form base class with DaisyUI styling and async support.
 
     Usage::
@@ -215,18 +374,33 @@ class FormworkForm(AsyncFormMixin, _AutoSearchMixin, Form):
         # In async view:
         if await form.ais_valid():
             ...
+
+    Pass ``validate_dirty_only=True`` (or set ``Meta.validate_dirty_only = True``)
+    to skip field validators on fields the user did not change.
     """
 
     default_renderer = FormworkRenderer
 
 
-class FormworkModelForm(AsyncModelFormMixin, _AutoSearchMixin, ModelForm, metaclass=FormworkModelFormMetaclass):
-    """ModelForm base class with DaisyUI styling and async support."""
+class FormworkModelForm(
+    _DirtyOnlyModelFormMixin,
+    AsyncModelFormMixin,
+    _AutoSearchMixin,
+    ModelForm,
+    metaclass=FormworkModelFormMetaclass,
+):
+    """ModelForm base class with DaisyUI styling and async support.
+
+    With ``Meta.validate_dirty_only = True`` (or the matching ``__init__``
+    kwarg), field validation, model field validation, unique checks and
+    constraint checks are all skipped for fields the user did not change.
+    Requires the bound model to inherit :class:`~django_formwork.FormworkModel`.
+    """
 
     default_renderer = FormworkRenderer
 
 
-class FormworkJinja2Form(AsyncFormMixin, _AutoSearchMixin, Form):
+class FormworkJinja2Form(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
     """Form base class with DaisyUI styling (Jinja2 renderer) and async support.
 
     Use this when your project uses Jinja2 templates.  Equivalent to
@@ -238,6 +412,7 @@ class FormworkJinja2Form(AsyncFormMixin, _AutoSearchMixin, Form):
 
 
 class FormworkJinja2ModelForm(
+    _DirtyOnlyModelFormMixin,
     AsyncModelFormMixin,
     _AutoSearchMixin,
     ModelForm,
