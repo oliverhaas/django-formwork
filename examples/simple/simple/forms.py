@@ -102,9 +102,13 @@ class ContactForm(forms.Form):
 
 
 def _assignee_icon(person: Person) -> str:
-    """Small initials badge shown beside each assignee in the dropdown."""
+    """Small initials badge shown beside each assignee in the dropdown.
+
+    Single-quoted attributes so the markup nests cleanly inside the widget's
+    double-quoted ``data-icon="..."`` attribute.
+    """
     initials = "".join(part[0] for part in person.name.split()[:2]).upper()
-    return format_html('<span class="badge badge-neutral badge-sm">{}</span>', initials)
+    return format_html("<span class='badge badge-neutral badge-sm'>{}</span>", initials)
 
 
 # Step 1: the simplest possible form.
