@@ -6,7 +6,7 @@ import pytest
 from django import forms
 from django.core.exceptions import ValidationError
 from django.test import override_settings
-from e2e.models import BasicFormData
+from e2e.models import BasicFormData, DirtyTrackedData
 
 from django_formwork.forms import FormworkForm, FormworkModelForm
 
@@ -89,6 +89,12 @@ class AsyncModelForm(FormworkModelForm):
         if val == "taken":
             raise ValidationError("Name taken")
         return val
+
+
+class ConstraintModelForm(FormworkModelForm):
+    class Meta:
+        model = DirtyTrackedData
+        fields = ["name", "email"]
 
 
 # ---------------------------------------------------------------------------
@@ -232,6 +238,26 @@ class TestAsyncModelFormClean:
         form = AsyncModelForm(data={"name": "taken", "email": "a@b.com", "message": "hi"})
         assert await form.ais_valid() is False
         assert "name" in form.errors
+
+
+@pytest.mark.asyncio(loop_scope="class")
+class TestAsyncConstraintValidation:
+    """The async path runs model constraint validation (avalidate_constraints).
+
+    DirtyTrackedData has a CheckConstraint forbidding name="LEGACY_BAD_CONSTRAINT".
+    A violation must surface as a form error, not a DB IntegrityError at asave().
+    """
+
+    async def test_constraint_violation_surfaces_as_form_error(self):
+        form = ConstraintModelForm(data={"name": "LEGACY_BAD_CONSTRAINT", "email": "a@b.com"})
+        assert await form.ais_valid() is False
+        assert form.errors
+
+    async def test_valid_data_passes_and_saves(self):
+        form = ConstraintModelForm(data={"name": "fine", "email": "a@b.com"})
+        assert await form.ais_valid() is True
+        instance = await form.asave()
+        assert instance.pk is not None
 
 
 # ---------------------------------------------------------------------------
