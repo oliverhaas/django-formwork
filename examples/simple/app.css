@@ -3,3 +3,8 @@
 
 /* Scan our templates for Tailwind utility classes. */
 @source "./templates/";
+
+/* Pin font for screenshot reproducibility across platforms. */
+body {
+  font-family: "Inter", sans-serif;
+}
