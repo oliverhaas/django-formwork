@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser
@@ -24,15 +24,19 @@ class Command(BaseCommand):
         subparsers.add_parser("install", help="Install required icon sets (lucide via django-iconx).")
 
     def handle(self, **options: Any) -> None:
-        subcommand = options.get("subcommand")
-        if subcommand == "install":
-            self._install()
-        else:
-            self.stderr.write("Usage: manage.py formwork install")
+        if options.get("subcommand") != "install":
+            raise CommandError("Usage: manage.py formwork install")
+        self._install()
 
     def _install(self) -> None:
         self.stdout.write("Installing Lucide icons via django-iconx...")
-        call_command("iconx", "add", "lucide")
-        call_command("iconx", "generate", "--output", _ICONS_OUTPUT)
+        try:
+            call_command("iconx", "add", "lucide")
+            call_command("iconx", "generate", "--output", _ICONS_OUTPUT)
+        except Exception as exc:
+            raise CommandError(
+                f"Icon generation via django-iconx failed: {exc}. "
+                "Ensure django-iconx is installed and in INSTALLED_APPS.",
+            ) from exc
         self.stdout.write(self.style.SUCCESS(f"Icons CSS written to {_ICONS_OUTPUT}"))
         self.stdout.write(self.style.SUCCESS("Formwork setup complete."))
