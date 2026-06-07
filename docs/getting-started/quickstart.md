@@ -166,7 +166,7 @@ For choices-backed search, define a `search_choices_<fieldname>` method on the f
 class TagForm(FormworkForm):
     tags = forms.ChoiceField(widget=SearchSelect)
 
-    def search_choices_tags(self, query, request):
+    def search_choices_tags(query, request):
         return [
             {"value": t.slug, "label": t.name}
             for t in Tag.objects.filter(name__icontains=query)[:20]

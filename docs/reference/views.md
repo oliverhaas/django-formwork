@@ -67,7 +67,7 @@ class CityForm(FormworkForm):
     )
 ```
 
-**Choices-backed** — The form defines a `search_choices_<fieldname>(self, query, request)` method. It receives the search query and the request, and returns a list of dicts or `(value, label)` tuples:
+**Choices-backed** — The form defines a `search_choices_<fieldname>(query, request)` method. It receives the search query and the request, and returns a list of dicts or `(value, label)` tuples:
 
 ```python
 from django_formwork.forms import FormworkForm
@@ -76,7 +76,7 @@ from django_formwork.widgets import SearchSelect
 class TagForm(FormworkForm):
     tags = forms.ChoiceField(widget=SearchSelect)
 
-    def search_choices_tags(self, query, request):
+    def search_choices_tags(query, request):
         return [
             {"value": t.slug, "label": t.name}
             for t in Tag.objects.filter(name__icontains=query)[:20]

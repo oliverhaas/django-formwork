@@ -9,15 +9,6 @@
 ### Changed
 
 - Tightened support window to Python 3.14 and Django 6.0 (was Python 3.12+ / Django 5.2+ in 0.1.0a1). Pin `django-formwork==0.1.0a1` if you need the wider range.
-
-### Fixed
-
-- **Failed server-side searches no longer flash response body / stale prerender into the listbox.** Two related fixes:
-    - htmx 4 (beta) changed its `noSwap` default to `[204, 304]`, so 4xx/5xx responses started getting swapped into the swap target — for our dropdowns that meant the Django debug HTML (or any error body) briefly painted in the listbox before our `hasError` handler hid it. Each dropdown's htmx-enabled input now cancels the swap on `before:swap` when `event.detail.ctx.response.status >= 400`.
-    - The `hasError = false` reset on `before:request` made the listbox visible again between request and a failed response, briefly re-showing the prerendered "No results" alert. That reset moved into `before:swap` (for status < 400 only), so `hasError` now stays `true` across consecutive failures and only clears when a successful swap actually happens.
-
-### Changed
-
 - **`formwork.js` is now an ES module** — `{% formwork_js %}` emits `<script type="module" src="...">` so the file's internal imports of `formwork-core.js` and `widgets/*.js` resolve. Users who reference `formwork.js` directly (without using the template tag) must add `type="module"` to their `<script>` tag.
 - **Page-global core split into `formwork-core.js`** — the htmx morph extension, dirty-tracking, and native-validation disabling now live in their own file, loaded via the new `{% formwork_core_js %}` template tag. `{% formwork_js %}` still works exactly as before (it imports `formwork-core.js` plus the three widget modules); the split lets users on `{{ form.media }}` load only the core they need.
 - **Per-widget `Media.js`** — `SearchSelect`, `MultiSelect`, and `ComboBox` now declare `class Media: js = ...` so their Alpine.data component code is included automatically via `{{ form.media }}`. Three loading paths now coexist: `{% formwork_js %}` (one-tag bundle), `{% formwork_core_js %}` + `{{ form.media }}` (per-form), or `import "django-formwork/formwork.js"` from a JS bundler (django-vite, webpack, esbuild). ES module URL dedup makes the paths safely composable.
@@ -28,6 +19,12 @@
     - All `hx-on::` attribute event names switch from dash to colon (`config-request` → `config:request`, etc.); `hx-on::send-error` consolidates into `hx-on::error`
     - `htmx:afterSwap` / `htmx:afterSettle` event listeners renamed to `htmx:after:swap` / `htmx:after:settle`
 - Users on htmx 2 should pin the previous django-formwork version.
+
+### Fixed
+
+- **Failed server-side searches no longer flash response body / stale prerender into the listbox.** Two related fixes:
+    - htmx 4 (beta) changed its `noSwap` default to `[204, 304]`, so 4xx/5xx responses started getting swapped into the swap target — for our dropdowns that meant the Django debug HTML (or any error body) briefly painted in the listbox before our `hasError` handler hid it. Each dropdown's htmx-enabled input now cancels the swap on `before:swap` when `event.detail.ctx.response.status >= 400`.
+    - The `hasError = false` reset on `before:request` made the listbox visible again between request and a failed response, briefly re-showing the prerendered "No results" alert. That reset moved into `before:swap` (for status < 400 only), so `hasError` now stays `true` across consecutive failures and only clears when a successful swap actually happens.
 
 ## 0.1.0a1 (2026-03-15)
 

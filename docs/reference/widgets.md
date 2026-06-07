@@ -158,7 +158,7 @@ class TagForm(FormworkForm):
 class LangForm(FormworkForm):
     languages = forms.MultipleChoiceField(widget=MultiSelect)
 
-    def search_choices_languages(self, query, request):
+    def search_choices_languages(query, request):
         return [{"value": k, "label": v} for k, v in _langs(query)]
 ```
 
@@ -257,7 +257,7 @@ tags = forms.CharField(
 class TagForm(FormworkForm):
     tags = forms.CharField(widget=ComboBox(search_decorator=login_required))
 
-    def search_choices_tags(self, query, request):
+    def search_choices_tags(query, request):
         return [{"label": t.name} for t in Tag.objects.filter(name__icontains=query)[:20]]
 ```
 
