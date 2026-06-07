@@ -204,9 +204,14 @@ class FormworkAutoSearchView(FormworkSearchView):
         for item in raw:
             if isinstance(item, dict):
                 results.append(item)
-            else:
-                # (value, label) tuple
+            elif isinstance(item, (list, tuple)) and len(item) >= 2:  # noqa: PLR2004
                 results.append({"value": str(item[0]), "label": str(item[1])})
+            else:
+                msg = (
+                    "search_choices results must be dicts or (value, label) sequences, "
+                    f"got {type(item).__name__}: {item!r}"
+                )
+                raise TypeError(msg)
         return results
 
     @staticmethod
