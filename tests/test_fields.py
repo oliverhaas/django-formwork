@@ -153,6 +153,19 @@ class TestFormworkModelChoiceField:
         assert converted.empty_label == "Pick one"
         assert converted.widget.__class__ == original.widget.__class__
 
+    def test_from_field_preserves_limit_choices_to_and_initial(self):
+        """from_field carries over limit_choices_to and initial, not just the basics."""
+        from django.forms import ModelChoiceField
+
+        original = ModelChoiceField(
+            queryset=User.objects.all(),
+            limit_choices_to={"is_active": True},
+            initial=1,
+        )
+        converted = FormworkModelChoiceField.from_field(original)
+        assert converted.get_limit_choices_to() == {"is_active": True}
+        assert converted.initial == 1
+
 
 @pytest.mark.django_db
 class TestFormworkModelMultipleChoiceField:

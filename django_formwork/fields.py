@@ -127,11 +127,18 @@ class FormworkModelChoiceField(ModelChoiceField):
             required=field.required,
             widget=field.widget,
             label=field.label,
+            initial=field.initial,
             help_text=field.help_text,
             to_field_name=getattr(field, "to_field_name", None),
+            limit_choices_to=field.limit_choices_to,
+            blank=getattr(field, "blank", False),
         )
         new_field.error_messages = field.error_messages
         new_field.validators = field.validators
+        new_field.disabled = field.disabled
+        new_field.localize = field.localize
+        new_field.label_suffix = field.label_suffix
+        new_field.show_hidden_initial = field.show_hidden_initial
         return new_field
 
 
@@ -173,9 +180,15 @@ class FormworkModelMultipleChoiceField(ModelMultipleChoiceField):
             required=field.required,
             widget=field.widget,
             label=field.label,
+            initial=field.initial,
             help_text=field.help_text,
             to_field_name=getattr(field, "to_field_name", None),
+            limit_choices_to=field.limit_choices_to,
         )
         new_field.error_messages = field.error_messages
         new_field.validators = field.validators
+        new_field.disabled = field.disabled
+        new_field.localize = field.localize
+        new_field.label_suffix = field.label_suffix
+        new_field.show_hidden_initial = field.show_hidden_initial
         return new_field
