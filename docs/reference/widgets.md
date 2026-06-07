@@ -186,18 +186,18 @@ When `search_fields` is provided (or the form defines `search_choices_<fieldname
 | `search_fields` | `Sequence[str] \| None` | `None` | Model field paths for auto-registration |
 | `search_decorator` | `Callable \| None` | *(required if `search_fields` is set)* | Auth decorator for the auto-registered endpoint (see note below) |
 
-For icons/descriptions on choice labels, wrap the label in [`FormworkChoiceLabel`](https://github.com/oliverhaas/django-formwork/blob/main/django_formwork/fields.py); for model-backed widgets, use `FormworkModelChoiceField` and pass `icon_from_instance` / `description_from_instance`.
+For icons/descriptions on choice labels, wrap the label in [`ChoiceLabel`](https://github.com/oliverhaas/django-formwork/blob/main/django_formwork/fields.py); for model-backed widgets, use `FormworkModelChoiceField` and pass `icon_from_instance` / `description_from_instance`.
 
 ### Usage
 
 ```python
 # Static choices with icons:
 from django.utils.html import mark_safe
-from django_formwork.fields import FormworkChoiceLabel
+from django_formwork.fields import ChoiceLabel
 
 city = forms.ChoiceField(
     choices=[
-        ("nyc", FormworkChoiceLabel("New York", icon=mark_safe("<span>🗽</span>"))),
+        ("nyc", ChoiceLabel("New York", icon=mark_safe("<span>🗽</span>"))),
         ("ldn", "London"),
     ],
     widget=SearchSelect,

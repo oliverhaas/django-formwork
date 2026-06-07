@@ -6,7 +6,7 @@ from django.http import HttpRequest, HttpResponse
 from django.template import engines
 from e2e.models import AutoSaveFormData, BasicFormData, City, Region
 
-from django_formwork.fields import FormworkChoiceLabel
+from django_formwork.fields import ChoiceLabel
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkValidateView
 from django_formwork.widgets import (
@@ -445,7 +445,7 @@ class SearchSelectForm(FormworkForm):
         label="City (plain, few options)",
     )
     country_many = forms.ChoiceField(
-        choices=[("", "")] + [(c, FormworkChoiceLabel(n, icon=flag)) for c, flag, n in _COUNTRIES],
+        choices=[("", "")] + [(c, ChoiceLabel(n, icon=flag)) for c, flag, n in _COUNTRIES],
         widget=SearchSelect(),
         required=False,
         label="Country (many options, auto-search)",
@@ -453,10 +453,10 @@ class SearchSelectForm(FormworkForm):
     city_icons = forms.ChoiceField(
         choices=[
             ("", ""),
-            ("nyc", FormworkChoiceLabel("New York", icon="\U0001f5fd", description="The Big Apple")),
-            ("ldn", FormworkChoiceLabel("London", icon="\U0001f1ec\U0001f1e7", description="Capital of England")),
-            ("tyo", FormworkChoiceLabel("Tokyo", icon="\U0001f5fc", description="Capital of Japan")),
-            ("par", FormworkChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7", description="City of Light")),
+            ("nyc", ChoiceLabel("New York", icon="\U0001f5fd", description="The Big Apple")),
+            ("ldn", ChoiceLabel("London", icon="\U0001f1ec\U0001f1e7", description="Capital of England")),
+            ("tyo", ChoiceLabel("Tokyo", icon="\U0001f5fc", description="Capital of Japan")),
+            ("par", ChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7", description="City of Light")),
         ],
         widget=SearchSelect(),
         required=False,
@@ -483,17 +483,17 @@ class SearchSelectForm(FormworkForm):
             (
                 "Europe",
                 [
-                    ("ldn", FormworkChoiceLabel("London", icon="\U0001f1ec\U0001f1e7")),
-                    ("par", FormworkChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7")),
-                    ("ber", FormworkChoiceLabel("Berlin", icon="\U0001f1e9\U0001f1ea")),
+                    ("ldn", ChoiceLabel("London", icon="\U0001f1ec\U0001f1e7")),
+                    ("par", ChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7")),
+                    ("ber", ChoiceLabel("Berlin", icon="\U0001f1e9\U0001f1ea")),
                 ],
             ),
             (
                 "Asia",
                 [
-                    ("tyo", FormworkChoiceLabel("Tokyo", icon="\U0001f1ef\U0001f1f5")),
-                    ("sel", FormworkChoiceLabel("Seoul", icon="\U0001f1f0\U0001f1f7")),
-                    ("bkk", FormworkChoiceLabel("Bangkok", icon="\U0001f1f9\U0001f1ed")),
+                    ("tyo", ChoiceLabel("Tokyo", icon="\U0001f1ef\U0001f1f5")),
+                    ("sel", ChoiceLabel("Seoul", icon="\U0001f1f0\U0001f1f7")),
+                    ("bkk", ChoiceLabel("Bangkok", icon="\U0001f1f9\U0001f1ed")),
                 ],
             ),
             (
@@ -501,14 +501,14 @@ class SearchSelectForm(FormworkForm):
                 [
                     (
                         "nyc",
-                        FormworkChoiceLabel(
+                        ChoiceLabel(
                             "New York",
                             icon="\U0001f1fa\U0001f1f8",
                             description="The Big Apple",
                         ),
                     ),
-                    ("sao", FormworkChoiceLabel("São Paulo", icon="\U0001f1e7\U0001f1f7")),
-                    ("mex", FormworkChoiceLabel("Mexico City", icon="\U0001f1f2\U0001f1fd")),
+                    ("sao", ChoiceLabel("São Paulo", icon="\U0001f1e7\U0001f1f7")),
+                    ("mex", ChoiceLabel("Mexico City", icon="\U0001f1f2\U0001f1fd")),
                 ],
             ),
         ],
@@ -559,7 +559,7 @@ class MultiSelectForm(FormworkForm):
         label="Languages (plain)",
     )
     countries_icons = forms.MultipleChoiceField(
-        choices=[(code, FormworkChoiceLabel(name, icon=flag)) for code, flag, name in _COUNTRIES],
+        choices=[(code, ChoiceLabel(name, icon=flag)) for code, flag, name in _COUNTRIES],
         widget=MultiSelect(),
         required=False,
         label="Countries (icons, auto-search)",
@@ -574,25 +574,25 @@ class MultiSelectForm(FormworkForm):
             (
                 "Europe",
                 [
-                    ("ldn", FormworkChoiceLabel("London", icon="\U0001f1ec\U0001f1e7")),
-                    ("par", FormworkChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7")),
-                    ("ber", FormworkChoiceLabel("Berlin", icon="\U0001f1e9\U0001f1ea")),
+                    ("ldn", ChoiceLabel("London", icon="\U0001f1ec\U0001f1e7")),
+                    ("par", ChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7")),
+                    ("ber", ChoiceLabel("Berlin", icon="\U0001f1e9\U0001f1ea")),
                 ],
             ),
             (
                 "Asia",
                 [
-                    ("tyo", FormworkChoiceLabel("Tokyo", icon="\U0001f1ef\U0001f1f5")),
-                    ("sel", FormworkChoiceLabel("Seoul", icon="\U0001f1f0\U0001f1f7")),
-                    ("bkk", FormworkChoiceLabel("Bangkok", icon="\U0001f1f9\U0001f1ed")),
+                    ("tyo", ChoiceLabel("Tokyo", icon="\U0001f1ef\U0001f1f5")),
+                    ("sel", ChoiceLabel("Seoul", icon="\U0001f1f0\U0001f1f7")),
+                    ("bkk", ChoiceLabel("Bangkok", icon="\U0001f1f9\U0001f1ed")),
                 ],
             ),
             (
                 "Americas",
                 [
-                    ("nyc", FormworkChoiceLabel("New York", icon="\U0001f1fa\U0001f1f8")),
-                    ("sao", FormworkChoiceLabel("São Paulo", icon="\U0001f1e7\U0001f1f7")),
-                    ("mex", FormworkChoiceLabel("Mexico City", icon="\U0001f1f2\U0001f1fd")),
+                    ("nyc", ChoiceLabel("New York", icon="\U0001f1fa\U0001f1f8")),
+                    ("sao", ChoiceLabel("São Paulo", icon="\U0001f1e7\U0001f1f7")),
+                    ("mex", ChoiceLabel("Mexico City", icon="\U0001f1f2\U0001f1fd")),
                 ],
             ),
         ],

@@ -30,7 +30,7 @@ class SearchSelect(forms.Select):
     the registration; nothing else to configure.
 
     Icons and descriptions are carried by the choice label.  Wrap choice
-    labels in :class:`~django_formwork.fields.FormworkChoiceLabel` or use
+    labels in :class:`~django_formwork.fields.ChoiceLabel` or use
     :class:`~django_formwork.fields.FormworkModelChoiceField` with
     ``icon_from_instance`` / ``description_from_instance``.
 
@@ -72,7 +72,7 @@ class SearchSelect(forms.Select):
         self._registry_key: str | None = None
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
-        from django_formwork.fields import FormworkChoiceLabel
+        from django_formwork.fields import ChoiceLabel
 
         context = super().get_context(name, value, attrs)
         # Select.format_value() wraps value in a list — unwrap for template.
@@ -86,7 +86,7 @@ class SearchSelect(forms.Select):
         for _group, options, _index in context["widget"]["optgroups"]:
             for option in options:
                 label = option["label"]
-                if isinstance(label, FormworkChoiceLabel):
+                if isinstance(label, ChoiceLabel):
                     option["icon"] = label.icon
                     option["description"] = label.description
                 else:

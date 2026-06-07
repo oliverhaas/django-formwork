@@ -26,7 +26,7 @@ class DataList(forms.TextInput):
 
     template_name = "formwork/widgets/datalist.html"
 
-    def __init__(self, *, datalist: list[str] | None = None, attrs: dict[str, Any] | None = None) -> None:
+    def __init__(self, attrs: dict[str, Any] | None = None, *, datalist: list[str] | None = None) -> None:
         super().__init__(attrs)
         self.datalist = datalist or []
 

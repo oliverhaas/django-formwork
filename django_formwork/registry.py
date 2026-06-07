@@ -18,6 +18,15 @@ if TYPE_CHECKING:
 
     from django.db.models import QuerySet
 
+__all__ = [
+    "SearchRegistration",
+    "get_registration",
+    "get_registry",
+    "make_choices_key",
+    "make_key",
+    "register",
+]
+
 _registry: dict[str, SearchRegistration] = {}
 
 

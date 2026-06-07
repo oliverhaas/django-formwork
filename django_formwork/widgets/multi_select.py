@@ -28,7 +28,7 @@ class MultiSelect(forms.SelectMultiple):
     tracked in Alpine state and submitted via hidden inputs.
 
     Icons are carried by the choice label.  Wrap choice labels in
-    :class:`~django_formwork.fields.FormworkChoiceLabel` (with the ``icon``
+    :class:`~django_formwork.fields.ChoiceLabel` (with the ``icon``
     value wrapped in ``mark_safe``) or use
     :class:`~django_formwork.fields.FormworkModelMultipleChoiceField` with
     ``icon_from_instance``.
@@ -71,7 +71,7 @@ class MultiSelect(forms.SelectMultiple):
         self._registry_key: str | None = None
 
     def get_context(self, name: str, value: list[str] | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
-        from django_formwork.fields import FormworkChoiceLabel
+        from django_formwork.fields import ChoiceLabel
 
         context = super().get_context(name, value, attrs)
         total = sum(len(options) for _, options, _ in context["widget"]["optgroups"])
@@ -94,11 +94,11 @@ class MultiSelect(forms.SelectMultiple):
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         context["widget"]["search_url"] = search_url
         context["widget"]["initial_options"] = initial_options if search_url else []
-        # Read icon from FormworkChoiceLabel.
+        # Read icon from ChoiceLabel.
         for _group, options, _index in context["widget"]["optgroups"]:
             for option in options:
                 label = option["label"]
-                option["icon"] = label.icon if isinstance(label, FormworkChoiceLabel) else ""
+                option["icon"] = label.icon if isinstance(label, ChoiceLabel) else ""
         if search_url:
             # Build initial selected map for Alpine: [[value, [label, icon]], ...]
             selected_values = set(value or [])

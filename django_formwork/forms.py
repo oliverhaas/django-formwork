@@ -97,7 +97,8 @@ class _AutoSearchMixin:
             make_choices_key,
             register,
         )
-        from django_formwork.widgets import _NOT_SET, ComboBox, MultiSelect, SearchSelect
+        from django_formwork.widgets import ComboBox, MultiSelect, SearchSelect
+        from django_formwork.widgets._base import _NOT_SET
 
         for name, field in self.fields.items():
             widget = field.widget

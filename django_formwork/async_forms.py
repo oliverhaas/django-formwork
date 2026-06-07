@@ -1,24 +1,9 @@
-"""Async form mixins for Django forms.
+"""Async-validation mixins for FormworkForm and FormworkModelForm.
 
-Adds ``ais_valid()``, ``afull_clean()``, and ``asave()`` to Django forms,
-allowing async ``clean_<field>()`` and ``clean()`` methods that can use
-the async ORM without ``sync_to_async`` wrappers.
-
-Usage with plain Django forms::
-
-    class MyForm(AsyncFormMixin, forms.Form):
-        async def clean_email(self):
-            if await User.objects.filter(email=self.cleaned_data["email"]).aexists():
-                raise ValidationError("Email taken")
-            return self.cleaned_data["email"]
-
-    # In an async view:
-    form = MyForm(request.POST)
-    if await form.ais_valid():
-        ...
-
-``FormworkForm`` and ``FormworkModelForm`` include these mixins
-automatically.
+Adds ``ais_valid()``, ``afull_clean()``, and ``asave()`` so async
+``clean_<field>()`` and ``clean()`` methods can use the async ORM without
+``sync_to_async`` wrappers.  Use ``FormworkForm`` or ``FormworkModelForm``
+directly; they compose these mixins automatically.
 """
 
 from __future__ import annotations
@@ -34,6 +19,11 @@ from django.forms.models import construct_instance
 if TYPE_CHECKING:
     from django.db import models
 
+__all__ = [
+    "AsyncFormMixin",
+    "AsyncModelFormMixin",
+]
+
 
 def _force_async_enabled() -> bool:
     from django.conf import settings
@@ -48,11 +38,7 @@ def _check_force_async(sync_name: str, async_name: str) -> None:
 
 
 class AsyncFormMixin:
-    """Mixin that adds async validation to Django forms.
-
-    Must be used with ``forms.Form`` or ``forms.ModelForm`` via multiple
-    inheritance. Attributes like ``is_bound``, ``errors``, ``add_error()``,
-    etc. are provided by the cooperating Form base class at runtime.
+    """Adds async validation to FormworkForm.
 
     Detects whether ``clean_<field>()`` and ``clean()`` are sync or async
     via ``inspect.iscoroutinefunction()`` and calls them accordingly.
