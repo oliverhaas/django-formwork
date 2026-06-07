@@ -117,6 +117,6 @@ class SearchSelect(forms.Select):
         elif search_url and registry_total is not None:
             context["widget"]["show_search"] = registry_total >= self.search_threshold
         else:
-            context["widget"]["show_search"] = total >= self.search_threshold
+            context["widget"]["show_search"] = total >= self.search_threshold or bool(search_url)
         context["widget"]["initial_options"] = initial_options if search_url else []
         return context
