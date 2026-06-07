@@ -140,8 +140,10 @@ class TicketValidatedForm(TicketWidgetsForm):
 
 
 # Step 4: editing an existing ticket, skipping validation on unchanged fields.
+# (The legacy ``title`` is the point here; the assignee FK is left off this edit
+# form so dirty-only doesn't carry an unchanged relation through construct_instance.)
 class TicketEditForm(FormworkModelForm):
     class Meta:
         model = Ticket
-        fields = ["title", "assignee", "priority", "description"]
+        fields = ["title", "priority", "description"]
         validate_dirty_only = True

@@ -148,7 +148,7 @@ class Ticket(FormworkModel):
 class TicketEditForm(FormworkModelForm):
     class Meta:
         model = Ticket
-        fields = ["title", "assignee", "priority", "description"]
+        fields = ["title", "priority", "description"]
         validate_dirty_only = True
 ```
 
