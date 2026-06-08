@@ -300,13 +300,27 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
                 exclude.add(f.name)
         return exclude
 
+    def _dirty_construct_exclude(self) -> set[str]:
+        """Fields ``construct_instance()`` should leave at their stored value.
+
+        Under ``validate_dirty_only`` on an existing instance, unchanged fields
+        keep what the DB loaded.  This stops an unchanged relation from being
+        re-assigned out of its raw pk, which the FK descriptor rejects.
+        """
+        exclude: set[str] = set(self._meta.exclude or ())
+        if self._validate_dirty_only and not self.instance._state.adding:  # noqa: SLF001
+            for name, bf in self._bound_items():
+                if not bf._has_changed():  # noqa: SLF001
+                    exclude.add(name)
+        return exclude
+
     def _post_clean(self) -> None:
         # Reordered copy of Django's ModelForm._post_clean(): construct_instance()
         # runs BEFORE _get_validation_exclusions() so the latter can consult
         # instance.get_dirty_fields() on the post-form state.
         opts = self._meta
         try:
-            self.instance = construct_instance(self, self.instance, opts.fields, opts.exclude)  # type: ignore[arg-type]
+            self.instance = construct_instance(self, self.instance, opts.fields, self._dirty_construct_exclude())  # type: ignore[arg-type]
         except ValidationError as e:
             self._update_errors(e)
 
@@ -329,7 +343,7 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
         # Same reorder as _post_clean(), async variant.
         opts = self._meta
         try:
-            self.instance = construct_instance(self, self.instance, opts.fields, opts.exclude)  # type: ignore[arg-type]
+            self.instance = construct_instance(self, self.instance, opts.fields, self._dirty_construct_exclude())  # type: ignore[arg-type]
         except ValidationError as e:
             self._update_errors(e)
 

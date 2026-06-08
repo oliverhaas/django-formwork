@@ -86,6 +86,7 @@ class DirtyTrackedData(FormworkModel):
     name = models.CharField(max_length=255, validators=[_reject_legacy_bad])
     email = models.EmailField()
     note = models.TextField(blank=True, default="")
+    region = models.ForeignKey("Region", null=True, blank=True, on_delete=models.SET_NULL)
 
     class Meta:
         app_label = "e2e"

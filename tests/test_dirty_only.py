@@ -298,3 +298,76 @@ class TestAsyncModelForm:
         form = DirtyTrackedFormOn(data={"name": "LEGACY_BAD", "email": "a@b.com", "note": ""})
         assert await form.ais_valid() is False
         assert "name" in form.errors
+
+
+# ---------------------------------------------------------------------------
+# Relational field (ForeignKey) on the dirty-only edit path
+# ---------------------------------------------------------------------------
+
+
+class DirtyTrackedFKForm(FormworkModelForm):
+    class Meta:
+        model = DirtyTrackedData
+        fields = ["name", "email", "note", "region"]
+        validate_dirty_only = True
+
+
+def _seed_with_region() -> DirtyTrackedData:
+    from e2e.models import Region
+
+    region = Region.objects.create(name="North")
+    obj = DirtyTrackedData(name="LEGACY_BAD", email="a@b.com", note="", region=region)
+    obj.save()  # bypasses full_clean so the legacy name persists
+    return obj
+
+
+class TestDirtyOnlyForeignKey:
+    def test_unchanged_fk_edit_succeeds(self):
+        # Regression: an unchanged FK left its raw pk in cleaned_data and
+        # construct_instance rejected the int. Editing only ``note`` must work
+        # and leave the relation (and the legacy name) untouched.
+        obj = _seed_with_region()
+        obj = DirtyTrackedData.objects.get(pk=obj.pk)
+        form = DirtyTrackedFKForm(
+            data={"name": "LEGACY_BAD", "email": "a@b.com", "note": "changed", "region": str(obj.region_id)},
+            instance=obj,
+        )
+        assert form.is_valid() is True
+        form.save()
+        obj.refresh_from_db()
+        assert obj.note == "changed"
+        assert obj.region_id is not None
+        assert obj.name == "LEGACY_BAD"
+
+    def test_changed_fk_still_validates_and_saves(self):
+        from e2e.models import Region
+
+        obj = _seed_with_region()
+        obj = DirtyTrackedData.objects.get(pk=obj.pk)
+        other = Region.objects.create(name="South")
+        form = DirtyTrackedFKForm(
+            data={"name": "LEGACY_BAD", "email": "a@b.com", "note": "", "region": str(other.pk)},
+            instance=obj,
+        )
+        assert form.is_valid() is True
+        form.save()
+        obj.refresh_from_db()
+        assert obj.region_id == other.pk
+
+
+@pytest.mark.asyncio(loop_scope="class")
+class TestAsyncDirtyOnlyForeignKey:
+    async def test_unchanged_fk_edit_succeeds(self):
+        from asgiref.sync import sync_to_async
+
+        obj = await sync_to_async(_seed_with_region)()
+        obj = await DirtyTrackedData.objects.aget(pk=obj.pk)
+        form = DirtyTrackedFKForm(
+            data={"name": "LEGACY_BAD", "email": "a@b.com", "note": "changed", "region": str(obj.region_id)},
+            instance=obj,
+        )
+        assert await form.ais_valid() is True
+        await form.asave()
+        await sync_to_async(obj.refresh_from_db)()
+        assert obj.note == "changed"
+        assert obj.region_id is not None
