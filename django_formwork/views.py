@@ -59,7 +59,7 @@ class FormworkSearchView(View):
     #: Template for SearchSelect results (value + label, for select-style)
     SEARCH_SELECT_TEMPLATE = (
         """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value }}" data-label="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon }}"{% endif %}>
+<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value }}" data-label="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
   <span class="formwork-check shrink-0 opacity-0" :class="value === '{{ item.value }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>{% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
 {% if not results %}"""
@@ -70,7 +70,7 @@ class FormworkSearchView(View):
     #: Template for ComboBox results (label only, for autocomplete-style)
     COMBOBOX_TEMPLATE = (
         """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon }}"{% endif %}>
+<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
   {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
 {% if not results %}"""

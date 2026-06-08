@@ -674,6 +674,22 @@ def test_search_select_no_icon_element_when_not_provided():
     assert len(icons) == 0
 
 
+@pytest.mark.unit
+def test_search_select_option_data_icon_attribute_escaped():
+    """Icon HTML with quotes must not break the option's data-icon attribute.
+
+    The button carries data-icon so the JS can restore the icon on select.
+    Without escaping, the icon's quotes close the attribute early; the parsed
+    value must round-trip to the full icon string.
+    """
+    icon = '<img src="a.svg">'
+    widget = SearchSelect(choices=[("a", ChoiceLabel("Alpha", icon=mark_safe(icon)))])  # noqa: S308
+    soup = render_widget(widget, name="test")
+    button = soup.find("button", attrs={"data-value": "a"})
+    assert button is not None
+    assert button["data-icon"] == icon
+
+
 # ─── Level 2b: Optgroup rendering ────────────────────────────────────────
 
 
