@@ -57,6 +57,7 @@ nav:
   - Cookbook: cookbook.md
   - Reference:
       - Architecture: architecture.md
+      - Forms: reference/forms.md
       - Widgets: reference/widgets.md
       - Views: reference/views.md
       - Browser Support: reference/browser-support.md
