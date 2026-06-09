@@ -8,6 +8,7 @@ from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.widgets import (
     ComboBox,
     DataList,
+    ImageDropZone,
     MultiSelect,
     PasswordReveal,
     Range,
@@ -139,7 +140,36 @@ class TicketValidatedForm(TicketWidgetsForm):
         return title
 
 
-# Step 4: editing an existing ticket, skipping validation on unchanged fields.
+# Step 4: tie the form to the model so the view can save it.
+class TicketCreateForm(FormworkModelForm):
+    assignee = FormworkModelChoiceField(
+        queryset=Person.objects.all(),
+        widget=SearchSelect(search_fields=["name", "email"], search_decorator=None),
+        icon_from_instance=_assignee_icon,
+        description_from_instance=lambda person: person.email,
+        required=False,
+        help_text="Type to search people by name or email.",
+    )
+
+    class Meta:
+        model = Ticket
+        fields = ["title", "assignee", "priority"]
+
+    def clean_title(self):
+        title = self.cleaned_data["title"]
+        if Ticket.objects.filter(title__iexact=title).exists():
+            raise forms.ValidationError("A ticket with this title already exists.")
+        return title
+
+
+# Step 5: an image drop zone for the ticket screenshot.
+class TicketUploadForm(TicketCreateForm):
+    class Meta(TicketCreateForm.Meta):
+        fields = [*TicketCreateForm.Meta.fields, "screenshot"]
+        widgets = {"screenshot": ImageDropZone(max_size=5 * 1024 * 1024)}
+
+
+# Step 6: editing an existing ticket, skipping validation on unchanged fields.
 # (The legacy ``title`` is the point here; the assignee FK is left off this edit
 # form so dirty-only doesn't carry an unchanged relation through construct_instance.)
 class TicketEditForm(FormworkModelForm):

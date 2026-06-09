@@ -35,6 +35,7 @@ class Ticket(FormworkModel):
     assignee = models.ForeignKey(Person, null=True, blank=True, on_delete=models.SET_NULL)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default="low")
     description = models.TextField(blank=True, default="")
+    screenshot = models.ImageField(upload_to="screenshots/", blank=True)
 
     def __str__(self):
         return self.title or f"Ticket #{self.pk}"

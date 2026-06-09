@@ -1,11 +1,15 @@
 """Views for the simple formwork example."""
 
-from django.shortcuts import render
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from .forms import (
     ContactForm,
+    TicketCreateForm,
     TicketEditForm,
     TicketTitleForm,
+    TicketUploadForm,
     TicketValidatedForm,
     TicketWidgetsForm,
 )
@@ -41,7 +45,7 @@ def cookbook_step3(request):
     """Server-side validation that morphs the form back in on error."""
     if request.method == "POST":
         form = TicketValidatedForm(request.POST)
-        form.is_valid()
+        form.is_valid()  # render any errors; the happy path arrives in step 4
         if request.headers.get("HX-Request") == "true":
             return render(request, "cookbook/_ticket_form.html", {"form": form, "action": "ck-step3"})
         return render(request, "cookbook/step3.html", {"form": form})
@@ -49,6 +53,44 @@ def cookbook_step3(request):
 
 
 def cookbook_step4(request):
+    """Create the ticket on valid POST, then redirect, htmx-aware."""
+    if request.method == "POST":
+        form = TicketCreateForm(request.POST)
+        if form.is_valid():
+            ticket = form.save()
+            url = reverse("ck-created", args=[ticket.pk])
+            if request.headers.get("HX-Request") == "true":
+                return HttpResponse(headers={"HX-Redirect": url})
+            return redirect(url)
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "cookbook/_ticket_form.html", {"form": form, "action": "ck-step4"})
+        return render(request, "cookbook/step4.html", {"form": form})
+    return render(request, "cookbook/step4.html", {"form": TicketCreateForm()})
+
+
+def cookbook_step5(request):
+    """Step 4 plus a screenshot drop zone; uploads arrive in request.FILES."""
+    if request.method == "POST":
+        form = TicketUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            ticket = form.save()
+            url = reverse("ck-created", args=[ticket.pk])
+            if request.headers.get("HX-Request") == "true":
+                return HttpResponse(headers={"HX-Redirect": url})
+            return redirect(url)
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "cookbook/_ticket_form.html", {"form": form, "action": "ck-step5"})
+        return render(request, "cookbook/step5.html", {"form": form})
+    return render(request, "cookbook/step5.html", {"form": TicketUploadForm()})
+
+
+def cookbook_created(request, pk):
+    """Redirect target for the create steps."""
+    ticket = get_object_or_404(Ticket, pk=pk)
+    return render(request, "cookbook/created.html", {"ticket": ticket})
+
+
+def cookbook_step6(request):
     """Edit the seeded legacy ticket with validate_dirty_only."""
     ticket = Ticket.objects.order_by("pk").first()
     if request.method == "POST":
@@ -56,6 +98,6 @@ def cookbook_step4(request):
         if form.is_valid():
             form.save()
         if request.headers.get("HX-Request") == "true":
-            return render(request, "cookbook/_ticket_form.html", {"form": form, "action": "ck-step4"})
-        return render(request, "cookbook/step4.html", {"form": form})
-    return render(request, "cookbook/step4.html", {"form": TicketEditForm(instance=ticket)})
+            return render(request, "cookbook/_ticket_form.html", {"form": form, "action": "ck-step6"})
+        return render(request, "cookbook/step6.html", {"form": form})
+    return render(request, "cookbook/step6.html", {"form": TicketEditForm(instance=ticket)})

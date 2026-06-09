@@ -46,4 +46,7 @@ django_formwork/static/iconx/
 # Root-level static/ (created by iconx or example builds)
 /static/
 
+# Uploaded files from running the example apps
+examples/*/media/
+
 scheduled_tasks.lock

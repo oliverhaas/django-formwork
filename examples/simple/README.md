@@ -18,7 +18,7 @@ Open http://localhost:8000/ in your browser.
 
 ## What it demonstrates
 
-- `FORM_RENDERER = "django_formwork.FormworkRenderer"` — all forms styled automatically
+- `FORM_RENDERER = "django_formwork.FormworkRenderer"`: all forms styled automatically
 - `formwork.css` as the single Tailwind input (includes DaisyUI + icons)
 - Standard widgets (TextInput, EmailInput, Textarea) auto-styled by CSS
 - Custom widgets: Toggle, Range, Rating, PasswordReveal, SearchSelect, MultiSelect, ComboBox, DataList
@@ -32,7 +32,9 @@ legacy ticket), visit:
 - `/cookbook/1/` plain field
 - `/cookbook/2/` searchable assignee dropdown
 - `/cookbook/3/` server-side validation via htmx morph swap
-- `/cookbook/4/` editing with `validate_dirty_only`
+- `/cookbook/4/` create on valid POST, redirect htmx-aware via `HX-Redirect`
+- `/cookbook/5/` screenshot upload with `ImageDropZone`
+- `/cookbook/6/` editing with `validate_dirty_only`
 
 Regenerate the docs screenshots (after building CSS and running migrate):
 

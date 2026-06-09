@@ -8,7 +8,7 @@ Prerequisites (run once, from examples/simple/):
 Then:
     uv run python generate_screenshots.py
 
-Writes docs/img/cookbook/step-{1..4}.png at the repo root.
+Writes docs/img/cookbook/step-{1..6}.png at the repo root.
 """
 
 # ruff: noqa: INP001
@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
 
+from PIL import Image, ImageDraw
 from playwright.sync_api import sync_playwright
 
 HERE = Path(__file__).resolve().parent
@@ -69,6 +71,37 @@ def _submit_duplicate_title(page) -> None:
     page.wait_for_timeout(200)
 
 
+def _submit_new_ticket(page) -> None:
+    """Create a ticket and follow the HX-Redirect to the created page."""
+    page.fill("#id_title", "Fix the login button")
+    page.locator("#ticket-form button[type='submit']").click()
+    page.wait_for_url("**/cookbook/created/**")
+    page.wait_for_timeout(400)
+
+
+def _sample_screenshot(directory: str) -> Path:
+    """A small fake app screenshot for the drop zone preview."""
+    path = Path(directory) / "screenshot.png"
+    img = Image.new("RGB", (640, 360), (243, 244, 246))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 0, 640, 56], fill=(79, 70, 229))
+    draw.rectangle([24, 88, 616, 140], fill=(255, 255, 255), outline=(209, 213, 219))
+    draw.rectangle([24, 164, 616, 336], fill=(255, 255, 255), outline=(209, 213, 219))
+    img.save(path)
+    return path
+
+
+def _attach_screenshot(sample: Path):
+    """Fill the form and drop an image in, so the preview thumbnail shows."""
+
+    def action(page) -> None:
+        page.fill("#id_title", "Search results overlap the footer")
+        page.set_input_files("#id_screenshot", str(sample))
+        page.wait_for_timeout(600)  # FileReader preview
+
+    return action
+
+
 def _shot(page, path: str, out_name: str, action=None) -> None:
     page.goto(f"{BASE}{path}")
     page.wait_for_load_state("domcontentloaded")
@@ -80,19 +113,34 @@ def _shot(page, path: str, out_name: str, action=None) -> None:
 
 
 def main() -> int:
+    # Drop tickets from earlier runs so the step-4 create doesn't hit the
+    # duplicate-title rule and the seeded LEGACY ticket stays first.
+    subprocess.run(
+        [
+            sys.executable,
+            "manage.py",
+            "shell",
+            "-c",
+            "from simple.models import Ticket; Ticket.objects.exclude(title='LEGACY').delete()",
+        ],
+        cwd=str(HERE),
+        check=True,
+    )
     server = subprocess.Popen(  # noqa: S603
         [sys.executable, "manage.py", "runserver", f"{HOST}:{PORT}", "--noreload"],
         cwd=str(HERE),
     )
     try:
         _wait_until_up(f"{BASE}/cookbook/1/")
-        with sync_playwright() as p:
+        with sync_playwright() as p, tempfile.TemporaryDirectory() as tmp:
             browser = p.chromium.launch()
             page = browser.new_context(viewport=VIEWPORT, device_scale_factor=1).new_page()
             _shot(page, "/cookbook/1/", "step-1.png")
             _shot(page, "/cookbook/2/", "step-2.png", _open_assignee)
             _shot(page, "/cookbook/3/", "step-3.png", _submit_duplicate_title)
-            _shot(page, "/cookbook/4/", "step-4.png")
+            _shot(page, "/cookbook/4/", "step-4.png", _submit_new_ticket)
+            _shot(page, "/cookbook/5/", "step-5.png", _attach_screenshot(_sample_screenshot(tmp)))
+            _shot(page, "/cookbook/6/", "step-6.png")
             browser.close()
     finally:
         server.terminate()

@@ -1,5 +1,7 @@
 <form id="ticket-form"
       method="post"
+      enctype="multipart/form-data"
+      hx-encoding="multipart/form-data"
       hx-post="{% url action %}"
       hx-target="#ticket-form"
       hx-swap="outerMorph"
