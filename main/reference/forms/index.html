@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://oliverhaas.github.io/django-formwork/main/reference/browser-support/">
+        <link rel="canonical" href="https://oliverhaas.github.io/django-formwork/main/reference/forms/">
       
       
-        <link rel="prev" href="../views/">
+        <link rel="prev" href="../../architecture/">
       
       
-        <link rel="next" href="../changelog/">
+        <link rel="next" href="../widgets/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Browser Support - Django Formwork</title>
+        <title>Forms - Django Formwork</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#browser-support" class="md-skip">
+        <a href="#forms" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Browser Support
+              Forms
             
           </span>
         </div>
@@ -514,10 +514,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../forms/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forms
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -533,6 +560,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#base-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base classes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#search-endpoint-registration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search endpoint registration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validate_dirty_only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_dirty_only
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#async-validation-and-saving" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Async validation and saving
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#formworkmodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FormworkModel
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -598,37 +700,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Browser Support
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../browser-support/" class="md-nav__link">
         
   
   
@@ -644,59 +719,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#feature-matrix" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Feature matrix
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#where-each-feature-is-used" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Where each feature is used
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#effective-minimum" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Effective minimum
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -764,10 +786,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#feature-matrix" class="md-nav__link">
+  <a href="#base-classes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Feature matrix
+        Base classes
       
     </span>
   </a>
@@ -775,10 +797,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#where-each-feature-is-used" class="md-nav__link">
+  <a href="#search-endpoint-registration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where each feature is used
+        Search endpoint registration
       
     </span>
   </a>
@@ -786,10 +808,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#effective-minimum" class="md-nav__link">
+  <a href="#validate_dirty_only" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Effective minimum
+        validate_dirty_only
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#async-validation-and-saving" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Async validation and saving
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#formworkmodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FormworkModel
       
     </span>
   </a>
@@ -816,76 +860,138 @@
   
 
 
-<h1 id="browser-support">Browser Support<a class="headerlink" href="#browser-support" title="Permanent link">&para;</a></h1>
-<p>Formwork's CSS uses several modern CSS features. The table below lists the minimum browser versions required for full support.</p>
-<h2 id="feature-matrix">Feature matrix<a class="headerlink" href="#feature-matrix" title="Permanent link">&para;</a></h2>
+<h1 id="forms">Forms<a class="headerlink" href="#forms" title="Permanent link">&para;</a></h1>
+<p><code>FormworkForm</code> and <code>FormworkModelForm</code> bundle the DaisyUI renderer with three
+behaviours plain Django forms do not have: automatic search-endpoint
+registration, dirty-only validation, and async validation and saving.</p>
+<p>With <code>FORM_RENDERER = "django_formwork.FormworkRenderer"</code> set, every form in
+the project renders styled, including plain <code>forms.Form</code>. Reach for the base
+classes when you want the behaviours below, or formwork styling on individual
+forms without the global renderer.</p>
+<h2 id="base-classes">Base classes<a class="headerlink" href="#base-classes" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Feature</th>
-<th>Chrome</th>
-<th>Firefox</th>
-<th>Safari</th>
-<th>Edge</th>
+<th>Class</th>
+<th>Renderer</th>
+<th>Use with</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>:has()</code> selector</td>
-<td>105</td>
-<td>121</td>
-<td>15.4</td>
-<td>105</td>
+<td><code>FormworkForm</code></td>
+<td><code>FormworkRenderer</code></td>
+<td>Django templates</td>
 </tr>
 <tr>
-<td><code>color-mix()</code></td>
-<td>111</td>
-<td>113</td>
-<td>16.2</td>
-<td>111</td>
+<td><code>FormworkModelForm</code></td>
+<td><code>FormworkRenderer</code></td>
+<td>Django templates, model-backed</td>
 </tr>
 <tr>
-<td>CSS Grid <code>subgrid</code></td>
-<td>117</td>
-<td>71</td>
-<td>16</td>
-<td>117</td>
+<td><code>FormworkJinja2Form</code></td>
+<td><code>FormworkJinja2Renderer</code></td>
+<td>Jinja2 templates</td>
 </tr>
 <tr>
-<td>CSS Nesting</td>
-<td>112</td>
-<td>117</td>
-<td>16.5</td>
-<td>112</td>
-</tr>
-<tr>
-<td><code>color-mix()</code> with <code>oklab</code></td>
-<td>111</td>
-<td>113</td>
-<td>16.2</td>
-<td>111</td>
-</tr>
-<tr>
-<td><code>@layer</code></td>
-<td>99</td>
-<td>97</td>
-<td>15.4</td>
-<td>99</td>
+<td><code>FormworkJinja2ModelForm</code></td>
+<td><code>FormworkJinja2Renderer</code></td>
+<td>Jinja2 templates, model-backed</td>
 </tr>
 </tbody>
 </table>
-<h2 id="where-each-feature-is-used">Where each feature is used<a class="headerlink" href="#where-each-feature-is-used" title="Permanent link">&para;</a></h2>
-<p><strong><code>:has()</code></strong> — used throughout <code>formwork.css</code> to style fieldsets contextually: single-checkbox two-column layout, multi-widget side-by-side layout, error tooltip sizing, ClearableFileInput flow layout, and validated textarea error state.</p>
-<p><strong><code>color-mix(in oklab, ...)</code></strong> — used for placeholder color on <code>&lt;select&gt;</code> and summary triggers, upload widget icon color, and the error highlight background on <code>ValidatedTextarea</code>. Browsers that don't support <code>color-mix()</code> fall back to a hardcoded <code>rgba()</code> value immediately before each <code>color-mix()</code> declaration.</p>
-<p><strong>CSS Grid <code>subgrid</code></strong> — used so checkbox and multi-widget inputs inside an error tooltip wrapper stay aligned with the parent fieldset's column grid.</p>
-<p><strong>CSS Nesting</strong> — used inside <code>@layer components</code> rule blocks (e.g. <code>.fieldset + .fieldset</code>). Browsers that don't support nesting will silently drop those rules.</p>
-<p><strong><code>@layer</code></strong> — all <code>formwork.css</code> rules are wrapped in <code>@layer components</code>. This ensures Tailwind utilities in HTML (which are in <code>@layer utilities</code>) always take precedence, and users can override formwork styles with unlayered CSS. Browsers that don't support <code>@layer</code> receive no formwork styles at all.</p>
-<h2 id="effective-minimum">Effective minimum<a class="headerlink" href="#effective-minimum" title="Permanent link">&para;</a></h2>
-<p>All five features are available in Chrome 117+, Firefox 121+, Safari 16.5+, and Edge 117+. Browsers released before these versions will have visual regressions (misaligned layouts, missing placeholder colors, broken subgrid alignment), but the forms remain functional.</p>
-<div class="admonition note">
-<p class="admonition-title">Fallbacks</p>
-<p><code>color-mix()</code> rules always include a <code>rgba()</code> fallback on the preceding line, so colors degrade gracefully on older browsers. All other features have no fallback — if you need to support older browsers, you will need to add custom CSS overrides.</p>
-</div>
+<p>The ModelForm variants upgrade auto-generated <code>ModelChoiceField</code> and
+<code>ModelMultipleChoiceField</code> instances to their Formwork equivalents, so
+<code>icon_from_instance</code> and <code>description_from_instance</code> callbacks can be attached
+to fields that come from <code>Meta.fields</code>. Explicitly declared fields, including
+custom subclasses, are left alone.</p>
+<h2 id="search-endpoint-registration">Search endpoint registration<a class="headerlink" href="#search-endpoint-registration" title="Permanent link">&para;</a></h2>
+<p>Fields rendered with <code>SearchSelect</code>, <code>MultiSelect</code>, or <code>ComboBox</code> register
+their server-side search automatically when the form is instantiated; a single
+<code>include("django_formwork.urls")</code> serves them all. Model-backed search needs
+<code>search_fields</code> on the widget and a queryset on the field; choices-backed
+search needs a <code>search_choices_&lt;fieldname&gt;(query, request)</code> method on the
+form. Both require <code>search_decorator</code>: pass an auth decorator such as
+<code>login_required</code>, or <code>None</code> for a public endpoint. See
+<a href="../views/">Views</a> for the endpoint machinery and the
+<a href="../../getting-started/quickstart/#server-side-search">quickstart</a> for worked
+examples.</p>
+<h2 id="validate_dirty_only">validate_dirty_only<a class="headerlink" href="#validate_dirty_only" title="Permanent link">&para;</a></h2>
+<p>On an edit form, validators added after a record was saved can reject stored
+values the user never touched. <code>validate_dirty_only</code> skips validation for
+fields the submission did not change. Enable it on the Meta class or per
+instantiation:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketEditForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">Ticket</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;priority&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">]</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        <span class="n">validate_dirty_only</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># or</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">form</span> <span class="o">=</span> <span class="n">TicketEditForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">ticket</span><span class="p">,</span> <span class="n">validate_dirty_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></code></pre></div>
+<p>For a field the user did not change:</p>
+<ul>
+<li>field validators and the <code>clean_&lt;field&gt;</code> method do not run</li>
+<li>model field validation, unique checks, and constraint checks exclude it</li>
+<li>the stored value is carried into <code>cleaned_data</code> and left untouched on the
+  instance, so an unchanged relation is never re-assigned</li>
+</ul>
+<p>Changed fields validate as usual, and the form-wide <code>clean()</code> method always
+runs. Whether a field counts as changed is decided by the machinery behind
+<code>Form.changed_data</code>, comparing the posted value against the form's initial
+data; with <code>instance=</code> bound, initial data is what the database holds. The
+model-level exclusions only apply to existing instances. On create, the
+instance's <code>full_clean()</code> covers every field.</p>
+<p>On a <code>FormworkModelForm</code> this requires the model to provide
+<code>get_dirty_fields()</code>. Inherit <a href="#formworkmodel"><code>FormworkModel</code></a>, or mix
+<code>filthyfields.DirtyFieldsMixin</code> into the model directly; the form raises
+<code>ImproperlyConfigured</code> otherwise. Plain <code>FormworkForm</code> supports the flag too,
+where it covers the field-level skips.</p>
+<p>The <a href="../../cookbook/#step-6-skip-validation-for-unchanged-fields">cookbook</a>
+walks through a legacy-data example.</p>
+<h2 id="async-validation-and-saving">Async validation and saving<a class="headerlink" href="#async-validation-and-saving" title="Permanent link">&para;</a></h2>
+<p><code>ais_valid()</code>, <code>afull_clean()</code>, and <code>asave()</code> are async counterparts to
+Django's sync methods. <code>clean_&lt;field&gt;()</code> and <code>clean()</code> may be sync or async in
+the same form; async ones are detected and awaited, so the async ORM works in
+validation without <code>sync_to_async</code> wrappers.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">SignupForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">email</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">EmailField</span><span class="p">()</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">clean_email</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>        <span class="n">email</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s2">&quot;email&quot;</span><span class="p">]</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="k">if</span> <span class="k">await</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">email__iexact</span><span class="o">=</span><span class="n">email</span><span class="p">)</span><span class="o">.</span><span class="n">aexists</span><span class="p">():</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Already registered.&quot;</span><span class="p">)</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="k">return</span> <span class="n">email</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">signup</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>        <span class="n">form</span> <span class="o">=</span> <span class="n">SignupForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>        <span class="k">if</span> <span class="k">await</span> <span class="n">form</span><span class="o">.</span><span class="n">ais_valid</span><span class="p">():</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>            <span class="o">...</span>
+</span></code></pre></div>
+<p><code>asave(commit=True)</code> mirrors <code>ModelForm.save()</code>: it awaits the instance's
+<code>asave()</code> and then saves many-to-many relations. With <code>commit=False</code> it
+returns the unsaved instance and exposes <code>save_m2m</code> as an async callable.</p>
+<p>Set <code>FORMWORK_FORCE_ASYNC = True</code> in settings to make the sync entry points
+(<code>is_valid()</code>, <code>full_clean()</code>, <code>save()</code>) raise <code>RuntimeError</code>. Use it to keep
+accidental sync calls out of an async codebase.</p>
+<h2 id="formworkmodel">FormworkModel<a class="headerlink" href="#formworkmodel" title="Permanent link">&para;</a></h2>
+<p><code>FormworkModel</code> is an abstract model base that mixes in
+<code>filthyfields.DirtyFieldsMixin</code>, providing the <code>get_dirty_fields()</code> that
+<code>validate_dirty_only</code> needs, and adds one helper for <code>clean()</code> rules:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Ticket</span><span class="p">(</span><span class="n">FormworkModel</span><span class="p">):</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">status</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">closed_at</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields_dirty</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;closed&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed_at</span><span class="p">:</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Closing a ticket requires closed_at.&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p><code>fields_dirty(*names)</code> is <code>True</code> if any of the named fields changed since the
+instance was loaded from the database. New instances always return <code>True</code>, so
+cross-field rules fire fully on create.</p>
 
 
 

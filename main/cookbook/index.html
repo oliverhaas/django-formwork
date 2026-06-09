@@ -501,10 +501,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-4-skip-validation-for-unchanged-fields" class="md-nav__link">
+  <a href="#step-4-save-the-ticket" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 4: skip validation for unchanged fields
+        Step 4: save the ticket
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-5-attachments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: attachments
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-6-skip-validation-for-unchanged-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: skip validation for unchanged fields
       
     </span>
   </a>
@@ -599,6 +621,34 @@
     
   
     Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/forms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forms
   
 
     
@@ -791,10 +841,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-4-skip-validation-for-unchanged-fields" class="md-nav__link">
+  <a href="#step-4-save-the-ticket" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 4: skip validation for unchanged fields
+        Step 4: save the ticket
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-5-attachments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: attachments
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-6-skip-validation-for-unchanged-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: skip validation for unchanged fields
       
     </span>
   </a>
@@ -834,13 +906,14 @@
 
 <h1 id="cookbook">Cookbook<a class="headerlink" href="#cookbook" title="Permanent link">&para;</a></h1>
 <p>This guide builds one ticket form up from a single field to a searchable,
-server-validated, dirty-aware form. Each step adds one capability. The forms and
-views are from the runnable <code>examples/simple</code> app, so every snippet works as
-shown. See the <a href="../getting-started/installation/">installation guide</a> for the
-one-time CSS and JavaScript setup.</p>
+server-validated form that saves, takes attachments, and edits existing records
+without re-validating untouched fields. Each step adds one capability. The
+forms and views are from the runnable <code>examples/simple</code> app, so every snippet
+works as shown. See the <a href="../getting-started/installation/">installation guide</a>
+for the one-time CSS and JavaScript setup.</p>
 <h2 id="step-1-the-form-is-the-center">Step 1: the form is the center<a class="headerlink" href="#step-1-the-form-is-the-center" title="Permanent link">&para;</a></h2>
 <p>The center of Formwork is forms. You render them the normal Django way, and the
-default widgets get automatic styling.</p>
+default widgets get automatic styling according to your DaisyUI theme.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># forms.py</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketTitleForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">Form</span><span class="p">):</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">title</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">help_text</span><span class="o">=</span><span class="s2">&quot;A short summary of the ticket.&quot;</span><span class="p">)</span>
@@ -855,10 +928,15 @@ default widgets get automatic styling.</p>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>{% formwork_js %}
 </span></code></pre></div>
 <p><img alt="A single styled title field" src="../img/cookbook/step-1.png" /></p>
+<p><code>{% formwork_js %}</code> does nothing for a plain text field yet. It loads the
+JavaScript behind the richer widgets and the htmx integration that the later
+steps use, so it belongs in the base template from the start.</p>
 <h2 id="step-2-richer-widgets">Step 2: richer widgets<a class="headerlink" href="#step-2-richer-widgets" title="Permanent link">&para;</a></h2>
 <p>Formwork ships widgets with extra styling and more modern behaviour, like
 dropdowns with search. Here the assignee is a <code>SearchSelect</code> backed by a model,
-with an initials badge and the person's email shown for each option.</p>
+with an initials badge and the person's email shown for each option. The
+priority stays a plain <code>ChoiceField</code>; standard fields and Formwork widgets mix
+freely in one form.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># forms.py</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.html</span><span class="w"> </span><span class="kn">import</span> <span class="n">format_html</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
@@ -907,7 +985,7 @@ state.</p>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>            <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;A ticket with this title already exists.&quot;</span><span class="p">)</span>
 </span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="k">return</span> <span class="n">title</span>
 </span></code></pre></div>
-<div class="language-html highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="cm">&lt;!-- the form posts to itself and morph-swaps the result --&gt;</span>
+<div class="language-html highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="cm">&lt;!-- cookbook/_ticket_form.html --&gt;</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="p">&lt;</span><span class="nt">form</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;ticket-form&quot;</span> <span class="na">method</span><span class="o">=</span><span class="s">&quot;post&quot;</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>      <span class="na">hx-post</span><span class="o">=</span><span class="s">&quot;{% url &#39;ck-step3&#39; %}&quot;</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>      <span class="na">hx-target</span><span class="o">=</span><span class="s">&quot;#ticket-form&quot;</span>
@@ -918,11 +996,14 @@ state.</p>
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>  <span class="p">&lt;</span><span class="nt">button</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;submit&quot;</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;btn btn-primary mt-4&quot;</span><span class="p">&gt;</span>Save<span class="p">&lt;/</span><span class="nt">button</span><span class="p">&gt;</span>
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="p">&lt;/</span><span class="nt">form</span><span class="p">&gt;</span>
 </span></code></pre></div>
+<p>The form tag lives in a partial that <code>step3.html</code> wraps in the full page; the
+later steps reuse it, with the posting URL passed in as a variable. The view
+returns just the partial for htmx requests:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># views.py</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">cookbook_step3</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>        <span class="n">form</span> <span class="o">=</span> <span class="n">TicketValidatedForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>        <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">()</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>        <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">()</span>  <span class="c1"># render any errors; the happy path arrives in step 4</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;HX-Request&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;true&quot;</span><span class="p">:</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">&quot;cookbook/_ticket_form.html&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">&quot;cookbook/step3.html&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span>
@@ -930,39 +1011,165 @@ state.</p>
 </span></code></pre></div>
 <p><code>{% formwork_js %}</code> registers the <code>formwork-morph</code> htmx extension, so the error
 tooltip appears without a full page reload and in-progress input is preserved.
-No <code>hx-ext</code> attribute is needed.</p>
+No <code>hx-ext</code> attribute is needed. The non-htmx branch keeps the plain form post
+working when JavaScript is unavailable. <code>data-formwork-dirty</code> highlights fields
+you have changed since the page loaded; it becomes useful on the edit form in
+step 6.</p>
 <p><img alt="A server-side error morphed into the form" src="../img/cookbook/step-3.png" /></p>
-<h2 id="step-4-skip-validation-for-unchanged-fields">Step 4: skip validation for unchanged fields<a class="headerlink" href="#step-4-skip-validation-for-unchanged-fields" title="Permanent link">&para;</a></h2>
-<p>When editing an existing record, re-running validation on fields the user did
-not touch can reject legacy data that is fine to leave alone. Set
-<code>validate_dirty_only</code> on a <code>FormworkModelForm</code> whose model inherits
-<code>FormworkModel</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># models.py</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkModel</span>
+<p>So far the view re-renders the form whether validation passed or not. Creating
+the ticket is the next step.</p>
+<h2 id="step-4-save-the-ticket">Step 4: save the ticket<a class="headerlink" href="#step-4-save-the-ticket" title="Permanent link">&para;</a></h2>
+<p>Tie the form to the model with <code>FormworkModelForm</code> and the view gets a regular
+<code>form.save()</code> happy path. <code>is_valid()</code> now runs the model's validators as well.
+The assignee field and the <code>clean_title</code> rule move over from steps 2 and 3
+unchanged.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># forms.py</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.forms</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkModelForm</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">Ticket</span><span class="p">(</span><span class="n">FormworkModel</span><span class="p">):</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">title</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">validators</span><span class="o">=</span><span class="p">[</span><span class="n">reject_legacy_title</span><span class="p">])</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="c1"># assignee, priority, description ...</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketCreateForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">assignee</span> <span class="o">=</span> <span class="n">FormworkModelChoiceField</span><span class="p">(</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="n">queryset</span><span class="o">=</span><span class="n">Person</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span><span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;email&quot;</span><span class="p">],</span> <span class="n">search_decorator</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        <span class="n">icon_from_instance</span><span class="o">=</span><span class="n">assignee_icon</span><span class="p">,</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>        <span class="n">description_from_instance</span><span class="o">=</span><span class="k">lambda</span> <span class="n">person</span><span class="p">:</span> <span class="n">person</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="p">)</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">Ticket</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;assignee&quot;</span><span class="p">,</span> <span class="s2">&quot;priority&quot;</span><span class="p">]</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">clean_title</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>        <span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>        <span class="k">if</span> <span class="n">Ticket</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">title__iexact</span><span class="o">=</span><span class="n">title</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>            <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;A ticket with this title already exists.&quot;</span><span class="p">)</span>
+</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>        <span class="k">return</span> <span class="n">title</span>
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># forms.py</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketEditForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">Ticket</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;priority&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">]</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>        <span class="n">validate_dirty_only</span> <span class="o">=</span> <span class="kc">True</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># views.py</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">cookbook_step4</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>        <span class="n">form</span> <span class="o">=</span> <span class="n">TicketCreateForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>            <span class="n">ticket</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>            <span class="n">url</span> <span class="o">=</span> <span class="n">reverse</span><span class="p">(</span><span class="s2">&quot;ck-created&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">ticket</span><span class="o">.</span><span class="n">pk</span><span class="p">])</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>            <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;HX-Request&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;true&quot;</span><span class="p">:</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>                <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;HX-Redirect&quot;</span><span class="p">:</span> <span class="n">url</span><span class="p">})</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;HX-Request&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;true&quot;</span><span class="p">:</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">&quot;cookbook/_ticket_form.html&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">&quot;cookbook/step4.html&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">&quot;cookbook/step4.html&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">TicketCreateForm</span><span class="p">()})</span>
 </span></code></pre></div>
-<p>Editing only the description of a ticket whose title is <code>"LEGACY"</code> now
-validates, because the unchanged title is skipped. On create, every field is
-validated as usual.</p>
-<p><img alt="Editing an existing ticket" src="../img/cookbook/step-4.png" /></p>
+<p>htmx submits the form with <code>fetch</code>, so a normal redirect response would be
+followed in the background and morphed into the form. The <code>HX-Redirect</code> header
+tells htmx to navigate the browser instead. The non-htmx branch is the usual
+post/redirect/get.</p>
+<p><img alt="The created ticket" src="../img/cookbook/step-4.png" /></p>
+<h2 id="step-5-attachments">Step 5: attachments<a class="headerlink" href="#step-5-attachments" title="Permanent link">&para;</a></h2>
+<p>Tickets carry screenshots. Add an <code>ImageField</code> to the model and swap its widget
+for a drop zone: drag an image in and a thumbnail preview shows before the
+upload.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># models.py</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">Ticket</span><span class="p">(</span><span class="n">FormworkModel</span><span class="p">):</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="c1"># title, assignee, priority, description ...</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">screenshot</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ImageField</span><span class="p">(</span><span class="n">upload_to</span><span class="o">=</span><span class="s2">&quot;screenshots/&quot;</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># forms.py</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">ImageDropZone</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketUploadForm</span><span class="p">(</span><span class="n">TicketCreateForm</span><span class="p">):</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">(</span><span class="n">TicketCreateForm</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">TicketCreateForm</span><span class="o">.</span><span class="n">Meta</span><span class="o">.</span><span class="n">fields</span><span class="p">,</span> <span class="s2">&quot;screenshot&quot;</span><span class="p">]</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>        <span class="n">widgets</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;screenshot&quot;</span><span class="p">:</span> <span class="n">ImageDropZone</span><span class="p">(</span><span class="n">max_size</span><span class="o">=</span><span class="mi">5</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)}</span>
+</span></code></pre></div>
+<p>Uploads change two things outside the form class. The form tag gains the
+multipart attributes, and the view passes <code>request.FILES</code>:</p>
+<div class="language-html highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">&lt;</span><span class="nt">form</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;ticket-form&quot;</span> <span class="na">method</span><span class="o">=</span><span class="s">&quot;post&quot;</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>      <span class="na">enctype</span><span class="o">=</span><span class="s">&quot;multipart/form-data&quot;</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>      <span class="na">hx-encoding</span><span class="o">=</span><span class="s">&quot;multipart/form-data&quot;</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>      <span class="na">hx-post</span><span class="o">=</span><span class="s">&quot;{% url &#39;ck-step5&#39; %}&quot;</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>      <span class="na">hx-target</span><span class="o">=</span><span class="s">&quot;#ticket-form&quot;</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>      <span class="na">hx-swap</span><span class="o">=</span><span class="s">&quot;outerMorph&quot;</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>      <span class="na">data-formwork-dirty</span><span class="p">&gt;</span>
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># views.py</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">form</span> <span class="o">=</span> <span class="n">TicketUploadForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">FILES</span><span class="p">)</span>
+</span></code></pre></div>
+<p><img alt="A drop zone with an image preview" src="../img/cookbook/step-5.png" /></p>
+<p>htmx does not read the form's <code>enctype</code>. Without
+<code>hx-encoding="multipart/form-data"</code> it submits the fields urlencoded and the
+file never reaches the server; <code>enctype</code> still covers the no-JavaScript
+fallback, so keep both. <code>max_size</code> rejects oversized files in the browser only, server-side
+checks stay your job. <code>upload_to</code> needs the usual <code>MEDIA_ROOT</code> and <code>MEDIA_URL</code>
+settings.</p>
+<h2 id="step-6-skip-validation-for-unchanged-fields">Step 6: skip validation for unchanged fields<a class="headerlink" href="#step-6-skip-validation-for-unchanged-fields" title="Permanent link">&para;</a></h2>
+<p>The steps so far create tickets. Editing an existing one runs into a different
+problem: re-running validation on fields the user did not touch can reject
+legacy data that is fine to leave alone. The example app seeds a ticket whose
+title today's validator would reject:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># models.py</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">reject_legacy_title</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="s2">&quot;LEGACY&quot;</span><span class="p">:</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>        <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Legacy titles are no longer allowed.&quot;</span><span class="p">)</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">Ticket</span><span class="p">(</span><span class="n">FormworkModel</span><span class="p">):</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    <span class="n">title</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">validators</span><span class="o">=</span><span class="p">[</span><span class="n">reject_legacy_title</span><span class="p">])</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>    <span class="c1"># assignee, priority, description, screenshot ...</span>
+</span></code></pre></div>
+<p>Set <code>validate_dirty_only</code> on a <code>FormworkModelForm</code> whose model inherits
+<code>FormworkModel</code>; the model base brings the dirty-field tracking the form needs.
+The field list trims to what this page edits; <code>description</code> has been on the
+model all along.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># forms.py</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketEditForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">Ticket</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;priority&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">]</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>        <span class="n">validate_dirty_only</span> <span class="o">=</span> <span class="kc">True</span>
+</span></code></pre></div>
+<p>The view binds the form to the existing instance and saves as usual:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># views.py</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">cookbook_step6</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="n">ticket</span> <span class="o">=</span> <span class="n">Ticket</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;pk&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>        <span class="n">form</span> <span class="o">=</span> <span class="n">TicketEditForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">ticket</span><span class="p">)</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>            <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;HX-Request&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;true&quot;</span><span class="p">:</span>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>            <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">&quot;cookbook/_ticket_form.html&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span>
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">&quot;cookbook/step6.html&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span>
+</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">&quot;cookbook/step6.html&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">TicketEditForm</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">ticket</span><span class="p">)})</span>
+</span></code></pre></div>
+<p>Editing only the description of the LEGACY ticket now validates and saves.
+Unchanged fields skip their field validators, <code>clean_&lt;field&gt;</code> methods,
+model-level validation, and unique and constraint checks; their stored values
+carry through untouched. On create, the model's <code>full_clean()</code> covers every
+field as usual. See the <a href="../reference/forms/#validate_dirty_only">forms reference</a>
+for the exact rules.</p>
+<p>This is the form <code>data-formwork-dirty</code> from step 3 was added for: it highlights
+the fields you changed, which here is exactly the set the server will validate.
+The two mechanisms are independent. The highlight is client-side display; the
+decision to skip is made on the server by comparing the posted data against the
+loaded instance, and it works the same without the attribute.</p>
+<p><img alt="Editing an existing ticket" src="../img/cookbook/step-6.png" /></p>
 <h2 id="going-further">Going further<a class="headerlink" href="#going-further" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Async validation in async views: <code>await form.ais_valid()</code> and <code>await form.asave()</code>.</li>
-<li>Choices-backed search without a model: a <code>search_choices_&lt;field&gt;(query, request)</code> method on the form.</li>
-<li>File and image drop zones with size limits.</li>
+<li>Validation can run async. The form base classes accept async <code>clean_&lt;field&gt;</code>
+  and <code>clean</code> methods; async views call <code>await form.ais_valid()</code> and
+  <code>await form.asave()</code>. See
+  <a href="../reference/forms/#async-validation-and-saving">async validation</a>.</li>
+<li>Search does not need a model. A <code>search_choices_&lt;field&gt;(query, request)</code>
+  method on the form serves any <code>SearchSelect</code>, <code>MultiSelect</code>, or <code>ComboBox</code>.
+  See <a href="../getting-started/quickstart/#server-side-search">server-side search</a>.</li>
+<li>The <a href="https://github.com/oliverhaas/django-formwork/tree/main/examples/full">full example</a>
+  is a small task manager that combines these patterns with <code>MultiSelect</code>,
+  <code>DatePicker</code>, and a multi-step wizard.</li>
 </ul>
-<p>See the <a href="../reference/widgets/">Widgets</a> and <a href="../reference/views/">Views</a> reference.</p>
+<p>The <a href="../reference/forms/">Forms</a>, <a href="../reference/widgets/">Widgets</a>, and
+<a href="../reference/views/">Views</a> references document the details.</p>
 
 
 
