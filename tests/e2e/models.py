@@ -57,6 +57,74 @@ class City(models.Model):
         return self.name
 
 
+class UniqueCode(models.Model):
+    """Single ``unique=True`` field, for batched formset-uniqueness tests."""
+
+    code = models.CharField(max_length=50, unique=True)
+    label = models.CharField(max_length=100, blank=True, default="")
+
+    class Meta:
+        app_label = "e2e"
+
+    def __str__(self):
+        return self.code or f"UniqueCode #{self.pk}"
+
+
+class UniquePair(models.Model):
+    """Classic ``unique_together``, for batched formset-uniqueness tests."""
+
+    left = models.CharField(max_length=50)
+    right = models.CharField(max_length=50)
+
+    class Meta:
+        app_label = "e2e"
+        unique_together = [("left", "right")]
+
+    def __str__(self):
+        return f"{self.left}/{self.right}"
+
+
+class ConstraintPair(models.Model):
+    """Modern ``Meta.constraints`` ``UniqueConstraint``, for batched-uniqueness tests."""
+
+    left = models.CharField(max_length=50)
+    right = models.CharField(max_length=50)
+
+    class Meta:
+        app_label = "e2e"
+        constraints = [models.UniqueConstraint(fields=["left", "right"], name="uq_constraint_pair")]
+
+    def __str__(self):
+        return f"{self.left}/{self.right}"
+
+
+class Membership(models.Model):
+    """Inline child, unique per ``(region, slug)``, for inline batched-uniqueness tests."""
+
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name="memberships")
+    slug = models.CharField(max_length=50)
+
+    class Meta:
+        app_label = "e2e"
+        unique_together = [("region", "slug")]
+
+    def __str__(self):
+        return self.slug or f"Membership #{self.pk}"
+
+
+class DatedCode(models.Model):
+    """``unique_for_date``, for batched date-uniqueness tests."""
+
+    slug = models.CharField(max_length=50, unique_for_date="published")
+    published = models.DateField()
+
+    class Meta:
+        app_label = "e2e"
+
+    def __str__(self):
+        return self.slug or f"DatedCode #{self.pk}"
+
+
 class AutoSaveFormData(models.Model):
     """Stores auto-saved form data (partial saves allowed)."""
 
