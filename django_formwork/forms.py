@@ -334,7 +334,10 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
         except ValidationError as e:
             self._update_errors(e)
 
-        if self._validate_unique:
+        # A FormworkBaseModelFormSet defers each child's against-the-database
+        # uniqueness check to one batched pass on the formset (see
+        # django_formwork.formsets); skip it here when so instructed.
+        if self._validate_unique and not getattr(self, "_defer_unique_to_formset", False):
             self.validate_unique()
         if self._validate_constraints:
             self.validate_constraints()
@@ -361,7 +364,8 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
         except ValidationError as e:
             self._update_errors(e)
 
-        if self._validate_unique:
+        # See _post_clean(): the formset batches the uniqueness check.
+        if self._validate_unique and not getattr(self, "_defer_unique_to_formset", False):
             await self.avalidate_unique()
         if self._validate_constraints:
             await self.avalidate_constraints()
