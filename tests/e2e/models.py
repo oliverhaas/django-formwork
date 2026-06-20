@@ -98,6 +98,76 @@ class ConstraintPair(models.Model):
         return f"{self.left}/{self.right}"
 
 
+class UniqueAndCheckPair(models.Model):
+    """A batchable ``UniqueConstraint`` next to a ``CheckConstraint``.
+
+    The unique part is batched by the formset; the check stays on Django's
+    per-form path. Used to prove the two coexist with stock parity.
+    """
+
+    left = models.CharField(max_length=50)
+    right = models.CharField(max_length=50)
+
+    class Meta:
+        app_label = "e2e"
+        constraints = [
+            models.UniqueConstraint(fields=["left", "right"], name="uq_unique_and_check_pair"),
+            models.CheckConstraint(condition=~models.Q(left="BAD"), name="ck_unique_and_check_pair_left"),
+        ]
+
+    def __str__(self):
+        return f"{self.left}/{self.right}"
+
+
+class ConditionalUnique(models.Model):
+    """A conditional (partial) ``UniqueConstraint``.
+
+    ``slug`` must be unique only among ``active=True`` rows. Conditional
+    constraints are not batchable, so they stay on Django's per-form path; the
+    test pins that parity holds.
+    """
+
+    slug = models.CharField(max_length=50)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        app_label = "e2e"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["slug"],
+                condition=models.Q(active=True),
+                name="uq_conditional_unique_active_slug",
+            ),
+        ]
+
+    def __str__(self):
+        return self.slug or f"ConditionalUnique #{self.pk}"
+
+
+class CustomMessageUnique(models.Model):
+    """A field-based ``UniqueConstraint`` with a custom violation message.
+
+    A custom message means Django uses ``get_violation_error_message`` rather
+    than ``unique_error_message``, so this constraint is not batchable and stays
+    on the per-form path. The test pins that the custom message is preserved.
+    """
+
+    code = models.CharField(max_length=50)
+
+    class Meta:
+        app_label = "e2e"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["code"],
+                name="uq_custom_message_unique_code",
+                violation_error_message="That code is already taken.",
+            ),
+        ]
+
+    def __str__(self):
+        return self.code or f"CustomMessageUnique #{self.pk}"
+
+
 class Membership(models.Model):
     """Inline child, unique per ``(region, slug)``, for inline batched-uniqueness tests."""
 

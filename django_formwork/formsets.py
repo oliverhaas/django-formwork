@@ -10,22 +10,26 @@ batches the database hit.
 
 :class:`FormworkBaseModelFormSet` collapses those N x M queries into one query
 per distinct unique check, regardless of row count.  It tells each child form to
-defer its uniqueness check (see
-:class:`~django_formwork.forms.FormworkModelForm`), then replays Django's own
-``_perform_unique_checks`` / ``_perform_date_checks`` against a single prefetched
-result set per check.  The validation outcome is identical to stock Django: same
-errors, same messages, same placement (field key vs ``__all__``); only the query
-count changes.
+defer its checks (see :class:`~django_formwork.forms.FormworkModelForm`), then
+replays Django's own ``_perform_unique_checks`` / ``_perform_date_checks``
+against a single prefetched result set per check.  The same batching covers the
+field-based ``Meta.constraints`` ``UniqueConstraint`` s that Django treats as
+total (no condition, no expressions, default message); the remaining
+constraints -- conditional or expression unique constraints, custom messages,
+and every ``CheckConstraint`` -- are replayed per form with Django's own
+``constraint.validate()``.  The validation outcome is identical to stock Django:
+same errors, same messages, same placement (field key vs ``__all__``); only the
+query count changes.
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypeGuard, cast
 
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
-from django.db import connection
-from django.db.models import Q
+from django.db import connection, router
+from django.db.models import Q, UniqueConstraint
 from django.forms.models import (
     BaseInlineFormSet,
     BaseModelFormSet,
@@ -59,9 +63,18 @@ class _BatchedUniquenessMixin:
     """Collapse a model formset's O(N x M) uniqueness queries into O(M).
 
     Mixed in *before* :class:`~django.forms.models.BaseModelFormSet`.  Children
-    are marked to defer their per-form uniqueness check; the formset then runs
-    one batched query per distinct check in :meth:`validate_unique` and rebuilds
-    exactly the errors Django would have raised per form.
+    are told to defer their per-form against-the-database checks; the formset
+    then runs one batched query per distinct uniqueness check in
+    :meth:`validate_unique` and rebuilds exactly the errors Django would have
+    raised per form.
+
+    Batched: classic ``unique`` / ``unique_together`` / ``unique_for_<date>``
+    *and* the field-based ``Meta.constraints`` ``UniqueConstraint`` s that Django
+    treats as total (no condition, no expressions, default message, nulls
+    distinct).  Everything else a constraint can express -- conditional or
+    expression ``UniqueConstraint`` s, custom violation messages, and every
+    ``CheckConstraint`` -- is replayed per form with Django's own
+    ``constraint.validate()``, so its result is identical to stock.
     """
 
     if TYPE_CHECKING:
@@ -70,34 +83,64 @@ class _BatchedUniquenessMixin:
 
     def _construct_form(self, i: int, **kwargs: Any) -> Any:  # noqa: ANN401
         form = super()._construct_form(i, **kwargs)  # type: ignore[misc]
-        # Honored by FormworkModelForm. A plain ModelForm ignores it and keeps
-        # Django's per-form behavior (still correct, just not batched).
+        # Honored by FormworkModelForm, which then sets ``_uniqueness_deferred``.
+        # A plain ModelForm ignores it and keeps Django's per-form behavior
+        # (still correct, just not batched).
         form._defer_unique_to_formset = True  # noqa: SLF001
         return form
 
     def validate_unique(self) -> None:
-        # Reproduce each child's against-the-database uniqueness errors in one
-        # batched pass *before* the in-memory cross-form dedup, so the dedup's
-        # ``valid_forms`` filter sees the same forms stock Django would.
-        self._perform_batched_unique_checks()
+        # Reproduce each deferred child's against-the-database errors before the
+        # in-memory cross-form dedup, so the dedup's ``valid_forms`` filter sees
+        # the same forms stock Django would.  Order matches stock ``_post_clean``:
+        # uniqueness first, then constraints.
+        forms = self._forms_to_check()
+        self._perform_batched_unique_checks([f for f in forms if getattr(f, "_validate_unique", False)])
+        self._perform_per_form_constraints([f for f in forms if getattr(f, "_validate_constraints", False)])
         super().validate_unique()  # type: ignore[misc]
 
     # -- collecting the checks -------------------------------------------------
 
     def _forms_to_check(self) -> list[Any]:
         deleted = set(self.deleted_forms)
+        # ``_uniqueness_deferred`` is set by FormworkModelForm only after its
+        # clean() ran and only when it actually skipped its own checks, i.e. the
+        # same forms whose ``_post_clean`` would have queried in stock.
+        return [form for form in self.forms if getattr(form, "_uniqueness_deferred", False) and form not in deleted]
+
+    @staticmethod
+    def _is_batchable_unique(constraint: Any) -> TypeGuard[UniqueConstraint]:  # noqa: ANN401
+        """True for the ``UniqueConstraint`` s Django folds into unique checks.
+
+        These are the "total" unique constraints (``Meta.total_unique_constraints``):
+        field-based, no condition, no expressions.  We narrow further to the ones
+        whose error is byte-for-byte a classic uniqueness error: nulls distinct
+        (so a NULL skips the check, as ``_perform_unique_checks`` does) and the
+        default violation message (so Django uses ``unique_error_message``).
+        """
+        return (
+            isinstance(constraint, UniqueConstraint)
+            and constraint.condition is None
+            and not constraint.contains_expressions
+            and constraint.nulls_distinct is not False
+            and constraint.violation_error_message == constraint.default_violation_error_message
+        )
+
+    def _meta_unique_checks(self, instance: Model, exclude: set[str]) -> list[UniqueCheck]:
+        """Batchable ``UniqueConstraint`` s as ``(model_class, fields)`` checks.
+
+        Mirrors how ``_get_unique_checks(include_meta_constraints=True)`` folds
+        total unique constraints into the unique-check list, restricted to the
+        subset :meth:`_is_batchable_unique` accepts.
+        """
         return [
-            form
-            for form in self.forms
-            # ``_validate_unique`` is True only once a form's clean() ran, i.e.
-            # the same forms whose ``_post_clean`` would have queried in stock.
-            if getattr(form, "_validate_unique", False)
-            and getattr(form, "_defer_unique_to_formset", False)
-            and form not in deleted
+            (model_class, tuple(constraint.fields))
+            for model_class, constraints in instance.get_constraints()
+            for constraint in constraints
+            if self._is_batchable_unique(constraint) and not any(name in exclude for name in constraint.fields)
         ]
 
-    def _perform_batched_unique_checks(self) -> None:
-        forms = self._forms_to_check()
+    def _perform_batched_unique_checks(self, forms: list[Any]) -> None:
         if not forms:
             return
 
@@ -105,11 +148,10 @@ class _BatchedUniquenessMixin:
         date_by_form: dict[Any, list[DateCheck]] = {}
         for form in forms:
             exclude = form._get_validation_exclusions()  # noqa: SLF001
-            # ``include_meta_constraints`` is left False: classic unique /
-            # unique_together / unique_for_<date> only. Meta UniqueConstraints
-            # keep Django's per-form ``validate_constraints`` path untouched.
+            # Classic unique / unique_together / unique_for_<date> ...
             unique_checks, date_checks = form.instance._get_unique_checks(exclude=exclude)  # noqa: SLF001
-            unique_by_form[form] = unique_checks
+            # ... plus the field-based Meta UniqueConstraints we can batch.
+            unique_by_form[form] = list(unique_checks) + self._meta_unique_checks(form.instance, exclude)
             date_by_form[form] = date_checks
 
         taken = self._prefetch_unique(forms, unique_by_form)
@@ -119,6 +161,34 @@ class _BatchedUniquenessMixin:
             errors: dict[str, list[ValidationError]] = {}
             self._collect_unique_errors(form, unique_by_form[form], taken, errors)
             self._collect_date_errors(form, date_by_form[form], taken_dates, errors)
+            if errors:
+                form._update_errors(ValidationError(errors))  # noqa: SLF001
+
+    def _perform_per_form_constraints(self, forms: list[Any]) -> None:
+        """Replay the constraints we do not batch, per form, like Django.
+
+        This reproduces ``Model.validate_constraints`` exactly (same iteration,
+        same error routing) but skips the unique constraints already covered by
+        :meth:`_perform_batched_unique_checks`.  It still costs one query per
+        constraint per form, which is unavoidable for ``CheckConstraint`` s and
+        conditional/expression unique constraints.
+        """
+        for form in forms:
+            instance = form.instance
+            exclude = form._get_validation_exclusions()  # noqa: SLF001
+            using = router.db_for_write(instance.__class__, instance=instance)
+            errors: dict[str, list[ValidationError]] = {}
+            for model_class, constraints in instance.get_constraints():
+                for constraint in constraints:
+                    if self._is_batchable_unique(constraint):
+                        continue
+                    try:
+                        constraint.validate(model_class, instance, exclude=exclude, using=using)
+                    except ValidationError as e:
+                        if getattr(e, "code", None) == "unique" and len(constraint.fields) == 1:
+                            errors.setdefault(constraint.fields[0], []).append(e)
+                        else:
+                            errors = e.update_error_dict(errors)
             if errors:
                 form._update_errors(ValidationError(errors))  # noqa: SLF001
 

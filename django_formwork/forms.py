@@ -273,6 +273,7 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
         _meta: Any
         _validate_unique: bool
         _validate_constraints: bool
+        _uniqueness_deferred: bool
         _update_errors: Any
         validate_unique: Any
         validate_constraints: Any
@@ -334,13 +335,17 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
         except ValidationError as e:
             self._update_errors(e)
 
-        # A FormworkBaseModelFormSet defers each child's against-the-database
-        # uniqueness check to one batched pass on the formset (see
-        # django_formwork.formsets); skip it here when so instructed.
-        if self._validate_unique and not getattr(self, "_defer_unique_to_formset", False):
-            self.validate_unique()
-        if self._validate_constraints:
-            self.validate_constraints()
+        # A FormworkBaseModelFormSet runs every child's against-the-database
+        # uniqueness and constraint checks once, in a batched pass on the formset
+        # (see django_formwork.formsets). When so instructed, skip both here and
+        # record that we deferred so the formset knows to cover this form.
+        if getattr(self, "_defer_unique_to_formset", False):
+            self._uniqueness_deferred = True
+        else:
+            if self._validate_unique:
+                self.validate_unique()
+            if self._validate_constraints:
+                self.validate_constraints()
 
     async def _apost_clean(self) -> None:
         # Same reorder as _post_clean(), async variant.
@@ -364,11 +369,15 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
         except ValidationError as e:
             self._update_errors(e)
 
-        # See _post_clean(): the formset batches the uniqueness check.
-        if self._validate_unique and not getattr(self, "_defer_unique_to_formset", False):
-            await self.avalidate_unique()
-        if self._validate_constraints:
-            await self.avalidate_constraints()
+        # See _post_clean(): the formset batches the uniqueness and constraint
+        # checks; skip both here and record that we deferred when instructed.
+        if getattr(self, "_defer_unique_to_formset", False):
+            self._uniqueness_deferred = True
+        else:
+            if self._validate_unique:
+                await self.avalidate_unique()
+            if self._validate_constraints:
+                await self.avalidate_constraints()
 
 
 class FormworkForm(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):

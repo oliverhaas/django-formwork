@@ -21,7 +21,17 @@ import pytest
 from django.db import connection
 from django.forms import inlineformset_factory, modelformset_factory
 from django.test.utils import CaptureQueriesContext
-from e2e.models import ConstraintPair, DatedCode, Membership, Region, UniqueCode, UniquePair
+from e2e.models import (
+    ConditionalUnique,
+    ConstraintPair,
+    CustomMessageUnique,
+    DatedCode,
+    Membership,
+    Region,
+    UniqueAndCheckPair,
+    UniqueCode,
+    UniquePair,
+)
 
 from django_formwork.formsets import (
     formwork_inlineformset_factory,
@@ -323,5 +333,134 @@ class TestQueryCount:
             assert self._our_formset(rows).is_valid()
         with CaptureQueriesContext(connection) as q_stock:
             assert self._stock_formset(rows).is_valid()
+
+        assert len(q_ours.captured_queries) < len(q_stock.captured_queries)
+
+
+# ---------------------------------------------------------------------------
+# Parity: batchable Meta UniqueConstraint alongside a CheckConstraint
+# ---------------------------------------------------------------------------
+
+
+class TestUniqueAndCheckParity:
+    """A field-based ``UniqueConstraint`` is batched; the ``CheckConstraint``
+    next to it stays on Django's per-form path. Both must match stock."""
+
+    def test_add_without_collision_is_valid(self):
+        _assert_parity(
+            UniqueAndCheckPair,
+            ["left", "right"],
+            _data([{"left": "a", "right": "1"}, {"left": "a", "right": "2"}]),
+        )
+
+    def test_unique_collision_matches_stock(self):
+        UniqueAndCheckPair.objects.create(left="a", right="1")
+        _assert_parity(
+            UniqueAndCheckPair,
+            ["left", "right"],
+            _data([{"left": "a", "right": "1"}, {"left": "b", "right": "2"}]),
+        )
+
+    def test_check_violation_matches_stock(self):
+        # left="BAD" trips the CheckConstraint, which is never batched.
+        _assert_parity(
+            UniqueAndCheckPair,
+            ["left", "right"],
+            _data([{"left": "BAD", "right": "1"}, {"left": "ok", "right": "2"}]),
+        )
+
+    def test_unique_and_check_violations_together_match_stock(self):
+        UniqueAndCheckPair.objects.create(left="a", right="1")
+        _assert_parity(
+            UniqueAndCheckPair,
+            ["left", "right"],
+            _data([{"left": "a", "right": "1"}, {"left": "BAD", "right": "9"}]),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Parity: non-batchable UniqueConstraints stay on Django's per-form path
+# ---------------------------------------------------------------------------
+
+
+class TestConditionalUniqueParity:
+    """A conditional (partial) ``UniqueConstraint`` is not batchable."""
+
+    def test_two_active_rows_collide_like_stock(self):
+        ConditionalUnique.objects.create(slug="x", active=True)
+        _assert_parity(
+            ConditionalUnique,
+            ["slug", "active"],
+            _data([{"slug": "x", "active": "on"}]),
+        )
+
+    def test_inactive_row_does_not_collide_like_stock(self):
+        ConditionalUnique.objects.create(slug="x", active=True)
+        # The condition is active=True, so an inactive duplicate is allowed.
+        _assert_parity(
+            ConditionalUnique,
+            ["slug", "active"],
+            _data([{"slug": "x"}]),  # active unchecked -> False
+        )
+
+
+class TestCustomMessageUniqueParity:
+    """A custom ``violation_error_message`` means Django uses
+    ``get_violation_error_message`` (not ``unique_error_message``), so the
+    constraint is not batchable and the custom text must survive."""
+
+    def test_custom_message_is_preserved_like_stock(self):
+        CustomMessageUnique.objects.create(code="taken")
+        _assert_parity(
+            CustomMessageUnique,
+            ["code"],
+            _data([{"code": "taken"}]),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Efficiency: Meta UniqueConstraint is batched too
+# ---------------------------------------------------------------------------
+
+
+class TestMetaConstraintEfficiency:
+    def _our(self, model, fields, rows):
+        cls = formwork_modelformset_factory(model, fields=fields, extra=0)
+        return cls(_data(rows), queryset=model.objects.none())
+
+    def _stock(self, model, fields, rows):
+        cls = modelformset_factory(model, fields=fields, extra=0)
+        return cls(_data(rows), queryset=model.objects.none())
+
+    def test_constraint_pair_queries_are_constant_in_form_count(self):
+        small = [{"left": f"L{i}", "right": f"R{i}"} for i in range(3)]
+        big = [{"left": f"L{i}", "right": f"R{i}"} for i in range(12)]
+
+        with CaptureQueriesContext(connection) as q_small:
+            assert self._our(ConstraintPair, ["left", "right"], small).is_valid()
+        with CaptureQueriesContext(connection) as q_big:
+            assert self._our(ConstraintPair, ["left", "right"], big).is_valid()
+
+        assert len(q_small.captured_queries) == len(q_big.captured_queries)
+
+    def test_constraint_pair_uses_fewer_queries_than_stock(self):
+        rows = [{"left": f"L{i}", "right": f"R{i}"} for i in range(12)]
+
+        with CaptureQueriesContext(connection) as q_ours:
+            assert self._our(ConstraintPair, ["left", "right"], rows).is_valid()
+        with CaptureQueriesContext(connection) as q_stock:
+            assert self._stock(ConstraintPair, ["left", "right"], rows).is_valid()
+
+        assert len(q_ours.captured_queries) < len(q_stock.captured_queries)
+
+    def test_unique_part_is_batched_even_next_to_a_check(self):
+        # The CheckConstraint still costs one query per form, but the unique
+        # part is batched, so we must beat stock's two-queries-per-form.
+        rows = [{"left": f"L{i}", "right": f"R{i}"} for i in range(12)]
+
+        with CaptureQueriesContext(connection) as q_ours:
+            assert self._our(UniqueAndCheckPair, ["left", "right"], rows).is_valid()
+        with CaptureQueriesContext(connection) as q_stock:
+            assert self._stock(UniqueAndCheckPair, ["left", "right"], rows).is_valid()
 
         assert len(q_ours.captured_queries) < len(q_stock.captured_queries)
