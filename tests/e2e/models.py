@@ -168,6 +168,34 @@ class CustomMessageUnique(models.Model):
         return self.code or f"CustomMessageUnique #{self.pk}"
 
 
+class MultiCheck(models.Model):
+    """Two ``CheckConstraint`` s on one model, for batched-check tests.
+
+    The formset evaluates both checks for every form in a single round trip.
+    This pins that batching many checks keeps each one's message, code, and
+    placement byte-for-byte identical to stock per-form validation, in ``Meta``
+    declaration order, including a custom message and code on the second check.
+    """
+
+    left = models.CharField(max_length=50)
+    right = models.CharField(max_length=50)
+
+    class Meta:
+        app_label = "e2e"
+        constraints = [
+            models.CheckConstraint(condition=~models.Q(left="BAD"), name="ck_multi_left"),
+            models.CheckConstraint(
+                condition=~models.Q(right="BAD"),
+                name="ck_multi_right",
+                violation_error_message="Right cannot be BAD.",
+                violation_error_code="right_is_bad",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.left}/{self.right}"
+
+
 class Membership(models.Model):
     """Inline child, unique per ``(region, slug)``, for inline batched-uniqueness tests."""
 

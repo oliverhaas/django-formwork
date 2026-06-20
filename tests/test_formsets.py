@@ -27,6 +27,7 @@ from e2e.models import (
     CustomMessageUnique,
     DatedCode,
     Membership,
+    MultiCheck,
     Region,
     UniqueAndCheckPair,
     UniqueCode,
@@ -378,6 +379,56 @@ class TestUniqueAndCheckParity:
         )
 
 
+class TestMultiCheckParity:
+    """Two ``CheckConstraint`` s evaluated in one batched round trip must
+    surface byte-for-byte what stock per-form validation does: each message,
+    each code, ``__all__`` placement, and ``Meta`` declaration order."""
+
+    def test_no_violation_is_valid(self):
+        _assert_parity(
+            MultiCheck,
+            ["left", "right"],
+            _data([{"left": "ok", "right": "ok"}, {"left": "fine", "right": "fine"}]),
+        )
+
+    def test_first_check_violation_matches_stock(self):
+        _assert_parity(
+            MultiCheck,
+            ["left", "right"],
+            _data([{"left": "BAD", "right": "ok"}, {"left": "ok", "right": "ok"}]),
+        )
+
+    def test_second_check_custom_message_matches_stock(self):
+        _assert_parity(
+            MultiCheck,
+            ["left", "right"],
+            _data([{"left": "ok", "right": "BAD"}]),
+        )
+
+    def test_both_checks_violation_order_matches_stock(self):
+        # One row trips both checks; the two messages must land in __all__ in
+        # Meta declaration order (left check, then right check).
+        _assert_parity(
+            MultiCheck,
+            ["left", "right"],
+            _data([{"left": "BAD", "right": "BAD"}]),
+        )
+
+    def test_mixed_rows_match_stock(self):
+        _assert_parity(
+            MultiCheck,
+            ["left", "right"],
+            _data(
+                [
+                    {"left": "BAD", "right": "ok"},
+                    {"left": "ok", "right": "ok"},
+                    {"left": "ok", "right": "BAD"},
+                    {"left": "BAD", "right": "BAD"},
+                ],
+            ),
+        )
+
+
 # ---------------------------------------------------------------------------
 # Parity: non-batchable UniqueConstraints stay on Django's per-form path
 # ---------------------------------------------------------------------------
@@ -454,8 +505,8 @@ class TestMetaConstraintEfficiency:
         assert len(q_ours.captured_queries) < len(q_stock.captured_queries)
 
     def test_unique_part_is_batched_even_next_to_a_check(self):
-        # The CheckConstraint still costs one query per form, but the unique
-        # part is batched, so we must beat stock's two-queries-per-form.
+        # Both the unique part and the check are batched, so we beat stock's
+        # several-queries-per-form by a wide margin.
         rows = [{"left": f"L{i}", "right": f"R{i}"} for i in range(12)]
 
         with CaptureQueriesContext(connection) as q_ours:
@@ -464,3 +515,50 @@ class TestMetaConstraintEfficiency:
             assert self._stock(UniqueAndCheckPair, ["left", "right"], rows).is_valid()
 
         assert len(q_ours.captured_queries) < len(q_stock.captured_queries)
+
+
+# ---------------------------------------------------------------------------
+# Efficiency: CheckConstraints are batched into one round trip
+# ---------------------------------------------------------------------------
+
+
+class TestCheckBatchingEfficiency:
+    def _our(self, model, fields, rows):
+        cls = formwork_modelformset_factory(model, fields=fields, extra=0)
+        return cls(_data(rows), queryset=model.objects.none())
+
+    def _stock(self, model, fields, rows):
+        cls = modelformset_factory(model, fields=fields, extra=0)
+        return cls(_data(rows), queryset=model.objects.none())
+
+    def test_multi_check_queries_are_constant_in_form_count(self):
+        small = [{"left": f"L{i}", "right": f"R{i}"} for i in range(3)]
+        big = [{"left": f"L{i}", "right": f"R{i}"} for i in range(12)]
+
+        with CaptureQueriesContext(connection) as q_small:
+            assert self._our(MultiCheck, ["left", "right"], small).is_valid()
+        with CaptureQueriesContext(connection) as q_big:
+            assert self._our(MultiCheck, ["left", "right"], big).is_valid()
+
+        assert len(q_small.captured_queries) == len(q_big.captured_queries)
+
+    def test_multi_check_uses_fewer_queries_than_stock(self):
+        rows = [{"left": f"L{i}", "right": f"R{i}"} for i in range(12)]
+
+        with CaptureQueriesContext(connection) as q_ours:
+            assert self._our(MultiCheck, ["left", "right"], rows).is_valid()
+        with CaptureQueriesContext(connection) as q_stock:
+            assert self._stock(MultiCheck, ["left", "right"], rows).is_valid()
+
+        assert len(q_ours.captured_queries) < len(q_stock.captured_queries)
+
+    def test_unique_and_check_queries_are_constant_in_form_count(self):
+        small = [{"left": f"L{i}", "right": f"R{i}"} for i in range(3)]
+        big = [{"left": f"L{i}", "right": f"R{i}"} for i in range(12)]
+
+        with CaptureQueriesContext(connection) as q_small:
+            assert self._our(UniqueAndCheckPair, ["left", "right"], small).is_valid()
+        with CaptureQueriesContext(connection) as q_big:
+            assert self._our(UniqueAndCheckPair, ["left", "right"], big).is_valid()
+
+        assert len(q_small.captured_queries) == len(q_big.captured_queries)

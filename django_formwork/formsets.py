@@ -14,22 +14,27 @@ defer its checks (see :class:`~django_formwork.forms.FormworkModelForm`), then
 replays Django's own ``_perform_unique_checks`` / ``_perform_date_checks``
 against a single prefetched result set per check.  The same batching covers the
 field-based ``Meta.constraints`` ``UniqueConstraint`` s that Django treats as
-total (no condition, no expressions, default message); the remaining
-constraints -- conditional or expression unique constraints, custom messages,
-and every ``CheckConstraint`` -- are replayed per form with Django's own
-``constraint.validate()``.  The validation outcome is identical to stock Django:
-same errors, same messages, same placement (field key vs ``__all__``); only the
-query count changes.
+total (no condition, no expressions, default message), and every
+``CheckConstraint`` is evaluated for all forms in one round trip (the same
+tableless query ``Q.check`` runs, wrapped as side-by-side scalar subqueries).
+The only constraints still replayed per form with Django's own
+``constraint.validate()`` are the ones neither pass can batch: conditional or
+expression unique constraints and custom message uniques.  The validation
+outcome is identical to stock Django: same errors, same messages, same placement
+(field key vs ``__all__``); only the query count changes.
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
+from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any, TypeGuard, cast
 
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
-from django.db import connection, router
-from django.db.models import Q, UniqueConstraint
+from django.db import DatabaseError, connection, connections, router, transaction
+from django.db.models import BooleanField, CheckConstraint, Q, UniqueConstraint, Value
+from django.db.models.functions import Coalesce
+from django.db.models.sql import Query
 from django.forms.models import (
     BaseInlineFormSet,
     BaseModelFormSet,
@@ -68,13 +73,13 @@ class _BatchedUniquenessMixin:
     :meth:`validate_unique` and rebuilds exactly the errors Django would have
     raised per form.
 
-    Batched: classic ``unique`` / ``unique_together`` / ``unique_for_<date>``
-    *and* the field-based ``Meta.constraints`` ``UniqueConstraint`` s that Django
-    treats as total (no condition, no expressions, default message, nulls
-    distinct).  Everything else a constraint can express -- conditional or
-    expression ``UniqueConstraint`` s, custom violation messages, and every
-    ``CheckConstraint`` -- is replayed per form with Django's own
-    ``constraint.validate()``, so its result is identical to stock.
+    Batched: classic ``unique`` / ``unique_together`` / ``unique_for_<date>``,
+    the field-based ``Meta.constraints`` ``UniqueConstraint`` s that Django treats
+    as total (no condition, no expressions, default message, nulls distinct), and
+    every ``CheckConstraint`` (all forms in one round trip).  What stays on
+    Django's per-form ``constraint.validate()`` path is only what cannot share a
+    batched query: conditional or expression ``UniqueConstraint`` s and custom
+    violation messages.  Either way the result is identical to stock.
     """
 
     if TYPE_CHECKING:
@@ -165,14 +170,20 @@ class _BatchedUniquenessMixin:
                 form._update_errors(ValidationError(errors))  # noqa: SLF001
 
     def _perform_per_form_constraints(self, forms: list[Any]) -> None:
-        """Replay the constraints we do not batch, per form, like Django.
+        """Replay the constraints not folded into the unique batch, like Django.
 
-        This reproduces ``Model.validate_constraints`` exactly (same iteration,
-        same error routing) but skips the unique constraints already covered by
-        :meth:`_perform_batched_unique_checks`.  It still costs one query per
-        constraint per form, which is unavoidable for ``CheckConstraint`` s and
-        conditional/expression unique constraints.
+        This reproduces ``Model.validate_constraints`` exactly -- same iteration
+        order, same error routing -- but (1) skips the unique constraints already
+        covered by :meth:`_perform_batched_unique_checks`, and (2) sources every
+        ``CheckConstraint`` verdict from one batched round trip (see
+        :meth:`_evaluate_batched_checks`) instead of a query per form.  The
+        per-form ``constraint.validate()`` calls that remain are for what neither
+        pass can batch: conditional or expression unique constraints and custom
+        message uniques.
         """
+        if not forms:
+            return
+        check_verdicts = self._evaluate_batched_checks(forms)
         for form in forms:
             instance = form.instance
             exclude = form._get_validation_exclusions()  # noqa: SLF001
@@ -182,15 +193,120 @@ class _BatchedUniquenessMixin:
                 for constraint in constraints:
                     if self._is_batchable_unique(constraint):
                         continue
+                    key = (id(form), id(constraint))
+                    if check_verdicts is not None and key in check_verdicts:
+                        # Already evaluated in the batched check pass; rebuild the
+                        # exact error CheckConstraint.validate would have raised.
+                        if not check_verdicts[key]:
+                            error = ValidationError(
+                                constraint.get_violation_error_message(),
+                                code=constraint.violation_error_code,
+                            )
+                            errors = self._route_constraint_error(errors, constraint, error)
+                        continue
                     try:
                         constraint.validate(model_class, instance, exclude=exclude, using=using)
-                    except ValidationError as e:
-                        if getattr(e, "code", None) == "unique" and len(constraint.fields) == 1:
-                            errors.setdefault(constraint.fields[0], []).append(e)
-                        else:
-                            errors = e.update_error_dict(errors)
+                    except ValidationError as error:
+                        errors = self._route_constraint_error(errors, constraint, error)
             if errors:
                 form._update_errors(ValidationError(errors))  # noqa: SLF001
+
+    @staticmethod
+    def _route_constraint_error(
+        errors: dict[str, list[ValidationError]],
+        constraint: Any,  # noqa: ANN401
+        error: ValidationError,
+    ) -> dict[str, list[ValidationError]]:
+        """Place a constraint error where ``Model.validate_constraints`` would."""
+        if getattr(error, "code", None) == "unique" and len(constraint.fields) == 1:
+            errors.setdefault(constraint.fields[0], []).append(error)
+        else:
+            errors = error.update_error_dict(errors)
+        return errors
+
+    # -- CheckConstraints (batched into one round trip) ------------------------
+
+    def _evaluate_batched_checks(self, forms: list[Any]) -> dict[tuple[int, int], bool] | None:
+        """Evaluate every batchable ``CheckConstraint`` across all forms at once.
+
+        Returns a ``{(id(form), id(constraint)): satisfied}`` map, or ``None`` to
+        tell the caller to fall back to per-form ``constraint.validate()`` (see
+        the ``DatabaseError`` note).  Mirrors ``CheckConstraint.validate``: a
+        check whose condition references an excluded field is skipped (validate
+        would return without error), and a verdict is ``Q.check``'s
+        ``execute_sql(...) is not None``.
+        """
+        jobs: dict[str, list[tuple[tuple[int, int], Any, dict[str, Any]]]] = defaultdict(list)
+        for form in forms:
+            instance = form.instance
+            exclude = form._get_validation_exclusions()  # noqa: SLF001
+            using = router.db_for_write(instance.__class__, instance=instance)
+            for model_class, constraints in instance.get_constraints():
+                for constraint in constraints:
+                    if not isinstance(constraint, CheckConstraint):
+                        continue
+                    if exclude and constraint._expression_refs_exclude(model_class, constraint.condition, exclude):  # type: ignore[attr-defined]  # noqa: SLF001
+                        continue
+                    against = instance._get_field_expression_map(meta=model_class._meta, exclude=exclude)  # noqa: SLF001
+                    jobs[using].append(((id(form), id(constraint)), constraint.condition, against))
+
+        verdicts: dict[tuple[int, int], bool] = {}
+        for using, group in jobs.items():
+            try:
+                satisfied = self._run_batched_checks([(condition, against) for _, condition, against in group], using)
+            except DatabaseError:
+                # Q.check swallows a DatabaseError per row and treats that row as
+                # passing.  A batched failure cannot be attributed per row, so
+                # fall back to Django's per-form validate() rather than guess.
+                return None
+            for (key, _condition, _against), ok in zip(group, satisfied, strict=True):
+                verdicts[key] = ok
+        return verdicts
+
+    def _run_batched_checks(self, items: list[tuple[Any, dict[str, Any]]], using: str) -> list[bool]:
+        """Run all check conditions for one database in a single statement.
+
+        Each condition compiles to the same tableless ``SELECT 1 WHERE ...`` that
+        ``Q.check`` would run; we wrap each as a scalar subquery and select them
+        side by side, so ``column is not None`` is that check's verdict.
+        """
+        conn = connections[using]
+        fragments: list[str] = []
+        params: list[Any] = []
+        for condition, against in items:
+            sql, sql_params = self._build_check_query(condition, against, using).get_compiler(using=using).as_sql()
+            fragments.append(f"({sql})")
+            params.extend(sql_params)
+        select = "SELECT " + ", ".join(f"{fragment} AS c{i}" for i, fragment in enumerate(fragments))
+        # Match Q.check: isolate the read in a savepoint when already inside a
+        # transaction, so a backend error rolls back cleanly.
+        atomic = transaction.atomic(using=using) if conn.in_atomic_block else nullcontext()
+        with atomic, conn.cursor() as cursor:
+            cursor.execute(select, params)
+            row = cursor.fetchone()
+        return [value is not None for value in row]
+
+    @staticmethod
+    def _build_check_query(condition: Any, against: dict[str, Any], using: str) -> Query:  # noqa: ANN401
+        """The tableless query ``Q.check`` builds for one condition and row.
+
+        A faithful copy of ``django.db.models.query_utils.Q.check`` up to the
+        point of execution, so the compiled SQL is byte-for-byte what stock would
+        run; only the transport (batched scalar subqueries) differs.
+        """
+        query = Query(None)
+        for name, value in against.items():
+            resolved = value if hasattr(value, "resolve_expression") else Value(value)
+            query.add_annotation(resolved, name, select=False)
+        query.add_annotation(Value(1), "_check")
+        if connections[using].features.supports_comparing_boolean_expr:
+            # Coalesce(..., Value(value=True)) is byte-identical to Q.check's
+            # literal True (Coalesce wraps non-expressions in Value); spelled out
+            # here to keep the boolean out of a positional argument.
+            query.add_q(Q(Coalesce(condition, Value(value=True), output_field=BooleanField())))
+        else:
+            query.add_q(condition)
+        return query
 
     # -- unique / unique_together ---------------------------------------------
 
