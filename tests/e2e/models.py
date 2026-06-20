@@ -196,6 +196,30 @@ class MultiCheck(models.Model):
         return f"{self.left}/{self.right}"
 
 
+class CheckThenUnique(models.Model):
+    """A ``CheckConstraint`` declared *before* a multi-field ``UniqueConstraint``.
+
+    A single row can trip both, and both errors land in ``__all__``. Stock
+    Django reports them in ``Meta`` declaration order (check, then unique), so
+    this model pins that the batched formset keeps that exact order even though
+    it sources the two verdicts from different batched passes.
+    """
+
+    left = models.CharField(max_length=50)
+    right = models.CharField(max_length=50)
+    note = models.CharField(max_length=50, default="")
+
+    class Meta:
+        app_label = "e2e"
+        constraints = [
+            models.CheckConstraint(condition=~models.Q(note="BAD"), name="ck_check_then_unique_note"),
+            models.UniqueConstraint(fields=["left", "right"], name="uq_check_then_unique_pair"),
+        ]
+
+    def __str__(self):
+        return f"{self.left}/{self.right}"
+
+
 class Membership(models.Model):
     """Inline child, unique per ``(region, slug)``, for inline batched-uniqueness tests."""
 

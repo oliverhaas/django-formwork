@@ -97,11 +97,14 @@ class _BatchedUniquenessMixin:
     def validate_unique(self) -> None:
         # Reproduce each deferred child's against-the-database errors before the
         # in-memory cross-form dedup, so the dedup's ``valid_forms`` filter sees
-        # the same forms stock Django would.  Order matches stock ``_post_clean``:
-        # uniqueness first, then constraints.
+        # the same forms stock Django would.  The two phases and their order
+        # mirror stock ``_post_clean``: ``validate_unique`` (classic unique /
+        # date checks) first, then ``validate_constraints`` (``Meta.constraints``
+        # in declaration order).  Keeping them separate is what preserves the
+        # message order when a check and a unique both land in ``__all__``.
         forms = self._forms_to_check()
-        self._perform_batched_unique_checks([f for f in forms if getattr(f, "_validate_unique", False)])
-        self._perform_per_form_constraints([f for f in forms if getattr(f, "_validate_constraints", False)])
+        self._perform_classic_unique_checks([f for f in forms if getattr(f, "_validate_unique", False)])
+        self._perform_meta_constraints([f for f in forms if getattr(f, "_validate_constraints", False)])
         super().validate_unique()  # type: ignore[misc]
 
     # -- collecting the checks -------------------------------------------------
@@ -145,7 +148,15 @@ class _BatchedUniquenessMixin:
             if self._is_batchable_unique(constraint) and not any(name in exclude for name in constraint.fields)
         ]
 
-    def _perform_batched_unique_checks(self, forms: list[Any]) -> None:
+    def _perform_classic_unique_checks(self, forms: list[Any]) -> None:
+        """Batched stand-in for ``Model.validate_unique`` (phase one).
+
+        Classic ``unique`` / ``unique_together`` / ``unique_for_<date>`` only.
+        The field-based ``Meta.constraints`` ``UniqueConstraint`` s are handled in
+        :meth:`_perform_meta_constraints` instead, so they keep their place in
+        ``Meta`` declaration order (stock validates them via
+        ``validate_constraints``, not ``validate_unique``).
+        """
         if not forms:
             return
 
@@ -153,10 +164,8 @@ class _BatchedUniquenessMixin:
         date_by_form: dict[Any, list[DateCheck]] = {}
         for form in forms:
             exclude = form._get_validation_exclusions()  # noqa: SLF001
-            # Classic unique / unique_together / unique_for_<date> ...
             unique_checks, date_checks = form.instance._get_unique_checks(exclude=exclude)  # noqa: SLF001
-            # ... plus the field-based Meta UniqueConstraints we can batch.
-            unique_by_form[form] = list(unique_checks) + self._meta_unique_checks(form.instance, exclude)
+            unique_by_form[form] = list(unique_checks)
             date_by_form[form] = date_checks
 
         taken = self._prefetch_unique(forms, unique_by_form)
@@ -169,47 +178,78 @@ class _BatchedUniquenessMixin:
             if errors:
                 form._update_errors(ValidationError(errors))  # noqa: SLF001
 
-    def _perform_per_form_constraints(self, forms: list[Any]) -> None:
-        """Replay the constraints not folded into the unique batch, like Django.
+    def _perform_meta_constraints(self, forms: list[Any]) -> None:
+        """Batched stand-in for ``Model.validate_constraints`` (phase two).
 
-        This reproduces ``Model.validate_constraints`` exactly -- same iteration
-        order, same error routing -- but (1) skips the unique constraints already
-        covered by :meth:`_perform_batched_unique_checks`, and (2) sources every
-        ``CheckConstraint`` verdict from one batched round trip (see
-        :meth:`_evaluate_batched_checks`) instead of a query per form.  The
-        per-form ``constraint.validate()`` calls that remain are for what neither
-        pass can batch: conditional or expression unique constraints and custom
-        message uniques.
+        Walks ``get_constraints()`` in ``Meta`` declaration order, exactly as
+        stock does, and accumulates each form's errors in that order so the
+        ``__all__`` message order is identical even when a check and a unique both
+        fail the same row.  Two kinds of verdict are sourced from batched passes
+        rather than a query per form: field-based ``UniqueConstraint`` s
+        (:meth:`_is_batchable_unique`, prefetched here) and every
+        ``CheckConstraint`` (:meth:`_evaluate_batched_checks`).  Whatever neither
+        pass can batch -- conditional or expression uniques, custom-message
+        uniques -- falls through to a per-form ``constraint.validate()``.
         """
         if not forms:
             return
+
+        # One prefetch covering the batchable meta-uniques across every form, so
+        # the in-order replay below is pure dict lookups, not N queries.
+        meta_unique_by_form = {
+            form: self._meta_unique_checks(form.instance, form._get_validation_exclusions())  # noqa: SLF001
+            for form in forms
+        }
+        taken = self._prefetch_unique(forms, meta_unique_by_form)
         check_verdicts = self._evaluate_batched_checks(forms)
+
         for form in forms:
-            instance = form.instance
-            exclude = form._get_validation_exclusions()  # noqa: SLF001
-            using = router.db_for_write(instance.__class__, instance=instance)
-            errors: dict[str, list[ValidationError]] = {}
-            for model_class, constraints in instance.get_constraints():
-                for constraint in constraints:
-                    if self._is_batchable_unique(constraint):
-                        continue
-                    key = (id(form), id(constraint))
-                    if check_verdicts is not None and key in check_verdicts:
-                        # Already evaluated in the batched check pass; rebuild the
-                        # exact error CheckConstraint.validate would have raised.
-                        if not check_verdicts[key]:
-                            error = ValidationError(
-                                constraint.get_violation_error_message(),
-                                code=constraint.violation_error_code,
-                            )
-                            errors = self._route_constraint_error(errors, constraint, error)
-                        continue
-                    try:
-                        constraint.validate(model_class, instance, exclude=exclude, using=using)
-                    except ValidationError as error:
-                        errors = self._route_constraint_error(errors, constraint, error)
+            errors = self._collect_meta_constraint_errors(form, taken, check_verdicts)
             if errors:
                 form._update_errors(ValidationError(errors))  # noqa: SLF001
+
+    def _collect_meta_constraint_errors(
+        self,
+        form: Any,  # noqa: ANN401
+        taken: dict[tuple[int, tuple[str, ...]], dict[tuple[Any, ...], set[Any]]],
+        check_verdicts: dict[tuple[int, int], bool] | None,
+    ) -> dict[str, list[ValidationError]]:
+        """One form's ``validate_constraints`` errors, in ``Meta`` order.
+
+        Batchable uniques consult ``taken`` and batched checks consult
+        ``check_verdicts``; anything else falls back to the constraint's own
+        ``validate()``.  Errors accumulate in iteration order, so a check and a
+        unique that both fail land in ``__all__`` exactly as stock orders them.
+        """
+        instance = form.instance
+        exclude = form._get_validation_exclusions()  # noqa: SLF001
+        using = router.db_for_write(instance.__class__, instance=instance)
+        errors: dict[str, list[ValidationError]] = {}
+        for model_class, constraints in instance.get_constraints():
+            for constraint in constraints:
+                if self._is_batchable_unique(constraint):
+                    # validate() early-returns on an excluded field; mirror that,
+                    # otherwise consult the prefetched existence set in this
+                    # constraint's Meta position.
+                    if not any(name in exclude for name in constraint.fields):
+                        self._collect_unique_errors(form, [(model_class, tuple(constraint.fields))], taken, errors)
+                    continue
+                key = (id(form), id(constraint))
+                if check_verdicts is not None and key in check_verdicts:
+                    # Already evaluated in the batched check pass; rebuild the
+                    # exact error CheckConstraint.validate would have raised.
+                    if not check_verdicts[key]:
+                        error = ValidationError(
+                            constraint.get_violation_error_message(),
+                            code=constraint.violation_error_code,
+                        )
+                        errors = self._route_constraint_error(errors, constraint, error)
+                    continue
+                try:
+                    constraint.validate(model_class, instance, exclude=exclude, using=using)
+                except ValidationError as error:
+                    errors = self._route_constraint_error(errors, constraint, error)
+        return errors
 
     @staticmethod
     def _route_constraint_error(

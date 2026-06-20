@@ -22,6 +22,7 @@ from django.db import connection
 from django.forms import inlineformset_factory, modelformset_factory
 from django.test.utils import CaptureQueriesContext
 from e2e.models import (
+    CheckThenUnique,
     ConditionalUnique,
     ConstraintPair,
     CustomMessageUnique,
@@ -426,6 +427,24 @@ class TestMultiCheckParity:
                     {"left": "BAD", "right": "BAD"},
                 ],
             ),
+        )
+
+
+class TestConstraintOrderParity:
+    """``Meta.constraints`` declaration order must survive batching.
+
+    A check batched in one pass and a unique batched in another must still
+    interleave their ``__all__`` messages in the order stock Django emits them.
+    """
+
+    def test_check_before_unique_order_matches_stock(self):
+        # note=BAD trips the check (declared first); (a, 1) trips the unique
+        # (declared second). Stock lists check then unique in __all__.
+        CheckThenUnique.objects.create(left="a", right="1", note="ok")
+        _assert_parity(
+            CheckThenUnique,
+            ["left", "right", "note"],
+            _data([{"left": "a", "right": "1", "note": "BAD"}]),
         )
 
 
