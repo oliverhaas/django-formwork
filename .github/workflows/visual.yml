@@ -21,7 +21,7 @@ jobs:
     steps:
       # ---------- Phase A: setup + run ----------
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           lfs: true
           # Use the PR head SHA so we have the source-branch tip locally
