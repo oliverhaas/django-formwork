@@ -3,15 +3,13 @@
 // after the last comma is what's being typed.  iconMap is hydrated from
 // data-icons and grows as the user picks icon-bearing suggestions.
 
-import { clearHighlight, keyboardNav, visibleOptions } from "./_helpers.js";
+import { dropdownBase } from "./_helpers.js";
 
 document.addEventListener("alpine:init", () => {
   Alpine.data("formworkComboBox", () => ({
+    ...dropdownBase("[data-suggestion]"),
     open: false,
     focused: false,
-    _v: 0,
-    hasError: false,
-    highlightedEl: null,
     multiple: false,
     iconMap: {},
 
@@ -77,28 +75,18 @@ document.addEventListener("alpine:init", () => {
         else confirmed.push(text);
         inp.value = confirmed.length ? confirmed.join(", ") + ", " : "";
         this._v++;
-        clearHighlight(this);
+        this._clearHighlight();
         inp.focus();
         inp.dispatchEvent(new Event("input", { bubbles: true }));
       } else {
         inp.value = text;
         this._v++;
-        clearHighlight(this);
+        this._clearHighlight();
         this.open = false;
       }
     },
-    _visibleOptions() {
-      return visibleOptions(this, "[data-suggestion]");
-    },
-    _clearHighlight() {
-      clearHighlight(this);
-    },
-    nav(dir) {
-      keyboardNav(this, dir, "[data-suggestion]");
-    },
     confirm() {
-      let target = this.highlightedEl;
-      if (!target || target.offsetParent === null) target = this._visibleOptions()[0];
+      const target = this._confirmTarget();
       if (target) this.pick(target.dataset.suggestion, target.dataset.icon || "");
     },
   }));

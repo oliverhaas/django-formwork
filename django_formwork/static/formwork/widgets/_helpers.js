@@ -23,3 +23,30 @@ export const keyboardNav = (component, dir, selector) => {
   component.highlightedEl.classList.add("highlighted");
   component.highlightedEl.scrollIntoView({ block: "nearest" });
 };
+
+// Base state and behavior shared by every dropdown component.  Each one
+// spreads this into its Alpine.data object, then adds its own state, getters,
+// and a `confirm()` that acts on `_confirmTarget()`.  `optionSelector` is the
+// attribute selector for the navigable option rows ("[data-value]", etc.).
+export const dropdownBase = (optionSelector) => ({
+  _v: 0,
+  hasError: false,
+  highlightedEl: null,
+
+  _visibleOptions() {
+    return visibleOptions(this, optionSelector);
+  },
+  _clearHighlight() {
+    clearHighlight(this);
+  },
+  nav(dir) {
+    keyboardNav(this, dir, optionSelector);
+  },
+  // The highlighted option, falling back to the first visible one.  Each
+  // component's confirm() picks from whatever this returns on Enter.
+  _confirmTarget() {
+    let target = this.highlightedEl;
+    if (!target || target.offsetParent === null) target = this._visibleOptions()[0];
+    return target;
+  },
+});

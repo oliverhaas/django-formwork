@@ -6,14 +6,12 @@
 //     every option and so checkbox state in the DOM is unreliable.
 //   - client-only: scans `input:checked` directly from the DOM.
 
-import { clearHighlight, keyboardNav, visibleOptions } from "./_helpers.js";
+import { dropdownBase } from "./_helpers.js";
 
 document.addEventListener("alpine:init", () => {
   Alpine.data("formworkMultiSelect", () => ({
-    _v: 0,
+    ...dropdownBase("[data-value]"),
     search: "",
-    hasError: false,
-    highlightedEl: null,
     hasSearchUrl: false,
     selected: null,
 
@@ -31,7 +29,7 @@ document.addEventListener("alpine:init", () => {
         const s = this.$refs.search;
         if (s) setTimeout(() => s.focus(), 0);
       } else {
-        clearHighlight(this);
+        this._clearHighlight();
       }
     },
 
@@ -69,18 +67,8 @@ document.addEventListener("alpine:init", () => {
         return ic ? ic.textContent.trim() + " " + text : text;
       }).join(", ");
     },
-    _visibleOptions() {
-      return visibleOptions(this, "[data-value]");
-    },
-    _clearHighlight() {
-      clearHighlight(this);
-    },
-    nav(dir) {
-      keyboardNav(this, dir, "[data-value]");
-    },
     confirm() {
-      let target = this.highlightedEl;
-      if (!target || target.offsetParent === null) target = this._visibleOptions()[0];
+      const target = this._confirmTarget();
       if (target) target.click();
     },
   }));

@@ -1,18 +1,17 @@
 // Alpine.data component for the formwork SearchSelect widget.
 // Loaded as an ES module via Media.js or imported by formwork.js.
 
-import { clearHighlight, keyboardNav, visibleOptions } from "./_helpers.js";
+import { dropdownBase } from "./_helpers.js";
 
 document.addEventListener("alpine:init", () => {
   Alpine.data("formworkSearchSelect", () => ({
-    _v: 0,
+    ...dropdownBase("[data-value]"),
     search: "",
     showSearch: false,
     value: "",
     label: "",
     icon: "",
-    hasError: false,
-    highlightedEl: null,
+    labelClass: "",
 
     init() {
       const el = this.$el;
@@ -20,6 +19,7 @@ document.addEventListener("alpine:init", () => {
       this.value = el.dataset.value || "";
       this.label = el.dataset.label || "";
       this.icon = el.dataset.icon || "";
+      this.labelClass = el.dataset.labelClass || "";
     },
 
     onToggle() {
@@ -32,7 +32,7 @@ document.addEventListener("alpine:init", () => {
         }
         if (this.showSearch) setTimeout(() => s?.focus(), 0);
       } else {
-        clearHighlight(this);
+        this._clearHighlight();
       }
     },
 
@@ -53,27 +53,20 @@ document.addEventListener("alpine:init", () => {
         if (inp) inp.dispatchEvent(new Event("change", { bubbles: true }));
       });
     },
-    _visibleOptions() {
-      return visibleOptions(this, "[data-value]");
-    },
-    _clearHighlight() {
-      clearHighlight(this);
-    },
-    nav(dir) {
-      keyboardNav(this, dir, "[data-value]");
-    },
     confirm() {
-      let target = this.highlightedEl;
-      if (!target || target.offsetParent === null) target = this._visibleOptions()[0];
-      if (target) this.pick(target.dataset.value, target.dataset.label, target.dataset.icon || "");
+      const target = this._confirmTarget();
+      if (target) {
+        this.pick(target.dataset.value, target.dataset.label, target.dataset.icon || "", target.dataset.labelClass || "");
+      }
     },
-    pick(val, lbl, ic) {
+    pick(val, lbl, ic, lc) {
       this.value = val;
       this.label = lbl;
       this.icon = ic || "";
+      this.labelClass = lc || "";
       this.search = "";
       this._v++;
-      clearHighlight(this);
+      this._clearHighlight();
       this.$root.open = false;
       this._notify();
     },
@@ -81,9 +74,10 @@ document.addEventListener("alpine:init", () => {
       this.value = "";
       this.label = "";
       this.icon = "";
+      this.labelClass = "";
       this.search = "";
       this._v++;
-      clearHighlight(this);
+      this._clearHighlight();
       this._notify();
     },
   }));
