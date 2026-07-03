@@ -29,11 +29,22 @@ class TestChoiceLabel:
         label = ChoiceLabel("New York")
         assert label.icon == ""
         assert label.description == ""
+        assert label.label_class == ""
+
+    def test_label_class_attribute(self):
+        label = ChoiceLabel("Active", label_class="text-success")
+        assert label.label_class == "text-success"
 
     def test_equality_by_str(self):
         """ChoiceLabel compares equal to its string representation."""
         label = ChoiceLabel("New York", icon="building")
         assert label == "New York"
+
+    def test_equality_distinguishes_label_class(self):
+        """Two labels differing only in label_class are not equal."""
+        success = ChoiceLabel("Active", label_class="text-success")
+        error = ChoiceLabel("Active", label_class="text-error")
+        assert success != error
 
     def test_repr(self):
         label = ChoiceLabel("NYC", icon="building", description="East Coast")

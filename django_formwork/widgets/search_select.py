@@ -94,9 +94,10 @@ class SearchSelect(forms.Select):
         fmt_value = context["widget"]["value"]
         if isinstance(fmt_value, (list, tuple)):
             context["widget"]["value"] = fmt_value[0] if fmt_value else ""
-        # Single pass: find selected label/icon AND read icons/descriptions.
+        # Single pass: find the selected option AND read icons/descriptions.
         selected_label = ""
         selected_icon = ""
+        selected_label_class = ""
         total = 0
         for _group, options, _index in context["widget"]["optgroups"]:
             for option in options:
@@ -104,15 +105,19 @@ class SearchSelect(forms.Select):
                 if isinstance(label, ChoiceLabel):
                     option["icon"] = label.icon
                     option["description"] = label.description
+                    option["label_class"] = label.label_class
                 else:
                     option["icon"] = ""
                     option["description"] = ""
+                    option["label_class"] = ""
                 if option["selected"]:
                     selected_label = str(label)
                     selected_icon = option["icon"]
+                    selected_label_class = option["label_class"]
                 total += 1
         context["widget"]["selected_label"] = selected_label
         context["widget"]["selected_icon"] = selected_icon
+        context["widget"]["selected_label_class"] = selected_label_class
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         # Resolve search URL from the registry. No registration → client-side only.
         search_url: str | None = None

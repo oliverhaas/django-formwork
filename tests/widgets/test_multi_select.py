@@ -134,6 +134,24 @@ def test_multi_select_get_context_icon_populated():
 
 
 @pytest.mark.unit
+def test_multi_select_get_context_label_class_populated():
+    """ChoiceLabel label_class is reflected in option['label_class']."""
+    widget = MultiSelect(
+        choices=[
+            ("a", ChoiceLabel("Alpha", label_class="text-success")),
+            ("b", "Beta"),
+        ],
+    )
+    ctx = widget.get_context("test", [], {})
+    for _group, options, _index in ctx["widget"]["optgroups"]:
+        for option in options:
+            if option["value"] == "a":
+                assert option["label_class"] == "text-success"
+            else:
+                assert option["label_class"] == ""
+
+
+@pytest.mark.unit
 def test_multi_select_initial_selected_json_empty_without_search_url():
     """initial_selected_json is not present when no search_url."""
     widget = MultiSelect(choices=[("a", "Alpha")])
@@ -462,6 +480,17 @@ def test_multi_select_alpine_x_data():
     soup = render_widget(widget, name="test")
     wrapper = soup.find("details", attrs={"x-data": "formworkMultiSelect"})
     assert wrapper is not None
+
+
+@pytest.mark.unit
+def test_multi_select_option_label_class_applied():
+    """An option's label_class is applied to its label text span."""
+    widget = MultiSelect(
+        choices=[("a", ChoiceLabel("Alpha", label_class="text-success"))],
+    )
+    soup = render_widget(widget, name="test")
+    label_span = soup.find("span", class_="select-none")
+    assert "text-success" in label_span["class"]
 
 
 @pytest.mark.unit
@@ -819,6 +848,26 @@ def test_multi_select_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
     """MultiSelect produces equivalent HTML when rendered via DTL and Jinja2."""
     soup_dtl = render_form(MultiSelectForm(), renderer=dtl_renderer)
     soup_jinja2 = render_form(MultiSelectForm(), renderer=jinja2_renderer)
+    assert_html_equivalent(soup_dtl, soup_jinja2)
+
+
+@pytest.mark.integration
+def test_multi_select_label_class_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
+    """A ChoiceLabel label_class renders equivalently via DTL and Jinja2."""
+
+    class LabelClassForm(FormworkForm):
+        tags = forms.MultipleChoiceField(
+            widget=MultiSelect(
+                choices=[
+                    ("hot", ChoiceLabel("Hot", label_class="text-error")),
+                    ("cold", ChoiceLabel("Cold", label_class="text-info")),
+                ],
+            ),
+            required=False,
+        )
+
+    soup_dtl = render_form(LabelClassForm(), renderer=dtl_renderer)
+    soup_jinja2 = render_form(LabelClassForm(), renderer=jinja2_renderer)
     assert_html_equivalent(soup_dtl, soup_jinja2)
 
 

@@ -30,22 +30,28 @@ class ChoiceLabel:
 
     Any code expecting a plain string (Django admin, built-in widgets,
     templates) sees the label text via ``__str__``.  Widgets that understand
-    ``ChoiceLabel`` can read ``.icon`` and ``.description``.
+    ``ChoiceLabel`` can read ``.icon``, ``.description`` and ``.label_class``.
+
+    ``icon`` and ``description`` may hold HTML (mark it safe at the call
+    site); ``label_class`` is a CSS class string applied to the plain-text
+    label in both the option row and the selected-value display.
 
     Usage::
 
         choices = [
             ("nyc", ChoiceLabel("New York", icon="building")),
             ("ldn", ChoiceLabel("London", icon="landmark")),
+            ("closed", ChoiceLabel("Closed", label_class="text-error")),
         ]
     """
 
-    __slots__ = ("description", "icon", "label")
+    __slots__ = ("description", "icon", "label", "label_class")
 
-    def __init__(self, label: str, *, icon: str = "", description: str = "") -> None:
+    def __init__(self, label: str, *, icon: str = "", description: str = "", label_class: str = "") -> None:
         self.label = label
         self.icon = icon
         self.description = description
+        self.label_class = label_class
 
     def __str__(self) -> str:
         return self.label
@@ -56,13 +62,20 @@ class ChoiceLabel:
             parts.append(f"icon={self.icon!r}")
         if self.description:
             parts.append(f"description={self.description!r}")
+        if self.label_class:
+            parts.append(f"label_class={self.label_class!r}")
         return f"ChoiceLabel({', '.join(parts)})"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, str):
             return self.label == other
         if isinstance(other, ChoiceLabel):
-            return self.label == other.label and self.icon == other.icon and self.description == other.description
+            return (self.label, self.icon, self.description, self.label_class) == (
+                other.label,
+                other.icon,
+                other.description,
+                other.label_class,
+            )
         return NotImplemented
 
     def __hash__(self) -> int:

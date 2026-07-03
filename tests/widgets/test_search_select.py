@@ -159,6 +159,45 @@ def test_search_select_get_context_optgroups_with_icons():
 
 
 @pytest.mark.unit
+def test_search_select_get_context_optgroups_with_label_class():
+    """label_class from ChoiceLabel is injected into optgroups."""
+    widget = SearchSelect(
+        choices=[
+            ("a", ChoiceLabel("Alpha", label_class="text-success")),
+            ("b", "Beta"),
+        ],
+    )
+    ctx = widget.get_context("test", "", {})
+    for _group, options, _index in ctx["widget"]["optgroups"]:
+        for option in options:
+            if option["value"] == "a":
+                assert option["label_class"] == "text-success"
+            else:
+                assert option["label_class"] == ""
+
+
+@pytest.mark.unit
+def test_search_select_get_context_selected_label_class():
+    """selected_label_class carries the selected option's label_class."""
+    widget = SearchSelect(
+        choices=[
+            ("a", ChoiceLabel("Alpha", label_class="text-success")),
+            ("b", "Beta"),
+        ],
+    )
+    ctx = widget.get_context("test", "a", {})
+    assert ctx["widget"]["selected_label_class"] == "text-success"
+
+
+@pytest.mark.unit
+def test_search_select_get_context_selected_label_class_empty_for_plain():
+    """selected_label_class is empty when the selected label carries no class."""
+    widget = SearchSelect(choices=[("a", "Alpha"), ("b", "Beta")])
+    ctx = widget.get_context("test", "a", {})
+    assert ctx["widget"]["selected_label_class"] == ""
+
+
+@pytest.mark.unit
 def test_search_select_value_from_datadict_present():
     """value_from_datadict returns the submitted value from POST data."""
     widget = SearchSelect(choices=[("a", "Alpha"), ("b", "Beta")])
@@ -358,6 +397,33 @@ def test_search_select_event_delegation_data_attrs():
     btn = soup.find("button", {"type": "button"})
     assert btn["data-value"] == "a"
     assert btn["data-label"] == "Alpha"
+
+
+@pytest.mark.unit
+def test_search_select_option_label_class_applied_to_label():
+    """An option's label_class is applied to its label span and data-label-class."""
+    widget = SearchSelect(
+        choices=[("a", ChoiceLabel("Alpha", label_class="text-success"))],
+    )
+    soup = render_widget(widget, name="test")
+    btn = soup.find("button", {"data-value": "a"})
+    assert btn["data-label-class"] == "text-success"
+    label_span = btn.find("span", class_="select-none")
+    assert "text-success" in label_span["class"]
+
+
+@pytest.mark.unit
+def test_search_select_selected_label_class_in_data_attr():
+    """The wrapper carries data-label-class for the selected option."""
+    widget = SearchSelect(
+        choices=[
+            ("a", ChoiceLabel("Alpha", label_class="text-success")),
+            ("b", "Beta"),
+        ],
+    )
+    soup = render_widget(widget, name="test", value="a")
+    wrapper = soup.find("details", attrs={"x-data": "formworkSearchSelect"})
+    assert wrapper["data-label-class"] == "text-success"
 
 
 @pytest.mark.unit
@@ -825,6 +891,26 @@ def test_search_select_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
     """SearchSelect produces equivalent HTML via DTL and Jinja2."""
     soup_dtl = render_form(SearchSelectForm(), renderer=dtl_renderer)
     soup_jinja2 = render_form(SearchSelectForm(), renderer=jinja2_renderer)
+    assert_html_equivalent(soup_dtl, soup_jinja2)
+
+
+@pytest.mark.integration
+def test_search_select_label_class_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
+    """A ChoiceLabel label_class renders equivalently via DTL and Jinja2."""
+
+    class LabelClassForm(FormworkForm):
+        state = forms.ChoiceField(
+            widget=SearchSelect(
+                choices=[
+                    ("open", ChoiceLabel("Open", label_class="text-success")),
+                    ("closed", ChoiceLabel("Closed", label_class="text-error")),
+                ],
+            ),
+            initial="closed",
+        )
+
+    soup_dtl = render_form(LabelClassForm(), renderer=dtl_renderer)
+    soup_jinja2 = render_form(LabelClassForm(), renderer=jinja2_renderer)
     assert_html_equivalent(soup_dtl, soup_jinja2)
 
 

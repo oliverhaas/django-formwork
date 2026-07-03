@@ -103,11 +103,13 @@ class MultiSelect(forms.SelectMultiple):
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
         context["widget"]["search_url"] = search_url
         context["widget"]["initial_options"] = initial_options if search_url else []
-        # Read icon from ChoiceLabel.
+        # Read icon and label_class from ChoiceLabel.
         for _group, options, _index in context["widget"]["optgroups"]:
             for option in options:
                 label = option["label"]
-                option["icon"] = label.icon if isinstance(label, ChoiceLabel) else ""
+                is_choice_label = isinstance(label, ChoiceLabel)
+                option["icon"] = label.icon if is_choice_label else ""
+                option["label_class"] = label.label_class if is_choice_label else ""
         if search_url:
             # Build initial selected map for Alpine: [[value, [label, icon]], ...]
             selected_values = set(value or [])
