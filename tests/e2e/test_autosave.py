@@ -71,7 +71,7 @@ class TestAutoSaveBehavior:
         inp.fill("Alice")
         _wait_for_autosave(autosave_page)
         # Email is empty but no error should show
-        email_errors = autosave_page.locator("#id_email_errors")
+        email_errors = autosave_page.locator("#id_email_error")
         assert email_errors.count() == 0
 
     def test_invalid_email_shows_error(self, autosave_page):

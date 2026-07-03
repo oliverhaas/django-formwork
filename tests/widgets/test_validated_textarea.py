@@ -171,7 +171,7 @@ def test_errors_tooltip_present():
     assert tooltip["id"] == "id_content_vttooltip"
     errors = tooltip.find("div", class_="formwork-errors")
     assert errors is not None
-    assert errors["id"] == "id_content_errors"
+    assert errors["id"] == "id_content_error"
     assert errors["role"] == "alert"
 
 
@@ -247,7 +247,7 @@ def test_htmx_config_request_errors_id():
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
     textarea = soup.find("textarea")
     config = textarea["hx-on::config:request"]
-    assert "event.detail.ctx.request.body.set('errors_id', 'id_content_errors')" in config
+    assert "event.detail.ctx.request.body.set('errors_id', 'id_content_error')" in config
 
 
 @pytest.mark.unit
@@ -461,14 +461,14 @@ def test_clean_text_no_marks(textarea_page):
         const params = new URLSearchParams();
         params.append('text', text);
         params.append('field_name', 'bio');
-        params.append('errors_id', textarea.id + '_errors');
+        params.append('errors_id', textarea.id + '_error');
         fetch(url, {method: 'POST', body: params})
             .then(r => r.text())
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString('<div>' + html + '</div>', 'text/html');
                 const oob = doc.querySelector('[hx-swap-oob]');
-                const errorsTarget = document.getElementById(textarea.id + '_errors');
+                const errorsTarget = document.getElementById(textarea.id + '_error');
                 if (oob && errorsTarget) {
                     errorsTarget.innerHTML = oob.innerHTML;
                     oob.remove();
@@ -499,14 +499,14 @@ def test_bad_text_shows_marks(textarea_page):
         const params = new URLSearchParams();
         params.append('text', text);
         params.append('field_name', 'bio');
-        params.append('errors_id', textarea.id + '_errors');
+        params.append('errors_id', textarea.id + '_error');
         fetch(url, {method: 'POST', body: params})
             .then(r => r.text())
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString('<div>' + html + '</div>', 'text/html');
                 const oob = doc.querySelector('[hx-swap-oob]');
-                const errorsTarget = document.getElementById(textarea.id + '_errors');
+                const errorsTarget = document.getElementById(textarea.id + '_error');
                 if (oob && errorsTarget) {
                     errorsTarget.innerHTML = oob.innerHTML;
                     oob.remove();
@@ -538,14 +538,14 @@ def _trigger_validation(page, text):
         const params = new URLSearchParams();
         params.append('text', text);
         params.append('field_name', 'bio');
-        params.append('errors_id', textarea.id + '_errors');
+        params.append('errors_id', textarea.id + '_error');
         fetch(url, {method: 'POST', body: params})
             .then(r => r.text())
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString('<div>' + html + '</div>', 'text/html');
                 const oob = doc.querySelector('[hx-swap-oob]');
-                const errorsTarget = document.getElementById(textarea.id + '_errors');
+                const errorsTarget = document.getElementById(textarea.id + '_error');
                 if (oob && errorsTarget) {
                     errorsTarget.innerHTML = oob.innerHTML;
                     oob.remove();

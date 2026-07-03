@@ -103,5 +103,5 @@ class TestMorphInfrastructure:
         basic_page.locator('input[name="agree"]').check()
         submit(basic_page)
         # Name field errors should be gone
-        name_errors = basic_page.locator("#id_name_errors")
+        name_errors = basic_page.locator("#id_name_error")
         assert name_errors.count() == 0

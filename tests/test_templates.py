@@ -237,6 +237,26 @@ class TestAriaAttributes:
         assert inp is not None
         assert "id_name_helptext" in (inp.get("aria-describedby") or "")
 
+    def test_aria_describedby_targets_exist(self):
+        """Every id referenced by aria-describedby must point to a real element.
+
+        Django bakes ``aria-describedby="{auto_id}_error"`` onto the widget, so
+        the error container's id has to match it or the reference dangles for
+        screen readers.
+        """
+
+        class F(FormworkForm):
+            name = forms.CharField(help_text="Your name")
+
+        form = F(data={"name": ""})
+        form.is_valid()
+        soup = render_html(form)
+        inp = soup.find("input", {"name": "name"})
+        described = (inp.get("aria-describedby") or "").split()
+        assert described, "expected aria-describedby on an errored field"
+        for ref in described:
+            assert soup.find(id=ref) is not None, f"aria-describedby points to missing #{ref}"
+
 
 class TestHiddenFields:
     """Hidden fields render without fieldset wrapper."""
@@ -355,7 +375,7 @@ class TestMorphingIds:
         form.is_valid()
         soup = render_html(form)
         errors = soup.find("div", class_="tooltip-content")
-        assert errors["id"] == "id_name_errors"
+        assert errors["id"] == "id_name_error"
 
     def test_non_field_errors_has_id(self):
         class F(FormworkForm):
@@ -387,7 +407,7 @@ class TestMorphingIds:
         tooltip = soup.find("div", class_="tooltip")
         assert tooltip["id"] == "id_choice_tooltip"
         errors = soup.find("div", class_="tooltip-content")
-        assert errors["id"] == "id_choice_errors"
+        assert errors["id"] == "id_choice_error"
 
     def test_no_tooltip_id_when_valid(self):
         class F(FormworkForm):

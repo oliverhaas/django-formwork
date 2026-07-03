@@ -48,7 +48,7 @@ class TestEmailInput:
 
     def test_submit_empty_shows_error(self, basic_page):
         submit(basic_page)
-        errors = basic_page.locator("#id_email_errors")
+        errors = basic_page.locator("#id_email_error")
         assert errors.count() == 1
 
     def test_morph_preserves_value(self, basic_page):
@@ -150,7 +150,7 @@ class TestCheckbox:
 
     def test_submit_unchecked_shows_error(self, basic_page):
         submit(basic_page)
-        errors = basic_page.locator("#id_agree_errors")
+        errors = basic_page.locator("#id_agree_error")
         assert errors.count() == 1
 
     def test_morph_preserves_checked(self, basic_page):

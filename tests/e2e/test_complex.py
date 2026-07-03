@@ -92,14 +92,14 @@ class TestComplexFormValidation:
         complex_page.locator('input[name="end_date"]').fill("2025-12-31")
         complex_page.locator('input[name="terms"]').check()
         submit(complex_page)
-        errors = complex_page.locator("#id_confirm_password_errors")
+        errors = complex_page.locator("#id_confirm_password_error")
         assert errors.count() == 1
         assert "match" in errors.text_content().lower()
 
     def test_password_match_no_error(self, complex_page):
         _fill_base_fields(complex_page)
         submit(complex_page)
-        errors = complex_page.locator("#id_confirm_password_errors")
+        errors = complex_page.locator("#id_confirm_password_error")
         assert errors.count() == 0
 
     def test_date_range_error(self, complex_page):
@@ -109,14 +109,14 @@ class TestComplexFormValidation:
         complex_page.locator('input[name="end_date"]').fill("2025-01-01")
         complex_page.locator('input[name="terms"]').check()
         submit(complex_page)
-        errors = complex_page.locator("#id_end_date_errors")
+        errors = complex_page.locator("#id_end_date_error")
         assert errors.count() == 1
         assert "after" in errors.text_content().lower()
 
     def test_valid_date_range_no_error(self, complex_page):
         _fill_base_fields(complex_page)
         submit(complex_page)
-        errors = complex_page.locator("#id_end_date_errors")
+        errors = complex_page.locator("#id_end_date_error")
         assert errors.count() == 0
 
     def test_terms_required(self, complex_page):
@@ -126,7 +126,7 @@ class TestComplexFormValidation:
         complex_page.locator('input[name="end_date"]').fill("2025-12-31")
         # Don't check terms
         submit(complex_page)
-        errors = complex_page.locator("#id_terms_errors")
+        errors = complex_page.locator("#id_terms_error")
         assert errors.count() == 1
 
     def test_country_without_languages_error(self, complex_page):
@@ -134,7 +134,7 @@ class TestComplexFormValidation:
         _fill_base_fields(complex_page)
         _pick_search_select(complex_page, "us", "United States")
         submit(complex_page)
-        errors = complex_page.locator("#id_languages_errors")
+        errors = complex_page.locator("#id_languages_error")
         assert errors.count() == 1
         assert "language" in errors.text_content().lower()
 
@@ -144,7 +144,7 @@ class TestComplexFormValidation:
         _pick_search_select(complex_page, "us", "United States")
         _toggle_multiselect_option(complex_page, "py", "Python")
         submit(complex_page)
-        errors = complex_page.locator("#id_languages_errors")
+        errors = complex_page.locator("#id_languages_error")
         assert errors.count() == 0
 
 
@@ -220,7 +220,7 @@ class TestComplexFormMorphResilience:
         # Wait for auto-validate debounce (1500ms input + processing)
         page.wait_for_timeout(2500)
         # Cross-field error: country without languages
-        errors = page.locator("#id_languages_errors")
+        errors = page.locator("#id_languages_error")
         expect(errors).to_have_count(1, timeout=3000)
         assert "language" in errors.text_content().lower()
 
@@ -298,7 +298,7 @@ class TestComplexFormVisualStates:
         page = complex_page
         _pick_search_select(page, "us", "United States")
         page.wait_for_timeout(2500)
-        errors = page.locator("#id_languages_errors")
+        errors = page.locator("#id_languages_error")
         expect(errors).to_have_count(1, timeout=3000)
         _toggle_multiselect_option(page, "py", "Python")
         page.wait_for_timeout(2500)
