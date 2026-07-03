@@ -1,0 +1,9 @@
+{# Search input: leading magnifier (swaps to an htmx spinner) and an optional trailing clear button. #}
+<div class="search-input"{% if widget.show_clear %} x-data{% endif %}>
+  <input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.show_clear %} x-ref="input"{% endif %}{% if widget.value is not none %} value="{{ widget.value }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}>
+  <span class="search-input-icon"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_icon"{% endif %} aria-hidden="true">
+    {% if widget.show_spinner %}<span class="loading loading-spinner loading-xs htmx-indicator search-input-spinner"></span>{% endif %}
+    <i class="icon icon-search{% if widget.show_spinner %} htmx-indicator-inverse{% endif %}"></i>
+  </span>
+  {% if widget.show_clear %}<button type="button" class="search-input-clear" @mousedown.prevent="$refs.input.value = ''; $refs.input.dispatchEvent(new Event('input', { bubbles: true })); $refs.input.focus()" aria-label="Clear search"><i class="icon icon-x"></i></button>{% endif %}
+</div>

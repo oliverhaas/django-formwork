@@ -1,0 +1,5 @@
+{# Number input with a static suffix (unit, currency, %) rendered inside the field. #}
+<div class="suffix-number">
+  <input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}>
+  {% if widget.suffix %}<span class="suffix-number-affix">{{ widget.suffix }}</span>{% endif %}
+</div>

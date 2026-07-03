@@ -1,0 +1,5 @@
+{# Text input. With floating=True the placeholder doubles as a DaisyUI floating label. #}
+{% if widget.floating %}<label class="floating-label">
+  <span>{{ widget.attrs.placeholder }}</span>
+  <input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.value is not none %} value="{{ widget.value }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}>
+</label>{% else %}<input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.value is not none %} value="{{ widget.value }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}>{% endif %}

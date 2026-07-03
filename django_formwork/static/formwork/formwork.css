@@ -295,6 +295,99 @@ i.icon {
     appearance: textfield;
 }
 
+/* SuffixNumberInput: a static unit, currency, or % affix inside the field. */
+.suffix-number {
+    @apply relative w-full;
+}
+
+.suffix-number > input {
+    padding-inline-end: 2.5rem;
+}
+
+.suffix-number-affix {
+    @apply absolute inset-y-0 end-3 flex items-center text-xs text-base-content/50 pointer-events-none;
+}
+
+/* SearchInput: leading magnifier, optional htmx spinner swap, trailing clear. */
+.search-input {
+    @apply relative w-full;
+}
+
+.search-input > input {
+    padding-inline-start: 2.5rem;
+}
+
+.search-input:has(> .search-input-clear) > input {
+    padding-inline-end: 2.5rem;
+}
+
+/* Hide the native WebKit clear affordance; the widget renders its own. */
+.search-input > input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.search-input-icon {
+    @apply pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-base-content/50;
+}
+
+.search-input:focus-within .search-input-icon {
+    @apply text-base-content;
+}
+
+.search-input-spinner {
+    @apply absolute text-primary;
+}
+
+.search-input-clear {
+    @apply absolute inset-y-0 end-0 flex items-center pe-3 cursor-pointer text-base-content/40 focus:outline-none;
+}
+
+.search-input-clear:hover {
+    @apply text-base-content;
+}
+
+/* Fade the magnifier out while an htmx request runs so the spinner shows through. */
+.htmx-indicator-inverse {
+    opacity: 1;
+}
+
+.htmx-request .htmx-indicator-inverse,
+.htmx-request.htmx-indicator-inverse {
+    opacity: 0;
+}
+
+/* BigRadioSelect / BigCheckboxSelect: choices rendered as large selectable cards.
+   The whole card is clickable and lights up in the primary colour when checked. */
+.big-choice {
+    @apply flex flex-col gap-3 lg:flex-row lg:items-stretch;
+}
+
+.big-choice-card {
+    @apply relative flex flex-1 basis-0 cursor-pointer items-center gap-4 rounded-box border border-base-300 bg-base-100 px-6 py-6 transition-colors;
+}
+
+.big-choice-card:hover {
+    @apply border-base-content/30;
+}
+
+.big-choice-card:has(:checked) {
+    @apply border-primary bg-primary text-primary-content;
+}
+
+/* Error border on the untouched cards; a checked card keeps its primary border. */
+.big-choice[data-invalid] .big-choice-card:not(:has(:checked)) {
+    @apply border-error;
+}
+
+.big-choice-card:has(:disabled) {
+    @apply cursor-not-allowed opacity-50;
+}
+
+.big-choice-label {
+    @apply grow text-balance;
+}
+
 /* PhoneInput: joined prefix + number. */
 .phone-input {
     @apply w-full relative;
