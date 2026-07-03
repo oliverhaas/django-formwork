@@ -94,7 +94,7 @@ def attach_server_search(
             return iter(self._items)
 
     n = count if count is not None else 0
-    factory = (lambda: _QS(n)) if count is not None else None
+    factory = (lambda request: _QS(n)) if count is not None else None
     register(
         key,
         SearchRegistration(

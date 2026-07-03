@@ -42,8 +42,8 @@ def _resolve_initial_results(registry_key: str | None) -> tuple[int | None, list
     htmx replaces them on first focus.  Total count drives the
     ``show_search`` decision (compared against ``search_threshold``).
 
-    - **Model-backed**: ``queryset_factory().count()`` for the total,
-      ``queryset_factory()[:reg.max_results]`` for the items.
+    - **Model-backed**: ``queryset_factory(None).count()`` for the total,
+      ``queryset_factory(None)[:reg.max_results]`` for the items.
     - **Choices-backed**: ``search_func("")`` once for both the total
       (``len``) and the items (sliced to ``reg.max_results``).
 
@@ -68,7 +68,7 @@ def _resolve_initial_results(registry_key: str | None) -> tuple[int | None, list
 
 def _initial_from_queryset(reg: SearchRegistration) -> tuple[int, list[dict[str, Any]]]:
     assert reg.queryset_factory is not None  # caller checked  # noqa: S101
-    qs = reg.queryset_factory()
+    qs = reg.queryset_factory(None)
     # NOTE: full ``COUNT(*)`` is wasteful when we only care whether it
     # crosses the search threshold.  Worth a PostgreSQL approximate-count
     # path later (pg_class.reltuples) — left exact for now.

@@ -195,7 +195,7 @@ class FormworkAutoSearchView(FormworkSearchView):
             return self._normalize_results(reg.search_func(query, kwargs.get("request")))
 
         # Path 2: model-backed (queryset + search_fields).
-        return self._queryset_results(reg, query)
+        return self._queryset_results(reg, query, kwargs.get("request"))
 
     @staticmethod
     def _normalize_results(raw: list) -> list[dict[str, str]]:
@@ -215,12 +215,16 @@ class FormworkAutoSearchView(FormworkSearchView):
         return results
 
     @staticmethod
-    def _queryset_results(reg: SearchRegistration, query: str) -> list[dict[str, str]]:
+    def _queryset_results(
+        reg: SearchRegistration,
+        query: str,
+        request: HttpRequest | None = None,
+    ) -> list[dict[str, str]]:
         from django.db.models import Q
 
         if reg.queryset_factory is None:  # pragma: no cover
             return []
-        qs = reg.queryset_factory()
+        qs = reg.queryset_factory(request)
         if query:
             q = Q()
             for field_name in reg.search_fields:

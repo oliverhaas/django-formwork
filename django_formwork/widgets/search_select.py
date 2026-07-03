@@ -11,6 +11,9 @@ from ._base import _NOT_SET, _ModuleScript, _resolve_initial_results
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    from django.db.models import QuerySet
+    from django.http import HttpRequest
+
 
 class SearchSelect(forms.Select):
     """Single-select dropdown with text search/filter.
@@ -47,6 +50,16 @@ class SearchSelect(forms.Select):
             queryset=City.objects.all(),
             widget=SearchSelect(search_fields=["name"], search_decorator=login_required),
         )
+
+    Pass ``search_queryset`` to scope results per request (e.g. to the
+    current user).  It is called with the active ``HttpRequest`` while
+    serving a search, and with ``None`` during the initial widget render::
+
+        widget=SearchSelect(
+            search_fields=["name"],
+            search_decorator=login_required,
+            search_queryset=lambda request: City.objects.filter(owner=request.user),
+        )
     """
 
     template_name = "formwork/widgets/search_select.html"
@@ -56,7 +69,7 @@ class SearchSelect(forms.Select):
     class Media:
         js = (_ModuleScript("formwork/widgets/search_select.js"),)
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         attrs: dict[str, Any] | None = None,
         choices: tuple = (),
@@ -64,11 +77,13 @@ class SearchSelect(forms.Select):
         show_search: bool | None = None,
         search_fields: Sequence[str] | None = None,
         search_decorator: Callable | object = _NOT_SET,
+        search_queryset: Callable[[HttpRequest | None], QuerySet] | None = None,
     ) -> None:
         super().__init__(attrs=attrs, choices=choices)
         self.show_search = show_search
         self.search_fields = tuple(search_fields) if search_fields else None
         self.search_decorator = search_decorator
+        self.search_queryset = search_queryset
         self._registry_key: str | None = None
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:

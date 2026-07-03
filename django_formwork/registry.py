@@ -1,28 +1,35 @@
 """Auto-registration registry for server-side search endpoints.
 
-Widgets with ``search_fields`` are automatically registered here when their
-form is instantiated.  Forms with ``search_choices_<fieldname>`` methods are
-also registered for plain (non-model) choice fields.
+Search-capable widgets (``SearchSelect``, ``MultiSelect``, ``ComboBox``) are
+registered here at *class-definition time*: the form metaclass walks the
+declared fields and registers one endpoint per searchable widget.  Registering
+in the metaclass (rather than on form instantiation) means every endpoint is
+present in every process as soon as the form module is imported, so the single
+dispatch view (:class:`~django_formwork.views.FormworkAutoSearchView`) can serve
+it regardless of which worker rendered the form.
 
-A single dispatch view (``FormworkAutoSearchView``) serves all registered
-endpoints via a stable key.
+Each endpoint is keyed by an opaque, stable digest of ``form_label`` +
+``field_name`` — unique per form field (no cross-form collisions) and free of
+internal module paths in the URL.
 """
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable
 
     from django.db.models import QuerySet
+    from django.http import HttpRequest
 
 __all__ = [
     "SearchRegistration",
+    "form_label",
     "get_registration",
     "get_registry",
-    "make_choices_key",
     "make_key",
     "register",
 ]
@@ -39,9 +46,15 @@ class SearchRegistration:
     - **Model-backed**: ``queryset_factory`` + ``search_fields`` for automatic
       ``__icontains`` filtering.
     - **Choices-backed**: ``search_func(query, request)`` returns results directly.
+
+    ``queryset_factory`` is request-scoped. It receives the current
+    ``HttpRequest`` (or ``None`` during the initial widget render, before a
+    request is available) so per-request querysets (e.g. filtered by
+    ``request.user``) resolve against the *searching* user, not whoever last
+    rendered the form.
     """
 
-    queryset_factory: Callable[[], QuerySet] | None = None
+    queryset_factory: Callable[[HttpRequest | None], QuerySet] | None = None
     search_fields: tuple[str, ...] = ()
     to_field_name: str = "pk"
     label_from_instance: Callable[..., str] | None = None
@@ -54,24 +67,23 @@ class SearchRegistration:
     extra: dict[str, Any] = field(default_factory=dict)
 
 
-def make_key(
-    model_label: str,
-    search_fields: Sequence[str],
-    to_field_name: str = "pk",
-) -> str:
-    """Build a stable, URL-safe registry key for model-backed search."""
-    fields_part = ",".join(sorted(search_fields))
-    key = f"{model_label}.{fields_part}"
-    if to_field_name != "pk":
-        key += f".{to_field_name}"
-    return key
+def form_label(form_cls: type) -> str:
+    """Return the fully-qualified label identifying a form class."""
+    return f"{form_cls.__module__}.{form_cls.__qualname__}"
 
 
-def make_choices_key(form_cls: type, field_name: str) -> str:
-    """Build a stable, URL-safe registry key for choices-backed search."""
-    module = form_cls.__module__
-    qualname = form_cls.__qualname__
-    return f"{module}.{qualname}.{field_name}".lower()
+def make_key(form_cls: type, field_name: str) -> str:
+    """Build a stable, opaque registry key for one form field's search endpoint.
+
+    The key is a digest of the form's label and the field name. It is unique
+    per form field (so two forms searching the same model never collide) and
+    opaque (internal module paths are not exposed in the URL).
+    """
+    digest = hashlib.md5(
+        f"{form_label(form_cls)}.{field_name}".encode(),
+        usedforsecurity=False,
+    )
+    return digest.hexdigest()[:16]
 
 
 def register(key: str, registration: SearchRegistration) -> None:

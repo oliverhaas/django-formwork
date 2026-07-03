@@ -7,9 +7,9 @@ from django.test import RequestFactory
 
 from django_formwork.registry import (
     SearchRegistration,
+    form_label,
     get_registration,
     get_registry,
-    make_choices_key,
     make_key,
     register,
 )
@@ -29,17 +29,50 @@ def _clean_registry():
 
 
 class TestMakeKey:
-    def test_basic_key(self):
-        assert make_key("myapp.mymodel", ["name"]) == "myapp.mymodel.name"
+    def test_deterministic(self):
+        class F:
+            pass
 
-    def test_multiple_fields_sorted(self):
-        assert make_key("myapp.mymodel", ["name", "code", "email"]) == "myapp.mymodel.code,email,name"
+        assert make_key(F, "city") == make_key(F, "city")
 
-    def test_custom_to_field_name(self):
-        assert make_key("myapp.mymodel", ["name"], to_field_name="slug") == "myapp.mymodel.name.slug"
+    def test_fixed_length_hex(self):
+        class F:
+            pass
 
-    def test_pk_default_no_suffix(self):
-        assert make_key("myapp.mymodel", ["name"], to_field_name="pk") == "myapp.mymodel.name"
+        key = make_key(F, "city")
+        assert len(key) == 16
+        assert all(c in "0123456789abcdef" for c in key)
+
+    def test_opaque_no_leaked_paths(self):
+        """The key must not expose the field name or the module path."""
+
+        class F:
+            pass
+
+        key = make_key(F, "city")
+        assert "city" not in key
+        assert F.__module__ not in key
+
+    def test_distinct_per_field(self):
+        class F:
+            pass
+
+        assert make_key(F, "city") != make_key(F, "country")
+
+    def test_distinct_per_form(self):
+        class A:
+            pass
+
+        class B:
+            pass
+
+        assert make_key(A, "city") != make_key(B, "city")
+
+    def test_form_label_is_module_and_qualname(self):
+        class F:
+            pass
+
+        assert form_label(F) == f"{F.__module__}.{F.__qualname__}"
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +82,7 @@ class TestMakeKey:
 
 class TestRegistry:
     def test_register_and_get(self):
-        reg = SearchRegistration(queryset_factory=lambda: None, search_fields=("name",))
+        reg = SearchRegistration(queryset_factory=lambda request: None, search_fields=("name",))
         register("test.key", reg)
         assert get_registration("test.key") is reg
 
@@ -57,14 +90,14 @@ class TestRegistry:
         assert get_registration("nonexistent") is None
 
     def test_register_idempotent(self):
-        reg1 = SearchRegistration(queryset_factory=lambda: None, search_fields=("a",))
-        reg2 = SearchRegistration(queryset_factory=lambda: None, search_fields=("b",))
+        reg1 = SearchRegistration(queryset_factory=lambda request: None, search_fields=("a",))
+        reg2 = SearchRegistration(queryset_factory=lambda request: None, search_fields=("b",))
         register("key", reg1)
         register("key", reg2)
         assert get_registration("key") is reg2
 
     def test_get_registry_returns_all(self):
-        reg = SearchRegistration(queryset_factory=lambda: None, search_fields=("a",))
+        reg = SearchRegistration(queryset_factory=lambda request: None, search_fields=("a",))
         register("k1", reg)
         register("k2", reg)
         assert len(get_registry()) == 2
@@ -89,8 +122,7 @@ class TestAutoRegistration:
                 widget=SearchSelect(search_fields=["username"], search_decorator=None),
             )
 
-        F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "user"))
         assert reg is not None
         assert reg.search_fields == ("username",)
         assert reg.to_field_name == "pk"
@@ -112,9 +144,49 @@ class TestAutoRegistration:
                 model = User
                 fields = []
 
-        F()
-        reg = get_registration(make_key("auth.user", ["username", "email"]))
+        reg = get_registration(make_key(F, "user"))
         assert reg is not None
+        assert reg.search_fields == ("username", "email")
+
+    def test_registration_happens_at_class_definition(self):
+        """Registration is done by the metaclass, before any instance exists."""
+        from django import forms
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
+
+        class F(FormworkForm):
+            user = forms.ModelChoiceField(
+                queryset=User.objects.all(),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
+            )
+
+        # No F() call: the endpoint exists purely from defining the class.
+        assert get_registration(make_key(F, "user")) is not None
+
+    def test_two_forms_same_model_do_not_collide(self):
+        """Per-form-field keys mean two forms searching one model get two endpoints."""
+        from django import forms
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
+
+        class A(FormworkForm):
+            user = forms.ModelChoiceField(
+                queryset=User.objects.all(),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
+            )
+
+        class B(FormworkForm):
+            user = forms.ModelChoiceField(
+                queryset=User.objects.all(),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
+            )
+
+        assert make_key(A, "user") != make_key(B, "user")
+        assert get_registration(make_key(A, "user")) is not None
+        assert get_registration(make_key(B, "user")) is not None
+        assert len(get_registry()) == 2
 
     def test_skips_widget_without_search_fields(self):
         from django import forms
@@ -128,7 +200,6 @@ class TestAutoRegistration:
                 widget=SearchSelect(search_decorator=None),
             )
 
-        F()
         assert len(get_registry()) == 0
 
     def test_skips_non_model_field(self):
@@ -143,7 +214,6 @@ class TestAutoRegistration:
                 widget=SearchSelect(search_fields=["name"], search_decorator=None),
             )
 
-        F()
         assert len(get_registry()) == 0
 
     def test_sets_registry_key_on_widget(self):
@@ -160,7 +230,7 @@ class TestAutoRegistration:
 
         form = F()
         widget = form.fields["user"].widget
-        assert widget._registry_key == make_key("auth.user", ["username"])
+        assert widget._registry_key == make_key(F, "user")
 
     def test_multiselect_auto_registers(self):
         from django import forms
@@ -174,8 +244,7 @@ class TestAutoRegistration:
                 widget=MultiSelect(search_fields=["username"], search_decorator=None),
             )
 
-        F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "users"))
         assert reg is not None
         assert reg.widget_type == "multiselect"
 
@@ -192,8 +261,7 @@ class TestAutoRegistration:
                 widget=SearchSelect(search_fields=["first_name"], search_decorator=None),
             )
 
-        F()
-        reg = get_registration(make_key("auth.user", ["first_name"], to_field_name="username"))
+        reg = get_registration(make_key(F, "user"))
         assert reg is not None
         assert reg.to_field_name == "username"
 
@@ -213,8 +281,7 @@ class TestAutoRegistration:
                 widget=SearchSelect(search_fields=["username"], search_decorator=None),
             )
 
-        F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "user"))
         assert reg.label_from_instance is not None
 
     def test_captures_icon_from_instance(self):
@@ -232,8 +299,7 @@ class TestAutoRegistration:
                 widget=SearchSelect(search_fields=["username"], search_decorator=None),
             )
 
-        F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "user"))
         assert reg.icon_from_instance is not None
 
     def test_queryset_factory_returns_fresh_qs(self):
@@ -248,45 +314,65 @@ class TestAutoRegistration:
                 widget=SearchSelect(search_fields=["username"], search_decorator=None),
             )
 
-        F()
-        reg = get_registration(make_key("auth.user", ["username"]))
-        qs = reg.queryset_factory()
+        reg = get_registration(make_key(F, "user"))
+        # Render-time call passes None (no request available yet).
+        qs = reg.queryset_factory(None)
         assert qs.model is User
 
-    def test_missing_search_decorator_raises(self):
-        """Omitting search_decorator on a widget with search_fields raises ImproperlyConfigured."""
+    def test_search_queryset_used_as_request_scoped_factory(self):
+        """A widget's search_queryset becomes the request-scoped factory."""
         from django import forms
-        from django.core.exceptions import ImproperlyConfigured
 
         from django_formwork.forms import FormworkForm
         from django_formwork.widgets import SearchSelect
+
+        sentinel = User.objects.filter(is_staff=True)
 
         class F(FormworkForm):
             user = forms.ModelChoiceField(
                 queryset=User.objects.all(),
-                widget=SearchSelect(search_fields=["username"]),
+                widget=SearchSelect(
+                    search_fields=["username"],
+                    search_decorator=None,
+                    search_queryset=lambda request: sentinel,
+                ),
             )
 
-        with pytest.raises(ImproperlyConfigured, match="search_decorator"):
-            F()
+        reg = get_registration(make_key(F, "user"))
+        assert reg.queryset_factory(None) is sentinel
 
-    def test_missing_search_decorator_choices_raises(self):
-        """Omitting search_decorator with a search_choices_ method raises ImproperlyConfigured."""
+    def test_missing_search_decorator_raises(self):
+        """Omitting search_decorator on a widget with search_fields raises at class definition."""
         from django import forms
         from django.core.exceptions import ImproperlyConfigured
 
         from django_formwork.forms import FormworkForm
         from django_formwork.widgets import SearchSelect
 
-        class CityForm(FormworkForm):
-            city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect())
+        with pytest.raises(ImproperlyConfigured, match="search_decorator"):
 
-            @staticmethod
-            def search_choices_city(query, request=None):
-                return _search_cities(query, request)
+            class F(FormworkForm):
+                user = forms.ModelChoiceField(
+                    queryset=User.objects.all(),
+                    widget=SearchSelect(search_fields=["username"]),
+                )
+
+    def test_missing_search_decorator_choices_raises(self):
+        """Omitting search_decorator with a search_choices_ method raises at class definition."""
+        from django import forms
+        from django.core.exceptions import ImproperlyConfigured
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
 
         with pytest.raises(ImproperlyConfigured, match="search_decorator"):
-            CityForm()
+
+            class CityForm(FormworkForm):
+                city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect())
+
+                @staticmethod
+                def search_choices_city(query, request=None):
+                    return _search_cities(query, request)
 
     def test_search_decorator_stored_in_registration(self):
         """The search_decorator value is stored in the SearchRegistration."""
@@ -302,8 +388,7 @@ class TestAutoRegistration:
                 widget=SearchSelect(search_fields=["username"], search_decorator=login_required),
             )
 
-        F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "user"))
         assert reg.search_decorator is login_required
 
 
@@ -325,10 +410,10 @@ class TestFormworkAutoSearchView:
     @pytest.fixture
     def registered_key(self):
         reg = SearchRegistration(
-            queryset_factory=User.objects.all,
+            queryset_factory=lambda request: User.objects.all(),
             search_fields=("username", "first_name"),
         )
-        key = make_key("auth.user", ["username", "first_name"])
+        key = "test.users"
         register(key, reg)
         return key
 
@@ -351,6 +436,23 @@ class TestFormworkAutoSearchView:
         buttons = soup.find_all("button")
         assert len(buttons) == 1
         assert "alice" in buttons[0].get_text()
+
+    def test_request_scoped_queryset_factory_receives_request(self):
+        """The dispatch view calls the queryset factory with the live request."""
+        from django_formwork.views import FormworkAutoSearchView
+
+        seen = {}
+
+        def factory_fn(request):
+            seen["request"] = request
+            return User.objects.all()
+
+        reg = SearchRegistration(queryset_factory=factory_fn, search_fields=("username",))
+        register("test.scoped", reg)
+
+        request = factory.get("/search/", {"q": "", "type": "search_select"})
+        FormworkAutoSearchView.as_view()(request, key="test.scoped")
+        assert seen["request"] is request
 
     def test_returns_404_for_unknown_key(self):
         from django_formwork.views import FormworkAutoSearchView
@@ -375,7 +477,7 @@ class TestFormworkAutoSearchView:
             return wrapper
 
         reg = SearchRegistration(
-            queryset_factory=User.objects.all,
+            queryset_factory=lambda request: User.objects.all(),
             search_fields=("username",),
             search_decorator=deny_all,
         )
@@ -387,11 +489,11 @@ class TestFormworkAutoSearchView:
         assert response.status_code == 403
 
     def test_search_decorator_none_allows_anonymous(self):
-        """search_decorator=None means public — no auth check."""
+        """search_decorator=None means public, no auth check."""
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
-            queryset_factory=User.objects.all,
+            queryset_factory=lambda request: User.objects.all(),
             search_fields=("username",),
             search_decorator=None,
         )
@@ -403,7 +505,7 @@ class TestFormworkAutoSearchView:
         assert response.status_code == 200
 
     def test_no_oob_total_count_in_response(self, registered_key):
-        """The response is just the option markup — no OOB total swap.
+        """The response is just the option markup, with no OOB total swap.
         Widgets know the total at render time from the registry."""
         from django_formwork.views import FormworkAutoSearchView
 
@@ -416,7 +518,7 @@ class TestFormworkAutoSearchView:
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
-            queryset_factory=User.objects.all,
+            queryset_factory=lambda request: User.objects.all(),
             search_fields=("username",),
             label_from_instance=lambda obj: f"USER:{obj.username}",
         )
@@ -430,7 +532,7 @@ class TestFormworkAutoSearchView:
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
-            queryset_factory=User.objects.all,
+            queryset_factory=lambda request: User.objects.all(),
             search_fields=("username",),
             icon_from_instance=lambda obj: f"icon-{obj.username}",
         )
@@ -444,7 +546,7 @@ class TestFormworkAutoSearchView:
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
-            queryset_factory=User.objects.all,
+            queryset_factory=lambda request: User.objects.all(),
             search_fields=("username",),
             description_from_instance=lambda obj: obj.email,
         )
@@ -458,7 +560,7 @@ class TestFormworkAutoSearchView:
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
-            queryset_factory=User.objects.all,
+            queryset_factory=lambda request: User.objects.all(),
             search_fields=("username",),
             to_field_name="username",
         )
@@ -474,7 +576,7 @@ class TestFormworkAutoSearchView:
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
-            queryset_factory=User.objects.all,
+            queryset_factory=lambda request: User.objects.all(),
             search_fields=("username",),
             max_results=2,
         )
@@ -490,7 +592,7 @@ class TestFormworkAutoSearchView:
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
-            queryset_factory=User.objects.all,
+            queryset_factory=lambda request: User.objects.all(),
             search_fields=("username",),
             widget_type="multiselect",
         )
@@ -506,7 +608,7 @@ class TestFormworkAutoSearchView:
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
-            queryset_factory=User.objects.all,
+            queryset_factory=lambda request: User.objects.all(),
             search_fields=("username",),
         )
         register("test.noresults", reg)
@@ -514,31 +616,6 @@ class TestFormworkAutoSearchView:
         request = factory.get("/search/", {"q": "zzzzz", "type": "search_select"})
         response = FormworkAutoSearchView.as_view()(request, key="test.noresults")
         assert b"No results" in response.content
-
-
-# ---------------------------------------------------------------------------
-# make_choices_key
-# ---------------------------------------------------------------------------
-
-
-class TestMakeChoicesKey:
-    def test_basic_key(self):
-        class MyForm:
-            pass
-
-        MyForm.__module__ = "myapp.forms"
-        MyForm.__qualname__ = "MyForm"
-        assert make_choices_key(MyForm, "city") == "myapp.forms.myform.city"
-
-    def test_nested_class(self):
-        class Outer:
-            class Inner:
-                pass
-
-        Outer.Inner.__module__ = "myapp.forms"
-        Outer.Inner.__qualname__ = "Outer.Inner"
-        key = make_choices_key(Outer.Inner, "color")
-        assert key == "myapp.forms.outer.inner.color"
 
 
 # ---------------------------------------------------------------------------
@@ -577,9 +654,7 @@ class TestChoicesAutoRegistration:
             def search_choices_city(query, request=None):
                 return _search_cities(query, request)
 
-        CityForm()
-        key = make_choices_key(CityForm, "city")
-        reg = get_registration(key)
+        reg = get_registration(make_key(CityForm, "city"))
         assert reg is not None
         assert reg.search_func is not None
         assert reg.widget_type == "search_select"
@@ -599,7 +674,7 @@ class TestChoicesAutoRegistration:
 
         form = CityForm()
         widget = form.fields["city"].widget
-        assert widget._registry_key == make_choices_key(CityForm, "city")
+        assert widget._registry_key == make_key(CityForm, "city")
 
     def test_skips_without_search_choices_method(self):
         from django import forms
@@ -610,7 +685,6 @@ class TestChoicesAutoRegistration:
         class CityForm(FormworkForm):
             city = forms.ChoiceField(choices=_CITIES, widget=SearchSelect(search_decorator=None))
 
-        CityForm()
         assert len(get_registry()) == 0
 
     def test_multiselect_choices(self):
@@ -626,9 +700,7 @@ class TestChoicesAutoRegistration:
             def search_choices_cities(query, request=None):
                 return _search_cities(query, request)
 
-        CityForm()
-        key = make_choices_key(CityForm, "cities")
-        reg = get_registration(key)
+        reg = get_registration(make_key(CityForm, "cities"))
         assert reg is not None
         assert reg.widget_type == "multiselect"
 
@@ -648,15 +720,13 @@ class TestChoicesAutoRegistration:
                     return [{"value": t, "label": t} for t in tags]
                 return [{"value": t, "label": t} for t in tags if query.lower() in t]
 
-        TagForm()
-        key = make_choices_key(TagForm, "tag")
-        reg = get_registration(key)
+        reg = get_registration(make_key(TagForm, "tag"))
         assert reg is not None
         assert reg.widget_type == "combobox"
 
 
 # ---------------------------------------------------------------------------
-# FormworkAutoSearchView — choices-backed dispatch
+# FormworkAutoSearchView, choices-backed dispatch
 # ---------------------------------------------------------------------------
 
 
@@ -692,7 +762,7 @@ class TestAutoSearchViewChoices:
         assert "New York" in buttons[0].get_text()
 
     def test_no_oob_total_count_in_response(self, choices_key):
-        """The response is just option markup — no OOB total swap.
+        """The response is just option markup, with no OOB total swap.
         Widgets know the total at render time from the registry."""
         from django_formwork.views import FormworkAutoSearchView
 

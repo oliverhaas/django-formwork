@@ -96,3 +96,32 @@ def bound_form_with_errors():
     form = SimpleFormworkForm(data={"name": "", "email": "bad", "message": ""})
     form.is_valid()
     return form
+
+
+@pytest.fixture(autouse=True)
+def _reregister_e2e_search(request):
+    """Re-establish the e2e forms' search registrations before each browser test.
+
+    Search endpoints register once, in the form metaclass, when a form module
+    is imported (see ``django_formwork.registry``).  In production nothing ever
+    clears that registry, but the autouse registry-cleanup fixtures wipe it
+    between tests for isolation, and Python will not re-import an already-loaded
+    module.  Without this, the in-process live server would 404 on every search
+    endpoint after the first test that clears the registry.  Re-registering is
+    idempotent and yields the same opaque keys, so the rendered widgets keep
+    resolving to a live endpoint.
+    """
+    if request.node.get_closest_marker("e2e") is None:
+        return
+
+    import inspect
+
+    # Imported as ``e2e.views`` (not ``tests.e2e.views``) so the module label,
+    # and therefore the registry keys, match what the live server renders.
+    import e2e.views as e2e_views
+
+    from django_formwork.forms import FormworkForm, FormworkModelForm, _register_search_widgets
+
+    for _name, obj in inspect.getmembers(e2e_views, inspect.isclass):
+        if issubclass(obj, (FormworkForm, FormworkModelForm)) and obj.__module__ == e2e_views.__name__:
+            _register_search_widgets(obj)

@@ -25,20 +25,26 @@ from typing import TYPE_CHECKING, Any
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.forms import Form, ModelChoiceField, ModelForm, ModelMultipleChoiceField
+from django.forms.forms import DeclarativeFieldsMetaclass
 from django.forms.models import InlineForeignKeyField, ModelFormMetaclass, construct_instance
 
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
 from django_formwork.fields import FormworkModelChoiceField, FormworkModelMultipleChoiceField
+from django_formwork.registry import SearchRegistration, make_key, register
 from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from django.db.models import QuerySet
     from django.forms import Field
+    from django.http import HttpRequest
 
     from django_formwork.widgets import ComboBox, MultiSelect, SearchSelect
 
 __all__ = [
     "FormworkForm",
+    "FormworkFormMetaclass",
     "FormworkJinja2Form",
     "FormworkJinja2ModelForm",
     "FormworkModelForm",
@@ -46,13 +52,155 @@ __all__ = [
 ]
 
 
+def _widget_type_for(widget: SearchSelect | MultiSelect | ComboBox) -> str:
+    from django_formwork.widgets import ComboBox, MultiSelect
+
+    if isinstance(widget, MultiSelect):
+        return "multiselect"
+    if isinstance(widget, ComboBox):
+        return "combobox"
+    return "search_select"
+
+
+def _model_registration(
+    widget: SearchSelect | MultiSelect | ComboBox,
+    field: Field,
+    search_fields: tuple[str, ...],
+    queryset: QuerySet,
+    decorator: Callable | None,
+) -> SearchRegistration:
+    """Build a model-backed :class:`SearchRegistration` for one searchable field."""
+    to_field_name = getattr(field, "to_field_name", None) or "pk"
+    # Callbacks live on the field.  Formwork fields expose icon/description
+    # callbacks; a plain ModelChoiceField only exposes label_from_instance.
+    label_func = getattr(field, "label_from_instance", None)
+    icon_func = None
+    desc_func = None
+    if isinstance(field, (FormworkModelChoiceField, FormworkModelMultipleChoiceField)):
+        icon_func = field.icon_from_instance
+        desc_func = field.description_from_instance
+
+    # Request-scoped queryset factory.  A widget may supply ``search_queryset``
+    # (called with the current request, or None at render time) to scope
+    # results per request; otherwise fall back to a fresh copy of the field's
+    # bound queryset.
+    search_queryset = getattr(widget, "search_queryset", None)
+    if callable(search_queryset):
+        factory = search_queryset
+    else:
+
+        def factory(_request: HttpRequest | None, qs: QuerySet = queryset) -> QuerySet:
+            return qs.all()
+
+    return SearchRegistration(
+        queryset_factory=factory,
+        search_fields=tuple(search_fields),
+        to_field_name=to_field_name,
+        label_from_instance=label_func,
+        icon_from_instance=icon_func,
+        description_from_instance=desc_func,
+        search_decorator=decorator,
+        widget_type=_widget_type_for(widget),
+    )
+
+
+def _register_search_widgets(form_cls: type) -> None:
+    """Register server-side search endpoints for a form's searchable widgets.
+
+    Called by the form metaclasses at class-definition time, so every endpoint
+    exists in every worker process as soon as the form module is imported (see
+    :mod:`django_formwork.registry`).  Walks ``base_fields`` and, for each
+    ``SearchSelect`` / ``MultiSelect`` / ``ComboBox`` that resolves to a real
+    search source, registers a :class:`~django_formwork.registry.SearchRegistration`
+    and stamps the widget with its ``_registry_key`` (preserved through the
+    per-instance deepcopy of the fields).
+
+    Two paths:
+
+    1. **Model-backed**: widget has ``search_fields`` and the field provides a
+       queryset.
+    2. **Choices-backed**: the form defines a
+       ``search_choices_<fieldname>(query, request)`` static method returning
+       results directly (list of dicts or ``(value, label)`` tuples).
+    """
+    from django_formwork.widgets import ComboBox, MultiSelect, SearchSelect
+    from django_formwork.widgets._base import _NOT_SET
+
+    base_fields = getattr(form_cls, "base_fields", None)
+    if not base_fields:
+        return
+
+    for name, field in base_fields.items():
+        widget = field.widget
+        if not isinstance(widget, (SearchSelect, MultiSelect, ComboBox)):
+            continue
+
+        search_fields = getattr(widget, "search_fields", None)
+        queryset = getattr(field, "queryset", None)
+        has_model_search = bool(search_fields) and queryset is not None
+        method = getattr(form_cls, f"search_choices_{name}", None)
+
+        if not has_model_search and method is None:
+            continue
+
+        # Enforce search_decorator: the developer must make a conscious auth
+        # choice for every auto-registered search endpoint.
+        raw_decorator = getattr(widget, "search_decorator", _NOT_SET)
+        if raw_decorator is _NOT_SET:
+            widget_cls = type(widget).__name__
+            msg = (
+                f"Field '{name}' uses {widget_cls} with server-side search but no "
+                f"search_decorator was provided. Pass a decorator (e.g. login_required) "
+                f"or None for public access."
+            )
+            raise ImproperlyConfigured(msg)
+        decorator = raw_decorator if callable(raw_decorator) else None
+
+        key = make_key(form_cls, name)
+        # Model-backed wins when both are present (search_fields is explicit).
+        if has_model_search and search_fields is not None and queryset is not None:
+            registration = _model_registration(widget, field, search_fields, queryset, decorator)
+        else:
+            registration = SearchRegistration(
+                search_func=method,
+                search_decorator=decorator,
+                widget_type=_widget_type_for(widget),
+            )
+        register(key, registration)
+        widget._registry_key = key  # noqa: SLF001
+
+
+class FormworkFormMetaclass(DeclarativeFieldsMetaclass):
+    """Metaclass for plain formwork forms that registers search endpoints.
+
+    Once the declarative fields are collected, walk them and register a search
+    endpoint for every searchable widget (see :func:`_register_search_widgets`).
+    Registering at class-definition time means the endpoints exist in every
+    worker as soon as the form module is imported, independent of whether a
+    given worker ever rendered the form.
+    """
+
+    def __new__(
+        mcs,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        **kwargs: Any,
+    ) -> type:
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+        _register_search_widgets(cls)
+        return cls
+
+
 class FormworkModelFormMetaclass(ModelFormMetaclass):
-    """Metaclass that auto-upgrades ``ModelChoiceField`` to ``FormworkModelChoiceField``.
+    """Metaclass that upgrades model choice fields and registers search endpoints.
 
     Auto-generated ``ModelChoiceField`` / ``ModelMultipleChoiceField`` instances
     (from ``Meta.model`` / ``Meta.fields``) are swapped for their Formwork
     equivalents so icon/description callbacks can be attached to the field.
-    Explicit field declarations — including custom subclasses — are left alone.
+    Explicit field declarations, including custom subclasses, are left alone.
+    After the swap, search endpoints are registered the same way as for plain
+    forms (see :func:`_register_search_widgets`).
     """
 
     def __new__(
@@ -70,131 +218,8 @@ class FormworkModelFormMetaclass(ModelFormMetaclass):
                 cls.base_fields[field_name] = FormworkModelChoiceField.from_field(field)
             elif type(field) is ModelMultipleChoiceField:
                 cls.base_fields[field_name] = FormworkModelMultipleChoiceField.from_field(field)
+        _register_search_widgets(cls)
         return cls
-
-
-class _AutoSearchMixin:
-    """Mixin that auto-registers search endpoints.
-
-    Two paths:
-
-    1. **Model-backed** — widget has ``search_fields`` and the field
-       provides a queryset (``ModelChoiceField``).
-    2. **Choices-backed** — the form defines a
-       ``search_choices_<fieldname>(query, request)`` method that returns
-       results directly (list of dicts or ``(value, label)`` tuples).
-    """
-
-    if TYPE_CHECKING:
-        fields: dict[str, Any]
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._auto_register_search()
-
-    def _auto_register_search(self) -> None:
-        from django.core.exceptions import ImproperlyConfigured
-
-        from django_formwork.registry import (
-            SearchRegistration,
-            make_choices_key,
-            register,
-        )
-        from django_formwork.widgets import ComboBox, MultiSelect, SearchSelect
-        from django_formwork.widgets._base import _NOT_SET
-
-        for name, field in self.fields.items():
-            widget = field.widget
-            if not isinstance(widget, (SearchSelect, MultiSelect, ComboBox)):
-                continue
-
-            # Check whether this widget would be auto-registered.
-            search_fields = getattr(widget, "search_fields", None)
-            queryset = getattr(field, "queryset", None)
-            has_model_search = bool(search_fields) and queryset is not None
-            has_choices_search = getattr(self.__class__, f"search_choices_{name}", None) is not None
-
-            if not has_model_search and not has_choices_search:
-                continue
-
-            # Enforce search_decorator — developer must make a conscious
-            # choice about auth for auto-registered search endpoints.
-            raw_decorator = getattr(widget, "search_decorator", _NOT_SET)
-            if raw_decorator is _NOT_SET:
-                widget_cls = type(widget).__name__
-                msg = (
-                    f"Field '{name}' uses {widget_cls} with server-side search but no "
-                    f"search_decorator was provided. Pass a decorator (e.g. login_required) "
-                    f"or None for public access."
-                )
-                raise ImproperlyConfigured(msg)
-            decorator = raw_decorator  # Validated: not _NOT_SET → Callable | None
-
-            # Path 1: model-backed (search_fields on widget + queryset on field).
-            if has_model_search and search_fields is not None and queryset is not None:
-                self._register_model_search(widget, field, search_fields, queryset)
-                continue
-
-            # Path 2: choices-backed (search_choices_<name> method on form).
-            method = getattr(self.__class__, f"search_choices_{name}", None)
-            if method is not None:
-                widget_type = self._widget_type_for(widget)
-                key = make_choices_key(self.__class__, name)
-                registration = SearchRegistration(
-                    search_func=method,
-                    search_decorator=decorator if callable(decorator) else None,
-                    widget_type=widget_type,
-                )
-                register(key, registration)
-                widget._registry_key = key  # noqa: SLF001
-
-    @staticmethod
-    def _register_model_search(
-        widget: SearchSelect | MultiSelect | ComboBox,
-        field: Field,
-        search_fields: tuple[str, ...],
-        queryset: QuerySet,
-    ) -> None:
-        from django_formwork.registry import SearchRegistration, make_key, register
-        from django_formwork.widgets import MultiSelect
-
-        model_label = queryset.model._meta.label_lower  # noqa: SLF001
-        to_field_name = getattr(field, "to_field_name", None) or "pk"
-        key = make_key(model_label, search_fields, to_field_name)
-
-        widget_type = "multiselect" if isinstance(widget, MultiSelect) else "search_select"
-        # Callbacks live on the field.  Formwork fields expose icon/description
-        # callbacks; plain ModelChoiceField only exposes label_from_instance.
-        label_func = getattr(field, "label_from_instance", None)
-        icon_func = None
-        desc_func = None
-        if isinstance(field, (FormworkModelChoiceField, FormworkModelMultipleChoiceField)):
-            icon_func = field.icon_from_instance
-            desc_func = field.description_from_instance
-        base_qs = queryset
-
-        registration = SearchRegistration(
-            queryset_factory=lambda qs=base_qs: qs.all(),  # type: ignore[misc]
-            search_fields=tuple(search_fields),
-            to_field_name=to_field_name,
-            label_from_instance=label_func,
-            icon_from_instance=icon_func,
-            description_from_instance=desc_func,
-            search_decorator=widget.search_decorator if callable(widget.search_decorator) else None,
-            widget_type=widget_type,
-        )
-        register(key, registration)
-        widget._registry_key = key  # noqa: SLF001
-
-    @staticmethod
-    def _widget_type_for(widget: SearchSelect | MultiSelect | ComboBox) -> str:
-        from django_formwork.widgets import ComboBox, MultiSelect
-
-        if isinstance(widget, MultiSelect):
-            return "multiselect"
-        if isinstance(widget, ComboBox):
-            return "combobox"
-        return "search_select"
 
 
 class _DirtyOnlyFormMixin:
@@ -380,7 +405,7 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
                 await self.avalidate_constraints()
 
 
-class FormworkForm(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
+class FormworkForm(_DirtyOnlyFormMixin, AsyncFormMixin, Form, metaclass=FormworkFormMetaclass):
     """Form base class with DaisyUI styling and async support.
 
     Usage::
@@ -412,7 +437,6 @@ class FormworkForm(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
 class FormworkModelForm(
     _DirtyOnlyModelFormMixin,
     AsyncModelFormMixin,
-    _AutoSearchMixin,
     ModelForm,
     metaclass=FormworkModelFormMetaclass,
 ):
@@ -427,7 +451,7 @@ class FormworkModelForm(
     default_renderer = FormworkRenderer
 
 
-class FormworkJinja2Form(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
+class FormworkJinja2Form(_DirtyOnlyFormMixin, AsyncFormMixin, Form, metaclass=FormworkFormMetaclass):
     """Form base class with DaisyUI styling (Jinja2 renderer) and async support.
 
     Use this when your project uses Jinja2 templates.  Equivalent to
@@ -441,7 +465,6 @@ class FormworkJinja2Form(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, 
 class FormworkJinja2ModelForm(
     _DirtyOnlyModelFormMixin,
     AsyncModelFormMixin,
-    _AutoSearchMixin,
     ModelForm,
     metaclass=FormworkModelFormMetaclass,
 ):
