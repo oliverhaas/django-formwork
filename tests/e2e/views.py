@@ -11,7 +11,6 @@ from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkValidateView
 from django_formwork.widgets import (
     ComboBox,
-    CountryInput,
     DataList,
     DatePicker,
     FileDropZone,
@@ -21,7 +20,6 @@ from django_formwork.widgets import (
     MultiSelect,
     OTPInput,
     PasswordReveal,
-    PhoneInput,
     Range,
     Rating,
     SearchSelect,
@@ -796,7 +794,7 @@ class TextareaForm(FormworkForm):
 
 
 class NewWidgetsForm(FormworkForm):
-    """DatePicker, InputNumber, OTP, Phone, Country, InputMask."""
+    """DatePicker, InputNumber, OTP, Country, InputMask."""
 
     due_date = forms.DateField(
         widget=DatePicker,
@@ -813,13 +811,9 @@ class NewWidgetsForm(FormworkForm):
         required=False,
         help_text="One-time password with auto-advance between digits.",
     )
-    phone = forms.CharField(
-        widget=PhoneInput,
-        required=False,
-        help_text="Country code selector with phone number input.",
-    )
     country = forms.ChoiceField(
-        widget=CountryInput(),
+        choices=[("", "")] + [(c, ChoiceLabel(n, icon=flag)) for c, flag, n in _COUNTRIES],
+        widget=SearchSelect(),
         required=False,
         help_text="Searchable country selector with flag emojis.",
     )
@@ -1319,7 +1313,7 @@ _PAGES = [
         "new-widgets",
         "/new-widgets/",
         "New Widgets",
-        "DatePicker, InputNumber, OTP, Phone, Country, InputMask",
+        "DatePicker, InputNumber, OTP, Country, InputMask",
     ),
     (
         "complex",

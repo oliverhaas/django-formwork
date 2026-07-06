@@ -5,6 +5,7 @@
  * up classes referenced in widget templates and widget Python defaults
  * (e.g. `mask-star-2` on Rating, `toggle` on Toggle, etc.). */
 @source "./templates/";
+@source "./taskmanager/templates/";
 @source "../../django_formwork/";
 
 /* `badge-{{ task.status_color }}` and `badge-{{ task.priority_color }}`

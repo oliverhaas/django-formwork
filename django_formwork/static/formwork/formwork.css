@@ -193,7 +193,7 @@ fieldset.fieldset > .tooltip:has(> select + select + select) {
    datetime-local, search, color, tel.
    Excludes inputs inside compound widgets (PasswordReveal's
    <label class="password-reveal">, dropdown search inputs) and ComboBox. */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.otp-input *):not(.phone-input *):not(.date-picker-label *):not(.input-mask *) {
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.otp-input *):not(.date-picker-label *):not(.input-mask *) {
     @apply input w-full;
 }
 
@@ -295,19 +295,6 @@ i.icon {
     appearance: textfield;
 }
 
-/* PhoneInput: joined prefix + number. */
-.phone-input {
-    @apply w-full relative;
-}
-
-.phone-prefix-trigger {
-    @apply select w-24 shrink-0 rounded-r-none;
-}
-
-.phone-prefix-menu {
-    @apply absolute top-full left-0 mt-1 w-24;
-}
-
 /* OTPInput: individual digit boxes in a row. */
 .otp-input {
     @apply w-fit;
@@ -356,7 +343,7 @@ textarea {
     @apply textarea w-full;
 }
 
-select:not(.phone-input *) {
+select {
     @apply select w-full;
 }
 

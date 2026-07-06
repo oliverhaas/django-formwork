@@ -1,4 +1,4 @@
-{% with prefix=widget.subwidgets.0 number=widget.subwidgets.1 %}<div class="phone-input join w-full"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_phone"{% endif %} x-data="{
+{% with prefix=widget.subwidgets.0 number=widget.subwidgets.1 %}<div class="join w-full relative"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_phone"{% endif %} x-data="{
   open: false,
   value: '{{ prefix.value|default:'' }}',
   label: '',
@@ -16,8 +16,8 @@
   }
 }" @click.away="open = false">
   <input x-ref="hidden" type="hidden" name="{{ prefix.name }}" value="{{ prefix.value|default:'' }}"{% if prefix.attrs.id %} id="{{ prefix.attrs.id }}"{% endif %}>
-  <button type="button" class="phone-prefix-trigger join-item" @click="open = !open" x-text="label"></button>
-  <ul x-show="open" x-cloak class="phone-prefix-menu dropdown-content menu bg-base-100 rounded-box shadow-lg border border-base-300 max-h-60 overflow-y-auto p-1 flex-nowrap z-10">
+  <button type="button" class="select w-28 shrink-0 join-item" @click="open = !open" x-text="label"></button>
+  <ul x-show="open" x-cloak class="menu dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 absolute top-full left-0 mt-1 w-28 max-h-60 overflow-y-auto p-1 flex-nowrap z-10">
     <template x-for="[val, lbl] in choices" :key="val">
       <li><a class="text-sm px-2 py-1" @click.prevent="pick(val, lbl)" x-text="lbl" :class="{ 'active': val === value }"></a></li>
     </template>

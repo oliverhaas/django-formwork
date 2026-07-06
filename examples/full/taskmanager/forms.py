@@ -7,14 +7,12 @@ from django import forms
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.widgets import (
     ComboBox,
-    CountryInput,
     DatePicker,
     FileDropZone,
     ImageDropZone,
     MultiSelect,
     OTPInput,
     PasswordReveal,
-    PhoneInput,
     Range,
     Rating,
     SearchSelect,
@@ -23,6 +21,31 @@ from django_formwork.widgets import (
 )
 
 from .models import Tag, Task
+from .widgets import PhoneInput
+
+# Demo country list; real projects supply their own (or use django-countries).
+_COUNTRY_CHOICES = [
+    ("", ""),
+    ("us", "🇺🇸 United States"),
+    ("gb", "🇬🇧 United Kingdom"),
+    ("de", "🇩🇪 Germany"),
+    ("fr", "🇫🇷 France"),
+    ("es", "🇪🇸 Spain"),
+    ("it", "🇮🇹 Italy"),
+    ("nl", "🇳🇱 Netherlands"),
+    ("se", "🇸🇪 Sweden"),
+    ("pl", "🇵🇱 Poland"),
+    ("ca", "🇨🇦 Canada"),
+    ("br", "🇧🇷 Brazil"),
+    ("mx", "🇲🇽 Mexico"),
+    ("jp", "🇯🇵 Japan"),
+    ("kr", "🇰🇷 South Korea"),
+    ("cn", "🇨🇳 China"),
+    ("in", "🇮🇳 India"),
+    ("au", "🇦🇺 Australia"),
+    ("za", "🇿🇦 South Africa"),
+    ("ng", "🇳🇬 Nigeria"),
+]
 
 
 class TaskForm(FormworkModelForm):
@@ -175,7 +198,8 @@ class SettingsForm(FormworkForm):
     email = forms.EmailField(initial="devon@example.com")
     phone = forms.CharField(widget=PhoneInput, required=False, help_text="Country code + number.")
     country = forms.ChoiceField(
-        widget=CountryInput,
+        choices=_COUNTRY_CHOICES,
+        widget=SearchSelect(),
         required=False,
         help_text="Where you're based.",
     )

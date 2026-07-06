@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- **`PhoneInput` widget.** Bundling a country dial-code table (with flag emoji) and a bespoke
+  prefix picker put application data in the framework, and it emitted a non-normalized
+  `"+1 5551234"` string with no validation. Real phone handling belongs to a dedicated library
+  such as `django-phonenumber-field`. The `full` example now ships a local `PhoneInput` that
+  shows how a project builds one. Removing it also let the bundled country/dial-code dataset
+  (`django_formwork/data.py`) be deleted.
+- **`CountryInput` widget and `country_choices()`.** The country selector was a thin wrapper
+  over `SearchSelect` pre-loaded with an ISO 3166-1 list, and it never validated (choices sat
+  on the widget, not the field, so every submitted value was rejected). Country lists are
+  application data, not framework data: build a `forms.ChoiceField(choices=...,
+  widget=SearchSelect())` from your own list (or a package like `django-countries`). The
+  example apps show the pattern.
+
 ## 0.1.0a2
 
 ### Added

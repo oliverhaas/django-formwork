@@ -452,49 +452,6 @@ code = forms.CharField(widget=OTPInput(length=6))
 
 ---
 
-## PhoneInput
-
-**Parent class:** `forms.MultiWidget`
-
-Phone number input with a country-code dropdown (with flags) next to a text input. The submitted value is `"{dial_code} {number}"`, e.g. `"+1 5551234"`.
-
-### Parameters
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `attrs` | `dict \| None` | `None` | HTML attributes for the wrapper |
-| `default_code` | `str` | `"+1"` | Dial code selected when no value is present |
-
-### Usage
-
-```python
-phone = forms.CharField(widget=PhoneInput)
-```
-
-**Requires Alpine.js.**
-
----
-
-## CountryInput
-
-**Parent class:** `SearchSelect`
-
-Searchable country selector with flag emojis. Pre-loaded with all ISO 3166-1 countries; submits the two-letter country code (e.g. `"US"`, `"DE"`).
-
-### Parameters
-
-Same as [`SearchSelect`](#searchselect). `choices` is fixed to the country list and cannot be overridden.
-
-### Usage
-
-```python
-country = forms.ChoiceField(widget=CountryInput())
-```
-
-**Requires Alpine.js.**
-
----
-
 ## ValidatedTextarea
 
 **Parent class:** `forms.Textarea`
