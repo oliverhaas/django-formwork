@@ -68,13 +68,19 @@ class TestMakeKey:
         OtherForm.__module__ = "myapp.forms"
         OtherForm.__qualname__ = "OtherForm"
         assert make_key(form_cls, "user", "myapp.mymodel", ["name"]) != make_key(
-            OtherForm, "user", "myapp.mymodel", ["name"]
+            OtherForm,
+            "user",
+            "myapp.mymodel",
+            ["name"],
         )
 
     def test_field_name_discriminates(self, form_cls):
         """Two fields in the same form on the same model+fields get distinct keys."""
         assert make_key(form_cls, "owner", "myapp.mymodel", ["name"]) != make_key(
-            form_cls, "manager", "myapp.mymodel", ["name"]
+            form_cls,
+            "manager",
+            "myapp.mymodel",
+            ["name"],
         )
 
 
@@ -411,7 +417,7 @@ class TestAutoRegistration:
         member_key = form.fields["member"].widget._registry_key
         assert owner_key != member_key
         assert str(get_registration(owner_key).queryset_factory().query) != str(
-            get_registration(member_key).queryset_factory().query
+            get_registration(member_key).queryset_factory().query,
         )
 
 
