@@ -8,7 +8,7 @@ Base view for the registry-driven search endpoint. `FormworkAutoSearchView` (bel
 
 ### Response templates
 
-The HTML fragment is rendered by one of three class-level Django templates, selected by the `type` query parameter the widget sends:
+The HTML fragment is rendered by one of three class-level Django templates, selected by the view's `widget_type`. Auto-registered endpoints take it from the registration; subclasses set the class attribute. A client-supplied `type` query parameter is ignored, so callers cannot switch templates:
 
 | Template attribute | Widget | Purpose |
 |---|---|---|
@@ -169,6 +169,23 @@ content = forms.CharField(
 | `end` | No | End character index in the text (for highlight) |
 
 If `start` and `end` are both present, the text between those indices is wrapped in a `<mark>` tag in the highlights overlay. Overlapping spans are merged before rendering.
+
+### Access control
+
+Like the search side's `search_decorator`, the view exposes a `validate_decorator` hook. Set it on your subclass to wrap `dispatch` with a standard Django auth decorator:
+
+```python
+from django.contrib.auth.decorators import login_required
+
+class SpellCheckView(FormworkValidateView):
+    validate_decorator = login_required
+```
+
+`None` (the default) leaves the endpoint public. A real subclass doing expensive work (spellcheck, LLM calls, database lookups) should set a decorator so it doesn't ship an unauthenticated, unrate-limited endpoint.
+
+### `MAX_TEXT_LENGTH`
+
+Text longer than `MAX_TEXT_LENGTH` characters (default `50_000`) is truncated before being passed to `get_errors()`, mirroring `MAX_QUERY_LENGTH` on the search side. Override the class attribute to change the limit.
 
 ### Security note
 

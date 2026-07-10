@@ -123,6 +123,21 @@ def test_otp_input_form_prefix(renderer):
     assert hidden["id"] == "id_auth-code"
 
 
+@pytest.mark.integration
+def test_otp_input_escapes_digits_in_x_data(renderer):
+    """SECURITY: redisplayed value characters in the Alpine digits array are JS-escaped."""
+    # Regression: a quote character in the submitted value broke out of its
+    # '...' array element in x-data (Alpine evaluates the entity-decoded
+    # attribute, so HTML autoescaping alone does not defend).
+    form = OTPForm(data={"code": "1'2<3\\"})
+    form.is_valid()
+    soup = render_form(form, renderer=renderer)
+    wrapper = soup.find("div", class_="otp-input")
+    x_data = wrapper["x-data"]
+    assert "'''" not in x_data
+    assert "\\u0027" in x_data
+
+
 # ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
 
 

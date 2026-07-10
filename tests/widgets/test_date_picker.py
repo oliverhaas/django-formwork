@@ -140,6 +140,22 @@ def test_date_picker_form_prefix(renderer):
     assert inp["id"] == "id_sched-due_date"
 
 
+@pytest.mark.integration
+def test_date_picker_escapes_value_in_x_data(renderer):
+    """SECURITY: the redisplayed raw value inside the Alpine x-data string is JS-escaped."""
+    # Regression: an unescaped quote broke out of the value: '...' string
+    # literal and executed on validation-error redisplay (Alpine evaluates the
+    # entity-decoded attribute, so HTML autoescaping alone does not defend).
+    payload = "'}); alert(1); ({'"
+    form = DatePickerForm(data={"due_date": payload})
+    form.is_valid()
+    soup = render_form(form, renderer=renderer)
+    wrapper = soup.find("div", class_="date-picker")
+    x_data = wrapper["x-data"]
+    assert payload not in x_data
+    assert "\\u0027" in x_data
+
+
 # ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
 
 

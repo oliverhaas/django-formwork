@@ -55,16 +55,23 @@ class SearchRegistration:
 
 
 def make_key(
+    form_cls: type,
+    field_name: str,
     model_label: str,
     search_fields: Sequence[str],
     to_field_name: str = "pk",
 ) -> str:
     """Build a stable, URL-safe registry key for model-backed search."""
+    # SECURITY: the form class and field name are part of the key (mirroring
+    # make_choices_key) so two forms searching the same model+fields never
+    # share a registration.  Otherwise a public registration could overwrite
+    # a decorated one (dropping its search_decorator), or an unfiltered
+    # queryset could replace a scoped one.
     fields_part = ",".join(sorted(search_fields))
-    key = f"{model_label}.{fields_part}"
+    key = f"{form_cls.__module__}.{form_cls.__qualname__}.{field_name}.{model_label}.{fields_part}"
     if to_field_name != "pk":
         key += f".{to_field_name}"
-    return key
+    return key.lower()
 
 
 def make_choices_key(form_cls: type, field_name: str) -> str:

@@ -135,6 +135,23 @@ def test_input_number_form_prefix(renderer):
     assert inp["id"] == "id_cfg-quantity"
 
 
+@pytest.mark.integration
+def test_input_number_escapes_value_in_x_data(renderer):
+    """SECURITY: the redisplayed raw value is quoted and JS-escaped inside x-data."""
+    # Regression: val: interpolated the raw submitted string into the Alpine
+    # object literal, so a non-numeric payload executed on validation-error
+    # redisplay.  The value is now wrapped in Number('...') with escapejs.
+    payload = "1'); alert(1); ('"
+    form = InputNumberForm(data={"quantity": payload})
+    form.is_valid()
+    soup = render_form(form, renderer=renderer)
+    wrapper = soup.find("div", class_="input-number")
+    x_data = wrapper["x-data"]
+    assert payload not in x_data
+    assert "val: Number('" in x_data
+    assert "\\u0027" in x_data
+
+
 # ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
 
 

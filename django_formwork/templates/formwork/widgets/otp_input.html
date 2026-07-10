@@ -1,5 +1,5 @@
 <div class="otp-input"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_otp"{% endif %} x-data="{
-  digits: [{% for d in widget.initial_digits %}'{{ d }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+  digits: [{% for d in widget.initial_digits %}'{{ d|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
   get combined() { return this.digits.join(''); },
   handleInput(i, e) {
     const v = e.target.value.slice(-1);

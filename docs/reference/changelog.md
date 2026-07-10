@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Security
+
+- **JS-escape every value interpolated into an Alpine `x-data` / expression context.** Alpine
+  evaluates the HTML-entity-decoded attribute, so Django's autoescaping alone does not defend.
+  Fixed the unescaped interpolations in `date_picker.html` (XSS on validation-error redisplay),
+  `otp_input.html` and `input_number.html` (both template engines; `InputNumber` now renders
+  `val: Number('<escaped>') || 0` instead of interpolating the raw value), and in the
+  `SEARCH_SELECT_TEMPLATE` / `COMBOBOX_TEMPLATE` htmx response fragments (stored XSS when
+  `to_field_name` or labels contain user-editable data).
+- **Search registry keys now include the form class and field name** (mirroring choices-backed
+  keys). Previously two forms searching the same model + `search_fields` shared one registration
+  last-writer-wins, so a public form could silently drop another form's `search_decorator` or
+  replace its scoped queryset with an unfiltered one. `make_key()` now takes `form_cls` and
+  `field_name` as its first two arguments.
+- **`FormworkAutoSearchView` renders with the widget type from the server-side registration**
+  (or the subclass attribute) and ignores the client-supplied `?type=` parameter. Widget
+  templates no longer send `type` with search requests, and the now-unused
+  `FormworkSearchView.VALID_WIDGET_TYPES` attribute was removed.
+- **`FormworkValidateView` hardening:** new `validate_decorator` hook (the same access-control
+  pattern the search side exposes via `search_decorator`) and a `MAX_TEXT_LENGTH` cap (default
+  `50_000` characters, mirroring `MAX_QUERY_LENGTH`) that truncates POSTed text before
+  validation.
+
 ### Removed
 
 - **`PhoneInput` widget.** Bundling a country dial-code table (with flag emoji) and a bespoke

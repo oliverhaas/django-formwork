@@ -18,6 +18,8 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from django.template.base import Template
 
     from django_formwork.registry import SearchRegistration
@@ -56,11 +58,14 @@ class FormworkSearchView(View):
     #: ``role="alert"`` error alert (which sits directly in ``dropdown-content``).
     _NO_RESULTS_HTML = '<li><div role="status" class="alert alert-info alert-soft m-0.5">No results.</div></li>'
 
-    #: Template for SearchSelect results (value + label, for select-style)
+    #: Template for SearchSelect results (value + label, for select-style).
+    #: SECURITY: ``escapejs`` on values read back into Alpine expressions
+    #: (``:class``) and dataset attributes.  Alpine evaluates the
+    #: entity-decoded attribute, so HTML autoescaping alone does not defend.
     SEARCH_SELECT_TEMPLATE = (
         """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value }}" data-label="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
-  <span class="formwork-check shrink-0 opacity-0" :class="value === '{{ item.value }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>{% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
+<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value|escapejs }}" data-label="{{ item.label|escapejs }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
+  <span class="formwork-check shrink-0 opacity-0" :class="value === '{{ item.value|escapejs }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>{% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
 {% if not results %}"""
         + _NO_RESULTS_HTML
@@ -70,7 +75,7 @@ class FormworkSearchView(View):
     #: Template for ComboBox results (label only, for autocomplete-style)
     COMBOBOX_TEMPLATE = (
         """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
+<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label|escapejs }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
   {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
 {% if not results %}"""
@@ -132,22 +137,20 @@ class FormworkSearchView(View):
         """
         return []
 
-    #: Valid widget types for the ``type`` query parameter.
-    VALID_WIDGET_TYPES = frozenset({"search_select", "combobox", "multiselect"})
-
     #: Maximum query length (bytes). Longer queries are truncated.
     MAX_QUERY_LENGTH = 200
 
     def get(self, request: HttpRequest) -> HttpResponse:
         query = request.GET.get("q", "").strip()[: self.MAX_QUERY_LENGTH]
-        widget_type = request.GET.get("type", self.widget_type)
         field_name = request.GET.get("name", "")
 
-        if widget_type not in self.VALID_WIDGET_TYPES:
-            widget_type = self.widget_type
-
+        # SECURITY: the widget type comes from the server side only (the
+        # registration for auto-registered endpoints, or the subclass
+        # attribute).  A client-supplied ``type`` parameter is ignored so
+        # callers cannot render results through a template the registration
+        # never intended.
         results = self.get_results(query, request=request)
-        template = self._get_template(widget_type)
+        template = self._get_template(self.widget_type)
         html = template.render(Context({"results": results, "field_name": field_name}))
         return HttpResponse(html.strip())
 
@@ -288,6 +291,24 @@ class FormworkValidateView(View):
     wrapped in a ``<mark>`` tag in the highlight overlay.
     """
 
+    #: Optional decorator (e.g. ``login_required``) applied to ``dispatch``,
+    #: the same access-control hook the search side exposes via
+    #: ``search_decorator``.  ``None`` means public.
+    validate_decorator: Callable | None = None
+
+    #: Maximum text length (characters). Longer texts are truncated before
+    #: validation, mirroring ``FormworkSearchView.MAX_QUERY_LENGTH``.
+    MAX_TEXT_LENGTH = 50_000
+
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
+        # Class-level access: instance access would bind a plain function
+        # (e.g. login_required) as a method and pass ``self`` into it.
+        decorator = type(self).validate_decorator
+        if decorator is not None:
+            decorated = decorator(super().dispatch)
+            return decorated(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
+
     def get_errors(self, text: str, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: ARG002
         """Return validation errors for the given text.
 
@@ -303,7 +324,7 @@ class FormworkValidateView(View):
         return []
 
     def post(self, request: HttpRequest) -> HttpResponse:
-        text = request.POST.get("text", "")
+        text = request.POST.get("text", "")[: self.MAX_TEXT_LENGTH]
         errors_id = request.POST.get("errors_id", "")
 
         errors = self.get_errors(text, request=request)

@@ -29,17 +29,53 @@ def _clean_registry():
 
 
 class TestMakeKey:
-    def test_basic_key(self):
-        assert make_key("myapp.mymodel", ["name"]) == "myapp.mymodel.name"
+    @pytest.fixture
+    def form_cls(self):
+        class MyForm:
+            pass
 
-    def test_multiple_fields_sorted(self):
-        assert make_key("myapp.mymodel", ["name", "code", "email"]) == "myapp.mymodel.code,email,name"
+        MyForm.__module__ = "myapp.forms"
+        MyForm.__qualname__ = "MyForm"
+        return MyForm
 
-    def test_custom_to_field_name(self):
-        assert make_key("myapp.mymodel", ["name"], to_field_name="slug") == "myapp.mymodel.name.slug"
+    def test_basic_key(self, form_cls):
+        assert make_key(form_cls, "user", "myapp.mymodel", ["name"]) == "myapp.forms.myform.user.myapp.mymodel.name"
 
-    def test_pk_default_no_suffix(self):
-        assert make_key("myapp.mymodel", ["name"], to_field_name="pk") == "myapp.mymodel.name"
+    def test_multiple_fields_sorted(self, form_cls):
+        assert (
+            make_key(form_cls, "user", "myapp.mymodel", ["name", "code", "email"])
+            == "myapp.forms.myform.user.myapp.mymodel.code,email,name"
+        )
+
+    def test_custom_to_field_name(self, form_cls):
+        assert (
+            make_key(form_cls, "user", "myapp.mymodel", ["name"], to_field_name="slug")
+            == "myapp.forms.myform.user.myapp.mymodel.name.slug"
+        )
+
+    def test_pk_default_no_suffix(self, form_cls):
+        assert (
+            make_key(form_cls, "user", "myapp.mymodel", ["name"], to_field_name="pk")
+            == "myapp.forms.myform.user.myapp.mymodel.name"
+        )
+
+    def test_form_class_discriminates(self, form_cls):
+        """SECURITY: two forms on the same model+fields must not share a key."""
+
+        class OtherForm:
+            pass
+
+        OtherForm.__module__ = "myapp.forms"
+        OtherForm.__qualname__ = "OtherForm"
+        assert make_key(form_cls, "user", "myapp.mymodel", ["name"]) != make_key(
+            OtherForm, "user", "myapp.mymodel", ["name"]
+        )
+
+    def test_field_name_discriminates(self, form_cls):
+        """Two fields in the same form on the same model+fields get distinct keys."""
+        assert make_key(form_cls, "owner", "myapp.mymodel", ["name"]) != make_key(
+            form_cls, "manager", "myapp.mymodel", ["name"]
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +126,7 @@ class TestAutoRegistration:
             )
 
         F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "user", "auth.user", ["username"]))
         assert reg is not None
         assert reg.search_fields == ("username",)
         assert reg.to_field_name == "pk"
@@ -113,7 +149,7 @@ class TestAutoRegistration:
                 fields = []
 
         F()
-        reg = get_registration(make_key("auth.user", ["username", "email"]))
+        reg = get_registration(make_key(F, "user", "auth.user", ["username", "email"]))
         assert reg is not None
 
     def test_skips_widget_without_search_fields(self):
@@ -160,7 +196,7 @@ class TestAutoRegistration:
 
         form = F()
         widget = form.fields["user"].widget
-        assert widget._registry_key == make_key("auth.user", ["username"])
+        assert widget._registry_key == make_key(F, "user", "auth.user", ["username"])
 
     def test_multiselect_auto_registers(self):
         from django import forms
@@ -175,7 +211,7 @@ class TestAutoRegistration:
             )
 
         F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "users", "auth.user", ["username"]))
         assert reg is not None
         assert reg.widget_type == "multiselect"
 
@@ -193,7 +229,7 @@ class TestAutoRegistration:
             )
 
         F()
-        reg = get_registration(make_key("auth.user", ["first_name"], to_field_name="username"))
+        reg = get_registration(make_key(F, "user", "auth.user", ["first_name"], to_field_name="username"))
         assert reg is not None
         assert reg.to_field_name == "username"
 
@@ -214,7 +250,7 @@ class TestAutoRegistration:
             )
 
         F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "user", "auth.user", ["username"]))
         assert reg.label_from_instance is not None
 
     def test_captures_icon_from_instance(self):
@@ -233,7 +269,7 @@ class TestAutoRegistration:
             )
 
         F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "user", "auth.user", ["username"]))
         assert reg.icon_from_instance is not None
 
     def test_queryset_factory_returns_fresh_qs(self):
@@ -249,7 +285,7 @@ class TestAutoRegistration:
             )
 
         F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "user", "auth.user", ["username"]))
         qs = reg.queryset_factory()
         assert qs.model is User
 
@@ -303,8 +339,80 @@ class TestAutoRegistration:
             )
 
         F()
-        reg = get_registration(make_key("auth.user", ["username"]))
+        reg = get_registration(make_key(F, "user", "auth.user", ["username"]))
         assert reg.search_decorator is login_required
+
+    def test_two_forms_same_model_fields_do_not_collide(self):
+        """SECURITY: a public form must not overwrite another form's protected registration.
+
+        Regression: keys were built from (model, search_fields, to_field_name)
+        only, so the last-instantiated form silently replaced the other's
+        search_decorator and queryset for the shared key.
+        """
+        from functools import wraps
+
+        from django import forms
+        from django.http import HttpResponse
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.views import FormworkAutoSearchView
+        from django_formwork.widgets import SearchSelect
+
+        def deny_all(view_func):
+            @wraps(view_func)
+            def wrapper(request, *args, **kwargs):
+                return HttpResponse(status=403)
+
+            return wrapper
+
+        class ProtectedForm(FormworkForm):
+            user = forms.ModelChoiceField(
+                queryset=User.objects.filter(is_staff=True),
+                widget=SearchSelect(search_fields=["username"], search_decorator=deny_all),
+            )
+
+        class PublicForm(FormworkForm):
+            user = forms.ModelChoiceField(
+                queryset=User.objects.all(),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
+            )
+
+        protected_key = ProtectedForm().fields["user"].widget._registry_key
+        public_key = PublicForm().fields["user"].widget._registry_key
+
+        assert protected_key != public_key
+        assert get_registration(protected_key).search_decorator is deny_all
+        assert get_registration(public_key).search_decorator is None
+
+        # Dispatching the protected key is still denied after the public form registered.
+        request = factory.get("/search/", {"q": ""})
+        assert FormworkAutoSearchView.as_view()(request, key=protected_key).status_code == 403
+        assert FormworkAutoSearchView.as_view()(request, key=public_key).status_code == 200
+
+    def test_two_fields_same_model_fields_get_distinct_registrations(self):
+        """Two fields in one form on the same model+search_fields keep their own querysets."""
+        from django import forms
+
+        from django_formwork.forms import FormworkForm
+        from django_formwork.widgets import SearchSelect
+
+        class F(FormworkForm):
+            owner = forms.ModelChoiceField(
+                queryset=User.objects.filter(is_staff=True),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
+            )
+            member = forms.ModelChoiceField(
+                queryset=User.objects.all(),
+                widget=SearchSelect(search_fields=["username"], search_decorator=None),
+            )
+
+        form = F()
+        owner_key = form.fields["owner"].widget._registry_key
+        member_key = form.fields["member"].widget._registry_key
+        assert owner_key != member_key
+        assert str(get_registration(owner_key).queryset_factory().query) != str(
+            get_registration(member_key).queryset_factory().query
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -324,11 +432,14 @@ class TestFormworkAutoSearchView:
 
     @pytest.fixture
     def registered_key(self):
+        class UserForm:
+            pass
+
         reg = SearchRegistration(
             queryset_factory=User.objects.all,
             search_fields=("username", "first_name"),
         )
-        key = make_key("auth.user", ["username", "first_name"])
+        key = make_key(UserForm, "user", "auth.user", ["username", "first_name"])
         register(key, reg)
         return key
 
@@ -496,11 +607,28 @@ class TestFormworkAutoSearchView:
         )
         register("test.multi", reg)
 
-        request = factory.get("/search/", {"q": "", "type": "multiselect", "name": "users"})
+        request = factory.get("/search/", {"q": "", "name": "users"})
         response = FormworkAutoSearchView.as_view()(request, key="test.multi")
         soup = BeautifulSoup(response.content, "html.parser")
         checkboxes = soup.find_all("input", {"type": "checkbox"})
         assert len(checkboxes) == 3
+
+    def test_widget_type_forced_from_registration(self):
+        """SECURITY: the client 'type' param is ignored; the registration decides the template."""
+        from django_formwork.views import FormworkAutoSearchView
+
+        reg = SearchRegistration(
+            queryset_factory=User.objects.all,
+            search_fields=("username",),
+            widget_type="multiselect",
+        )
+        register("test.forced", reg)
+
+        request = factory.get("/search/", {"q": "", "type": "combobox", "name": "users"})
+        response = FormworkAutoSearchView.as_view()(request, key="test.forced")
+        soup = BeautifulSoup(response.content, "html.parser")
+        assert len(soup.find_all("input", {"type": "checkbox"})) == 3
+        assert soup.find(attrs={"data-suggestion": True}) is None
 
     def test_no_results_message(self):
         from django_formwork.views import FormworkAutoSearchView

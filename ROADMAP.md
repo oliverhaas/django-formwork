@@ -42,24 +42,13 @@ honestly.
 - [x] **Removed `CountryInput` + `country_choices()`** (2026-07-05, see Done). It was a thin
   `SearchSelect` wrapper that never validated (choices on the widget, not the field). Decided
   country lists are application data, not framework data.
-- [ ] **escapejs every value interpolated into an Alpine `x-data` / JS-string context (two
-  confirmed XSS).** Alpine reads the HTML-entity-decoded attribute and `eval`s it, so
-  Django's autoescaping doesn't defend. `input_mask.html`/`search_select.html` already use
-  `escapejs`, proving the fix is known; apply it consistently and audit every inline widget
-  in one pass. (small)
-    - `date_picker.html:3`, exploitable on validation-error redisplay (arbitrary length value)
-    - `views.py:63` (htmx `SEARCH_SELECT_TEMPLATE`), exploitable via stored data when
-      `to_field_name` is a user-editable slug/username field
-    - `otp_input.html:2`, same unescaped pattern (constrained, but fix it too)
-- [ ] **Prevent registry key collisions that override auth/queryset across registrations.**
-  `make_key` uses only `(model_label, sorted search_fields, to_field_name)`; the
-  `queryset_factory` and `search_decorator` aren't in the key, and `register()` overwrites
-  last-writer-wins on a process-global dict re-populated per request. A public/unfiltered
-  `SearchSelect` on the same model+fields as a tenant-scoped `login_required` one shares a
-  URL and nondeterministically drops the decorator and leaks the unfiltered queryset. Fold a
-  discriminator (form module/qualname, as `make_choices_key` already does) into the key, or
-  refuse to overwrite a materially different registration. (`django_formwork/registry.py:57`,
-  medium)
+- [x] **escapejs'd every value interpolated into an Alpine `x-data` / JS-string context**
+  (2026-07-10, see Done). Fixed `date_picker.html`, `otp_input.html`, `input_number.html`
+  (both engines) and the `SEARCH_SELECT_TEMPLATE`/`COMBOBOX_TEMPLATE` fragments; audited the
+  remaining widgets, with regression tests using hostile values.
+- [x] **Prevented registry key collisions that override auth/queryset across registrations**
+  (2026-07-10, see Done). `make_key` now folds the form module/qualname + field name into the
+  key, as `make_choices_key` already did.
 
 ### Packaging: make a fresh install actually work
 
@@ -79,8 +68,9 @@ honestly.
 - [ ] **Lock `widget_type` and `ComboBox` naming to one convention.** Tokens ship three
   spellings (`search_select` vs `combobox` vs `multiselect`); `ComboBox` is spelled four ways
   (class / `combo_box.html` / `combo_box.js` / token `"combobox"`). Public via
-  `VALID_WIDGET_TYPES`, the `?type=` query param, and `SearchRegistration.widget_type`.
-  Recommend snake_case everywhere. (`django_formwork/views.py:136`, medium)
+  `FormworkSearchView.widget_type` and `SearchRegistration.widget_type` (the `?type=` query
+  param and `VALID_WIDGET_TYPES` were removed in the 2026-07-10 security batch).
+  Recommend snake_case everywhere. (`django_formwork/views.py`, medium)
 - [ ] **Reconcile the `FormworkModel` import path + decide the top-level re-export policy.**
   The `ImproperlyConfigured` message and docstrings tell users `from django_formwork import
   FormworkModel`, which raises `ImportError`; only `django_formwork.models` works. More
@@ -190,15 +180,17 @@ honestly.
 
 ## Quick wins (small effort, high value; knock these out first)
 
-- [ ] escapejs the two confirmed XSS sinks (`date_picker.html:3`, `views.py:63`) + `otp_input.html`
+- [x] ~~escapejs the two confirmed XSS sinks~~ Done (2026-07-10), plus `input_number.html` and a
+  full audit of both engines
 - [x] ~~Ship `CountryField`~~ Removed `CountryInput`/`country_choices()` entirely (2026-07-05)
 - [ ] Swap `installation.md` CSS block for the `examples/simple/app.css` recipe + add the
   `formwork install` / `django_iconx` step
 - [ ] Cap `django-iconx` to `>=0.2.0,<0.3` (one line, removes a release blocker)
 - [ ] Add `fail_under=90` to `[tool.coverage.report]`; delete/confirm-gitignore the stale
   `coverage.xml` (reports a misleading 36% vs the real ~91%)
-- [ ] Force `FormworkAutoSearchView.widget_type` from the registration, ignoring client `?type=`
-  (`views.py:143`)
+- [x] ~~Force `FormworkAutoSearchView.widget_type` from the registration, ignoring client
+  `?type=`~~ Done (2026-07-10); widget templates no longer send `type`, `VALID_WIDGET_TYPES`
+  removed
 - [ ] Drop clamped-empty spans in `_build_highlighted` so no stray empty `<mark>` is emitted
   (`views.py:322`)
 - [ ] Fix the `FormworkModel` error message + docstring cross-refs (or add the lazy `__getattr__`)
@@ -234,16 +226,25 @@ honestly.
 6. **Should `max_size`/`accept` be enforced server-side** (auto-attach validators, changing
    behavior) or remain presentational-only with loud docs? An API-semantics call that freezes
    user expectations at 1.0.
-7. **`FormworkValidateView`** is CSRF-exempt with no default auth hook and no length cap on
-   POSTed text (unlike search). Harmless for the base class (no-op `get_errors`), but a real
-   subclass doing expensive work (spellcheck/LLM/DB) inherits an unauthenticated,
-   unrate-limited endpoint. Add the same decorator hook + length cap the search side has, or
-   just document the responsibility? (Audit verdict: *uncertain*, your call.)
+7. ~~**`FormworkValidateView`** is CSRF-exempt with no default auth hook and no length cap on
+   POSTed text (unlike search).~~ Resolved (2026-07-10): added the `validate_decorator` hook
+   and a `MAX_TEXT_LENGTH` cap (50k chars) mirroring the search side; documented in
+   `docs/reference/views.md`.
 
 ---
 
 ## Done
 
+- **Security batch: Alpine escaping, registry key collisions, forced `widget_type`,
+  `FormworkValidateView` hardening** (2026-07-10). escapejs'd every user-influenced value
+  interpolated into an Alpine `x-data`/expression context in both template engines
+  (`date_picker`, `otp_input`, `input_number`, plus the `SEARCH_SELECT_TEMPLATE` and
+  `COMBOBOX_TEMPLATE` htmx fragments) with hostile-value regression tests. `make_key` now
+  includes the form module/qualname + field name so two forms on the same model+fields can't
+  overwrite each other's decorator or queryset. `FormworkAutoSearchView` ignores the client
+  `?type=` param and renders with the registration's widget type; templates stopped sending
+  it and `VALID_WIDGET_TYPES` was removed. `FormworkValidateView` gained a
+  `validate_decorator` hook and a `MAX_TEXT_LENGTH` (50k) truncation cap.
 - **Removed `PhoneInput` and the bundled country/dial-code dataset (`data.py`)** (2026-07-06).
   It put application data in the framework and emitted a non-normalized, unvalidated phone
   string. The `full` example now ships a project-local `PhoneInput` (widget + app template under

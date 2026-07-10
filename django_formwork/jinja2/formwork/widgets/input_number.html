@@ -1,5 +1,5 @@
 <div class="input-number"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_stepper"{% endif %} x-data="{
-  val: {{ widget.value|default("0", true) }},
+  val: Number('{{ widget.value|default("0", true)|escapejs }}') || 0,
   min: {{ widget.attrs.min|default("null") }},
   max: {{ widget.attrs.max|default("null") }},
   step: {{ widget.attrs.step|default("1") }},

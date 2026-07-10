@@ -132,7 +132,7 @@ class _AutoSearchMixin:
 
             # Path 1: model-backed (search_fields on widget + queryset on field).
             if has_model_search and search_fields is not None and queryset is not None:
-                self._register_model_search(widget, field, search_fields, queryset)
+                self._register_model_search(name, widget, field, search_fields, queryset)
                 continue
 
             # Path 2: choices-backed (search_choices_<name> method on form).
@@ -148,8 +148,9 @@ class _AutoSearchMixin:
                 register(key, registration)
                 widget._registry_key = key  # noqa: SLF001
 
-    @staticmethod
     def _register_model_search(
+        self,
+        field_name: str,
         widget: SearchSelect | MultiSelect | ComboBox,
         field: Field,
         search_fields: tuple[str, ...],
@@ -160,7 +161,7 @@ class _AutoSearchMixin:
 
         model_label = queryset.model._meta.label_lower  # noqa: SLF001
         to_field_name = getattr(field, "to_field_name", None) or "pk"
-        key = make_key(model_label, search_fields, to_field_name)
+        key = make_key(type(self), field_name, model_label, search_fields, to_field_name)
 
         widget_type = "multiselect" if isinstance(widget, MultiSelect) else "search_select"
         # Callbacks live on the field.  Formwork fields expose icon/description

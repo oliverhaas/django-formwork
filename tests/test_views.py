@@ -22,6 +22,18 @@ class CitySearchView(FormworkSearchView):
         return cities
 
 
+class CityComboBoxView(CitySearchView):
+    """City search rendered with the ComboBox template."""
+
+    widget_type = "combobox"
+
+
+class CityMultiSelectView(CitySearchView):
+    """City search rendered with the MultiSelect template."""
+
+    widget_type = "multiselect"
+
+
 class IconSearchView(FormworkSearchView):
     """Test subclass returning results with icons."""
 
@@ -31,25 +43,42 @@ class IconSearchView(FormworkSearchView):
         ]
 
 
+class HostileSearchView(FormworkSearchView):
+    """Test subclass returning values/labels with JS-breaking characters."""
+
+    def get_results(self, query, **kwargs):
+        return [
+            {"value": "x'); alert(1); ('", "label": "</script><script>alert(1)</script>"},
+        ]
+
+
+class HostileComboBoxView(HostileSearchView):
+    widget_type = "combobox"
+
+
+class HostileMultiSelectView(HostileSearchView):
+    widget_type = "multiselect"
+
+
 factory = RequestFactory()
 
 
 class TestFormworkSearchViewSearchSelect:
     def test_returns_html(self):
-        request = factory.get("/search/", {"q": "", "type": "search_select"})
+        request = factory.get("/search/", {"q": ""})
         response = CitySearchView.as_view()(request)
         assert response.status_code == 200
         assert response["Content-Type"] == "text/html; charset=utf-8"
 
     def test_returns_all_results_for_empty_query(self):
-        request = factory.get("/search/", {"q": "", "type": "search_select"})
+        request = factory.get("/search/", {"q": ""})
         response = CitySearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         buttons = soup.find_all("button")
         assert len(buttons) == 4
 
     def test_filters_results(self):
-        request = factory.get("/search/", {"q": "lon", "type": "search_select"})
+        request = factory.get("/search/", {"q": "lon"})
         response = CitySearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         buttons = soup.find_all("button")
@@ -57,12 +86,12 @@ class TestFormworkSearchViewSearchSelect:
         assert "London" in buttons[0].get_text()
 
     def test_no_results_message(self):
-        request = factory.get("/search/", {"q": "zzz", "type": "search_select"})
+        request = factory.get("/search/", {"q": "zzz"})
         response = CitySearchView.as_view()(request)
         assert b"No results" in response.content
 
     def test_data_value_and_label_attrs(self):
-        request = factory.get("/search/", {"q": "new", "type": "search_select"})
+        request = factory.get("/search/", {"q": "new"})
         response = CitySearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         btn = soup.find("button")
@@ -70,14 +99,14 @@ class TestFormworkSearchViewSearchSelect:
         assert btn["data-label"] == "New York"
 
     def test_option_role(self):
-        request = factory.get("/search/", {"q": "", "type": "search_select"})
+        request = factory.get("/search/", {"q": ""})
         response = CitySearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         options = soup.find_all("li", {"role": "option"})
         assert len(options) == 4
 
     def test_icon_support(self):
-        request = factory.get("/search/", {"q": "", "type": "search_select"})
+        request = factory.get("/search/", {"q": ""})
         response = IconSearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         icon = soup.find("img", {"src": "py.svg"})
@@ -86,23 +115,23 @@ class TestFormworkSearchViewSearchSelect:
 
 class TestFormworkSearchViewComboBox:
     def test_returns_suggestion_buttons(self):
-        request = factory.get("/search/", {"q": "", "type": "combobox"})
-        response = CitySearchView.as_view()(request)
+        request = factory.get("/search/", {"q": ""})
+        response = CityComboBoxView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         buttons = soup.find_all("button")
         assert len(buttons) == 4
 
     def test_data_suggestion_attr(self):
-        request = factory.get("/search/", {"q": "par", "type": "combobox"})
-        response = CitySearchView.as_view()(request)
+        request = factory.get("/search/", {"q": "par"})
+        response = CityComboBoxView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         btn = soup.find("button")
         assert btn["data-suggestion"] == "Paris"
 
     def test_no_data_value_attr(self):
         """ComboBox buttons have data-suggestion, not data-value."""
-        request = factory.get("/search/", {"q": "", "type": "combobox"})
-        response = CitySearchView.as_view()(request)
+        request = factory.get("/search/", {"q": ""})
+        response = CityComboBoxView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         btn = soup.find("button")
         assert not btn.has_attr("data-value")
@@ -110,46 +139,46 @@ class TestFormworkSearchViewComboBox:
 
 class TestFormworkSearchViewMultiSelect:
     def test_returns_checkbox_options(self):
-        request = factory.get("/search/", {"q": "", "type": "multiselect", "name": "lang"})
-        response = CitySearchView.as_view()(request)
+        request = factory.get("/search/", {"q": "", "name": "lang"})
+        response = CityMultiSelectView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         checkboxes = soup.find_all("input", {"type": "checkbox"})
         assert len(checkboxes) == 4
 
     def test_checkboxes_have_no_name(self):
         """htmx mode: checkboxes are visual only, hidden inputs handle submission."""
-        request = factory.get("/search/", {"q": "", "type": "multiselect", "name": "lang"})
-        response = CitySearchView.as_view()(request)
+        request = factory.get("/search/", {"q": "", "name": "lang"})
+        response = CityMultiSelectView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         cb = soup.find("input", {"type": "checkbox"})
         assert not cb.has_attr("name")
 
     def test_alpine_x_init_on_checkboxes(self):
-        request = factory.get("/search/", {"q": "", "type": "multiselect", "name": "lang"})
-        response = CitySearchView.as_view()(request)
+        request = factory.get("/search/", {"q": "", "name": "lang"})
+        response = CityMultiSelectView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         cb = soup.find("input", {"type": "checkbox"})
         assert cb.has_attr("x-init")
         assert "selected.has" in cb["x-init"]
 
     def test_alpine_change_handler_on_checkboxes(self):
-        request = factory.get("/search/", {"q": "", "type": "multiselect", "name": "lang"})
-        response = CitySearchView.as_view()(request)
+        request = factory.get("/search/", {"q": "", "name": "lang"})
+        response = CityMultiSelectView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         cb = soup.find("input", {"type": "checkbox"})
         assert cb.has_attr("@change")
         assert "toggle(" in cb["@change"]
 
     def test_multiselect_class_on_checkboxes(self):
-        request = factory.get("/search/", {"q": "", "type": "multiselect", "name": "lang"})
-        response = CitySearchView.as_view()(request)
+        request = factory.get("/search/", {"q": "", "name": "lang"})
+        response = CityMultiSelectView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         cb = soup.find("input", {"type": "checkbox"})
         assert "multiselect" in cb.get("class", [])
 
     def test_checkmark_span(self):
-        request = factory.get("/search/", {"q": "", "type": "multiselect", "name": "lang"})
-        response = CitySearchView.as_view()(request)
+        request = factory.get("/search/", {"q": "", "name": "lang"})
+        response = CityMultiSelectView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         check = soup.find("span", class_="formwork-check")
         assert check is not None
@@ -165,12 +194,14 @@ class TestFormworkSearchViewDefaults:
         btn = soup.find("button")
         assert btn.has_attr("data-value")
 
-    def test_type_override_via_query_param(self):
+    def test_type_query_param_ignored(self):
+        """SECURITY: a client-supplied type param must not switch templates."""
         request = factory.get("/search/", {"q": "", "type": "combobox"})
         response = CitySearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         btn = soup.find("button")
-        assert btn.has_attr("data-suggestion")
+        assert btn.has_attr("data-value")
+        assert not btn.has_attr("data-suggestion")
 
     def test_empty_base_class_results(self):
         """Base class returns empty results."""
@@ -489,18 +520,18 @@ class TestFormworkSearchViewErrorHandling:
         buttons = soup.find_all("button")
         assert len(buttons) == 4
 
-    def test_invalid_widget_type_falls_back(self):
-        """Invalid 'type' query param falls back to default widget_type."""
+    def test_invalid_type_param_ignored(self):
+        """An invalid 'type' query param is ignored; the view's widget_type wins."""
         request = factory.get("/search/", {"q": "", "type": "not_a_type"})
         response = CitySearchView.as_view()(request)
         assert response.status_code == 200
         soup = BeautifulSoup(response.content, "html.parser")
-        # Falls back to search_select (has data-value)
+        # Renders as search_select (has data-value)
         btn = soup.find("button")
         assert btn.has_attr("data-value")
 
-    def test_empty_type_falls_back(self):
-        """Empty 'type' query param falls back to default widget_type."""
+    def test_empty_type_param_ignored(self):
+        """An empty 'type' query param is ignored; the view's widget_type wins."""
         request = factory.get("/search/", {"q": "", "type": ""})
         response = CitySearchView.as_view()(request)
         assert response.status_code == 200
@@ -510,7 +541,7 @@ class TestFormworkSearchViewErrorHandling:
         Widgets know the total at render time from the registry, so the
         view doesn't need to push it.
         """
-        request = factory.get("/search/", {"q": "", "type": "search_select", "name": "city"})
+        request = factory.get("/search/", {"q": "", "name": "city"})
         response = CitySearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         assert soup.find(attrs={"hx-swap-oob": True}) is None
@@ -529,3 +560,91 @@ class TestFormworkSearchViewErrorHandling:
         request = factory.get("/search/", {"q": "a" * 50})
         TrackingView.as_view()(request)
         assert len(received["query"]) == 10
+
+
+# ---------------------------------------------------------------------------
+# Search view escaping (SECURITY)
+# ---------------------------------------------------------------------------
+
+
+class TestSearchViewEscaping:
+    """Values interpolated into Alpine expression / dataset attributes are JS-escaped.
+
+    Alpine evaluates the entity-decoded attribute, so HTML autoescaping alone
+    does not defend against quotes in stored data (e.g. a user-editable
+    ``to_field_name`` or label).
+    """
+
+    def test_search_select_value_escaped_in_alpine_expression(self):
+        request = factory.get("/search/", {"q": ""})
+        content = HostileSearchView.as_view()(request).content.decode()
+        assert "'); alert(1); ('" not in content
+        assert "\\u0027" in content
+
+    def test_search_select_no_raw_script_tag(self):
+        request = factory.get("/search/", {"q": ""})
+        content = HostileSearchView.as_view()(request).content.decode()
+        assert "<script>" not in content
+
+    def test_combobox_suggestion_escaped(self):
+        request = factory.get("/search/", {"q": ""})
+        content = HostileComboBoxView.as_view()(request).content.decode()
+        assert "<script>" not in content
+        soup = BeautifulSoup(content, "html.parser")
+        assert "\\u003C" in soup.find("button")["data-suggestion"]
+
+    def test_multiselect_value_escaped_in_alpine_handlers(self):
+        request = factory.get("/search/", {"q": "", "name": "x"})
+        response = HostileMultiSelectView.as_view()(request)
+        soup = BeautifulSoup(response.content, "html.parser")
+        cb = soup.find("input", {"type": "checkbox"})
+        assert "'); alert(1); ('" not in cb["@change"]
+        assert "\\u0027" in cb["@change"]
+
+
+# ---------------------------------------------------------------------------
+# FormworkValidateView hardening (SECURITY)
+# ---------------------------------------------------------------------------
+
+
+class TestFormworkValidateViewHardening:
+    def test_text_truncated_to_max_length(self):
+        """Texts longer than MAX_TEXT_LENGTH are truncated before get_errors()."""
+        received = {}
+
+        class TrackingView(FormworkValidateView):
+            MAX_TEXT_LENGTH = 10
+
+            def get_errors(self, text, **kwargs):
+                received["text"] = text
+                return []
+
+        request = factory.post("/validate/", {"text": "a" * 50, "errors_id": ""})
+        TrackingView.as_view()(request)
+        assert len(received["text"]) == 10
+
+    def test_validate_decorator_applied(self):
+        """A validate_decorator wraps dispatch, mirroring search_decorator."""
+        from functools import wraps
+
+        from django.http import HttpResponse
+
+        def deny_all(view_func):
+            @wraps(view_func)
+            def wrapper(request, *args, **kwargs):
+                return HttpResponse(status=403)
+
+            return wrapper
+
+        class ProtectedView(FormworkValidateView):
+            validate_decorator = deny_all
+
+        request = factory.post("/validate/", {"text": "hello", "errors_id": ""})
+        response = ProtectedView.as_view()(request)
+        assert response.status_code == 403
+
+    def test_validate_decorator_none_allows_anonymous(self):
+        """validate_decorator=None (the default) means public, no auth check."""
+        request = factory.post("/validate/", {"text": "hello", "errors_id": ""})
+        response = FormworkValidateView.as_view()(request)
+        assert response.status_code == 200
