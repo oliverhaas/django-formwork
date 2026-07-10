@@ -62,7 +62,7 @@ class MultiSelect(forms.SelectMultiple):
         *,
         show_search: bool | None = None,
         search_fields: Sequence[str] | None = None,
-        search_decorator: Callable | object = _NOT_SET,
+        search_decorator: Callable | None = _NOT_SET,
     ) -> None:
         super().__init__(attrs=attrs, choices=choices)
         self.show_search = show_search
@@ -92,6 +92,7 @@ class MultiSelect(forms.SelectMultiple):
         else:
             context["widget"]["show_search"] = total >= self.search_threshold or bool(search_url)
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
+        context["widget"]["aria_describedby"] = context["widget"]["attrs"].get("aria-describedby")
         context["widget"]["search_url"] = search_url
         context["widget"]["initial_options"] = initial_options if search_url else []
         # Read icon from ChoiceLabel.

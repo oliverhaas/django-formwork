@@ -226,6 +226,15 @@ def test_image_drop_zone_browse_text():
 
 
 @pytest.mark.unit
+def test_image_drop_zone_error_element_role_alert():
+    """The client-side error <p> has role='alert' so rejected files are announced."""
+    soup = render_widget(ImageDropZone())
+    error = soup.find("p", class_="image-upload-error")
+    assert error is not None
+    assert error.get("role") == "alert"
+
+
+@pytest.mark.unit
 def test_image_drop_zone_custom_accept_override():
     """Passing a custom accept attr overrides image/* in the rendered input."""
     widget = ImageDropZone(attrs={"accept": ".png,.jpg"})

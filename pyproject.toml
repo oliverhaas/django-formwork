@@ -170,8 +170,6 @@ include = ["django_formwork/async_forms.py"]
 [tool.ty.overrides.rules]
 # Mixin classes reference attributes from cooperating Form/ModelForm base classes.
 unresolved-attribute = "ignore"
-# construct_instance expects BaseForm; mixin passes self which is always mixed into ModelForm.
-invalid-argument-type = "ignore"
 
 [[tool.ty.overrides]]
 include = ["django_formwork/formsets.py"]
@@ -248,3 +246,4 @@ omit = ["tests/*"]
 [tool.coverage.report]
 precision = 2
 skip_covered = true
+fail_under = 90

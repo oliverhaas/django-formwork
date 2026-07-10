@@ -89,7 +89,35 @@ def test_input_number_renders_with_value():
     assert container is not None
     # The x-data attribute should contain the value.
     x_data = container.get("x-data", "")
-    assert "7" in x_data
+    assert "val: '7'," in x_data
+
+
+@pytest.mark.unit
+def test_input_number_unbound_renders_empty_value():
+    """An unbound/None value renders as an empty string, not '0'."""
+    soup = render_widget(InputNumber(), name="quantity", attrs={"id": "id_quantity"})
+    container = soup.find(attrs={"class": lambda c: c and "input-number" in c})
+    assert "val: ''," in container.get("x-data", "")
+
+
+@pytest.mark.unit
+def test_input_number_zero_value_not_blanked():
+    """An actual 0 value is kept; only None/empty renders empty."""
+    soup = render_widget(InputNumber(), name="quantity", value=0, attrs={"id": "id_quantity"})
+    container = soup.find(attrs={"class": lambda c: c and "input-number" in c})
+    assert "val: '0'," in container.get("x-data", "")
+
+
+@pytest.mark.unit
+def test_input_number_steps_round_to_step_precision():
+    """inc()/dec() route through _round() so float steps don't accumulate artifacts."""
+    # Regression: 0.2 + 0.1 stepped to 0.30000000000000004 in the stepper.
+    widget = InputNumber(attrs={"step": "0.1"})
+    soup = render_widget(widget, name="quantity", attrs={"id": "id_quantity"})
+    x_data = soup.find(attrs={"class": lambda c: c and "input-number" in c}).get("x-data", "")
+    assert "step: 0.1," in x_data
+    assert "this._round(this._num() - this.step)" in x_data
+    assert "this._round(this._num() + this.step)" in x_data
 
 
 # ─── Level 3: Form integration ───────────────────────────────────────────
@@ -140,7 +168,7 @@ def test_input_number_escapes_value_in_x_data(renderer):
     """SECURITY: the redisplayed raw value is quoted and JS-escaped inside x-data."""
     # Regression: val: interpolated the raw submitted string into the Alpine
     # object literal, so a non-numeric payload executed on validation-error
-    # redisplay.  The value is now wrapped in Number('...') with escapejs.
+    # redisplay.  The value is now a quoted, escapejs'd string.
     payload = "1'); alert(1); ('"
     form = InputNumberForm(data={"quantity": payload})
     form.is_valid()
@@ -148,7 +176,7 @@ def test_input_number_escapes_value_in_x_data(renderer):
     wrapper = soup.find("div", class_="input-number")
     x_data = wrapper["x-data"]
     assert payload not in x_data
-    assert "val: Number('" in x_data
+    assert "val: '" in x_data
     assert "\\u0027" in x_data
 
 

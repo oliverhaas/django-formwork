@@ -91,8 +91,8 @@ honestly.
   `otp_input`) before 1.0. (`templates/formwork/widgets/input_mask.html:1`, large)
 - [ ] **Cover the async ModelForm save path.** `avalidate_unique`'s ValidationError branch
   and the entire `_asave_m2m` loop have zero tests; async duplicate-unique validation and
-  `asave()` on an M2M form are unexercised. Also remove the dead, shadowed
-  `AsyncModelFormMixin._apost_clean` so async coverage can actually close.
+  `asave()` on an M2M form are unexercised. (The dead, shadowed
+  `AsyncModelFormMixin._apost_clean` was removed 2026-07-10; the missing tests remain.)
   (`django_formwork/async_forms.py:156`, medium)
 - [ ] **Add e2e/screenshot coverage for the six untested widgets** (`country_input`,
   `date_picker`, `input_mask`, `input_number`, `otp_input`, `phone_input`). The
@@ -100,8 +100,8 @@ honestly.
   `otp_input` and `input_mask`. (`tests/widgets/`, large)
 - [ ] **Fix custom-dropdown accessibility.** `MultiSelect` checkboxes are `display:none`
   (removed from the a11y tree); `keyboardNav` only toggles a CSS class and never sets
-  `aria-activedescendant`/`aria-selected`; the three dropdowns drop the `aria-describedby`
-  Django 6 auto-populates, so an AT user hears "invalid" but never the error/help text.
+  `aria-activedescendant`/`aria-selected`. (The dropped `aria-describedby` was fixed
+  2026-07-10: the three dropdowns now forward it to the combobox input / summary triggers.)
   (`static/formwork/widgets/_helpers.js:15`, medium)
 - [ ] **Document formsets, Jinja2 setup, and a consolidated settings page.** The marketed
   batched-uniqueness formsets have zero docs and no nav entry; Jinja2 users have no documented
@@ -133,10 +133,10 @@ honestly.
   a hard dependency and bootstrapped, so this is the highest value-per-effort strategic
   feature, plausibly *the* 1.0 differentiator. Needs a server-side guard so hidden fields skip
   validation. (`templates/django/forms/formwork_field.html:1`, medium)
-- [ ] **Reduce e2e flakiness + add a coverage floor.** 210 `wait_for_timeout` sleeps violate
-  the project's own Playwright guidance and will intermittently fail as the suite grows; no
-  `fail_under` so coverage can silently regress. Convert to `expect()` state-based waits; add
-  `fail_under=90`. (`tests/widgets/test_search_select.py:1`, medium)
+- [ ] **Reduce e2e flakiness.** 210 `wait_for_timeout` sleeps violate the project's own
+  Playwright guidance and will intermittently fail as the suite grows. Convert to `expect()`
+  state-based waits. (The coverage-floor half is done: `fail_under=90` added 2026-07-10.)
+  (`tests/widgets/test_search_select.py:1`, medium)
 
 ---
 
@@ -180,20 +180,24 @@ honestly.
   `formwork install` / `django_iconx` step~~ Done (2026-07-10), full rewrite; see Done
 - [x] ~~Cap `django-iconx` to `>=0.2.0,<0.3`~~ Won't do (2026-07-10): maintainer owns iconx,
   wants it uncapped
-- [ ] Add `fail_under=90` to `[tool.coverage.report]`; delete/confirm-gitignore the stale
-  `coverage.xml` (reports a misleading 36% vs the real ~91%)
+- [x] ~~Add `fail_under=90` to `[tool.coverage.report]`; delete/confirm-gitignore the stale
+  `coverage.xml`~~ Done (2026-07-10); `coverage.xml` was already gitignored and untracked
 - [x] ~~Force `FormworkAutoSearchView.widget_type` from the registration, ignoring client
   `?type=`~~ Done (2026-07-10); widget templates no longer send `type`, `VALID_WIDGET_TYPES`
   removed
-- [ ] Drop clamped-empty spans in `_build_highlighted` so no stray empty `<mark>` is emitted
-  (`views.py:322`)
+- [x] ~~Drop clamped-empty spans in `_build_highlighted` so no stray empty `<mark>` is
+  emitted~~ Done (2026-07-10)
 - [ ] Fix the `FormworkModel` error message + docstring cross-refs (or add the lazy `__getattr__`)
-- [ ] Render `aria-describedby` on the combobox input + SearchSelect/MultiSelect summaries
-- [ ] Add `role="alert"` to the drop-zone/image-upload error `<p>` so rejected-file feedback
-  is announced
-- [ ] Type `search_decorator` as `Callable | None` instead of `Callable | object`
-- [ ] Render empty (not `'0'`) for unbound `InputNumber`; round `inc()`/`dec()` to step precision
-- [ ] Remove the dead `AsyncModelFormMixin._apost_clean` copy so async coverage can close
+- [x] ~~Render `aria-describedby` on the combobox input + SearchSelect/MultiSelect
+  summaries~~ Done (2026-07-10), both engines
+- [x] ~~Add `role="alert"` to the drop-zone/image-upload error `<p>`~~ Done (2026-07-10),
+  both engines
+- [x] ~~Type `search_decorator` as `Callable | None` instead of `Callable | object`~~ Done
+  (2026-07-10)
+- [x] ~~Render empty (not `'0'`) for unbound `InputNumber`; round `inc()`/`dec()` to step
+  precision~~ Done (2026-07-10); no e2e page exists yet, so the stepper JS is asserted via
+  rendered `x-data` only
+- [x] ~~Remove the dead `AsyncModelFormMixin._apost_clean` copy~~ Done (2026-07-10)
 - [ ] Add a Jinja2 setup section (FORM_RENDERER wiring + how to emit CSS/JS)
 - [ ] Document the no-`self` convention for `search_choices_<field>` handlers
 

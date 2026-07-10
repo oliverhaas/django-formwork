@@ -68,7 +68,7 @@ class ComboBox(forms.TextInput):
         *,
         suggestions: list[str] | list[tuple[str, list[str]]] | None = None,
         multiple: bool = False,
-        search_decorator: Callable | object = _NOT_SET,
+        search_decorator: Callable | None = _NOT_SET,
         icons: dict[str, str] | None = None,
         descriptions: dict[str, str] | None = None,
     ) -> None:
@@ -105,6 +105,7 @@ class ComboBox(forms.TextInput):
         context["widget"]["suggestion_groups"] = groups
         context["widget"]["multiple"] = self.multiple
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
+        context["widget"]["aria_describedby"] = context["widget"]["attrs"].get("aria-describedby")
         # Resolve search URL from the registry. No registration → client-side only.
         search_url: str | None = None
         if self._registry_key:

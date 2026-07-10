@@ -340,14 +340,14 @@ class FormworkValidateView(View):
     def _build_highlighted(text: str, errors: list[dict[str, Any]]) -> str:
         """Build HTML with ``<mark>`` tags around error spans."""
         text_len = len(text)
-        spans = sorted(
-            [
-                (max(0, e["start"]), min(text_len, e["end"]))
-                for e in errors
-                if "start" in e and "end" in e and e["start"] < e["end"]
-            ],
-            key=lambda x: x[0],
+        clamped = (
+            (max(0, e["start"]), min(text_len, e["end"]))
+            for e in errors
+            if "start" in e and "end" in e and e["start"] < e["end"]
         )
+        # Drop spans clamped to nothing (entirely outside the text) so no
+        # empty <mark> is emitted.
+        spans = sorted((s for s in clamped if s[0] < s[1]), key=lambda x: x[0])
         if not spans:
             return html_escape(text)
 

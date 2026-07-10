@@ -503,6 +503,24 @@ class TestFormworkValidateViewMergeSpans:
         )
         assert "<mark>" not in highlighted
 
+    def test_span_entirely_outside_text_ignored(self):
+        """A span clamped to nothing produces no stray empty mark."""
+        highlighted = FormworkValidateView._build_highlighted(
+            "abc",
+            [{"start": 5, "end": 10}],
+        )
+        assert "<mark>" not in highlighted
+        assert highlighted == "abc"
+
+    def test_span_entirely_before_text_ignored(self):
+        """A fully negative span clamps to (0, 0) and is dropped."""
+        highlighted = FormworkValidateView._build_highlighted(
+            "abc",
+            [{"start": -5, "end": 0}],
+        )
+        assert "<mark>" not in highlighted
+        assert highlighted == "abc"
+
 
 # ---------------------------------------------------------------------------
 # Search view error handling

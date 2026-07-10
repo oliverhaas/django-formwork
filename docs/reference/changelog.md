@@ -35,8 +35,8 @@
 - **JS-escape every value interpolated into an Alpine `x-data` / expression context.** Alpine
   evaluates the HTML-entity-decoded attribute, so Django's autoescaping alone does not defend.
   Fixed the unescaped interpolations in `date_picker.html` (XSS on validation-error redisplay),
-  `otp_input.html` and `input_number.html` (both template engines; `InputNumber` now renders
-  `val: Number('<escaped>') || 0` instead of interpolating the raw value), and in the
+  `otp_input.html` and `input_number.html` (both template engines; `InputNumber` now
+  interpolates the value as a quoted, JS-escaped string instead of a raw expression), and in the
   `SEARCH_SELECT_TEMPLATE` / `COMBOBOX_TEMPLATE` htmx response fragments (stored XSS when
   `to_field_name` or labels contain user-editable data).
 - **Search registry keys now include the form class and field name** (mirroring choices-backed
@@ -70,6 +70,24 @@
   `formwork.css` (not Tailwind/DaisyUI a second time) plus the generated icons CSS, and the
   `@source "path/to/django_formwork/"` directive without which Tailwind 4 tree-shakes the
   widget classes and widgets render unstyled.
+- **`search_decorator` is typed `Callable | None`** on `SearchSelect`, `MultiSelect`, and
+  `ComboBox` (was `Callable | object`). Runtime behavior is unchanged: omitting the argument
+  still raises `ImproperlyConfigured` when server-side search is registered.
+
+### Fixed
+
+- **Dropdown widgets no longer drop Django's `aria-describedby`.** `SearchSelect` and
+  `MultiSelect` render it on the `<summary>` trigger and `ComboBox` on the combobox input
+  (both template engines), so assistive tech now hears the help text and error message that
+  Django 6 auto-wires, not just `aria-invalid`.
+- **Drop-zone rejection feedback is announced.** The client-side error `<p>` in
+  `FileDropZone` and `ImageDropZone` has `role="alert"` (both engines), so "file(s) too
+  large" / "wrong type" feedback reaches screen readers.
+- **`InputNumber` renders empty for an unbound/`None` value** instead of `0`, and the
+  stepper's `inc()`/`dec()` round to the step's decimal precision (stepping `0.2` by `0.1`
+  yields `0.3`, not `0.30000000000000004`).
+- **`FormworkValidateView` no longer emits a stray empty `<mark>`** when an error span lies
+  entirely outside the submitted text (spans clamped to nothing are now dropped).
 
 ### Removed
 
@@ -85,6 +103,10 @@
   application data, not framework data: build a `forms.ChoiceField(choices=...,
   widget=SearchSelect())` from your own list (or a package like `django-countries`). The
   example apps show the pattern.
+- **The dead `AsyncModelFormMixin._apost_clean` override.** It was shadowed by the dirty-only
+  model form mixin in the MRO of `FormworkModelForm` / `FormworkJinja2ModelForm` and never
+  called. Anyone composing `AsyncModelFormMixin` directly with a plain `ModelForm`
+  (unsupported) must supply their own `_apost_clean`.
 
 ## 0.1.0a2
 

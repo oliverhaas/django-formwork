@@ -424,6 +424,24 @@ def test_search_select_no_aria_invalid_when_valid():
 
 
 @pytest.mark.unit
+def test_search_select_aria_describedby_on_summary():
+    """aria-describedby propagates to the summary trigger element."""
+    widget = SearchSelect(choices=[("a", "Alpha")])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test", "aria-describedby": "id_test_helptext"})
+    summary = soup.find("summary")
+    assert summary["aria-describedby"] == "id_test_helptext"
+
+
+@pytest.mark.unit
+def test_search_select_no_aria_describedby_by_default():
+    """summary does not have aria-describedby without help text or errors."""
+    widget = SearchSelect(choices=[("a", "Alpha")])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    summary = soup.find("summary")
+    assert not summary.has_attr("aria-describedby")
+
+
+@pytest.mark.unit
 def test_search_select_wrapper_has_stable_id():
     """details wrapper id is derived from the widget id."""
     widget = SearchSelect(choices=[("a", "Alpha")])
@@ -794,6 +812,16 @@ def test_search_select_form_error_state_aria_invalid(renderer):
     summary = soup.find("summary")
     assert summary is not None
     assert summary.get("aria-invalid") == "true"
+
+
+@pytest.mark.integration
+def test_search_select_form_error_state_aria_describedby(renderer):
+    """Django's auto aria-describedby (→ the error container) reaches the summary."""
+    form = SearchSelectForm(data={})
+    form.is_valid()
+    soup = render_form(form, renderer=renderer)
+    summary = soup.find("summary")
+    assert summary.get("aria-describedby") == "id_city_error"
 
 
 @pytest.mark.integration

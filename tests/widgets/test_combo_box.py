@@ -375,6 +375,24 @@ def test_combo_box_aria_invalid():
 
 
 @pytest.mark.unit
+def test_combo_box_aria_describedby():
+    """aria-describedby propagates to the combobox input."""
+    widget = ComboBox(suggestions=["Alpha"])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test", "aria-describedby": "id_test_helptext"})
+    trigger = soup.find("input", class_="combobox-input")
+    assert trigger["aria-describedby"] == "id_test_helptext"
+
+
+@pytest.mark.unit
+def test_combo_box_no_aria_describedby_by_default():
+    """The input has no aria-describedby without help text or errors."""
+    widget = ComboBox(suggestions=["Alpha"])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    trigger = soup.find("input", class_="combobox-input")
+    assert not trigger.has_attr("aria-describedby")
+
+
+@pytest.mark.unit
 def test_combo_box_htmx_attrs_when_registered():
     """When the widget is attached to the registry, htmx attributes are added to the input."""
     widget = make_server_widget(ComboBox)
@@ -706,6 +724,16 @@ def test_combo_box_error_state_aria_invalid(renderer):
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "tag"})
     assert inp.get("aria-invalid") == "true"
+
+
+@pytest.mark.integration
+def test_combo_box_error_state_aria_describedby(renderer):
+    """Django's auto aria-describedby (→ the error container) reaches the input."""
+    form = ComboBoxForm(data={})
+    form.is_valid()
+    soup = render_form(form, renderer=renderer)
+    inp = soup.find("input", attrs={"name": "tag"})
+    assert inp.get("aria-describedby") == "id_tag_error"
 
 
 @pytest.mark.integration

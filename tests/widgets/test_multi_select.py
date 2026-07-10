@@ -534,6 +534,24 @@ def test_multi_select_no_aria_invalid_when_valid():
 
 
 @pytest.mark.unit
+def test_multi_select_aria_describedby_on_summary():
+    """aria-describedby is forwarded to the <summary> trigger."""
+    widget = MultiSelect(choices=[("a", "A")])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test", "aria-describedby": "id_test_helptext"})
+    summary = soup.find("summary")
+    assert summary["aria-describedby"] == "id_test_helptext"
+
+
+@pytest.mark.unit
+def test_multi_select_no_aria_describedby_by_default():
+    """aria-describedby is absent on <summary> without help text or errors."""
+    widget = MultiSelect(choices=[("a", "A")])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    summary = soup.find("summary")
+    assert not summary.has_attr("aria-describedby")
+
+
+@pytest.mark.unit
 def test_multi_select_wrapper_has_id():
     """<details> gets id='{id}_multiselect' when attrs contain an id."""
     widget = MultiSelect(choices=[("a", "A")])
@@ -788,6 +806,16 @@ def test_multi_select_error_state_aria_invalid(renderer):
     soup = render_form(form, renderer=renderer)
     summary = soup.find("summary")
     assert summary.get("aria-invalid") == "true"
+
+
+@pytest.mark.integration
+def test_multi_select_error_state_aria_describedby(renderer):
+    """Django's auto aria-describedby (→ the error container) reaches the summary."""
+    form = MultiSelectForm(data={})
+    form.is_valid()
+    soup = render_form(form, renderer=renderer)
+    summary = soup.find("summary")
+    assert summary.get("aria-describedby") == "id_tags_error"
 
 
 @pytest.mark.integration

@@ -211,6 +211,15 @@ def test_file_drop_zone_browse_text():
 
 
 @pytest.mark.unit
+def test_file_drop_zone_error_element_role_alert():
+    """The client-side error <p> has role='alert' so rejected files are announced."""
+    soup = render_widget(FileDropZone())
+    error = soup.find("p", class_="dropzone-error")
+    assert error is not None
+    assert error.get("role") == "alert"
+
+
+@pytest.mark.unit
 def test_file_drop_zone_multiple_attr_passthrough():
     """multiple attr on the widget is passed through to the file input."""
     widget = FileDropZone(attrs={"multiple": True})

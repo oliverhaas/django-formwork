@@ -54,7 +54,7 @@
       {% if widget.accept_display or widget.max_size_display %}<p class="image-upload-accept-text">{% if widget.accept_display %}{{ widget.accept_display }}{% endif %}{% if widget.accept_display and widget.max_size_display %} · {% endif %}{% if widget.max_size_display %}Max {{ widget.max_size_display }}{% endif %}</p>{% endif %}
     </div>
     <div x-show="error && !preview" x-cloak class="image-upload-prompt" @click.stop="error = ''; $refs.input.click()">
-      <p class="image-upload-error" x-text="error"></p>
+      <p role="alert" class="image-upload-error" x-text="error"></p>
       {% if widget.accept_display or widget.max_size_display %}<p class="image-upload-accept-text">{% if widget.accept_display %}{{ widget.accept_display }}{% endif %}{% if widget.accept_display and widget.max_size_display %} · {% endif %}{% if widget.max_size_display %}Max {{ widget.max_size_display }}{% endif %}</p>{% endif %}
     </div>
     <div x-show="preview" x-cloak class="image-upload-preview-area">

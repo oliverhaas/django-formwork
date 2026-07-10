@@ -63,7 +63,7 @@ class SearchSelect(forms.Select):
         *,
         show_search: bool | None = None,
         search_fields: Sequence[str] | None = None,
-        search_decorator: Callable | object = _NOT_SET,
+        search_decorator: Callable | None = _NOT_SET,
     ) -> None:
         super().__init__(attrs=attrs, choices=choices)
         self.show_search = show_search
@@ -99,6 +99,7 @@ class SearchSelect(forms.Select):
         context["widget"]["selected_label"] = selected_label
         context["widget"]["selected_icon"] = selected_icon
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
+        context["widget"]["aria_describedby"] = context["widget"]["attrs"].get("aria-describedby")
         # Resolve search URL from the registry. No registration → client-side only.
         search_url: str | None = None
         if self._registry_key:

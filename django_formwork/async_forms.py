@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any
 
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ValidationError
-from django.forms.models import construct_instance
 
 if TYPE_CHECKING:
     from django.db import models
@@ -110,48 +109,17 @@ class AsyncFormMixin:
 class AsyncModelFormMixin(AsyncFormMixin):
     """Extends :class:`AsyncFormMixin` with async model operations.
 
-    Adds ``asave()``, async ``_post_clean`` (model validation), and
-    async M2M saving.
+    Adds ``asave()``, async unique/constraint validation, and async
+    M2M saving.
     """
 
     def save(self: Any, commit: bool = True) -> Any:  # noqa: FBT001, FBT002, ANN401
         _check_force_async("save", "asave")
         return super().save(commit=commit)  # type: ignore[misc]
 
-    async def _apost_clean(self: Any) -> None:
-        """Async version of ``ModelForm._post_clean()``."""
-        opts = self._meta
-        exclude = self._get_validation_exclusions()
-
-        from django.forms.models import InlineForeignKeyField
-
-        for name, field in self.fields.items():
-            if isinstance(field, InlineForeignKeyField):
-                exclude.add(name)
-
-        try:
-            self.instance = construct_instance(
-                self,
-                self.instance,
-                opts.fields,
-                opts.exclude,
-            )
-        except ValidationError as e:
-            self._update_errors(e)
-
-        try:
-            await sync_to_async(self.instance.full_clean)(
-                exclude=exclude,
-                validate_unique=False,
-                validate_constraints=False,
-            )
-        except ValidationError as e:
-            self._update_errors(e)
-
-        if self._validate_unique:
-            await self.avalidate_unique()
-        if self._validate_constraints:
-            await self.avalidate_constraints()
+    # NOTE: the async ``_post_clean`` (model construction + validation) lives on
+    # ``_DirtyOnlyModelFormMixin._apost_clean`` in django_formwork.forms, which
+    # precedes this mixin in the MRO of both model form base classes.
 
     async def avalidate_unique(self: Any) -> None:
         """Async version of ``validate_unique()``."""
