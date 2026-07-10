@@ -767,6 +767,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#access-control_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#max_text_length" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MAX_TEXT_LENGTH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#security-note" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1015,6 +1037,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#access-control_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#max_text_length" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MAX_TEXT_LENGTH
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#security-note" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1051,11 +1095,11 @@
 
 
 <h1 id="server-side-views">Server-side Views<a class="headerlink" href="#server-side-views" title="Permanent link">&para;</a></h1>
-<p>Formwork provides three class-based views for server-side search and validation. All are in <code>django_formwork.views</code>.</p>
+<p>Formwork provides three class-based views for server-side search and validation. All are importable from <code>django_formwork</code> (or from <code>django_formwork.views</code>).</p>
 <h2 id="formworksearchview">FormworkSearchView<a class="headerlink" href="#formworksearchview" title="Permanent link">&para;</a></h2>
 <p>Base view for the registry-driven search endpoint. <code>FormworkAutoSearchView</code> (below) inherits from it and serves every auto-registered widget; you'd subclass <code>FormworkSearchView</code> directly only if you want to render the formwork response templates (the <code>&lt;li&gt;</code> fragments that htmx swaps in) from a custom endpoint of your own — e.g. for a non-formwork widget that reuses the same look.</p>
 <h3 id="response-templates">Response templates<a class="headerlink" href="#response-templates" title="Permanent link">&para;</a></h3>
-<p>The HTML fragment is rendered by one of three class-level Django templates, selected by the <code>type</code> query parameter the widget sends:</p>
+<p>The HTML fragment is rendered by one of three class-level Django templates, selected by the view's <code>widget_type</code> (<code>"search_select"</code>, <code>"combo_box"</code>, or <code>"multi_select"</code>). Auto-registered endpoints take it from the registration; subclasses set the class attribute. A client-supplied <code>type</code> query parameter is ignored, so callers cannot switch templates:</p>
 <table>
 <thead>
 <tr>
@@ -1071,12 +1115,12 @@
 <td>Value + label, with checkmark for current selection</td>
 </tr>
 <tr>
-<td><code>COMBOBOX_TEMPLATE</code></td>
+<td><code>COMBO_BOX_TEMPLATE</code></td>
 <td><code>ComboBox</code></td>
 <td>Label only, for autocomplete suggestions</td>
 </tr>
 <tr>
-<td><code>MULTISELECT_TEMPLATE</code></td>
+<td><code>MULTI_SELECT_TEMPLATE</code></td>
 <td><code>MultiSelect</code></td>
 <td>Checkbox options that sync with Alpine.js widget state</td>
 </tr>
@@ -1132,7 +1176,7 @@
 <h3 id="auto-registration">Auto-registration<a class="headerlink" href="#auto-registration" title="Permanent link">&para;</a></h3>
 <p>Registration happens automatically when a <code>FormworkForm</code> or <code>FormworkModelForm</code> is instantiated. Two modes are supported:</p>
 <p><strong>Model-backed</strong> — The widget has <code>search_fields</code> and the field is a <code>ModelChoiceField</code> or <code>ModelMultipleChoiceField</code>. Formwork registers an endpoint that filters the queryset using <code>__icontains</code> on the listed fields:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.forms</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">SearchSelect</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">CityForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
@@ -1142,7 +1186,7 @@
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="p">)</span>
 </span></code></pre></div>
 <p><strong>Choices-backed</strong> — The form defines a <code>search_choices_&lt;fieldname&gt;(query, request)</code> method. It receives the search query and the request, and returns a list of dicts or <code>(value, label)</code> tuples:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.forms</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">SearchSelect</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">TagForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
@@ -1187,7 +1231,7 @@
 </ol>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># views.py</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.views</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkValidateView</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkValidateView</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">SpellCheckView</span><span class="p">(</span><span class="n">FormworkValidateView</span><span class="p">):</span>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
@@ -1241,6 +1285,16 @@
 </tbody>
 </table>
 <p>If <code>start</code> and <code>end</code> are both present, the text between those indices is wrapped in a <code>&lt;mark&gt;</code> tag in the highlights overlay. Overlapping spans are merged before rendering.</p>
+<h3 id="access-control_1">Access control<a class="headerlink" href="#access-control_1" title="Permanent link">&para;</a></h3>
+<p>Like the search side's <code>search_decorator</code>, the view exposes a <code>validate_decorator</code> hook. Set it on your subclass to wrap <code>dispatch</code> with a standard Django auth decorator:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">login_required</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">SpellCheckView</span><span class="p">(</span><span class="n">FormworkValidateView</span><span class="p">):</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">validate_decorator</span> <span class="o">=</span> <span class="n">login_required</span>
+</span></code></pre></div>
+<p><code>None</code> (the default) leaves the endpoint public. A real subclass doing expensive work (spellcheck, LLM calls, database lookups) should set a decorator so it doesn't ship an unauthenticated, unrate-limited endpoint.</p>
+<h3 id="max_text_length"><code>MAX_TEXT_LENGTH</code><a class="headerlink" href="#max_text_length" title="Permanent link">&para;</a></h3>
+<p>Text longer than <code>MAX_TEXT_LENGTH</code> characters (default <code>50_000</code>) is truncated before being passed to <code>get_errors()</code>, mirroring <code>MAX_QUERY_LENGTH</code> on the search side. Override the class attribute to change the limit.</p>
 <h3 id="security-note">Security note<a class="headerlink" href="#security-note" title="Permanent link">&para;</a></h3>
 <p><code>FormworkValidateView</code> is <strong>CSRF-exempt</strong> because it performs read-only validation — it reads text and returns highlighted output, but makes no changes to application state.</p>
 <div class="admonition warning">
