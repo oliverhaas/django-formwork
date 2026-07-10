@@ -20,7 +20,8 @@ suite, 989 passing), but **not 1.0-ready**. Three blockers dominate.
    omits both `manage.py formwork install` (so the Tailwind build fails on the git-ignored,
    generated `icons.css`) and the `@source` directive (so Tailwind v4 tree-shakes every
    widget utility class and widgets render unstyled). The correct recipe already exists in
-   `examples/simple/app.css`; the docs just don't match it.
+   `examples/simple/app.css`; the docs just don't match it. (Fixed 2026-07-10 together with
+   the icons.css relocation; see Done below.)
 3. **API / naming lock-in.** `widget_type` is spelled three ways, `ComboBox` four; the
    public import surface is fragmented; the registry is public-but-should-be-internal. These
    freeze under semver at 1.0 and must be settled first.
@@ -52,16 +53,13 @@ honestly.
 
 ### Packaging: make a fresh install actually work
 
-- [ ] **Fix `installation.md` so the build works and widgets render.** Replace the CSS block
-  with the `examples/simple/app.css` recipe: import *only* `formwork.css` (it pulls in
-  tailwind+daisyui+icons itself), add `@source "path/to/site-packages/django_formwork/";`,
-  add `django_iconx` to `INSTALLED_APPS`, and add `python manage.py formwork install` as a
-  required step. Document the `formwork install` command (currently the only CLI surface,
-  entirely undocumented). (`docs/getting-started/installation.md:38`, small)
-- [ ] **Cap the unbounded pre-1.0 `django-iconx` dependency.** `>=0.2.0` with no upper bound
-  on a 0.x package whose API can break on any minor bump. A future 0.3/0.4 can silently break
-  every adopter's `formwork install`. Pin `>=0.2.0,<0.3` (or fast-track iconx to 1.0).
-  (`pyproject.toml:29`, small)
+- [x] **Rewrote `installation.md` so the build works and widgets render** (2026-07-10, see
+  Done). Import only `formwork.css` plus the generated `iconx/icons.css`, the
+  `@source "path/to/site-packages/django_formwork/";` directive, `django_iconx` in
+  `INSTALLED_APPS`, and `python manage.py formwork install` as a required documented step
+  (including the new `--output` option).
+- [x] ~~Cap the unbounded pre-1.0 `django-iconx` dependency.~~ Won't do (2026-07-10): the
+  maintainer owns django-iconx and wants the constraint uncapped.
 
 ### API surface: lock names before semver freezes them
 
@@ -119,11 +117,10 @@ honestly.
   exports `make_key`/`register`/`SearchRegistration`, freezing a key format the code itself
   plans to evolve. Introduce one documented `FORMWORK` settings dict + constructor kwargs;
   drop registry internals from the public surface. (`widgets/search_select.py:54`, medium)
-- [ ] **Move generated `icons.css` out of site-packages.** `formwork install` hardcodes
-  output into the installed package dir, so it fails on read-only deploys (containers, system
-  pip, Nix, zipapp). Expose `--output` defaulting to a project static dir; make the import
-  overridable. (Shapes what the install docs can even recommend.)
-  (`management/commands/formwork.py:16`, medium)
+- [x] **Moved generated `icons.css` out of site-packages** (2026-07-10, see Done).
+  `formwork install` now writes to the project static dir (first `STATICFILES_DIRS` entry,
+  else `BASE_DIR/static`) with an `--output` override; `formwork.css` no longer imports it
+  and the recipe imports it from the project instead.
 - [ ] **Scope the global htmx morph config to formwork subtrees.** `formwork-core.js` pushes
   `'open'` into `htmx.config.morphIgnore` and appends x-for/x-if selectors to
   `morphSkipChildren` *globally*, silently changing morph for every non-formwork `<details>`
@@ -183,9 +180,10 @@ honestly.
 - [x] ~~escapejs the two confirmed XSS sinks~~ Done (2026-07-10), plus `input_number.html` and a
   full audit of both engines
 - [x] ~~Ship `CountryField`~~ Removed `CountryInput`/`country_choices()` entirely (2026-07-05)
-- [ ] Swap `installation.md` CSS block for the `examples/simple/app.css` recipe + add the
-  `formwork install` / `django_iconx` step
-- [ ] Cap `django-iconx` to `>=0.2.0,<0.3` (one line, removes a release blocker)
+- [x] ~~Swap `installation.md` CSS block for the `examples/simple/app.css` recipe + add the
+  `formwork install` / `django_iconx` step~~ Done (2026-07-10), full rewrite; see Done
+- [x] ~~Cap `django-iconx` to `>=0.2.0,<0.3`~~ Won't do (2026-07-10): maintainer owns iconx,
+  wants it uncapped
 - [ ] Add `fail_under=90` to `[tool.coverage.report]`; delete/confirm-gitignore the stale
   `coverage.xml` (reports a misleading 36% vs the real ~91%)
 - [x] ~~Force `FormworkAutoSearchView.widget_type` from the registration, ignoring client
@@ -218,9 +216,11 @@ honestly.
    feature for 1.0: conditional fields (medium, highest value-per-effort), the layout system
    (large, decides non-trivial CRUD adoption), or the inline-formset UI (large, most-requested).
    Pick deliberately.
-4. **Where should generated `icons.css` live**, inside site-packages (current, breaks
-   read-only installs) or a project-controlled static dir with an overridable import? Reshapes
-   the whole CSS distribution + install-docs story.
+4. ~~**Where should generated `icons.css` live**, inside site-packages (current, breaks
+   read-only installs) or a project-controlled static dir with an overridable import?~~
+   Resolved (2026-07-10): project static dir via `--output` (default first `STATICFILES_DIRS`
+   entry, else `BASE_DIR/static`); the project's Tailwind input imports it next to
+   `formwork.css`. See Done.
 5. **Type-checking direction:** keep both mypy and ty (pay the double-suppression tax, flip
    `respect-type-ignore-comments=true`), or drop one checker for the library source?
 6. **Should `max_size`/`accept` be enforced server-side** (auto-attach validators, changing
@@ -235,6 +235,21 @@ honestly.
 
 ## Done
 
+- **Packaging batch: icons.css out of site-packages + installation guide rewrite**
+  (2026-07-10). `manage.py formwork install` no longer writes the generated `icons.css` into
+  the installed package dir (which failed on read-only installs: containers, system pip,
+  Nix). It now targets the project static dir (first `STATICFILES_DIRS` entry, else
+  `BASE_DIR/static`, with a `STATICFILES_DIRS` injection + warning in the fallback case) and
+  grew an `--output DIR` override; the stray cwd-relative `static/iconx/icons.css` artifact
+  from iconx's add-time generate is gone (`--no-generate` + explicit generate).
+  `formwork.css` dropped its `../iconx/icons.css` import; the project's Tailwind input now
+  imports the generated file itself (both example apps, the e2e harness, and the CI comments
+  updated). `installation.md` was rewritten as one walkthrough that actually builds:
+  `django_iconx` in `INSTALLED_APPS`, `formwork install` as a required documented step (the
+  command finally has reference docs), import only `formwork.css` + the generated icons CSS,
+  and the `@source "path/to/django_formwork/"` directive with the tree-shaking rationale.
+  New command tests in `tests/test_formwork_command.py`. Decided separately: the
+  `django-iconx` constraint stays uncapped (maintainer owns the package).
 - **Security batch: Alpine escaping, registry key collisions, forced `widget_type`,
   `FormworkValidateView` hardening** (2026-07-10). escapejs'd every user-influenced value
   interpolated into an Alpine `x-data`/expression context in both template engines

@@ -25,6 +25,24 @@
   `50_000` characters, mirroring `MAX_QUERY_LENGTH`) that truncates POSTed text before
   validation.
 
+### Changed
+
+- **`manage.py formwork install` now writes the generated icon CSS into your project's static
+  directory** instead of into the installed `django_formwork` package, which failed on
+  read-only installs (containers, system-wide pip, Nix). The file lands at
+  `<first STATICFILES_DIRS entry>/iconx/icons.css`, falling back to
+  `BASE_DIR/static/iconx/icons.css` when `STATICFILES_DIRS` is not set; a new `--output DIR`
+  option overrides the directory. Consequently **`formwork.css` no longer imports
+  `../iconx/icons.css`**: add `@import "./static/iconx/icons.css";` (adjusted to your static
+  dir) next to the formwork import in your Tailwind input. The installation guide and both
+  example apps show the updated recipe.
+- **Rewrote the installation guide so a fresh install actually works.** It now documents the
+  previously missing required steps: `django_iconx` in `INSTALLED_APPS`,
+  `manage.py formwork install` (including the new `--output` option), importing only
+  `formwork.css` (not Tailwind/DaisyUI a second time) plus the generated icons CSS, and the
+  `@source "path/to/django_formwork/"` directive without which Tailwind 4 tree-shakes the
+  widget classes and widgets render unstyled.
+
 ### Removed
 
 - **`PhoneInput` widget.** Bundling a country dial-code table (with flag emoji) and a bespoke

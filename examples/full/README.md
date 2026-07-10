@@ -8,7 +8,7 @@ A small project-management UI built on django-formwork. Five pages exercise the 
 cd examples/full
 uv pip install django django-formwork pillow         # pillow for ImageField
 npm install tailwindcss daisyui                      # CSS build tools
-uv run manage.py formwork install                    # download Lucide icons
+uv run manage.py formwork install                    # icons: SVGs + static/iconx/icons.css
 npx @tailwindcss/cli -i app.css -o static/dist.css   # compile CSS
 uv run manage.py migrate
 uv run manage.py seed                                # ~15 sample tasks

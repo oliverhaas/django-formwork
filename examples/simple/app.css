@@ -1,5 +1,8 @@
-/* Import formwork (includes Tailwind + DaisyUI + icons). */
+/* Import formwork (includes Tailwind + DaisyUI). */
 @import "../../django_formwork/static/formwork/formwork.css";
+
+/* Icon classes generated into static/ by `manage.py formwork install`. */
+@import "./static/iconx/icons.css";
 
 /* Scan our templates AND the whole formwork package so Tailwind picks up
  * classes referenced in the widget and field templates (the dropdown option

@@ -49,8 +49,10 @@ jobs:
         run: uv run playwright install --with-deps chromium
 
       - name: Generate iconx CSS
-        # formwork.css imports ../iconx/icons.css, which is gitignored and
-        # generated on demand by `manage.py formwork install`.
+        # tests/e2e/app.css imports django_formwork/static/iconx/icons.css,
+        # which is gitignored and generated on demand by `manage.py formwork
+        # install` (the test settings resolve the static dir to
+        # django_formwork/static/).
         env:
           DJANGO_SETTINGS_MODULE: settings.base
           PYTHONPATH: tests
