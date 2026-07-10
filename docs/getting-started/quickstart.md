@@ -35,7 +35,7 @@ Each field renders inside a `<fieldset class="fieldset">` with a label, help tex
 If you don't want to set `FORM_RENDERER` globally, use the form base classes:
 
 ```python
-from django_formwork.forms import FormworkForm, FormworkModelForm
+from django_formwork import FormworkForm, FormworkModelForm
 
 class ContactForm(FormworkForm):
     name = forms.CharField()
@@ -106,7 +106,7 @@ class ExampleForm(forms.Form):
 
 ```python
 # views.py
-from django_formwork.views import FormworkValidateView
+from django_formwork import FormworkValidateView
 
 class SpellCheckView(FormworkValidateView):
     def get_errors(self, text: str, **kwargs) -> list[dict]:
@@ -147,7 +147,7 @@ There are two registration paths. For model-backed search, pair the widget with 
 
 ```python
 from django.contrib.auth.decorators import login_required
-from django_formwork.forms import FormworkForm
+from django_formwork import FormworkForm
 from django_formwork.widgets import SearchSelect
 
 class CityForm(FormworkForm):

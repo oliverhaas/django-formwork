@@ -3,8 +3,7 @@
 from django import forms
 from django.utils.html import format_html
 
-from django_formwork.fields import FormworkModelChoiceField
-from django_formwork.forms import FormworkForm, FormworkModelForm
+from django_formwork import FormworkForm, FormworkModelChoiceField, FormworkModelForm
 from django_formwork.widgets import (
     ComboBox,
     DataList,

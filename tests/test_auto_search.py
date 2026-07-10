@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from django.contrib.auth.models import User
 from django.test import RequestFactory
 
-from django_formwork.registry import (
+from django_formwork._registry import (
     SearchRegistration,
     get_registration,
     get_registry,
@@ -198,7 +198,7 @@ class TestAutoRegistration:
         widget = form.fields["user"].widget
         assert widget._registry_key == make_key(F, "user", "auth.user", ["username"])
 
-    def test_multiselect_auto_registers(self):
+    def test_multi_select_auto_registers(self):
         from django import forms
 
         from django_formwork.forms import FormworkForm
@@ -213,7 +213,7 @@ class TestAutoRegistration:
         F()
         reg = get_registration(make_key(F, "users", "auth.user", ["username"]))
         assert reg is not None
-        assert reg.widget_type == "multiselect"
+        assert reg.widget_type == "multi_select"
 
     def test_custom_to_field_name(self):
         from django import forms
@@ -597,13 +597,13 @@ class TestFormworkAutoSearchView:
         buttons = soup.find_all("button")
         assert len(buttons) == 2
 
-    def test_multiselect_widget_type(self):
+    def test_multi_select_widget_type(self):
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
             queryset_factory=User.objects.all,
             search_fields=("username",),
-            widget_type="multiselect",
+            widget_type="multi_select",
         )
         register("test.multi", reg)
 
@@ -620,11 +620,11 @@ class TestFormworkAutoSearchView:
         reg = SearchRegistration(
             queryset_factory=User.objects.all,
             search_fields=("username",),
-            widget_type="multiselect",
+            widget_type="multi_select",
         )
         register("test.forced", reg)
 
-        request = factory.get("/search/", {"q": "", "type": "combobox", "name": "users"})
+        request = factory.get("/search/", {"q": "", "type": "combo_box", "name": "users"})
         response = FormworkAutoSearchView.as_view()(request, key="test.forced")
         soup = BeautifulSoup(response.content, "html.parser")
         assert len(soup.find_all("input", {"type": "checkbox"})) == 3
@@ -741,7 +741,7 @@ class TestChoicesAutoRegistration:
         CityForm()
         assert len(get_registry()) == 0
 
-    def test_multiselect_choices(self):
+    def test_multi_select_choices(self):
         from django import forms
 
         from django_formwork.forms import FormworkForm
@@ -758,9 +758,9 @@ class TestChoicesAutoRegistration:
         key = make_choices_key(CityForm, "cities")
         reg = get_registration(key)
         assert reg is not None
-        assert reg.widget_type == "multiselect"
+        assert reg.widget_type == "multi_select"
 
-    def test_combobox_choices(self):
+    def test_combo_box_choices(self):
         from django import forms
 
         from django_formwork.forms import FormworkForm
@@ -780,7 +780,7 @@ class TestChoicesAutoRegistration:
         key = make_choices_key(TagForm, "tag")
         reg = get_registration(key)
         assert reg is not None
-        assert reg.widget_type == "combobox"
+        assert reg.widget_type == "combo_box"
 
 
 # ---------------------------------------------------------------------------

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from django.template.base import Template
 
-    from django_formwork.registry import SearchRegistration
+    from django_formwork._registry import SearchRegistration
 
 __all__ = [
     "FormworkAutoSearchView",
@@ -73,7 +73,7 @@ class FormworkSearchView(View):
     )
 
     #: Template for ComboBox results (label only, for autocomplete-style)
-    COMBOBOX_TEMPLATE = (
+    COMBO_BOX_TEMPLATE = (
         """{% for item in results %}
 <li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label|escapejs }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
   {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
@@ -87,7 +87,7 @@ class FormworkSearchView(View):
     #: Checkboxes have no ``name`` — hidden inputs in the widget template
     #: handle form submission.  Alpine directives sync checked state with
     #: the parent ``x-data`` scope (the widget wrapper).
-    MULTISELECT_TEMPLATE = (
+    MULTI_SELECT_TEMPLATE = (
         """{% for item in results %}
 <li><label class="flex items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200" data-value="{{ item.value|escapejs }}">
   <input type="checkbox" value="{{ item.value }}" class="multiselect hidden" x-init="$el.checked = selected.has('{{ item.value|escapejs }}')" @change="toggle('{{ item.value|escapejs }}', '{{ item.label|escapejs }}', '{{ item.icon|escapejs }}')">
@@ -114,8 +114,8 @@ class FormworkSearchView(View):
         if cls._compiled_templates is None:
             cls._compiled_templates = {
                 "search_select": cls._engine.from_string(cls.SEARCH_SELECT_TEMPLATE),
-                "combobox": cls._engine.from_string(cls.COMBOBOX_TEMPLATE),
-                "multiselect": cls._engine.from_string(cls.MULTISELECT_TEMPLATE),
+                "combo_box": cls._engine.from_string(cls.COMBO_BOX_TEMPLATE),
+                "multi_select": cls._engine.from_string(cls.MULTI_SELECT_TEMPLATE),
             }
         return cls._compiled_templates[widget_type]
 
@@ -165,13 +165,13 @@ class FormworkAutoSearchView(FormworkSearchView):
         path("__formwork__/", include("django_formwork.urls"))
 
     The view looks up the registration by key, filters the queryset, and
-    returns results using the appropriate template (search_select, multiselect,
-    or combobox).
+    returns results using the appropriate template (search_select, multi_select,
+    or combo_box).
     """
 
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
-        from django_formwork.registry import get_registration
+        from django_formwork._registry import get_registration
 
         self.registration = get_registration(kwargs.get("key", ""))
 

@@ -3,7 +3,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from django_formwork.models import FormworkModel
+from django_formwork import FormworkModel
 
 PRIORITY_CHOICES = [
     ("low", "Low"),

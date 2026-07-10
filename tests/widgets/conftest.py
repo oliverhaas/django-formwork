@@ -63,7 +63,7 @@ def attach_server_search(
     ``count`` populates a fake queryset whose ``.count()`` and slicing yield
     that many objects with ``label`` / ``icon`` / ``description`` attributes.
     """
-    from django_formwork.registry import SearchRegistration, register
+    from django_formwork._registry import SearchRegistration, register
 
     key = key or f"tests.widget.{type(widget).__name__}.{id(widget)}"
 
@@ -157,7 +157,7 @@ def assert_html_equivalent(a: Tag, b: Tag) -> None:
 def _clean_widget_registry():
     """Drop any registry entries created by ``attach_server_search`` so tests
     don't leak state across the module."""
-    from django_formwork.registry import get_registry
+    from django_formwork._registry import get_registry
 
     yield
     get_registry().clear()

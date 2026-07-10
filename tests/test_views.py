@@ -25,13 +25,13 @@ class CitySearchView(FormworkSearchView):
 class CityComboBoxView(CitySearchView):
     """City search rendered with the ComboBox template."""
 
-    widget_type = "combobox"
+    widget_type = "combo_box"
 
 
 class CityMultiSelectView(CitySearchView):
     """City search rendered with the MultiSelect template."""
 
-    widget_type = "multiselect"
+    widget_type = "multi_select"
 
 
 class IconSearchView(FormworkSearchView):
@@ -53,11 +53,11 @@ class HostileSearchView(FormworkSearchView):
 
 
 class HostileComboBoxView(HostileSearchView):
-    widget_type = "combobox"
+    widget_type = "combo_box"
 
 
 class HostileMultiSelectView(HostileSearchView):
-    widget_type = "multiselect"
+    widget_type = "multi_select"
 
 
 factory = RequestFactory()
@@ -196,7 +196,7 @@ class TestFormworkSearchViewDefaults:
 
     def test_type_query_param_ignored(self):
         """SECURITY: a client-supplied type param must not switch templates."""
-        request = factory.get("/search/", {"q": "", "type": "combobox"})
+        request = factory.get("/search/", {"q": "", "type": "combo_box"})
         response = CitySearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         btn = soup.find("button")

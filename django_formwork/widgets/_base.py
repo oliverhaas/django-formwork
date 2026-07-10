@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from django_formwork.registry import SearchRegistration
+    from django_formwork._registry import SearchRegistration
 
 # Sentinel: distinguishes "developer didn't pass search_decorator" from
 # "developer explicitly passed None" (= no decorator, public endpoint).
@@ -51,7 +51,7 @@ def _resolve_initial_results(registry_key: str | None) -> tuple[int | None, list
     """
     if registry_key is None:
         return None, []
-    from django_formwork.registry import get_registration
+    from django_formwork._registry import get_registration
 
     reg = get_registration(registry_key)
     if reg is None:

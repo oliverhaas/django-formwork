@@ -95,7 +95,7 @@ class _AutoSearchMixin:
     def _auto_register_search(self) -> None:
         from django.core.exceptions import ImproperlyConfigured
 
-        from django_formwork.registry import (
+        from django_formwork._registry import (
             SearchRegistration,
             make_choices_key,
             register,
@@ -156,14 +156,14 @@ class _AutoSearchMixin:
         search_fields: tuple[str, ...],
         queryset: QuerySet,
     ) -> None:
-        from django_formwork.registry import SearchRegistration, make_key, register
+        from django_formwork._registry import SearchRegistration, make_key, register
         from django_formwork.widgets import MultiSelect
 
         model_label = queryset.model._meta.label_lower  # noqa: SLF001
         to_field_name = getattr(field, "to_field_name", None) or "pk"
         key = make_key(type(self), field_name, model_label, search_fields, to_field_name)
 
-        widget_type = "multiselect" if isinstance(widget, MultiSelect) else "search_select"
+        widget_type = "multi_select" if isinstance(widget, MultiSelect) else "search_select"
         # Callbacks live on the field.  Formwork fields expose icon/description
         # callbacks; plain ModelChoiceField only exposes label_from_instance.
         label_func = getattr(field, "label_from_instance", None)
@@ -192,9 +192,9 @@ class _AutoSearchMixin:
         from django_formwork.widgets import ComboBox, MultiSelect
 
         if isinstance(widget, MultiSelect):
-            return "multiselect"
+            return "multi_select"
         if isinstance(widget, ComboBox):
-            return "combobox"
+            return "combo_box"
         return "search_select"
 
 

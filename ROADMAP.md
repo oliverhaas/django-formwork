@@ -24,7 +24,8 @@ suite, 989 passing), but **not 1.0-ready**. Three blockers dominate.
    the icons.css relocation; see Done below.)
 3. **API / naming lock-in.** `widget_type` is spelled three ways, `ComboBox` four; the
    public import surface is fragmented; the registry is public-but-should-be-internal. These
-   freeze under semver at 1.0 and must be settled first.
+   freeze under semver at 1.0 and must be settled first. (Settled 2026-07-10: snake_case
+   tokens, uniform lazy top-level re-exports, registry made internal; see Done below.)
 
 Underneath sits one architectural root cause: **11 of 17 widgets inline their JS as
 duplicated `x-data` blocks across both template engines.** That is *why* the escaping bug
@@ -63,19 +64,15 @@ honestly.
 
 ### API surface: lock names before semver freezes them
 
-- [ ] **Lock `widget_type` and `ComboBox` naming to one convention.** Tokens ship three
-  spellings (`search_select` vs `combobox` vs `multiselect`); `ComboBox` is spelled four ways
-  (class / `combo_box.html` / `combo_box.js` / token `"combobox"`). Public via
-  `FormworkSearchView.widget_type` and `SearchRegistration.widget_type` (the `?type=` query
-  param and `VALID_WIDGET_TYPES` were removed in the 2026-07-10 security batch).
-  Recommend snake_case everywhere. (`django_formwork/views.py`, medium)
-- [ ] **Reconcile the `FormworkModel` import path + decide the top-level re-export policy.**
-  The `ImproperlyConfigured` message and docstrings tell users `from django_formwork import
-  FormworkModel`, which raises `ImportError`; only `django_formwork.models` works. More
-  broadly, formsets, view base classes, and async mixins are submodule-only while forms are
-  top-level (an arbitrary split). Decide the canonical surface (recommend a lazy module-level
-  `__getattr__` so documented names resolve) and make it uniform.
-  (`django_formwork/__init__.py:25`, small)
+- [x] **Locked `widget_type` and `ComboBox` naming to snake_case** (2026-07-10, see Done).
+  Tokens are now `search_select` / `multi_select` / `combo_box`; the view template
+  attributes are `SEARCH_SELECT_TEMPLATE` / `MULTI_SELECT_TEMPLATE` / `COMBO_BOX_TEMPLATE`;
+  `widgets/combobox.py` became `widgets/combo_box.py`. Class names stay PascalCase.
+- [x] **Reconciled the `FormworkModel` import path + uniform lazy top-level re-exports**
+  (2026-07-10, see Done). A lazy module-level `__getattr__` in `django_formwork/__init__.py`
+  resolves every documented public name (forms, formsets, view base classes,
+  `FormworkModel`, async mixins, renderers) from the top level; submodule imports keep
+  working; docs and examples show top-level imports as canonical.
 
 ---
 
@@ -111,12 +108,11 @@ honestly.
   way to configure the renderer or emit CSS/JS (the tags are DTL-only `simple_tag`s that
   don't work in Jinja2); no single settings reference for `FORM_RENDERER`/`FORMWORK_FORCE_ASYNC`.
   (`mkdocs.yml:44`, medium)
-- [ ] **Settle the config surface + scope the auto-search registry as internal.**
-  `search_threshold` is class-only, `max_results` isn't settable from the widget,
-  `FORMWORK_FORCE_ASYNC` is an undocumented bare `getattr`; meanwhile `registry.py` publicly
-  exports `make_key`/`register`/`SearchRegistration`, freezing a key format the code itself
-  plans to evolve. Introduce one documented `FORMWORK` settings dict + constructor kwargs;
-  drop registry internals from the public surface. (`widgets/search_select.py:54`, medium)
+- [ ] **Settle the config surface.** `search_threshold` is class-only, `max_results` isn't
+  settable from the widget, `FORMWORK_FORCE_ASYNC` is an undocumented bare `getattr`.
+  Introduce one documented `FORMWORK` settings dict + constructor kwargs.
+  (`widgets/search_select.py:54`, medium) The registry half of this item is done: `registry.py`
+  became the internal `_registry.py` (2026-07-10, see Done).
 - [x] **Moved generated `icons.css` out of site-packages** (2026-07-10, see Done).
   `formwork install` now writes to the project static dir (first `STATICFILES_DIRS` entry,
   else `BASE_DIR/static`) with an `--output` override; `formwork.css` no longer imports it
@@ -205,10 +201,11 @@ honestly.
 
 ## Open questions (your calls; decide before the relevant work)
 
-1. **Public API surface:** commit to uniform lazy top-level re-exports (forms, formsets, view
+1. ~~**Public API surface:** commit to uniform lazy top-level re-exports (forms, formsets, view
    base classes, `FormworkModel`, async mixins all from `django_formwork`), or a documented
    "import from submodules" convention? And is the registry semver-covered at all? Must be
-   decided before the freeze.
+   decided before the freeze.~~ Resolved (2026-07-10): uniform lazy top-level re-exports via
+   module `__getattr__`; the registry is internal (`_registry.py`), not semver-covered. See Done.
 2. **Is i18n a 1.0 requirement or a fast-follow?** Full gettext + locale + JS externalization
    is large and cheapest *after* the inline-x-data extraction. Blocking 1.0 on it could delay
    significantly; shipping English-only forecloses non-English adopters until a minor release.
@@ -235,6 +232,20 @@ honestly.
 
 ## Done
 
+- **API naming batch: snake_case widget-type tokens, uniform lazy top-level imports,
+  internal registry** (2026-07-10). Widget-type tokens settled on snake_case everywhere:
+  `"multiselect"` → `"multi_select"`, `"combobox"` → `"combo_box"` (in
+  `SearchRegistration.widget_type`, `FormworkSearchView.widget_type`, and the template
+  cache keys); `MULTISELECT_TEMPLATE`/`COMBOBOX_TEMPLATE` → `MULTI_SELECT_TEMPLATE`/
+  `COMBO_BOX_TEMPLATE`; `widgets/combobox.py` → `widgets/combo_box.py` (class names stay
+  PascalCase; DOM CSS classes are unchanged). `django_formwork/__init__.py` now resolves
+  every documented public name lazily via module `__getattr__` (PEP 562): forms, formsets,
+  fields, view base classes, `FormworkModel`, async mixins, renderers. So
+  `from django_formwork import FormworkModel` finally works without forcing the app
+  registry at import time; docs and examples show top-level imports as canonical.
+  `registry.py` became `_registry.py` (internal; key format and registration API are
+  explicitly not semver-covered). New import-surface tests in `tests/test_packaging.py`,
+  including a no-`DJANGO_SETTINGS_MODULE` subprocess import check.
 - **Packaging batch: icons.css out of site-packages + installation guide rewrite**
   (2026-07-10). `manage.py formwork install` no longer writes the generated `icons.css` into
   the installed package dir (which failed on read-only installs: containers, system pip,

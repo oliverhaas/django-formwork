@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- **Widget-type tokens are snake_case everywhere.** The tokens carried by
+  `SearchRegistration.widget_type` and `FormworkSearchView.widget_type` renamed:
+  `"multiselect"` → `"multi_select"` and `"combobox"` → `"combo_box"` (`"search_select"` is
+  unchanged). The response-template class attributes follow suit: `MULTISELECT_TEMPLATE` →
+  `MULTI_SELECT_TEMPLATE` and `COMBOBOX_TEMPLATE` → `COMBO_BOX_TEMPLATE`. The widget module
+  `django_formwork.widgets.combobox` renamed to `django_formwork.widgets.combo_box`
+  (importing `ComboBox` from `django_formwork.widgets` is unaffected). Widget class names
+  stay PascalCase and the DOM CSS classes (`combobox`, `multiselect`, `search-select`) are
+  unchanged, so no stylesheet or template overrides break.
+- **The auto-search registry is now internal.** `django_formwork.registry` renamed to
+  `django_formwork._registry`; `make_key`, `make_choices_key`, `register`,
+  `get_registration`, `get_registry`, and `SearchRegistration` are no longer public API.
+  The registry key format and registration machinery may change without notice; the public
+  surface is the auto-registration behavior on `FormworkForm` / `FormworkModelForm` plus
+  `FormworkAutoSearchView` and `include("django_formwork.urls")`.
+
+### Added
+
+- **Uniform top-level import surface.** Every documented public name now resolves lazily
+  from the package root: form and formset base classes and factories, fields, view base
+  classes, renderers, the async mixins, and `FormworkModel` (whose documented
+  `from django_formwork import FormworkModel` previously raised `ImportError`). Imports
+  stay lazy via a module-level `__getattr__`, so `import django_formwork` still works
+  without configured settings or a ready app registry. Submodule imports keep working;
+  the docs now show top-level imports as canonical.
+
 ### Security
 
 - **JS-escape every value interpolated into an Alpine `x-data` / expression context.** Alpine

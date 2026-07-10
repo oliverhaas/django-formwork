@@ -9,6 +9,12 @@ the project renders styled, including plain `forms.Form`. Reach for the base
 classes when you want the behaviours below, or formwork styling on individual
 forms without the global renderer.
 
+Everything documented here is importable from the package root:
+
+```python
+from django_formwork import FormworkForm, FormworkModel, FormworkModelForm
+```
+
 ## Base classes
 
 | Class | Renderer | Use with |

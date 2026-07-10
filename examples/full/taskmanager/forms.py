@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from django import forms
 
-from django_formwork.forms import FormworkForm, FormworkModelForm
+from django_formwork import FormworkForm, FormworkModelForm
 from django_formwork.widgets import (
     ComboBox,
     DatePicker,

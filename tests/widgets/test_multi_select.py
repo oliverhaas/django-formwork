@@ -930,7 +930,7 @@ def test_multi_select_htmx_open_loads_results(multi_select_page):
     multi_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.multiselect');
         const search = dds[2].querySelector('input[type="text"]');
-        htmx.ajax('GET', search.getAttribute('hx-get') + '?q=&type=multiselect&name=languages_htmx', {
+        htmx.ajax('GET', search.getAttribute('hx-get') + '?q=&type=multi_select&name=languages_htmx', {
             target: search.getAttribute('hx-target'),
             swap: 'innerHTML',
         });
@@ -951,7 +951,7 @@ def test_multi_select_htmx_select_creates_hidden_inputs(multi_select_page):
     multi_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.multiselect');
         const search = dds[2].querySelector('input[type="text"]');
-        htmx.ajax('GET', search.getAttribute('hx-get') + '?q=&type=multiselect&name=languages_htmx', {
+        htmx.ajax('GET', search.getAttribute('hx-get') + '?q=&type=multi_select&name=languages_htmx', {
             target: search.getAttribute('hx-target'),
             swap: 'innerHTML',
         });

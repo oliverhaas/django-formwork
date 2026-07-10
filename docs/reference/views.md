@@ -1,6 +1,6 @@
 # Server-side Views
 
-Formwork provides three class-based views for server-side search and validation. All are in `django_formwork.views`.
+Formwork provides three class-based views for server-side search and validation. All are importable from `django_formwork` (or from `django_formwork.views`).
 
 ## FormworkSearchView
 
@@ -8,13 +8,13 @@ Base view for the registry-driven search endpoint. `FormworkAutoSearchView` (bel
 
 ### Response templates
 
-The HTML fragment is rendered by one of three class-level Django templates, selected by the view's `widget_type`. Auto-registered endpoints take it from the registration; subclasses set the class attribute. A client-supplied `type` query parameter is ignored, so callers cannot switch templates:
+The HTML fragment is rendered by one of three class-level Django templates, selected by the view's `widget_type` (`"search_select"`, `"combo_box"`, or `"multi_select"`). Auto-registered endpoints take it from the registration; subclasses set the class attribute. A client-supplied `type` query parameter is ignored, so callers cannot switch templates:
 
 | Template attribute | Widget | Purpose |
 |---|---|---|
 | `SEARCH_SELECT_TEMPLATE` | `SearchSelect` | Value + label, with checkmark for current selection |
-| `COMBOBOX_TEMPLATE` | `ComboBox` | Label only, for autocomplete suggestions |
-| `MULTISELECT_TEMPLATE` | `MultiSelect` | Checkbox options that sync with Alpine.js widget state |
+| `COMBO_BOX_TEMPLATE` | `ComboBox` | Label only, for autocomplete suggestions |
+| `MULTI_SELECT_TEMPLATE` | `MultiSelect` | Checkbox options that sync with Alpine.js widget state |
 
 Override any of these on your subclass to change the rendered markup. Implementing `get_results(query, **kwargs)` is the per-request hook.
 
@@ -57,7 +57,7 @@ Registration happens automatically when a `FormworkForm` or `FormworkModelForm` 
 **Model-backed** — The widget has `search_fields` and the field is a `ModelChoiceField` or `ModelMultipleChoiceField`. Formwork registers an endpoint that filters the queryset using `__icontains` on the listed fields:
 
 ```python
-from django_formwork.forms import FormworkForm
+from django_formwork import FormworkForm
 from django_formwork.widgets import SearchSelect
 
 class CityForm(FormworkForm):
@@ -70,7 +70,7 @@ class CityForm(FormworkForm):
 **Choices-backed** — The form defines a `search_choices_<fieldname>(query, request)` method. It receives the search query and the request, and returns a list of dicts or `(value, label)` tuples:
 
 ```python
-from django_formwork.forms import FormworkForm
+from django_formwork import FormworkForm
 from django_formwork.widgets import SearchSelect
 
 class TagForm(FormworkForm):
@@ -129,7 +129,7 @@ Base view for server-side textarea validation. It handles POST requests, calls `
 
 ```python
 # views.py
-from django_formwork.views import FormworkValidateView
+from django_formwork import FormworkValidateView
 
 class SpellCheckView(FormworkValidateView):
     def get_errors(self, text: str, **kwargs) -> list[dict]:

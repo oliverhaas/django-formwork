@@ -1,4 +1,4 @@
-"""Auto-registration registry for server-side search endpoints.
+"""Internal auto-registration registry for server-side search endpoints.
 
 Widgets with ``search_fields`` are automatically registered here when their
 form is instantiated.  Forms with ``search_choices_<fieldname>`` methods are
@@ -6,6 +6,9 @@ also registered for plain (non-model) choice fields.
 
 A single dispatch view (``FormworkAutoSearchView``) serves all registered
 endpoints via a stable key.
+
+Internal module: the key format and registration API may change between
+releases without notice.
 """
 
 from __future__ import annotations
@@ -17,15 +20,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from django.db.models import QuerySet
-
-__all__ = [
-    "SearchRegistration",
-    "get_registration",
-    "get_registry",
-    "make_choices_key",
-    "make_key",
-    "register",
-]
 
 _registry: dict[str, SearchRegistration] = {}
 

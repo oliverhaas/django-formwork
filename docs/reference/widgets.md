@@ -193,7 +193,7 @@ For icons/descriptions on choice labels, wrap the label in [`ChoiceLabel`](https
 ```python
 # Static choices with icons:
 from django.utils.html import mark_safe
-from django_formwork.fields import ChoiceLabel
+from django_formwork import ChoiceLabel
 
 city = forms.ChoiceField(
     choices=[

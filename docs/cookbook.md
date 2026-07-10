@@ -47,8 +47,7 @@ freely in one form.
 # forms.py
 from django.utils.html import format_html
 
-from django_formwork.fields import FormworkModelChoiceField
-from django_formwork.forms import FormworkForm
+from django_formwork import FormworkForm, FormworkModelChoiceField
 from django_formwork.widgets import SearchSelect
 
 
@@ -152,7 +151,7 @@ unchanged.
 
 ```python
 # forms.py
-from django_formwork.forms import FormworkModelForm
+from django_formwork import FormworkModelForm
 
 
 class TicketCreateForm(FormworkModelForm):

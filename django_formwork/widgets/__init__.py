@@ -5,7 +5,7 @@ All widgets are importable from ``django_formwork.widgets``::
     from django_formwork.widgets import Toggle, SearchSelect, DatePicker
 """
 
-from django_formwork.widgets.combobox import ComboBox
+from django_formwork.widgets.combo_box import ComboBox
 from django_formwork.widgets.datalist import DataList
 from django_formwork.widgets.date_picker import DatePicker
 from django_formwork.widgets.file_drop_zone import FileDropZone
