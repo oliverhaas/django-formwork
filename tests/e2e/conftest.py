@@ -114,6 +114,12 @@ def textarea_page(page, live_server):
 
 
 @pytest.fixture
+def new_widgets_page(page, live_server):
+    """Navigate to the new-widgets page (DatePicker, InputNumber, OTP, InputMask)."""
+    return _navigate(page, live_server, "/new-widgets/")
+
+
+@pytest.fixture
 def builtin_page(page, live_server):
     """Navigate to the built-in compound widgets page."""
     return _navigate(page, live_server, "/builtin/")

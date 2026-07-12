@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from django import forms
+
+from ._base import _ModuleScript
 
 
 class OTPInput(forms.TextInput):
@@ -20,6 +23,9 @@ class OTPInput(forms.TextInput):
 
     template_name = "formwork/widgets/otp_input.html"
 
+    class Media:
+        js = (_ModuleScript("formwork/widgets/otp_input.js"),)
+
     def __init__(self, attrs: dict[str, Any] | None = None, *, length: int = 6) -> None:
         super().__init__(attrs)
         self.length = length
@@ -31,4 +37,5 @@ class OTPInput(forms.TextInput):
         # Pre-fill individual digits from current value.
         val = value or ""
         context["widget"]["initial_digits"] = [val[i] if i < len(val) else "" for i in range(self.length)]
+        context["widget"]["initial_digits_json"] = json.dumps(context["widget"]["initial_digits"])
         return context

@@ -5,13 +5,15 @@ Levels:
     2. unit        — widget rendering: HTML structure, attributes
     3. integration — form integration: field template, prefix
     4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — SKIPPED (no e2e page for OTPInput yet)
-    6. e2e         — SKIPPED (see above)
+    5. e2e         — smoke: typing advances focus, hidden input collects value
+    6. e2e         — SKIPPED (gap; smoke coverage only)
     7. e2e         — SKIPPED (see above)
-    8. screenshot  — SKIPPED (no e2e page for OTPInput yet)
+    8. screenshot  — SKIPPED (no baseline for OTPInput yet)
 """
 
 from __future__ import annotations
+
+import json
 
 import pytest
 from django import forms
@@ -71,6 +73,14 @@ def test_otp_input_get_context_with_none():
     assert ctx["widget"]["initial_digits"] == ["", "", "", ""]
 
 
+@pytest.mark.unit
+def test_otp_input_get_context_initial_digits_json():
+    """initial_digits_json is the JSON-encoded twin of initial_digits."""
+    widget = OTPInput(length=4)
+    ctx = widget.get_context("code", "12", {"id": "id_code"})
+    assert json.loads(ctx["widget"]["initial_digits_json"]) == ["1", "2", "", ""]
+
+
 # ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
 
 
@@ -90,6 +100,15 @@ def test_otp_input_renders_digit_inputs():
     # Visible digit inputs have type="text" and maxlength="1".
     digit_inputs = soup.find_all("input", attrs={"type": "text", "maxlength": "1"})
     assert len(digit_inputs) == length
+
+
+@pytest.mark.unit
+def test_otp_input_alpine_x_data():
+    """The wrapper div binds to the formworkOtpInput Alpine.data component."""
+    soup = render_widget(OTPInput(length=4), name="code", value="12", attrs={"id": "id_code"})
+    wrapper = soup.find("div", attrs={"x-data": "formworkOtpInput"})
+    assert wrapper is not None
+    assert json.loads(wrapper["data-digits"]) == ["1", "2", "", ""]
 
 
 # ─── Level 3: Form integration ───────────────────────────────────────────
@@ -125,17 +144,18 @@ def test_otp_input_form_prefix(renderer):
 
 @pytest.mark.integration
 def test_otp_input_escapes_digits_in_x_data(renderer):
-    """SECURITY: redisplayed value characters in the Alpine digits array are JS-escaped."""
+    """SECURITY: redisplayed value characters never land in an executable context."""
     # Regression: a quote character in the submitted value broke out of its
-    # '...' array element in x-data (Alpine evaluates the entity-decoded
-    # attribute, so HTML autoescaping alone does not defend).
+    # '...' array element in the inline x-data.  The digits now ride in an
+    # autoescaped data-digits JSON attribute read via dataset (never evaluated
+    # as JS), and x-data holds only the fixed component name.
     form = OTPForm(data={"code": "1'2<3\\"})
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     wrapper = soup.find("div", class_="otp-input")
-    x_data = wrapper["x-data"]
-    assert "'''" not in x_data
-    assert "\\u0027" in x_data
+    assert wrapper["x-data"] == "formworkOtpInput"
+    # BeautifulSoup entity-decodes: exact JSON round-trip proves lossless escaping.
+    assert json.loads(wrapper["data-digits"]) == ["1", "'", "2", "<", "3", "\\"]
 
 
 # ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
@@ -150,15 +170,25 @@ def test_otp_input_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
-#
-# No e2e page exists for OTPInput yet.  Tests to add once a page fixture
-# is available: renders on page, typing into digit inputs advances focus,
-# pasting fills all digits.
+
+
+@pytest.mark.e2e
+def test_otp_input_typing_auto_advances(new_widgets_page):
+    """Smoke: typing a digit advances focus; the hidden input collects the value."""
+    from playwright.sync_api import expect
+
+    boxes = new_widgets_page.locator("#id_otp_code_otp .otp-digit")
+    boxes.nth(0).click()
+    new_widgets_page.keyboard.type("1")
+    expect(boxes.nth(1)).to_be_focused()
+    new_widgets_page.keyboard.type("23456")
+    hidden = new_widgets_page.locator("input[name='otp_code']")
+    expect(hidden).to_have_value("123456")
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# No e2e page exists for OTPInput yet.
+# Requires a dedicated error-flow page.  Left as a gap.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────

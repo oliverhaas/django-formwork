@@ -5,7 +5,8 @@ Levels:
     2. unit        — widget rendering: HTML structure, placeholder, value
     3. integration — form integration: field template, error state, prefix
     4. integration — Jinja2/DTL parity: identical HTML across engines
-    5–8. e2e / screenshot — SKIPPED (no e2e page for DatePicker yet)
+    5. e2e         — smoke: calendar opens and picking a day fills the input
+    6–8. e2e / screenshot — SKIPPED (gaps; smoke coverage only)
 """
 
 from __future__ import annotations
@@ -97,6 +98,18 @@ def test_date_picker_renders_with_value():
     assert inp.get("value") == "2024-06-15"
 
 
+@pytest.mark.unit
+def test_date_picker_alpine_x_data():
+    """The wrapper div binds to the formworkDatePicker Alpine.data component."""
+    import datetime
+
+    widget = DatePicker()
+    soup = render_widget(widget, value=datetime.date(2024, 6, 15), attrs={"id": "id_due_date"})
+    wrapper = soup.find("div", attrs={"x-data": "formworkDatePicker"})
+    assert wrapper is not None
+    assert wrapper["data-value"] == "2024-06-15"
+
+
 # ─── Level 3: Form integration ───────────────────────────────────────────
 
 
@@ -142,18 +155,19 @@ def test_date_picker_form_prefix(renderer):
 
 @pytest.mark.integration
 def test_date_picker_escapes_value_in_x_data(renderer):
-    """SECURITY: the redisplayed raw value inside the Alpine x-data string is JS-escaped."""
-    # Regression: an unescaped quote broke out of the value: '...' string
-    # literal and executed on validation-error redisplay (Alpine evaluates the
-    # entity-decoded attribute, so HTML autoescaping alone does not defend).
+    """SECURITY: the redisplayed raw value never lands in an executable context."""
+    # Regression: an unescaped quote broke out of the inline x-data string
+    # literal and executed on validation-error redisplay.  The value now rides
+    # in an autoescaped data-value attribute read via dataset (never evaluated
+    # as JS), and x-data holds only the fixed component name.
     payload = "'}); alert(1); ({'"
     form = DatePickerForm(data={"due_date": payload})
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     wrapper = soup.find("div", class_="date-picker")
-    x_data = wrapper["x-data"]
-    assert payload not in x_data
-    assert "\\u0027" in x_data
+    assert wrapper["x-data"] == "formworkDatePicker"
+    # BeautifulSoup entity-decodes: an exact round-trip proves lossless escaping.
+    assert wrapper["data-value"] == payload
 
 
 # ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
@@ -168,14 +182,28 @@ def test_date_picker_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
-#
-# No e2e page for DatePicker yet — tests would live here once a page
-# fixture is added.  Tracked as a gap in e2e coverage.
+
+
+@pytest.mark.e2e
+def test_date_picker_opens_and_picks_day(new_widgets_page):
+    """Smoke: the calendar toggle opens the panel; picking a day fills the input."""
+    import re
+
+    from playwright.sync_api import expect
+
+    picker = new_widgets_page.locator("#id_due_date_datepicker")
+    picker.locator("button.date-picker-toggle").click()
+    panel = picker.locator("div.dropdown-content")
+    expect(panel).to_be_visible()
+    panel.get_by_role("button", name="15", exact=True).click()
+    inp = new_widgets_page.locator("input[name='due_date']")
+    expect(inp).to_have_value(re.compile(r"^\d{4}-\d{2}-15$"))
+    expect(panel).not_to_be_visible()
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# Requires an e2e page fixture.  Left as a gap.
+# Requires a dedicated error-flow page.  Left as a gap.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────

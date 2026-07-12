@@ -1,0 +1,126 @@
+// Alpine.data component for the formwork InputMask widget.
+// Loaded as an ES module via Media.js or imported by formwork.js.
+
+document.addEventListener("alpine:init", () => {
+  Alpine.data("formworkInputMask", () => ({
+    mask: "",
+    dot: "\u00b7",
+    raw: "",
+
+    init() {
+      this.mask = this.$el.dataset.mask || "";
+      const v = this.$refs.display.getAttribute("data-initial") || "";
+      for (let i = 0; i < v.length; i++) {
+        if (/[a-zA-Z0-9]/.test(v[i])) this.raw += v[i];
+      }
+      this.render();
+    },
+
+    buildFull() {
+      let result = "";
+      let ri = 0;
+      for (let i = 0; i < this.mask.length; i++) {
+        const m = this.mask[i];
+        if (m === "#" || m === "A" || m === "*") {
+          result += ri < this.raw.length ? this.raw[ri++] : this.dot;
+        } else {
+          result += m;
+        }
+      }
+      return result;
+    },
+    buildClean() {
+      let result = "";
+      let ri = 0;
+      for (let i = 0; i < this.mask.length; i++) {
+        const m = this.mask[i];
+        if (m === "#" || m === "A" || m === "*") {
+          if (ri >= this.raw.length) break;
+          result += this.raw[ri++];
+        } else {
+          if (ri >= this.raw.length) break;
+          result += m;
+        }
+      }
+      return result;
+    },
+    buildOverlay() {
+      let html = "";
+      let ri = 0;
+      for (let i = 0; i < this.mask.length; i++) {
+        const m = this.mask[i];
+        if (m === "#" || m === "A" || m === "*") {
+          if (ri < this.raw.length) {
+            html += this.raw[ri++];
+          } else {
+            html += "<span class=input-mask-dot>" + this.dot + "</span>";
+          }
+        } else {
+          if (ri >= this.raw.length) {
+            html += "<span class=input-mask-dot>" + m + "</span>";
+          } else {
+            html += m;
+          }
+        }
+      }
+      return html;
+    },
+    cursorPos() {
+      let pos = 0;
+      let ri = 0;
+      for (let i = 0; i < this.mask.length; i++) {
+        const m = this.mask[i];
+        if (m === "#" || m === "A" || m === "*") {
+          if (ri >= this.raw.length) {
+            pos = i;
+            return pos;
+          }
+          ri++;
+        }
+        pos = i + 1;
+      }
+      return pos;
+    },
+    render() {
+      this.$refs.display.value = this.buildFull();
+      this.$refs.hidden.value = this.buildClean();
+      this.$refs.overlay.innerHTML = this.buildOverlay();
+    },
+    handleInput(e) {
+      let newRaw = "";
+      for (let i = 0; i < e.target.value.length; i++) {
+        if (/[a-zA-Z0-9]/.test(e.target.value[i])) newRaw += e.target.value[i];
+      }
+      this.raw = this.filterRaw(newRaw);
+      this.render();
+      const cp = this.cursorPos();
+      e.target.setSelectionRange(cp, cp);
+      this.$refs.hidden.dispatchEvent(new Event("input", { bubbles: true }));
+    },
+    filterRaw(input) {
+      let result = "";
+      let ri = 0;
+      for (let i = 0; i < this.mask.length && ri < input.length; i++) {
+        const m = this.mask[i];
+        if (m === "#") {
+          if (/\d/.test(input[ri])) result += input[ri];
+          ri++;
+        } else if (m === "A") {
+          if (/[a-zA-Z]/.test(input[ri])) result += input[ri];
+          ri++;
+        } else if (m === "*") {
+          result += input[ri++];
+        } else {
+          if (input[ri] === m) ri++;
+        }
+      }
+      return result;
+    },
+    handleClick(e) {
+      const cp = this.cursorPos();
+      if (e.target.selectionStart > cp) {
+        e.target.setSelectionRange(cp, cp);
+      }
+    },
+  }));
+});

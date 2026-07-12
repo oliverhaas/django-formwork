@@ -55,6 +55,18 @@
 
 ### Changed
 
+- **`DatePicker`, `OTPInput`, and `InputMask` now bind to shipped Alpine.data components**
+  (`formworkDatePicker`, `formworkOtpInput`, `formworkInputMask` in
+  `formwork/widgets/date_picker.js`, `otp_input.js`, and `input_mask.js`) instead of inlining
+  their behavior in the templates' `x-data` attribute. Configuration rides in autoescaped
+  `data-*` attributes read via `dataset` at init: `data-value` (DatePicker), `data-digits`
+  (OTPInput, a JSON array exposed as `widget.initial_digits_json` in the template context),
+  and `data-mask` (InputMask). The three widget classes gained a `Media` declaration, so the
+  usual `{% formwork_core_js %}` + `{{ form.media }}` pair loads the new modules automatically.
+  If you override these widget templates, update your copies: `x-data` now holds only the
+  component name, and the `escapejs` filters were dropped alongside the JS-string literals
+  they protected (values no longer pass through an executable context, so autoescaping alone
+  is the correct and sufficient defense; there is no security regression).
 - **`manage.py formwork install` now writes the generated icon CSS into your project's static
   directory** instead of into the installed `django_formwork` package, which failed on
   read-only installs (containers, system-wide pip, Nix). The file lands at

@@ -24,6 +24,7 @@ from tests.e2e.conftest import (  # noqa: F401
     builtin_page,
     combobox_page,
     multi_select_page,
+    new_widgets_page,
     search_select_page,
     simple_page,
     textarea_page,

@@ -32,3 +32,6 @@ import "./formwork-core.js";
 import "./widgets/search_select.js";
 import "./widgets/multi_select.js";
 import "./widgets/combo_box.js";
+import "./widgets/date_picker.js";
+import "./widgets/input_mask.js";
+import "./widgets/otp_input.js";

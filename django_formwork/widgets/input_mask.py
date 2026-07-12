@@ -6,6 +6,8 @@ from typing import Any
 
 from django import forms
 
+from ._base import _ModuleScript
+
 
 class InputMask(forms.TextInput):
     """Text input with a fixed-format mask.
@@ -20,6 +22,9 @@ class InputMask(forms.TextInput):
     """
 
     template_name = "formwork/widgets/input_mask.html"
+
+    class Media:
+        js = (_ModuleScript("formwork/widgets/input_mask.js"),)
 
     def __init__(self, attrs: dict[str, Any] | None = None, *, mask: str = "") -> None:
         super().__init__(attrs)

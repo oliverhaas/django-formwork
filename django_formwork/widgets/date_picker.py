@@ -6,6 +6,8 @@ from typing import Any
 
 from django import forms
 
+from ._base import _ModuleScript
+
 
 class DatePicker(forms.DateInput):
     """Date input with an Alpine.js calendar dropdown.
@@ -20,6 +22,9 @@ class DatePicker(forms.DateInput):
 
     template_name = "formwork/widgets/date_picker.html"
     input_type = "text"
+
+    class Media:
+        js = (_ModuleScript("formwork/widgets/date_picker.js"),)
 
     def __init__(self, attrs: dict[str, Any] | None = None, *, format: str | None = None) -> None:  # noqa: A002
         defaults: dict[str, Any] = {"placeholder": "YYYY-MM-DD"}

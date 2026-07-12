@@ -5,7 +5,8 @@ Levels:
     2. unit        — widget rendering: HTML structure, placeholder attribute
     3. integration — form integration: field template, error state, prefix
     4. integration — Jinja2/DTL parity: identical HTML across engines
-    5–8. e2e / screenshot — SKIPPED (no e2e page for InputMask yet)
+    5. e2e         — smoke: typing applies the mask pattern
+    6–8. e2e / screenshot — SKIPPED (gaps; smoke coverage only)
 """
 
 from __future__ import annotations
@@ -93,6 +94,15 @@ def test_input_mask_renders_placeholder():
     assert display.get("placeholder") == "(\u00b7\u00b7\u00b7) \u00b7\u00b7\u00b7-\u00b7\u00b7\u00b7\u00b7"
 
 
+@pytest.mark.unit
+def test_input_mask_alpine_x_data():
+    """The wrapper div binds to the formworkInputMask Alpine.data component."""
+    soup = render_widget(InputMask(mask="(###) ###-####"), attrs={"id": "id_phone"})
+    wrapper = soup.find("div", attrs={"x-data": "formworkInputMask"})
+    assert wrapper is not None
+    assert wrapper["data-mask"] == "(###) ###-####"
+
+
 # ─── Level 3: Form integration ───────────────────────────────────────────
 
 
@@ -148,14 +158,24 @@ def test_input_mask_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
-#
-# No e2e page for InputMask yet — tests would live here once a page
-# fixture is added.  Tracked as a gap in e2e coverage.
+
+
+@pytest.mark.e2e
+def test_input_mask_formats_typed_input(new_widgets_page):
+    """Smoke: typing digits into the masked phone input applies the pattern."""
+    from playwright.sync_api import expect
+
+    display = new_widgets_page.locator("#id_phone_masked_mask input.input-mask-display")
+    display.click()
+    new_widgets_page.keyboard.type("5551234567")
+    expect(display).to_have_value("(555) 123-4567")
+    hidden = new_widgets_page.locator("input[name='phone_masked']")
+    expect(hidden).to_have_value("(555) 123-4567")
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# Requires an e2e page fixture.  Left as a gap.
+# Requires a dedicated error-flow page.  Left as a gap.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
