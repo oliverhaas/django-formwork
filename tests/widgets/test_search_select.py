@@ -8,15 +8,15 @@ regression).  Each level is marked so you can run fast-feedback subsets:
     uv run pytest tests/widgets/test_search_select.py -m "not e2e"      # skip browser
 
 Levels:
-    1. unit        — widget object: instantiation, choices, search_url, show_search,
+    1. unit        : widget object: instantiation, choices, search_url, show_search,
                      get_context, value_from_datadict, edge cases
-    2. unit        — widget rendering: HTML structure, attributes, icons, htmx attrs
-    3. integration — form integration: fieldset, error state, prefix
-    4. integration — Jinja2/DTL parity
-    5. e2e         — user interaction: opening, selecting, search filtering
-    6. e2e         — error flow (no dedicated error page yet — see comment)
-    7. e2e         — morph resilience: dropdown state, selected value preserved
-    8. screenshot  — visual states: closed, open, selected
+    2. unit        : widget rendering: HTML structure, attributes, icons, htmx attrs
+    3. integration : form integration: fieldset, error state, prefix
+    4. integration : Jinja2/DTL parity
+    5. e2e         : user interaction: opening, selecting, search filtering
+    6. e2e         : error flow (no dedicated error page yet; see comment)
+    7. e2e         : morph resilience: dropdown state, selected value preserved
+    8. screenshot  : visual states: closed, open, selected
 """
 
 from __future__ import annotations
@@ -503,7 +503,7 @@ def test_search_select_no_htmx_attrs_without_search_url():
 
 @pytest.mark.unit
 def test_search_select_static_choices_ignored_when_search_url():
-    """Static ``choices`` are ignored when server search is wired — the
+    """Static ``choices`` are ignored when server search is wired. The
     listbox renders pre-rendered registry options instead.  ``count=0``
     here so the listbox renders the empty-state alert (no options)."""
     widget = make_server_widget(SearchSelect, count=0, choices=[("a", "Alpha")])
@@ -514,7 +514,7 @@ def test_search_select_static_choices_ignored_when_search_url():
 
 @pytest.mark.unit
 def test_search_select_renders_no_results_alert_when_initial_options_empty():
-    """An empty initial set still communicates state — the listbox carries
+    """An empty initial set still communicates state. The listbox carries
     the same ``role=status`` alert that the htmx response would render."""
     widget = make_server_widget(SearchSelect, count=0)
     soup = render_widget(widget, attrs={"id": "id_test"})
@@ -537,7 +537,7 @@ def test_search_select_no_alpine_no_results_when_search_url():
 @pytest.mark.unit
 def test_search_select_prerenders_initial_options_when_registered():
     """The first ``max_results`` registry items are baked straight into the
-    listbox so the dropdown opens with real data — htmx replaces them on
+    listbox so the dropdown opens with real data; htmx replaces them on
     first focus."""
     widget = make_server_widget(SearchSelect, count=3)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
@@ -634,8 +634,8 @@ def test_search_select_search_input_wires_error_handlers():
 
 @pytest.mark.unit
 def test_search_select_listbox_hidden_only_on_error():
-    """The listbox stays visible at all times except when an error occurs
-    — the spinner indicates loading without blanking the listbox."""
+    """The listbox stays visible at all times except when an error occurs;
+    the spinner indicates loading without blanking the listbox."""
     widget = make_server_widget(SearchSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_listbox")
@@ -1301,7 +1301,7 @@ def test_search_select_htmx_icons_pick_sets_value(search_select_page):
     assert hidden.input_value() == "fr"
 
 
-# ─── Level 5b: E2e — grouped (optgroup) SearchSelect ─────────────────────
+# ─── Level 5b: E2e, grouped (optgroup) SearchSelect ─────────────────────
 #
 # city_grouped is the 7th SearchSelect on the page (nth(6)).
 
@@ -1346,7 +1346,7 @@ def test_search_select_grouped_search_hides_empty_groups(search_select_page):
     assert visible_headers == ["Europe"]
 
 
-# ─── Level 5c: E2e — search auto-focus ───────────────────────────────────
+# ─── Level 5c: E2e, search auto-focus ───────────────────────────────────
 #
 # The second SearchSelect (city_many) has 21 choices, above the default
 # search threshold of 20, so it shows a search input.
@@ -1392,7 +1392,7 @@ def test_search_select_no_search_no_focus_error(search_select_page):
     assert errors == []
 
 
-# ─── Level 5d: E2e — keyboard navigation ─────────────────────────────────
+# ─── Level 5d: E2e, keyboard navigation ─────────────────────────────────
 #
 # Uses the grouped SearchSelect (nth(6)) which has 9 fixed-size options
 # in 3 groups and a search input.  Keyboard handlers are on the <details>
@@ -1511,11 +1511,11 @@ def test_search_select_keyboard_close_clears_highlight(search_select_page):
 # The /search-select/ page marks all fields as required=False, so no
 # validation errors are triggered on empty submit.  A dedicated page with
 # a required SearchSelect would be needed for a proper error-flow test.
-# Skipped until that page exists — tracked as part of the broader error-
+# Skipped until that page exists; tracked as part of the broader error-
 # state test work.
 
 
-# ─── Level 6b: E2e — server-side search loading + failure UX ─────────────
+# ─── Level 6b: E2e, server-side search loading + failure UX ─────────────
 #
 # Skeleton placeholders show on first full page load before the first
 # focus-triggered htmx request swaps in real options.  When the search
@@ -1528,12 +1528,9 @@ def test_search_select_keyboard_close_clears_highlight(search_select_page):
 
 @pytest.mark.e2e
 def test_search_select_prerenders_options_on_initial_load(search_select_page):
-    """Real options render in every htmx-mode SearchSelect on first page
-    load, before any user interaction — no skeleton flicker.
-
-    The dropdown at index 3 wires up ``search_choices_city_htmx`` against
-    ``E2E_CITIES`` (4 cities), so all 4 options are baked in.
-    """
+    """Real options render in every htmx-mode SearchSelect on first page load, before any user
+    interaction, with no skeleton flicker. The dropdown at index 3 wires up
+    ``search_choices_city_htmx`` against ``E2E_CITIES`` (4 cities), so all 4 options are baked in."""
     htmx_dropdown = search_select_page.locator("details.dropdown.search-select").nth(3)
     items = htmx_dropdown.locator("ul[role='listbox'] > li[role='option']")
     assert items.count() == 4
@@ -1542,7 +1539,7 @@ def test_search_select_prerenders_options_on_initial_load(search_select_page):
 @pytest.mark.e2e
 def test_search_select_options_refresh_on_first_focus(search_select_page):
     """First focus fires htmx; the swap replaces pre-rendered options with
-    the fresh response — same count, same listbox."""
+    the fresh response: same count, same listbox."""
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(3)
@@ -1581,7 +1578,7 @@ def test_search_select_failing_search_shows_error_alert(search_select_page):
 
 @pytest.mark.e2e
 def test_search_select_search_input_works_after_error(search_select_page):
-    """The search input remains usable after a failure — typing fires a new
+    """The search input remains usable after a failure; typing fires a new
     request and the value lands in the input."""
     from playwright.sync_api import expect
 
@@ -1676,7 +1673,7 @@ def test_search_select_morph_preserves_dropdown_open(search_select_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — PNG artifacts land in test-results/ for manual review.
+# Scaffolding only: PNG artifacts land in test-results/ for manual review.
 # True baseline comparison requires a visual-regression plugin (see #26).
 
 

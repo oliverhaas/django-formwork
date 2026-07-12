@@ -1,15 +1,5 @@
-"""Tests for ValidatedTextarea widget.
-
-Levels:
-    1. unit        — widget object: instantiation, get_context, value_from_datadict
-    2. unit        — widget rendering: HTML structure, htmx attrs, Alpine bindings
-    3. integration — form integration: fieldset wrapping, error state, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — user interaction: renders, typing, validation response, highlights
-    6. e2e         — error flow: error messages appear, clear, persist while typing
-    7. e2e         — morph resilience: typed content preserved across htmx morphs
-    8. screenshot  — visual states: default, with-content, with-error-highlights
-"""
+"""Tests for ValidatedTextarea widget: unit (object, rendering), integration (form wrapping,
+Jinja2/DTL parity), end-to-end (interaction, errors, morph resilience), and screenshot (visual states)."""
 
 from __future__ import annotations
 
@@ -343,7 +333,7 @@ def test_wrapper_has_id():
 
 @pytest.mark.unit
 def test_aria_invalid_not_static_on_textarea():
-    """aria-invalid is NOT a static HTML attr — it is controlled by Alpine."""
+    """aria-invalid is NOT a static HTML attr; it is controlled by Alpine."""
     widget = ValidatedTextarea(validate_url="/validate/")
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
     textarea = soup.find("textarea")
@@ -594,7 +584,7 @@ def test_errors_persist_while_typing(textarea_page):
     textarea_page.wait_for_timeout(500)
     errors = textarea_page.locator(".validated-textarea-tooltip .formwork-errors")
     expect(errors.locator("p")).to_have_count(1, timeout=3000)
-    # Simulate typing — should NOT clear errors immediately
+    # Simulate typing, which should NOT clear errors immediately
     textarea_page.evaluate("""
         const ta = document.querySelector('textarea[name="bio"]');
         ta.value = 'fixing the text';
@@ -665,7 +655,7 @@ def test_morph_preserves_value(textarea_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────────
 #
-# Scaffolding only — these tests produce PNG artifacts in `test-results/`
+# Scaffolding only: these tests produce PNG artifacts in `test-results/`
 # for manual review.  True baseline comparison requires a visual-regression
 # plugin (e.g. `pytest-playwright-visual`) as a follow-up.
 
