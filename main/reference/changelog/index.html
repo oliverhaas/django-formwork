@@ -1092,6 +1092,13 @@
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
+<li><strong><code>error_display</code> Meta option for field error rendering.</strong> <code>FormworkForm</code>,
+  <code>FormworkModelForm</code>, and their Jinja2 equivalents accept
+  <code>error_display = "tooltip"</code> (default, unchanged DaisyUI tooltip) or
+  <code>"inline"</code>, which renders errors below the widget using the same
+  icon-plus-toggle pattern as help text, in error color. Collapsed shows the
+  truncated error only; the <code>[more]</code> toggle expands both the full error and
+  the help text together. See <a href="../forms/#error_display">Forms</a>.</li>
 <li><strong>Uniform top-level import surface.</strong> Every documented public name now resolves lazily
   from the package root: form and formset base classes and factories, fields, view base
   classes, renderers, the async mixins, and <code>FormworkModel</code> (whose documented

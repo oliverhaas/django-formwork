@@ -2616,6 +2616,14 @@
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>See <a href="../views/#formworkvalidateview"><code>FormworkValidateView</code></a> for implementing the server-side view.</p>
+<p>Server-side validation errors (from <code>validate_url</code>) always render in the
+widget's own built-in tooltip, regardless of the form's
+<a href="../forms/#error_display"><code>error_display</code></a> setting. On <code>error_display =
+"inline"</code> forms, a field-level validation error (e.g. <code>required</code>) still
+renders inline below the widget as usual, so the two error surfaces can
+appear at the same time. There's no fix planned; avoid pairing
+<code>ValidatedTextarea</code> with <code>error_display = "inline"</code> if that overlap matters
+for your layout.</p>
 <p><strong>Requires htmx.</strong></p>
 <hr />
 <h2 id="search_decorator-parameter"><code>search_decorator</code> parameter<a class="headerlink" href="#search_decorator-parameter" title="Permanent link">&para;</a></h2>
