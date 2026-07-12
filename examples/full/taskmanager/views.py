@@ -17,7 +17,7 @@ from .forms import (
     WizardFirstTaskForm,
     WizardProjectForm,
 )
-from .models import Tag, Task
+from .models import Profile, Tag, Task
 
 # Fields editable per-cell in list rows (_list_row.html); task_status() disables the rest.
 ROW_EDITABLE_FIELDS = {"status", "assignee", "due_date", "tags"}
@@ -258,12 +258,14 @@ def _wizard_summary(data):
 
 
 def settings_page(request):
-    """Showcase the remaining widgets in a faux account-settings page."""
+    """Account settings, persisted on the demo's single Profile row."""
+    profile = Profile.load()
     if request.method == "POST":
-        form = SettingsForm(request.POST, request.FILES)
+        form = SettingsForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
-            messages.success(request, "Settings saved (demo — nothing persisted).")
+            form.save()
+            messages.success(request, "Settings saved.")
             return redirect("settings")
     else:
-        form = SettingsForm()
+        form = SettingsForm(instance=profile)
     return render(request, "settings.html", {"form": form})

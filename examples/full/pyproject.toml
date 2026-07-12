@@ -9,8 +9,18 @@ dependencies = [
   "pillow>=11",      # ImageField (cover_image, avatar) needs it
 ]
 
+[dependency-groups]
+dev = [
+  "pytest>=9,<10",
+  "pytest-django>=4.12,<5",
+]
+
 [tool.uv.sources]
 django-formwork = { path = "../..", editable = true }
 
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "taskmanager.settings"
+testpaths = ["taskmanager"]

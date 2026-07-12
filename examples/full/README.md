@@ -29,7 +29,7 @@ Open http://localhost:8000/.
 | `/tasks/` | Tasks list — htmx-driven filter bar, table with inline status edit per row |
 | `/tasks/new/` and `/tasks/<id>/edit/` | Two-column task form: full `ModelForm` left, metadata sidebar right |
 | `/wizard/` | Four-step project wizard (Project → Configuration → First task → Review) with the DaisyUI `steps` component |
-| `/settings/` | Showcase page for `PhoneInput`, `SearchSelect`, `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating` |
+| `/settings/` | Showcase page for `PhoneInput`, `SearchSelect`, `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating`, persisted on a single local `Profile` row |
 
 ## Widgets covered
 
@@ -43,9 +43,19 @@ Every widget in the package gets airtime across these pages. Quick lookup:
 
 ## What's intentionally not here
 
-- Auth — the settings page is a stub that doesn't persist anything.
+- Auth — there is no login. Settings are pinned to one local `Profile` row.
 - File processing — uploaded files are saved to `media/` and rendered, nothing else.
 - Real-time anything — htmx morph swaps where it makes sense, no SSE / WebSockets.
+
+## Tests
+
+The example doubles as an integration test bed for the package:
+
+```bash
+uv run pytest
+```
+
+Covers the persisted settings flow (Profile singleton, phone validation, avatar upload).
 
 ## CSS theme switching
 

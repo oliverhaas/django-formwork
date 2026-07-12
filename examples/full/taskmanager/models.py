@@ -1,5 +1,6 @@
 """Models for the task manager example."""
 
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 
 
@@ -86,3 +87,75 @@ class Task(models.Model):
     @property
     def priority_color(self) -> str:
         return self.PRIORITY_COLORS.get(self.priority, "neutral")
+
+
+class Profile(models.Model):
+    """Account settings of the demo's single local user.
+
+    The example has no auth, so exactly one row exists, pinned to pk=1.
+    ``load()`` is the only intended way to get hold of it. The password and
+    2FA fields on the settings form are widget showcases and never stored.
+    """
+
+    # Demo country list; real projects supply their own (or use django-countries).
+    class Country(models.TextChoices):
+        US = "us", "🇺🇸 United States"
+        GB = "gb", "🇬🇧 United Kingdom"
+        DE = "de", "🇩🇪 Germany"
+        FR = "fr", "🇫🇷 France"
+        ES = "es", "🇪🇸 Spain"
+        IT = "it", "🇮🇹 Italy"
+        NL = "nl", "🇳🇱 Netherlands"
+        SE = "se", "🇸🇪 Sweden"
+        PL = "pl", "🇵🇱 Poland"
+        CA = "ca", "🇨🇦 Canada"
+        BR = "br", "🇧🇷 Brazil"
+        MX = "mx", "🇲🇽 Mexico"
+        JP = "jp", "🇯🇵 Japan"
+        KR = "kr", "🇰🇷 South Korea"
+        CN = "cn", "🇨🇳 China"
+        IN = "in", "🇮🇳 India"
+        AU = "au", "🇦🇺 Australia"
+        ZA = "za", "🇿🇦 South Africa"
+        NG = "ng", "🇳🇬 Nigeria"
+
+    full_name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone = models.CharField(
+        max_length=30,
+        blank=True,
+        default="",
+        validators=[
+            RegexValidator(
+                r"^\+\d{1,4} [\d ()/-]{3,20}$",
+                "Enter a dial code and number, e.g. '+49 171 1234567'.",
+            ),
+        ],
+    )
+    country = models.CharField(max_length=2, blank=True, default="", choices=Country.choices)
+    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
+    favourite_food = models.CharField(max_length=50, blank=True, default="")
+    satisfaction = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+
+    def __str__(self):
+        return self.full_name
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        self.full_name = self.full_name.strip()
+
+    @classmethod
+    def load(cls) -> Profile:
+        obj, _ = cls.objects.get_or_create(
+            pk=1,
+            defaults={"full_name": "Devon Vega", "email": "devon@example.com"},
+        )
+        return obj

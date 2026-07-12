@@ -20,32 +20,8 @@ from django_formwork.widgets import (
     ValidatedTextarea,
 )
 
-from .models import Tag, Task
+from .models import Profile, Tag, Task
 from .widgets import PhoneInput
-
-# Demo country list; real projects supply their own (or use django-countries).
-_COUNTRY_CHOICES = [
-    ("", ""),
-    ("us", "🇺🇸 United States"),
-    ("gb", "🇬🇧 United Kingdom"),
-    ("de", "🇩🇪 Germany"),
-    ("fr", "🇫🇷 France"),
-    ("es", "🇪🇸 Spain"),
-    ("it", "🇮🇹 Italy"),
-    ("nl", "🇳🇱 Netherlands"),
-    ("se", "🇸🇪 Sweden"),
-    ("pl", "🇵🇱 Poland"),
-    ("ca", "🇨🇦 Canada"),
-    ("br", "🇧🇷 Brazil"),
-    ("mx", "🇲🇽 Mexico"),
-    ("jp", "🇯🇵 Japan"),
-    ("kr", "🇰🇷 South Korea"),
-    ("cn", "🇨🇳 China"),
-    ("in", "🇮🇳 India"),
-    ("au", "🇦🇺 Australia"),
-    ("za", "🇿🇦 South Africa"),
-    ("ng", "🇳🇬 Nigeria"),
-]
 
 # Demo roster; real projects would look this up (users, team members, ...).
 _ASSIGNEE_CHOICES = [
@@ -223,30 +199,18 @@ class WizardFirstTaskForm(FormworkForm):
 # --- Settings (showcase remaining widgets) ---------------------------------
 
 
-class SettingsForm(FormworkForm):
-    """Faux account settings — exercises the widgets the task domain doesn't."""
+class SettingsForm(FormworkModelForm):
+    """Account settings, persisted on the demo's single Profile row.
 
-    full_name = forms.CharField(max_length=100, initial="Devon Vega")
-    email = forms.EmailField(initial="devon@example.com")
-    phone = forms.CharField(
-        widget=PhoneInput,
-        required=False,
-        help_text="Country code + number (custom PhoneInput multi-widget).",
-    )
+    Exercises the widgets the task domain doesn't. The password and 2FA
+    fields are widget showcases only and are never stored.
+    """
+
     country = forms.ChoiceField(
-        choices=_COUNTRY_CHOICES,
+        choices=[("", ""), *Profile.Country.choices],
         widget=SearchSelect(),
         required=False,
         help_text="Where you're based.",
-    )
-    avatar = forms.ImageField(
-        widget=ImageDropZone(max_size=2 * 1024 * 1024),
-        required=False,
-        help_text=(
-            "Square-ish PNG or JPG, ≤2 MB (ImageDropZone). The picture is shown at small sizes "
-            "throughout the app, so pick something that stays recognizable as a "
-            "tiny thumbnail. A close-up works better than a wide shot."
-        ),
     )
     new_password = forms.CharField(
         widget=PasswordReveal,
@@ -263,15 +227,43 @@ class SettingsForm(FormworkForm):
         required=False,
         help_text="Six-digit code from your authenticator (OTPInput).",
     )
-    favourite_food = forms.CharField(
-        widget=ComboBox(suggestions=["Pizza", "Pasta", "Sushi", "Tacos", "Curry", "Ramen", "Salad"]),
-        required=False,
-        help_text="Autocompletes as you type (ComboBox with static suggestions).",
-    )
     satisfaction = forms.TypedChoiceField(
         choices=Rating.make_choices(5),
         coerce=int,
-        widget=Rating,
+        empty_value=None,
+        widget=Rating(allow_clear=True),
         required=False,
         help_text="How are we doing? (five-star Rating widget)",
     )
+
+    field_order = [
+        "full_name",
+        "email",
+        "phone",
+        "country",
+        "avatar",
+        "new_password",
+        "two_factor_code",
+        "favourite_food",
+        "satisfaction",
+    ]
+
+    class Meta:
+        model = Profile
+        fields = ["full_name", "email", "phone", "country", "avatar", "favourite_food", "satisfaction"]
+        widgets = {
+            "phone": PhoneInput,
+            "avatar": ImageDropZone(max_size=2 * 1024 * 1024),
+            "favourite_food": ComboBox(
+                suggestions=["Pizza", "Pasta", "Sushi", "Tacos", "Curry", "Ramen", "Salad"],
+            ),
+        }
+        help_texts = {
+            "phone": "Country code + number (custom PhoneInput multi-widget).",
+            "avatar": (
+                "Square-ish PNG or JPG, ≤2 MB (ImageDropZone). The picture is shown at small sizes "
+                "throughout the app, so pick something that stays recognizable as a "
+                "tiny thumbnail. A close-up works better than a wide shot."
+            ),
+            "favourite_food": "Autocompletes as you type (ComboBox with static suggestions).",
+        }
