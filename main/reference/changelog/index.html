@@ -1183,6 +1183,12 @@
 <li><strong><code>search_decorator</code> is typed <code>Callable | None</code></strong> on <code>SearchSelect</code>, <code>MultiSelect</code>, and
   <code>ComboBox</code> (was <code>Callable | object</code>). Runtime behavior is unchanged: omitting the argument
   still raises <code>ImproperlyConfigured</code> when server-side search is registered.</li>
+<li><strong>Help text now renders as a single truncated line with a leading info icon</strong> instead of
+  wrapping across multiple lines. When the text overflows, a <code>[more]</code>/<code>[less]</code> toggle
+  appears at the end of the line to expand or collapse it. This changes the DOM inside the
+  help-text <code>&lt;p class="label"&gt;</code> in <code>formwork_field.html</code> (both template engines): if you
+  override this template, the help text now lives in a nested <code>&lt;span&gt;</code> alongside the icon
+  and toggle button rather than directly in the <code>&lt;p&gt;</code>.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
