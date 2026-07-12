@@ -226,11 +226,22 @@ class InlineErrorsForm(FormworkForm):
 
     name = forms.CharField(
         min_length=3,
-        help_text=(
-            "Enter your full legal name exactly as it appears on your "
-            "government-issued photo ID or passport."
-        ),
+        help_text=("Enter your full legal name exactly as it appears on your government-issued photo ID or passport."),
     )
+
+    def clean_name(self):
+        # Native-first (the default): the browser gates `required`/`min_length`
+        # before the form POSTs, so an empty or too-short value shows a native
+        # bubble, not an inline error. To see the inline error, enter a
+        # native-valid value (>=3 chars) that still fails this server-only rule,
+        # e.g. a single word like "Alice". After the first server error,
+        # disableNativeValidation() turns native validation off (it keys off the
+        # `formwork-errors` class the inline error now carries), so later
+        # submits route every error through the server.
+        name = self.cleaned_data["name"]
+        if " " not in name.strip():
+            raise forms.ValidationError("Enter your full name: first and last.")
+        return name
 
     class Meta:
         error_display = "inline"

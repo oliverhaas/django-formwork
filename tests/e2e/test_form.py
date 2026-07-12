@@ -147,6 +147,21 @@ class TestInlineErrorToggle:
         helptext = inline_errors_page.locator("#id_name_helptext")
         assert "sr-only" in (helptext.get_attribute("class") or "")
 
+    def test_native_first_real_click_shows_inline_error(self, inline_errors_page):
+        # No noValidate cheat: the real native-first click path. "Alice" is
+        # native-valid (non-empty, >=3 chars) so it clears the browser gate; the
+        # server-only clean_name then rejects the single word and renders inline.
+        page = inline_errors_page
+        page.locator("#id_name").fill("Alice")
+        page.locator("form[hx-post] button[type='submit']").click()
+        error_row = page.locator("#id_name_error")
+        expect(error_row).to_be_visible()
+        expect(error_row).to_contain_text("Enter your full name: first and last.")
+        # The formwork-errors hook on the inline error disables native
+        # validation (parity with tooltip mode), so later submits route every
+        # error to the server instead of showing a native browser bubble.
+        page.wait_for_function("() => document.querySelector('form[hx-post]').noValidate === true")
+
 
 class TestMorphInfrastructure:
     """Verify htmx 4 morph swap and the formwork-morph extension are registered."""

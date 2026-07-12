@@ -232,6 +232,19 @@ class TestInlineErrorRendering:
         assert icon is not None
         assert icon.get("aria-hidden") == "true"
 
+    def test_error_row_has_formwork_errors_hook(self):
+        # .formwork-errors is what disableNativeValidation() keys off, so inline
+        # mode reaches parity with tooltip mode: once a server error is showing,
+        # native validation turns off and later errors route to the server.
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": ""}, error_display="inline")
+        form.is_valid()
+        soup = render_html(form)
+        error_row = soup.find("p", attrs={"id": "id_name_error"})
+        assert "formwork-errors" in error_row.get("class", [])
+
     def test_multiple_errors_joined_in_single_row(self):
         class F(FormworkForm):
             email = forms.EmailField(min_length=20)
