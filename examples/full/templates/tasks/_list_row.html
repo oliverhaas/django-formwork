@@ -7,25 +7,45 @@
     <form hx-post="{% url 'task_status' task.pk %}"
           hx-target="#task-row-{{ task.pk }}"
           hx-swap="outerHTML"
-          hx-trigger="change">
+          hx-trigger="change delay:400ms">
       {% csrf_token %}
+      <input type="hidden" name="field" value="status">
       {{ task.row_form.status }}
     </form>
   </td>
   <td>
     <span class="badge badge-{{ task.priority_color }} badge-soft badge-sm">{{ task.priority_label }}</span>
   </td>
-  <td class="text-sm">{% include "_avatar.html" %}</td>
-  <td>
-    <div class="flex flex-wrap gap-1">
-      {% for tag in task.tags.all %}
-        <span class="badge badge-ghost badge-sm">{{ tag.name }}</span>
-      {% empty %}
-        <span class="text-base-content/40">—</span>
-      {% endfor %}
-    </div>
+  <td class="text-sm">
+    <form hx-post="{% url 'task_status' task.pk %}"
+          hx-target="#task-row-{{ task.pk }}"
+          hx-swap="outerHTML"
+          hx-trigger="change delay:400ms">
+      {% csrf_token %}
+      <input type="hidden" name="field" value="assignee">
+      {{ task.row_form.assignee }}
+    </form>
   </td>
-  <td class="text-sm whitespace-nowrap">{{ task.due_date|default:"—" }}</td>
+  <td>
+    <form hx-post="{% url 'task_status' task.pk %}"
+          hx-target="#task-row-{{ task.pk }}"
+          hx-swap="outerHTML"
+          hx-trigger="change delay:400ms">
+      {% csrf_token %}
+      <input type="hidden" name="field" value="tags">
+      {{ task.row_form.tags }}
+    </form>
+  </td>
+  <td class="text-sm whitespace-nowrap">
+    <form hx-post="{% url 'task_status' task.pk %}"
+          hx-target="#task-row-{{ task.pk }}"
+          hx-swap="outerHTML"
+          hx-trigger="change delay:400ms">
+      {% csrf_token %}
+      <input type="hidden" name="field" value="due_date">
+      {{ task.row_form.due_date }}
+    </form>
+  </td>
   <td>
     <div class="dropdown dropdown-end">
       <button tabindex="0" class="btn btn-ghost btn-xs" aria-label="actions">

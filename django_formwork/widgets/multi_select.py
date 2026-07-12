@@ -102,7 +102,9 @@ class MultiSelect(forms.SelectMultiple):
                 option["icon"] = label.icon if isinstance(label, ChoiceLabel) else ""
         if search_url:
             # Build initial selected map for Alpine: [[value, [label, icon]], ...]
-            selected_values = set(value or [])
+            # Stringify: unbound (instance-derived) initial values are ints/model
+            # instances while option["value"] is always a stringified choice value.
+            selected_values = {str(v) for v in (value or [])}
             initial_selected = [
                 [str(option["value"]), [str(option["label"]), option.get("icon", "")]]
                 for _group, options, _index in context["widget"]["optgroups"]

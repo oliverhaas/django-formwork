@@ -21,7 +21,19 @@ document.addEventListener("alpine:init", () => {
       const el = this.$el;
       this.hasSearchUrl = el.dataset.hasSearchUrl === "true";
       if (this.hasSearchUrl) {
-        this.selected = new Map(JSON.parse(el.dataset.initialSelected || "[]"));
+        const sync = () => {
+          this.selected = new Map(JSON.parse(el.dataset.initialSelected || "[]"));
+        };
+        sync();
+        // htmx 4 morphs swapped-in content in place rather than replacing the
+        // node, so this x-data component (and thus init()) only ever runs
+        // once. Re-sync whenever the server updates the attribute (e.g. after
+        // this widget's own htmx-triggered save) so the display doesn't lag
+        // one swap behind the confirmed server state.
+        new MutationObserver(sync).observe(el, {
+          attributes: true,
+          attributeFilter: ["data-initial-selected"],
+        });
       }
     },
 

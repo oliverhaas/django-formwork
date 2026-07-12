@@ -19,6 +19,9 @@ from .forms import (
 )
 from .models import Tag, Task
 
+# Fields editable per-cell in list rows (_list_row.html); task_status() disables the rest.
+ROW_EDITABLE_FIELDS = {"status", "assignee", "due_date", "tags"}
+
 # ─── Dashboard ──────────────────────────────────────────────────────────
 
 
@@ -89,7 +92,7 @@ def task_list(request):
 
     tasks = list(tasks)
     for t in tasks:
-        t.row_form = TaskForm(instance=t, editable_fields=["status"], auto_id=f"id_row_{t.pk}_%s")
+        t.row_form = TaskForm(instance=t, editable_fields=ROW_EDITABLE_FIELDS, auto_id=f"id_row_{t.pk}_%s")
 
     if request.headers.get("HX-Request") == "true":
         return render(request, "tasks/_list_rows.html", {"tasks": tasks})
@@ -135,12 +138,14 @@ def task_delete(request, pk):
 
 
 def task_status(request, pk):
-    """Inline row edit via htmx, using TaskForm with only status editable."""
+    """Inline row edit via htmx: saves only the field named by the posted "field" marker."""
     task = get_object_or_404(Task, pk=pk)
-    form = TaskForm(request.POST, instance=task, editable_fields=["status"], auto_id=f"id_row_{task.pk}_%s")
-    if form.is_valid():
-        form.save()
-    task.row_form = form
+    field = request.POST.get("field")
+    editable = [field] if field in ROW_EDITABLE_FIELDS else []
+    save_form = TaskForm(request.POST, instance=task, editable_fields=editable, auto_id=f"id_row_{task.pk}_%s")
+    if save_form.is_valid():
+        save_form.save()
+    task.row_form = TaskForm(instance=task, editable_fields=ROW_EDITABLE_FIELDS, auto_id=f"id_row_{task.pk}_%s")
     return render(request, "tasks/_list_row.html", {"task": task})
 
 

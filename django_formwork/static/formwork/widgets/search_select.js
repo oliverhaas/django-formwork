@@ -17,9 +17,22 @@ document.addEventListener("alpine:init", () => {
     init() {
       const el = this.$el;
       this.showSearch = el.dataset.showSearch === "true";
-      this.value = el.dataset.value || "";
-      this.label = el.dataset.label || "";
-      this.icon = el.dataset.icon || "";
+      const sync = () => {
+        this.value = el.dataset.value || "";
+        this.label = el.dataset.label || "";
+        this.icon = el.dataset.icon || "";
+        this._v++;
+      };
+      sync();
+      // htmx 4 morphs swapped-in content in place rather than replacing the
+      // node, so this x-data component (and thus init()) only ever runs
+      // once. Re-sync whenever the server updates these attributes (e.g.
+      // after this widget's own htmx-triggered save) so the display doesn't
+      // lag one swap behind the confirmed server state.
+      new MutationObserver(sync).observe(el, {
+        attributes: true,
+        attributeFilter: ["data-value", "data-label", "data-icon"],
+      });
     },
 
     onToggle() {

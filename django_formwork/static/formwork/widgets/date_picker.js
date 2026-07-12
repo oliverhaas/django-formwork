@@ -10,11 +10,24 @@ document.addEventListener("alpine:init", () => {
     days: [],
 
     init() {
-      this.value = this.$el.dataset.value || "";
-      const d = this.value ? new Date(this.value + "T00:00:00") : new Date();
-      this.month = d.getMonth();
-      this.year = d.getFullYear();
-      this.buildDays();
+      const el = this.$el;
+      const sync = () => {
+        this.value = el.dataset.value || "";
+        const d = this.value ? new Date(this.value + "T00:00:00") : new Date();
+        this.month = d.getMonth();
+        this.year = d.getFullYear();
+        this.buildDays();
+      };
+      sync();
+      // htmx 4 morphs swapped-in content in place rather than replacing the
+      // node, so this x-data component (and thus init()) only ever runs
+      // once. Re-sync whenever the server updates data-value (e.g. after
+      // this widget's own htmx-triggered save) so the calendar popup
+      // doesn't highlight a stale day after the input's own swap.
+      new MutationObserver(sync).observe(el, {
+        attributes: true,
+        attributeFilter: ["data-value"],
+      });
     },
 
     buildDays() {
