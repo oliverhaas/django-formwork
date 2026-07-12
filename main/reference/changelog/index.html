@@ -1151,6 +1151,17 @@
   In passing this fixes a Jinja2-only bug where an empty-string <code>min</code>/<code>max</code> attr rendered a
   bare <code>min: ,</code> (a JS syntax error) because <code>|default("null")</code> lacked the boolean flag; both
   engines now treat empty as unset, matching the DTL behavior.</li>
+<li><strong><code>FileDropZone</code> and <code>ImageDropZone</code> now bind to shipped Alpine.data components</strong>
+  (<code>formworkDropZone</code>, <code>formworkImageUpload</code> in <code>formwork/widgets/drop_zone.js</code> and
+  <code>image_upload.js</code>; the JS files follow the template basenames) instead of inlining their
+  behavior in the templates' <code>x-data</code> attribute. Configuration rides in an autoescaped
+  <code>data-max-size</code> attribute read via <code>dataset</code> at init (<code>0</code> means no client-side size
+  check). The two widget classes gained a <code>Media</code> declaration, so the usual
+  <code>{% formwork_core_js %}</code> + <code>{{ form.media }}</code> pair loads the new modules automatically.
+  If you override the <code>drop_zone.html</code> / <code>image_upload.html</code> widget templates, update your
+  copies: <code>x-data</code> now holds only the component name. The client-side accept/max-size
+  checks are unchanged and remain presentational only; server-side enforcement stays a
+  separate roadmap item.</li>
 <li><strong><code>manage.py formwork install</code> now writes the generated icon CSS into your project's static
   directory</strong> instead of into the installed <code>django_formwork</code> package, which failed on
   read-only installs (containers, system-wide pip, Nix). The file lands at
