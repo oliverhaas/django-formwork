@@ -44,6 +44,10 @@
 
 .fieldset .label {
     white-space: normal;
+    /* The help-text span is nowrap while truncated, which makes the label's
+       min-content the full one-line text width. As a grid item it must be
+       allowed to shrink below that, or it inflates past the fieldset. */
+    min-width: 0;
 }
 
 /* Error tooltip wrapper: when DaisyUI's tooltip wraps the label + widget,
