@@ -1125,6 +1125,18 @@
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li><strong><code>DatePicker</code>, <code>OTPInput</code>, and <code>InputMask</code> now bind to shipped Alpine.data components</strong>
+  (<code>formworkDatePicker</code>, <code>formworkOtpInput</code>, <code>formworkInputMask</code> in
+  <code>formwork/widgets/date_picker.js</code>, <code>otp_input.js</code>, and <code>input_mask.js</code>) instead of inlining
+  their behavior in the templates' <code>x-data</code> attribute. Configuration rides in autoescaped
+  <code>data-*</code> attributes read via <code>dataset</code> at init: <code>data-value</code> (DatePicker), <code>data-digits</code>
+  (OTPInput, a JSON array exposed as <code>widget.initial_digits_json</code> in the template context),
+  and <code>data-mask</code> (InputMask). The three widget classes gained a <code>Media</code> declaration, so the
+  usual <code>{% formwork_core_js %}</code> + <code>{{ form.media }}</code> pair loads the new modules automatically.
+  If you override these widget templates, update your copies: <code>x-data</code> now holds only the
+  component name, and the <code>escapejs</code> filters were dropped alongside the JS-string literals
+  they protected (values no longer pass through an executable context, so autoescaping alone
+  is the correct and sufficient defense; there is no security regression).</li>
 <li><strong><code>manage.py formwork install</code> now writes the generated icon CSS into your project's static
   directory</strong> instead of into the installed <code>django_formwork</code> package, which failed on
   read-only installs (containers, system-wide pip, Nix). The file lands at
