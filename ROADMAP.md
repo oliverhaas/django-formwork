@@ -12,17 +12,18 @@ naming lock-in) are resolved. What remains is one architectural root cause plus 
 work: most widgets still inline their JS as duplicated `x-data` blocks across both
 template engines (the audit counted 11 of 17 before the widget removals). That
 duplication is why the escaping bug class existed and what makes the a11y/i18n gaps
-expensive to close.
+expensive to close. (Update 2026-07-12: the extraction landed; see the first item below.)
 
 ---
 
 ## Should have for 1.0
 
-- [ ] **Extract inline `x-data` widgets into shipped `Alpine.data` JS modules.** Inline
+- [x] **Extract inline `x-data` widgets into shipped `Alpine.data` JS modules.** Inline
   widget JS is duplicated byte-for-byte across DTL and Jinja2: un-lintable, un-testable,
   un-minifiable, and where the two engines silently drift. At minimum the
   security-sensitive ones (`date_picker`, `otp_input`) before 1.0.
   (`templates/formwork/widgets/input_mask.html:1`, large)
+  Done 2026-07-12: all 8 remaining inline widgets bind to `formwork/widgets/*.js` modules; no `x-data="{` literal left in either engine, both engines verified in sync.
 - [ ] **Make widget `max_size`/`accept` enforceable server-side (or loudly document them
   as cosmetic).** Drop zones enforce size/type/count only in client JS; any direct POST
   uploads arbitrary size/type, a DoS + content-type bypass. It matches plain-Django
