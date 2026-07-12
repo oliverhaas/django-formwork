@@ -29,7 +29,7 @@ Open http://localhost:8000/.
 | `/tasks/` | Tasks list — htmx-driven filter bar, table with inline status edit per row |
 | `/tasks/new/` and `/tasks/<id>/edit/` | Two-column task form: full `ModelForm` left, metadata sidebar right |
 | `/wizard/` | Four-step project wizard (Project → Configuration → First task → Review) with the DaisyUI `steps` component |
-| `/settings/` | Showcase page for `PhoneInput`, `SearchSelect`, `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating` |
+| `/settings/` | Showcase page for `PhoneInput`, `SearchSelect`, `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating`, persisted on a single local `Profile` row |
 
 ## Widgets covered
 
@@ -37,15 +37,25 @@ Every widget in the package gets airtime across these pages. Quick lookup:
 
 - **Dashboard quick-add**: plain Django inputs (a four-option priority doesn't need a fancy widget)
 - **Tasks list filter bar**: plain selects + plain text input
-- **Task form**: `SearchSelect` (assignee), `MultiSelect` (model-backed, auto-wired server search), `DatePicker`, `ImageDropZone`, `FileDropZone`, `Rating`
+- **Task form**: `SearchSelect` (assignee, backed by the `Member` model with an initials badge and email per option), `MultiSelect` (model-backed, auto-wired server search), `DatePicker`, `ImageDropZone`, `FileDropZone`, `Rating`
 - **Wizard**: `ValidatedTextarea`, `Toggle`, `Range`, `RadioSelect`, `DatePicker`, `MultiSelect`
 - **Settings**: `PhoneInput`, `SearchSelect` (country), `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating`
 
 ## What's intentionally not here
 
-- Auth — the settings page is a stub that doesn't persist anything.
+- Auth — there is no login. Settings are pinned to one local `Profile` row, and assignees are plain `Member` rows rather than Django users.
 - File processing — uploaded files are saved to `media/` and rendered, nothing else.
 - Real-time anything — htmx morph swaps where it makes sense, no SSE / WebSockets.
+
+## Tests
+
+The example doubles as an integration test bed for the package:
+
+```bash
+uv run pytest
+```
+
+Covers the persisted settings flow (Profile singleton, phone validation, avatar upload) and the task flows (Member assignee, htmx inline row edits).
 
 ## CSS theme switching
 

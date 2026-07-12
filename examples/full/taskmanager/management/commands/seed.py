@@ -8,7 +8,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from taskmanager.models import Tag, Task
+from taskmanager.models import Member, Tag, Task
 
 
 class Command(BaseCommand):
@@ -17,6 +17,22 @@ class Command(BaseCommand):
     def handle(self, *args, **options):  # noqa: ARG002
         Task.objects.all().delete()
         Tag.objects.all().delete()
+        Member.objects.all().delete()
+
+        members = {
+            name.split()[0]: Member.objects.create(
+                name=name,
+                email=f"{name.split()[0].lower()}@example.com",
+            )
+            for name in [
+                "Devon Vega",
+                "Mira Chen",
+                "Sasha Petrov",
+                "Iris Okafor",
+                "Kai Tanaka",
+                "Robin Larsen",
+            ]
+        }
 
         tag_names = [
             "frontend",
@@ -60,11 +76,11 @@ class Command(BaseCommand):
                 description=f"Auto-generated example task. Owner: {assignee or 'unassigned'}.",
                 status=status,
                 priority=priority,
-                assignee=assignee,
+                assignee=members[assignee] if assignee else None,
                 due_date=(now + timedelta(days=due_offset)).date() if due_offset is not None else None,
                 rating=random.choice([None, 3, 4, 4, 5]) if status == Task.Status.DONE else None,  # noqa: S311
             )
             t.tags.set([tags[n] for n in tag_keys])
             created += 1
 
-        self.stdout.write(self.style.SUCCESS(f"Seeded {created} tasks, {len(tags)} tags."))
+        self.stdout.write(self.style.SUCCESS(f"Seeded {created} tasks, {len(tags)} tags, {len(members)} members."))

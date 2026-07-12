@@ -44,17 +44,11 @@
           <ul class="divide-y divide-base-200">
             {% for t in recent %}
               <li class="py-3 flex items-center gap-3">
-                <span class="avatar avatar-placeholder shrink-0">
-                  {% if t.assignee %}
-                    <span class="bg-base-300 text-base-content/80 rounded-full w-8">
-                      <span class="text-xs font-semibold">{{ t.assignee_initials }}</span>
-                    </span>
-                  {% else %}
-                    <span class="bg-base-200 text-base-content/40 rounded-full w-8">
-                      <i class="icon icon-user size-4"></i>
-                    </span>
-                  {% endif %}
-                </span>
+                {% if t.assignee %}
+                  <span class="badge badge-neutral badge-sm shrink-0">{{ t.assignee.initials }}</span>
+                {% else %}
+                  <span class="badge badge-ghost badge-sm shrink-0"><i class="icon icon-user size-3"></i></span>
+                {% endif %}
                 <div class="min-w-0 flex-1">
                   <a href="{% url 'task_edit' t.pk %}" class="font-medium hover:underline truncate block">{{ t.title }}</a>
                   <p class="text-xs text-base-content/50">

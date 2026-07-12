@@ -12,7 +12,7 @@ PEOPLE = [
 ]
 
 
-def seed(apps, schema_editor):  # noqa: ARG001
+def seed(apps, schema_editor):
     Person = apps.get_model("simple", "Person")
     Ticket = apps.get_model("simple", "Ticket")
     people = [Person.objects.create(name=n, email=e) for n, e in PEOPLE]
@@ -27,7 +27,7 @@ def seed(apps, schema_editor):  # noqa: ARG001
     )
 
 
-def unseed(apps, schema_editor):  # noqa: ARG001
+def unseed(apps, schema_editor):
     apps.get_model("simple", "Ticket").objects.all().delete()
     apps.get_model("simple", "Person").objects.all().delete()
 

@@ -17,7 +17,7 @@ from .forms import (
     WizardFirstTaskForm,
     WizardProjectForm,
 )
-from .models import Tag, Task
+from .models import Profile, Tag, Task
 
 # Fields editable per-cell in list rows (_list_row.html); task_status() disables the rest.
 ROW_EDITABLE_FIELDS = {"status", "assignee", "due_date", "tags"}
@@ -44,7 +44,7 @@ def dashboard(request):
         }
         for status in Task.Status
     ]
-    recent = qs.order_by("-updated_at")[:8]
+    recent = qs.prefetch_related("assignee").order_by("-updated_at")[:8]
 
     if request.method == "POST":
         form = TaskQuickAddForm(request.POST)
@@ -77,7 +77,7 @@ def dashboard(request):
 def task_list(request):
     """List tasks with htmx search/filter."""
     form = TaskFilterForm(request.GET)
-    tasks = Task.objects.prefetch_related("tags")
+    tasks = Task.objects.prefetch_related("tags", "assignee")
 
     if form.is_valid():
         q = form.cleaned_data.get("q")
@@ -258,12 +258,14 @@ def _wizard_summary(data):
 
 
 def settings_page(request):
-    """Showcase the remaining widgets in a faux account-settings page."""
+    """Account settings, persisted on the demo's single Profile row."""
+    profile = Profile.load()
     if request.method == "POST":
-        form = SettingsForm(request.POST, request.FILES)
+        form = SettingsForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
-            messages.success(request, "Settings saved (demo — nothing persisted).")
+            form.save()
+            messages.success(request, "Settings saved.")
             return redirect("settings")
     else:
-        form = SettingsForm()
+        form = SettingsForm(instance=profile)
     return render(request, "settings.html", {"form": form})

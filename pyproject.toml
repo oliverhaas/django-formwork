@@ -100,6 +100,16 @@ suppress-none-returning = true
   "RUF012", # Mutable class defaults are standard Django patterns (Meta, choices)
   "S105",   # Hardcoded secret key is intentional (example only)
 ]
+"examples/**/migrations/**" = [
+  "ARG001", # RunPython hooks take (apps, schema_editor) whether used or not
+]
+"examples/**/test_*.py" = [
+  "ARG",     # Unused arguments common in fixtures
+  "PLR2004", # Magic values in assertions are fine
+  "S101",    # assert in tests
+  "S106",    # Hardcoded demo passwords in test data
+  "SLF001",  # Private member access okay to inspect model _meta
+]
 "tests/**" = [
   "ANN",     # Type annotations not required in tests
   "ARG",     # Unused arguments common in fixtures

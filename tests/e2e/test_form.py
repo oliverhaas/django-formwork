@@ -114,6 +114,42 @@ class TestHelpTextToggle:
         assert abs(toggle_bottom - row_bottom) <= 3
 
 
+class TestInlineErrorToggle:
+    """Meta.error_display = "inline": errors render like help text, in red, below the field."""
+
+    def test_no_tooltip_wrapper(self, inline_errors_page):
+        submit(inline_errors_page)
+        assert inline_errors_page.locator("#inline-errors-form .tooltip").count() == 0
+
+    def test_error_row_visible_help_text_hidden_when_collapsed(self, inline_errors_page):
+        submit(inline_errors_page)
+        error_row = inline_errors_page.locator("#id_name_error")
+        helptext = inline_errors_page.locator("#id_name_helptext")
+        assert error_row.is_visible()
+        # sr-only keeps a 1x1px box, so is_visible() reports True; check the
+        # resolved class list (Alpine merges :class into class at runtime).
+        assert "sr-only" in (helptext.get_attribute("class") or "")
+
+    def test_click_more_reveals_error_and_help_text_together(self, inline_errors_page):
+        submit(inline_errors_page)
+        toggle = inline_errors_page.locator("#id_name_error button")
+        assert toggle.text_content() == "[more]"
+
+        toggle.click()
+        assert toggle.text_content() == "[less]"
+        assert inline_errors_page.locator("#id_name_helptext").is_visible()
+        assert "government-issued" in inline_errors_page.locator("#id_name_helptext").text_content()
+
+    def test_click_less_collapses_help_text_again(self, inline_errors_page):
+        submit(inline_errors_page)
+        toggle = inline_errors_page.locator("#id_name_error button")
+        toggle.click()
+        toggle.click()
+        assert toggle.text_content() == "[more]"
+        helptext = inline_errors_page.locator("#id_name_helptext")
+        assert "sr-only" in (helptext.get_attribute("class") or "")
+
+
 class TestMorphInfrastructure:
     """Verify htmx 4 morph swap and the formwork-morph extension are registered."""
 

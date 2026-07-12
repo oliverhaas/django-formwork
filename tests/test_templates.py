@@ -196,6 +196,90 @@ class TestErrorRendering:
         assert len(errors) >= 2
 
 
+class TestInlineErrorRendering:
+    """Errors render as a red help-text-style row when Meta.error_display = "inline"."""
+
+    def test_no_tooltip_wrapper(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": ""}, error_display="inline")
+        form.is_valid()
+        soup = render_html(form)
+        assert soup.find("div", class_="tooltip") is None
+
+    def test_error_row_has_role_alert_and_id(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": ""}, error_display="inline")
+        form.is_valid()
+        soup = render_html(form)
+        error_row = soup.find("p", attrs={"id": "id_name_error"})
+        assert error_row is not None
+        assert error_row["role"] == "alert"
+        assert "text-error" in error_row.get("class", [])
+
+    def test_error_row_has_leading_icon(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": ""}, error_display="inline")
+        form.is_valid()
+        soup = render_html(form)
+        error_row = soup.find("p", attrs={"id": "id_name_error"})
+        icon = error_row.find("i", class_="icon-circle-alert")
+        assert icon is not None
+        assert icon.get("aria-hidden") == "true"
+
+    def test_multiple_errors_joined_in_single_row(self):
+        class F(FormworkForm):
+            email = forms.EmailField(min_length=20)
+
+        form = F(data={"email": "bad"}, error_display="inline")
+        form.is_valid()
+        soup = render_html(form)
+        error_row = soup.find("p", attrs={"id": "id_email_error"})
+        assert error_row.find_all("p") == []
+        assert len(form.errors["email"]) >= 2
+        for message in form.errors["email"]:
+            assert message in error_row.get_text()
+
+    def test_help_text_hidden_but_present_when_collapsed(self):
+        class F(FormworkForm):
+            name = forms.CharField(help_text="Enter your name")
+
+        form = F(data={"name": ""}, error_display="inline")
+        form.is_valid()
+        soup = render_html(form)
+        helptext = soup.find("p", attrs={"id": "id_name_helptext"})
+        assert helptext is not None
+        assert "Enter your name" in helptext.get_text()
+        assert "sr-only" in helptext.get(":class", "")
+
+    def test_no_more_button_when_no_help_text_and_no_overflow(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": ""}, error_display="inline")
+        form.is_valid()
+        soup = render_html(form)
+        error_row = soup.find("p", attrs={"id": "id_name_error"})
+        button = error_row.find("button")
+        assert button is not None
+        assert "x-show" in button.attrs
+
+    def test_tooltip_mode_still_default(self):
+        class F(FormworkForm):
+            name = forms.CharField()
+
+        form = F(data={"name": ""})
+        form.is_valid()
+        soup = render_html(form)
+        assert soup.find("div", class_="tooltip") is not None
+        assert soup.find("p", attrs={"id": "id_name_error"}) is None
+
+
 class TestNonFieldErrors:
     """Non-field errors use DaisyUI alert component."""
 
@@ -259,6 +343,21 @@ class TestAriaAttributes:
             name = forms.CharField(help_text="Your name")
 
         form = F(data={"name": ""})
+        form.is_valid()
+        soup = render_html(form)
+        inp = soup.find("input", {"name": "name"})
+        described = (inp.get("aria-describedby") or "").split()
+        assert described, "expected aria-describedby on an errored field"
+        for ref in described:
+            assert soup.find(id=ref) is not None, f"aria-describedby points to missing #{ref}"
+
+    def test_aria_describedby_targets_exist_in_inline_mode(self):
+        """The sr-only help text must stay in the DOM so aria-describedby still resolves."""
+
+        class F(FormworkForm):
+            name = forms.CharField(help_text="Your name")
+
+        form = F(data={"name": ""}, error_display="inline")
         form.is_valid()
         soup = render_html(form)
         inp = soup.find("input", {"name": "name"})

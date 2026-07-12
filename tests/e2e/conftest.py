@@ -78,6 +78,12 @@ def simple_page(page, live_server):
 
 
 @pytest.fixture
+def inline_errors_page(page, live_server):
+    """Navigate to the inline errors (Meta.error_display = "inline") page."""
+    return _navigate(page, live_server, "/inline-errors/")
+
+
+@pytest.fixture
 def toggle_page(page, live_server):
     """Navigate to a page containing the Toggle widget."""
     return _navigate(page, live_server, "/simple/")

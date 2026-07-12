@@ -198,6 +198,22 @@ class _AutoSearchMixin:
         return "search_select"
 
 
+class _ErrorDisplayFormMixin:
+    """Choose how field errors render: DaisyUI tooltip or inline (help-text style).
+
+    ``error_display`` is ``"tooltip"`` (default) or ``"inline"``, set via
+    ``Meta.error_display`` or the matching ``__init__`` kwarg.  Read by
+    ``formwork_field.html`` as ``field.form.error_display``.
+    """
+
+    def __init__(self, *args: Any, error_display: str | None = None, **kwargs: Any) -> None:
+        if error_display is None:
+            meta = getattr(type(self), "Meta", None)
+            error_display = getattr(meta, "error_display", "tooltip")
+        self.error_display: str = error_display
+        super().__init__(*args, **kwargs)
+
+
 class _DirtyOnlyFormMixin:
     """Skip field-level validation for fields the user didn't change.
 
@@ -381,7 +397,7 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
                 await self.avalidate_constraints()
 
 
-class FormworkForm(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
+class FormworkForm(_ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
     """Form base class with DaisyUI styling and async support.
 
     Usage::
@@ -405,12 +421,17 @@ class FormworkForm(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
 
     Pass ``validate_dirty_only=True`` (or set ``Meta.validate_dirty_only = True``)
     to skip field validators on fields the user did not change.
+
+    Pass ``error_display="inline"`` (or set ``Meta.error_display = "inline"``) to
+    render field errors below the widget, help-text style, instead of the
+    default DaisyUI tooltip.
     """
 
     default_renderer = FormworkRenderer
 
 
 class FormworkModelForm(
+    _ErrorDisplayFormMixin,
     _DirtyOnlyModelFormMixin,
     AsyncModelFormMixin,
     _AutoSearchMixin,
@@ -423,12 +444,16 @@ class FormworkModelForm(
     kwarg), field validation, model field validation, unique checks and
     constraint checks are all skipped for fields the user did not change.
     Requires the bound model to inherit :class:`~django_formwork.FormworkModel`.
+
+    Pass ``error_display="inline"`` (or set ``Meta.error_display = "inline"``) to
+    render field errors below the widget, help-text style, instead of the
+    default DaisyUI tooltip.
     """
 
     default_renderer = FormworkRenderer
 
 
-class FormworkJinja2Form(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
+class FormworkJinja2Form(_ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
     """Form base class with DaisyUI styling (Jinja2 renderer) and async support.
 
     Use this when your project uses Jinja2 templates.  Equivalent to
@@ -440,6 +465,7 @@ class FormworkJinja2Form(_DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, 
 
 
 class FormworkJinja2ModelForm(
+    _ErrorDisplayFormMixin,
     _DirtyOnlyModelFormMixin,
     AsyncModelFormMixin,
     _AutoSearchMixin,
