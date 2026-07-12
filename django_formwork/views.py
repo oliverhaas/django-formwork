@@ -35,10 +35,10 @@ class FormworkSearchView(View):
     """Base view for server-side widget search.
 
     :class:`FormworkAutoSearchView` (below) is the dispatch view that backs
-    every auto-registered widget — most users never subclass this directly.
+    every auto-registered widget; most users never subclass this directly.
     Subclass :class:`FormworkSearchView` only to render the formwork
     response templates (the ``<li>`` fragments htmx swaps in) from a custom
-    endpoint of your own — e.g. for a non-formwork widget that reuses the
+    endpoint of your own, e.g. for a non-formwork widget that reuses the
     same look.
 
     Results dict keys:
@@ -84,7 +84,7 @@ class FormworkSearchView(View):
     )
 
     #: Template for MultiSelect results (checkbox options).
-    #: Checkboxes have no ``name`` — hidden inputs in the widget template
+    #: Checkboxes have no ``name``; hidden inputs in the widget template
     #: handle form submission.  Alpine directives sync checked state with
     #: the parent ``x-data`` scope (the widget wrapper).
     MULTI_SELECT_TEMPLATE = (
@@ -125,7 +125,7 @@ class FormworkSearchView(View):
         Override this in your subclass.  Each result should be a dict with
         at least a ``label`` key, and optionally ``value`` and ``icon``.
 
-        ``icon`` values should be wrapped in ``mark_safe()`` — plain strings
+        ``icon`` values should be wrapped in ``mark_safe()``; plain strings
         are auto-escaped by the template engine.
 
         Args:
@@ -180,7 +180,7 @@ class FormworkAutoSearchView(FormworkSearchView):
             return HttpResponse(status=404)
         reg = self.registration
         self.widget_type = reg.widget_type
-        # Remove URL kwargs before passing to parent — get() doesn't accept them.
+        # Remove URL kwargs before passing to parent: get() doesn't accept them.
         kwargs.pop("key", None)
         # Apply the search_decorator (e.g. login_required) if one was set.
         if reg.search_decorator is not None:
@@ -190,7 +190,7 @@ class FormworkAutoSearchView(FormworkSearchView):
 
     def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:
         reg = self.registration
-        if reg is None:  # pragma: no cover — dispatch() returns 404 when None
+        if reg is None:  # pragma: no cover (dispatch() returns 404 when None)
             return []
 
         # Path 1: choices-backed (search_func).

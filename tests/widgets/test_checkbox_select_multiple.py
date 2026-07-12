@@ -8,14 +8,14 @@ regression).  Each level is marked so you can run fast-feedback subsets:
     uv run pytest tests/widgets/test_checkbox_select_multiple.py -m "not e2e"  # skip browser
 
 Levels:
-    1. unit        — widget object: instantiation, get_context, value_from_datadict
-    2. unit        — widget rendering: HTML structure, attributes
-    3. integration — form integration: field template, error state, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — user interaction: renders, check multiple, label clicks
-    6. e2e         — error flow: SKIPPED (toppings not required on builtin page)
-    7. e2e         — morph resilience: checked boxes survive htmx morphs
-    8. screenshot  — visual states: default, some checked
+    1. unit        : widget object: instantiation, get_context, value_from_datadict
+    2. unit        : widget rendering: HTML structure, attributes
+    3. integration : form integration: field template, error state, prefix
+    4. integration : Jinja2/DTL parity: identical HTML across engines
+    5. e2e         : user interaction: renders, check multiple, label clicks
+    6. e2e         : error flow: SKIPPED (toppings not required on builtin page)
+    7. e2e         : morph resilience: checked boxes survive htmx morphs
+    8. screenshot  : visual states: default, some checked
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ class CheckboxSelectMultipleForm(FormworkForm):
 
 
 class CheckboxSelectMultipleRequiredForm(FormworkForm):
-    """Form fixture with toppings required — used for error-state tests."""
+    """Form fixture with toppings required, used for error-state tests."""
 
     toppings = forms.MultipleChoiceField(
         choices=TOPPING_CHOICES,
@@ -306,7 +306,7 @@ def test_checkbox_select_multiple_morph_preserves_selections(builtin_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — these tests produce PNG artifacts in `test-results/`
+# Scaffolding only. These tests produce PNG artifacts in `test-results/`
 # that can be reviewed manually.  True baseline comparison requires
 # wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
 # as a follow-up.

@@ -8,13 +8,13 @@ regression).  Each level is marked so you can run fast-feedback subsets:
     uv run pytest tests/widgets/test_toggle.py -m "not e2e"    # skip browser tests
 
 Levels:
-    1. unit        — widget object: instantiation, get_context, value_from_datadict
-    2. unit        — widget rendering: HTML structure, classes, attributes
-    3. integration — form integration: field template, error state, morph IDs
-    5. e2e         — user interaction: fill, click, submit
-    6. e2e         — error flow: validation errors appear and clear
-    7. e2e         — morph resilience: state preserved across htmx morphs
-    8. screenshot  — visual states: default, checked, error
+    1. unit (widget object: instantiation, get_context, value_from_datadict)
+    2. unit (widget rendering: HTML structure, classes, attributes)
+    3. integration (form integration: field template, error state, morph IDs)
+    5. e2e (user interaction: fill, click, submit)
+    6. e2e (error flow: validation errors appear and clear)
+    7. e2e (morph resilience: state preserved across htmx morphs)
+    8. screenshot (visual states: default, checked, error)
 """
 
 from __future__ import annotations
@@ -82,7 +82,7 @@ def test_toggle_value_from_datadict_unchecked():
 
 @pytest.mark.unit
 def test_toggle_get_context_with_value_none():
-    """Passing value=None is tolerated — widget renders unchecked."""
+    """Passing value=None is tolerated; widget renders unchecked."""
     widget = Toggle()
     ctx = widget.get_context("enabled", None, {"id": "id_enabled"})
     assert ctx["widget"]["value"] is None
@@ -212,7 +212,7 @@ def test_toggle_user_can_click_on_off(toggle_page):
 #
 # Toggle is not required on the /simple/ page, so dedicated error-flow
 # tests would need a separate page with a required=True Toggle.  Left as
-# a gap until that page exists — tracked under #28 (missing test
+# a gap until that page exists. Tracked under #28 (missing test
 # coverage) as part of the broader error-state test work.
 
 
@@ -248,7 +248,7 @@ def test_toggle_morph_preserves_unchecked(toggle_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — these tests produce PNG artifacts in `test-results/`
+# Scaffolding only: these tests produce PNG artifacts in `test-results/`
 # that can be reviewed manually.  True baseline comparison requires
 # wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
 # as a follow-up.  See issue #26 for the plan.

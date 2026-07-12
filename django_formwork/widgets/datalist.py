@@ -12,7 +12,7 @@ class DataList(forms.TextInput):
 
     Renders an ``<input>`` with a ``list`` attribute pointing to a
     ``<datalist>`` containing the provided suggestions.  No JavaScript
-    required — the browser provides the autocomplete dropdown natively.
+    is required: the browser provides the autocomplete dropdown natively.
 
     Note: the submitted value is whatever the user typed (free text),
     not a key from a choices list.

@@ -8,14 +8,14 @@ regression).  Each level is marked so you can run fast-feedback subsets:
     uv run pytest tests/widgets/test_password_reveal.py -m "not e2e"   # skip browser tests
 
 Levels:
-    1. unit        — widget object: instantiation, get_context, value_from_datadict
-    2. unit        — widget rendering: HTML structure, classes, attributes
-    3. integration — form integration: field template, error state, morph IDs
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — user interaction: toggle password visibility
-    6. e2e         — error flow: SKIPPED (see comment)
-    7. e2e         — morph resilience: show/hide state preserved across morphs
-    8. screenshot  — visual states: default (hidden), revealed
+    1. unit: widget object (instantiation, get_context, value_from_datadict)
+    2. unit: widget rendering (HTML structure, classes, attributes)
+    3. integration: form integration (field template, error state, morph IDs)
+    4. integration: Jinja2/DTL parity (identical HTML across engines)
+    5. e2e: user interaction (toggle password visibility)
+    6. e2e: error flow, SKIPPED (see comment)
+    7. e2e: morph resilience (show/hide state preserved across morphs)
+    8. screenshot: visual states, default (hidden) and revealed
 """
 
 from __future__ import annotations
@@ -305,7 +305,7 @@ def test_password_reveal_wrapper_has_id_attr(simple_page):
 
 @pytest.mark.e2e
 def test_password_reveal_morph_clears_value(simple_page):
-    """Django's PasswordInput doesn't render values — morph clears the field."""
+    """Django's PasswordInput doesn't render values; morph clears the field."""
     from tests.e2e.conftest import submit
 
     inp = simple_page.locator('input[name="password"]')
@@ -340,7 +340,7 @@ def test_password_reveal_morph_preserves_reveal_state(simple_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — these tests produce PNG artifacts in `test-results/`
+# Scaffolding only: these tests produce PNG artifacts in `test-results/`
 # that can be reviewed manually.  True baseline comparison requires
 # wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
 # as a follow-up.  See issue #26 for the plan.

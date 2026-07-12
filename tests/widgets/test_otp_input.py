@@ -1,14 +1,14 @@
 """Tests for the OTPInput widget.
 
 Levels:
-    1. unit        — widget object: instantiation, get_context, value_from_datadict
-    2. unit        — widget rendering: HTML structure, attributes
-    3. integration — form integration: field template, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — smoke: typing advances focus, hidden input collects value
-    6. e2e         — SKIPPED (gap; smoke coverage only)
-    7. e2e         — SKIPPED (see above)
-    8. screenshot  — SKIPPED (no baseline for OTPInput yet)
+    1. unit (widget object: instantiation, get_context, value_from_datadict)
+    2. unit (widget rendering: HTML structure, attributes)
+    3. integration (form integration: field template, prefix)
+    4. integration (Jinja2/DTL parity: identical HTML across engines)
+    5. e2e (smoke: typing advances focus, hidden input collects value)
+    6. e2e: SKIPPED (gap; smoke coverage only)
+    7. e2e: SKIPPED (see above)
+    8. screenshot: SKIPPED (no baseline for OTPInput yet)
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ def test_otp_input_get_context_with_value():
 
 @pytest.mark.unit
 def test_otp_input_get_context_with_none():
-    """get_context() tolerates None value — all digits are empty strings."""
+    """get_context() tolerates None value. All digits are empty strings."""
     widget = OTPInput(length=4)
     ctx = widget.get_context("code", None, {"id": "id_code"})
     assert ctx["widget"]["initial_digits"] == ["", "", "", ""]

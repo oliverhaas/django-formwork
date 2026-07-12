@@ -37,7 +37,7 @@ class ComboBox(forms.TextInput):
     In multiple mode (``multiple=True``), accepts comma-separated values.
     Suggestions appear for the segment currently being typed.
 
-    Server-side search auto-wires through the formwork registry — define a
+    Server-side search auto-wires through the formwork registry: define a
     ``search_choices_<fieldname>`` method on a
     :class:`~django_formwork.forms.FormworkForm` returning ``(value, label)``
     tuples or ``{"label": ..., "icon": ...}`` dicts.

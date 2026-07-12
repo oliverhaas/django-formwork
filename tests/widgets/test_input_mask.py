@@ -1,12 +1,12 @@
 """Tests for the InputMask widget.
 
 Levels:
-    1. unit        — widget object: instantiation, get_context, placeholder generation
-    2. unit        — widget rendering: HTML structure, placeholder attribute
-    3. integration — form integration: field template, error state, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — smoke: typing applies the mask pattern
-    6–8. e2e / screenshot — SKIPPED (gaps; smoke coverage only)
+    1. unit, widget object: instantiation, get_context, placeholder generation
+    2. unit, widget rendering: HTML structure, placeholder attribute
+    3. integration, form integration: field template, error state, prefix
+    4. integration, Jinja2/DTL parity: identical HTML across engines
+    5. e2e, smoke: typing applies the mask pattern
+    6 to 8. e2e / screenshot, SKIPPED (gaps; smoke coverage only)
 """
 
 from __future__ import annotations

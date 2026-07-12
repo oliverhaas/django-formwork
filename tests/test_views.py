@@ -555,8 +555,8 @@ class TestFormworkSearchViewErrorHandling:
         assert response.status_code == 200
 
     def test_no_oob_total_count_in_response(self):
-        """The response is just the option markup — no OOB total swap.
-        Widgets know the total at render time from the registry, so the
+        """The response is just the option markup, with no OOB total swap:
+        widgets know the total at render time from the registry, so the
         view doesn't need to push it.
         """
         request = factory.get("/search/", {"q": "", "name": "city"})

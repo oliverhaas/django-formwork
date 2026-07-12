@@ -41,7 +41,7 @@ LANGUAGE_CHOICES = [
 class ContactForm(forms.Form):
     """A contact form with a mix of standard and custom widgets."""
 
-    # Standard widgets — auto-styled by formwork CSS
+    # Standard widgets: auto-styled by formwork CSS
     name = forms.CharField(
         max_length=100,
         help_text="Your full name.",

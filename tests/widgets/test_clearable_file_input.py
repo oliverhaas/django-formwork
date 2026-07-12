@@ -8,14 +8,14 @@ regression).  Each level is marked so you can run fast-feedback subsets:
     uv run pytest tests/widgets/test_clearable_file_input.py -m "not e2e"   # skip browser tests
 
 Levels:
-    1. unit        — widget object: instantiation, is_multipart, value_from_datadict
-    2. unit        — widget rendering: file input, clear checkbox, filename display
-    3. integration — form integration: fieldset, error state, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — user interaction: renders, filename, clear checkbox
-    6. e2e         — error flow: SKIPPED (avatar is not required on /builtin/)
-    7. e2e         — morph resilience: checked clear checkbox survives morph
-    8. screenshot  — visual states: default
+    1. unit (widget object): instantiation, is_multipart, value_from_datadict
+    2. unit (widget rendering): file input, clear checkbox, filename display
+    3. integration (form integration): fieldset, error state, prefix
+    4. integration (Jinja2/DTL parity): identical HTML across engines
+    5. e2e (user interaction): renders, filename, clear checkbox
+    6. e2e (error flow): SKIPPED (avatar is not required on /builtin/)
+    7. e2e (morph resilience): checked clear checkbox survives morph
+    8. screenshot (visual states): default
 """
 
 from __future__ import annotations
@@ -204,7 +204,7 @@ def test_clearable_file_input_clear_checkbox_interaction(builtin_page):
 #
 # avatar is not required on the /builtin/ page, so a dedicated error-flow
 # test would need a separate page with a required ClearableFileInput.
-# Skipped for now — tracked as a gap in error-state coverage.
+# Skipped for now. Tracked as a gap in error-state coverage.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
@@ -226,7 +226,7 @@ def test_clearable_file_input_morph_preserves_clear_checkbox(builtin_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — produces PNG artifacts in test-results/ for manual
+# Scaffolding only: produces PNG artifacts in test-results/ for manual
 # review.  True baseline comparison requires a visual-regression plugin.
 
 

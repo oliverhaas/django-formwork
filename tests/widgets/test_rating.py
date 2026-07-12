@@ -8,14 +8,14 @@ regression).  Each level is marked so you can run fast-feedback subsets:
     uv run pytest tests/widgets/test_rating.py -m "not e2e"    # skip browser tests
 
 Levels:
-    1. unit        — widget object: instantiation, make_choices, get_context, value_from_datadict
-    2. unit        — widget rendering: HTML structure, classes, checked state, allow_clear
-    3. integration — form integration: field template, fieldset wrapping, error state, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — user interaction: click a star
-    6. e2e         — error flow: SKIPPED (no required-Rating-only page yet)
-    7. e2e         — morph resilience: selected star preserved across htmx morphs
-    8. screenshot  — visual states: default, one-star-selected
+    1. unit: widget object, instantiation, make_choices, get_context, value_from_datadict
+    2. unit: widget rendering, HTML structure, classes, checked state, allow_clear
+    3. integration: form integration, field template, fieldset wrapping, error state, prefix
+    4. integration: Jinja2/DTL parity, identical HTML across engines
+    5. e2e: user interaction, click a star
+    6. e2e: error flow, SKIPPED (no required-Rating-only page yet)
+    7. e2e: morph resilience, selected star preserved across htmx morphs
+    8. screenshot: visual states, default, one-star-selected
 """
 
 from __future__ import annotations
@@ -290,7 +290,7 @@ def test_rating_error_state_aria_invalid(renderer):
     rating_div = soup.find("div", class_="rating")
     assert rating_div is not None
     # At least one radio has aria-invalid (Django sets it on the widget)
-    # or the fieldset signals the error — check tooltip exists
+    # or the fieldset signals the error: check tooltip exists
     tooltip = soup.find(id="id_rating_tooltip")
     assert tooltip is not None
 
@@ -358,7 +358,7 @@ def test_rating_has_mask_star_class(simple_page):
 # The /simple/ page requires a Rating field (stars), but submitting with no
 # star selected also triggers errors on the other required fields, making
 # isolated Rating error-flow tests noisy.  A dedicated page with only a
-# required Rating field is needed.  Skipped until that page exists — tracked
+# required Rating field is needed.  Skipped until that page exists; tracked
 # under the broader error-state test coverage work.
 
 
@@ -402,7 +402,7 @@ def test_rating_morph_no_star_selected_stays_empty(simple_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — these tests produce PNG artifacts in `test-results/`
+# Scaffolding only: these tests produce PNG artifacts in `test-results/`
 # that can be reviewed manually.  True baseline comparison requires
 # wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
 # as a follow-up.  See issue #26 for the plan.

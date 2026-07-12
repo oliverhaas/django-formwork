@@ -183,7 +183,7 @@ class TestMorphPreservation:
         inp.focus()
         inp.press_sequentially("Extra", delay=50)
         # The server-side value is "Original" but the focused input has "OriginalExtra"
-        # Trigger morph — formwork-morph extension preserves the focused input value
+        # Trigger morph: the formwork-morph extension preserves the focused input value
         _trigger_input_event(autosave_page, 'input[name="name"]')
         _wait_for_autosave(autosave_page)
         assert inp.input_value() == "OriginalExtra"

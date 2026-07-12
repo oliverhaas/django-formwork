@@ -1,14 +1,14 @@
 """Tests for the FileDropZone widget.
 
 Levels:
-    1. unit        — widget object: instantiation, get_context, value_from_datadict
-    2. unit        — widget rendering: HTML structure, Alpine bindings, attributes
-    3. integration — form integration: fieldset, error state, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — user interaction: renders, browse text, file input, area
-    6. e2e         — error flow: SKIPPED (no required FileDropZone on /uploads/ page)
-    7. e2e         — morph resilience: file state preserved across htmx morphs
-    8. screenshot  — visual states: default, with-file
+    1. unit (widget object): instantiation, get_context, value_from_datadict
+    2. unit (widget rendering): HTML structure, Alpine bindings, attributes
+    3. integration (form integration): fieldset, error state, prefix
+    4. integration (Jinja2/DTL parity): identical HTML across engines
+    5. e2e (user interaction): renders, browse text, file input, area
+    6. e2e (error flow): SKIPPED (no required FileDropZone on /uploads/ page)
+    7. e2e (morph resilience): file state preserved across htmx morphs
+    8. screenshot (visual states): default, with-file
 """
 
 from __future__ import annotations
@@ -462,7 +462,7 @@ def test_file_drop_zone_rejects_wrong_type_with_alert(uploads_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — produces PNG artifacts in test-results/ for manual
+# Scaffolding only, producing PNG artifacts in test-results/ for manual
 # review.  True baseline comparison requires pytest-playwright-visual.
 # See issue #26.
 
