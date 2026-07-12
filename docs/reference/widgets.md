@@ -477,6 +477,15 @@ content = forms.CharField(
 
 See [`FormworkValidateView`](views.md#formworkvalidateview) for implementing the server-side view.
 
+Server-side validation errors (from `validate_url`) always render in the
+widget's own built-in tooltip, regardless of the form's
+[`error_display`](forms.md#error_display) setting. On `error_display =
+"inline"` forms, a field-level validation error (e.g. `required`) still
+renders inline below the widget as usual, so the two error surfaces can
+appear at the same time. There's no fix planned; avoid pairing
+`ValidatedTextarea` with `error_display = "inline"` if that overlap matters
+for your layout.
+
 **Requires htmx.**
 
 ---

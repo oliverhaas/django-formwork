@@ -43,6 +43,36 @@ form. Both require `search_decorator`: pass an auth decorator such as
 [quickstart](../getting-started/quickstart.md#server-side-search) for worked
 examples.
 
+## error_display
+
+Field errors render as a DaisyUI tooltip by default. That's compact, but easy
+to miss in a dense layout like a table row, and there's no room for the help
+text once an error appears. `error_display = "inline"` switches every field
+on the form to the same visual pattern already used for help text: a small
+icon below the widget, in error color, with the error message truncated to
+one line and a `[more]` toggle when it overflows. Set it on the Meta class or
+per instantiation:
+
+```python
+class ContactForm(FormworkForm):
+    class Meta:
+        error_display = "inline"
+
+# or
+form = ContactForm(request.POST, error_display="inline")
+```
+
+Collapsed, only the truncated error shows, and the help text (if any) is
+present for screen readers but visually hidden. Clicking `[more]` reveals
+the full error message and the help text together; `[less]` collapses both
+again. Errors and help text always share one expand/collapse state per
+field.
+
+Use `"tooltip"` (the default) for fields with breathing room, and `"inline"`
+where a hovering tooltip would be awkward: inline table-row editing, dense
+multi-column layouts, or forms where the help text should stay reachable
+even while an error is showing.
+
 ## validate_dirty_only
 
 On an edit form, validators added after a record was saved can reject stored

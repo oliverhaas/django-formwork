@@ -221,6 +221,21 @@ class SimpleForm(FormworkForm):
     )
 
 
+class InlineErrorsForm(FormworkForm):
+    """Meta.error_display = "inline": errors render like help text, in red, below the field."""
+
+    name = forms.CharField(
+        min_length=3,
+        help_text=(
+            "Enter your full legal name exactly as it appears on your "
+            "government-issued photo ID or passport."
+        ),
+    )
+
+    class Meta:
+        error_display = "inline"
+
+
 class _FakeFile:
     """Minimal file-like object so ClearableFileInput shows the clear checkbox."""
 
@@ -1290,6 +1305,12 @@ _PAGES = [
     ),
     ("simple", "/simple/", "Simple Custom Widgets", "Toggle, range slider, password reveal, datalist, and star rating"),
     (
+        "inline-errors",
+        "/inline-errors/",
+        "Inline Errors",
+        "Meta.error_display = \u201cinline\u201d \u2014 errors render like help text, in red, below the field",
+    ),
+    (
         "builtin",
         "/builtin/",
         "Built-in Widgets",
@@ -1542,6 +1563,10 @@ def elements_view(request: HttpRequest) -> HttpResponse:
 
 def simple_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, SimpleForm, "simple")
+
+
+def inline_errors_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, InlineErrorsForm, "inline-errors")
 
 
 def builtin_view(request: HttpRequest) -> HttpResponse:

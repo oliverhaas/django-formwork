@@ -765,6 +765,15 @@ details.dropdown.search-select > .dropdown-content {
     @apply w-fit;
 }
 
+/* ================================================================
+   Inline errors (Meta.error_display = "inline")
+   No dedicated CSS block: the error row reuses the help-text `.label`
+   markup verbatim (same flex/gap/grid-column rules, `text-error` for
+   colour) and is never wrapped in `.tooltip`, so it falls through to
+   the same grid selectors used for the no-error / no-tooltip case
+   (checkbox pairs, date+time, triple-select).  See formwork_field.html.
+   ================================================================ */
+
 
 /* ================================================================
    ValidatedTextarea overlay
