@@ -8,14 +8,14 @@ regression).  Each level is marked so you can run fast-feedback subsets:
     uv run pytest tests/widgets/test_combo_box.py -m "not e2e"   # skip browser tests
 
 Levels:
-    1. unit        — widget object: instantiation, get_context, value_from_datadict
-    2. unit        — widget rendering: HTML structure, classes, attributes
-    3. integration — form integration: field template, error state, morph IDs
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — user interaction: typing, picking suggestion, clear
-    6. e2e         — error flow: skipped (no required ComboBox on the /combobox/ page)
-    7. e2e         — morph resilience: typed value and selected suggestions preserved
-    8. screenshot  — visual states: default, open dropdown, suggestion selected
+    1. unit        : widget object: instantiation, get_context, value_from_datadict
+    2. unit        : widget rendering: HTML structure, classes, attributes
+    3. integration : form integration: field template, error state, morph IDs
+    4. integration : Jinja2/DTL parity: identical HTML across engines
+    5. e2e         : user interaction: typing, picking suggestion, clear
+    6. e2e         : error flow: skipped (no required ComboBox on the /combobox/ page)
+    7. e2e         : morph resilience: typed value and selected suggestions preserved
+    8. screenshot  : visual states: default, open dropdown, suggestion selected
 """
 
 from __future__ import annotations
@@ -266,7 +266,7 @@ def test_combo_box_class_on_wrapper():
 
 @pytest.mark.unit
 def test_combo_box_text_input_is_form_field():
-    """The text input submits directly — no hidden input."""
+    """The text input submits directly, without a hidden input."""
     widget = ComboBox(suggestions=["Alpha"])
     soup = render_widget(widget, name="test")
     text_input = soup.find("input", class_="combobox-input")
@@ -415,7 +415,7 @@ def test_combo_box_no_htmx_attrs_without_search_url():
 
 @pytest.mark.unit
 def test_combo_box_static_suggestions_ignored_when_search_url():
-    """When server search is wired, static ``suggestions`` are ignored —
+    """When server search is wired, static ``suggestions`` are ignored:
     the listbox renders pre-rendered registry options instead.  ``count=0``
     here so the listbox renders only the empty-state alert."""
     widget = make_server_widget(ComboBox, count=0, suggestions=["Alpha"])
@@ -426,7 +426,7 @@ def test_combo_box_static_suggestions_ignored_when_search_url():
 
 @pytest.mark.unit
 def test_combo_box_renders_no_results_alert_when_initial_options_empty():
-    """An empty initial set still communicates state — the listbox carries
+    """An empty initial set still communicates state: the listbox carries
     the same ``role=status`` alert that the htmx response would render."""
     widget = make_server_widget(ComboBox, count=0)
     soup = render_widget(widget, attrs={"id": "id_test"})
@@ -449,7 +449,7 @@ def test_combo_box_no_alpine_no_results_when_search_url():
 @pytest.mark.unit
 def test_combo_box_prerenders_initial_options_when_registered():
     """The first ``max_results`` registry items are baked into the listbox
-    so the dropdown opens with real suggestions — htmx replaces them on
+    so the dropdown opens with real suggestions; htmx replaces them on
     first focus."""
     widget = make_server_widget(ComboBox, count=3)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
@@ -536,7 +536,7 @@ def test_combo_box_listbox_hidden_only_on_error():
 
 @pytest.mark.unit
 def test_combo_box_binds_alpine_component_when_search_url():
-    """The wrapper binds to the formworkComboBox component regardless of search_url —
+    """The wrapper binds to the formworkComboBox component regardless of search_url;
     hasError state lives in the component, not the markup."""
     widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
@@ -872,7 +872,7 @@ def test_combo_box_multiple_toggle_off(combobox_page):
     assert "Pizza" not in inp.input_value()
 
 
-# ─── Level 5b: E2e — grouped ComboBox ────────────────────────────────────
+# ─── Level 5b: E2e, grouped ComboBox ─────────────────────────────────────
 #
 # food_grouped is the 8th ComboBox on the page (nth(7)).
 
@@ -912,7 +912,7 @@ def test_combo_box_grouped_pick_from_group(combobox_page):
     assert inp.input_value() == "Sushi"
 
 
-# ─── Level 5c: E2e — keyboard navigation ─────────────────────────────────
+# ─── Level 5c: E2e, keyboard navigation ──────────────────────────────────
 #
 # Keyboard handlers live on the wrapper ``<div class='dropdown combobox'>``,
 # so the input must be focused (dropdown open) for events to bubble up.
@@ -1080,7 +1080,7 @@ def test_combo_box_keyboard_escape_closes_dropdown(combobox_page):
 # Skipped until a required-field variant of the ComboBox page is available.
 
 
-# ─── Level 6b: E2e — server-side search loading + failure UX ─────────────
+# ─── Level 6b: E2e, server-side search loading + failure UX ──────────────
 #
 # Indices on /combobox/:  4 = language_htmx (working),
 #                         8 = language_failing (slow + always 500).
@@ -1088,13 +1088,9 @@ def test_combo_box_keyboard_escape_closes_dropdown(combobox_page):
 
 @pytest.mark.e2e
 def test_combo_box_prerenders_options_on_initial_load(combobox_page):
-    """Real options render in every htmx-mode ComboBox on first page load,
-    before any user interaction — no skeleton flicker.
-
-    The combobox at index 4 wires ``search_choices_language_htmx`` against
-    ``E2E_LANGUAGES`` (6 entries), all of which are baked in (default
-    ``reg.max_results`` is 50).
-    """
+    """Real options render in every htmx-mode ComboBox on first page load, before any user interaction, with no
+    skeleton flicker. The combobox at index 4 wires ``search_choices_language_htmx`` against ``E2E_LANGUAGES`` (6
+    entries), all baked in since the default ``reg.max_results`` is 50."""
     htmx_combo = combobox_page.locator(".dropdown.combobox").nth(4)
     items = htmx_combo.locator("ul[role='listbox'] > li[role='option']")
     assert items.count() == 6
@@ -1103,7 +1099,7 @@ def test_combo_box_prerenders_options_on_initial_load(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_options_refresh_on_first_focus(combobox_page):
     """First focus fires htmx; the swap replaces pre-rendered options with
-    the fresh response — same count, same listbox."""
+    the fresh response: same count, same listbox."""
     from playwright.sync_api import expect
 
     combo = combobox_page.locator(".dropdown.combobox").nth(4)
@@ -1128,7 +1124,7 @@ def test_combo_box_failing_search_shows_error_alert(combobox_page):
 
 @pytest.mark.e2e
 def test_combo_box_input_works_after_error(combobox_page):
-    """The combobox input remains usable after a failure — typing fires a
+    """The combobox input remains usable after a failure: typing fires a
     new request and the value lands in the input."""
     from playwright.sync_api import expect
 
@@ -1186,7 +1182,7 @@ def test_combo_box_morph_preserves_multiple_selected(combobox_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — these tests produce PNG artifacts in `test-results/`
+# Scaffolding only: these tests produce PNG artifacts in `test-results/`
 # that can be reviewed manually.  True baseline comparison requires
 # wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
 # as a follow-up.

@@ -4,10 +4,10 @@ These test formwork's handling of standard Django field attributes that
 apply across all widget types, not specific to any single widget.
 
 Levels:
-    1. unit        — widget rendering: disabled/readonly attrs in HTML
-    2. integration — form integration: fieldset structure, required indicator
-    3. e2e         — user interaction: disabled/readonly behavior, asterisk visibility
-    4. screenshot  — visual states: disabled, readonly
+    1. unit: widget rendering, disabled/readonly attrs in HTML
+    2. integration: form integration, fieldset structure, required indicator
+    3. e2e: user interaction, disabled/readonly behavior, asterisk visibility
+    4. screenshot: visual states, disabled, readonly
 """
 
 from __future__ import annotations

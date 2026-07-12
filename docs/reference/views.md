@@ -4,7 +4,7 @@ Formwork provides three class-based views for server-side search and validation.
 
 ## FormworkSearchView
 
-Base view for the registry-driven search endpoint. `FormworkAutoSearchView` (below) inherits from it and serves every auto-registered widget; you'd subclass `FormworkSearchView` directly only if you want to render the formwork response templates (the `<li>` fragments that htmx swaps in) from a custom endpoint of your own — e.g. for a non-formwork widget that reuses the same look.
+Base view for the registry-driven search endpoint. `FormworkAutoSearchView` (below) inherits from it and serves every auto-registered widget; you'd subclass `FormworkSearchView` directly only if you want to render the formwork response templates (the `<li>` fragments that htmx swaps in) from a custom endpoint of your own, e.g. for a non-formwork widget that reuses the same look.
 
 ### Response templates
 
@@ -54,7 +54,7 @@ This mounts one URL: `__formwork__/search/<key>/` which `FormworkAutoSearchView`
 
 Registration happens automatically when a `FormworkForm` or `FormworkModelForm` is instantiated. Two modes are supported:
 
-**Model-backed** — The widget has `search_fields` and the field is a `ModelChoiceField` or `ModelMultipleChoiceField`. Formwork registers an endpoint that filters the queryset using `__icontains` on the listed fields:
+**Model-backed**: The widget has `search_fields` and the field is a `ModelChoiceField` or `ModelMultipleChoiceField`. Formwork registers an endpoint that filters the queryset using `__icontains` on the listed fields:
 
 ```python
 from django_formwork import FormworkForm
@@ -67,7 +67,7 @@ class CityForm(FormworkForm):
     )
 ```
 
-**Choices-backed** — The form defines a `search_choices_<fieldname>(query, request)` method. It receives the search query and the request, and returns a list of dicts or `(value, label)` tuples:
+**Choices-backed**: The form defines a `search_choices_<fieldname>(query, request)` method. It receives the search query and the request, and returns a list of dicts or `(value, label)` tuples:
 
 ```python
 from django_formwork import FormworkForm
@@ -85,7 +85,7 @@ class TagForm(FormworkForm):
 
 ### Access control
 
-Auto-registered endpoints require a `search_decorator` on the widget. Omitting it raises `ImproperlyConfigured` — formwork refuses to silently expose an unauthenticated search endpoint.
+Auto-registered endpoints require a `search_decorator` on the widget. Omitting it raises `ImproperlyConfigured`: formwork refuses to silently expose an unauthenticated search endpoint.
 
 Pass a standard Django auth decorator:
 
@@ -110,7 +110,7 @@ To explicitly allow unauthenticated access (public endpoint), pass `None`:
 ```python
 SearchSelect(
     search_fields=["name"],
-    search_decorator=None,  # public — no auth required
+    search_decorator=None,  # public, no auth required
 )
 ```
 
@@ -122,8 +122,8 @@ The decorator wraps `FormworkAutoSearchView.dispatch` for that endpoint.
 
 Base view for server-side textarea validation. It handles POST requests, calls `get_errors()`, and returns:
 
-1. An HTML fragment with `<mark>` tags wrapping error spans — htmx swaps this into the `ValidatedTextarea` highlights overlay.
-2. An out-of-band (`hx-swap-oob`) fragment with error messages — htmx swaps this into the error display area.
+1. An HTML fragment with `<mark>` tags wrapping error spans: htmx swaps this into the `ValidatedTextarea` highlights overlay.
+2. An out-of-band (`hx-swap-oob`) fragment with error messages: htmx swaps this into the error display area.
 
 ### Usage
 
@@ -189,7 +189,7 @@ Text longer than `MAX_TEXT_LENGTH` characters (default `50_000`) is truncated be
 
 ### Security note
 
-`FormworkValidateView` is **CSRF-exempt** because it performs read-only validation — it reads text and returns highlighted output, but makes no changes to application state.
+`FormworkValidateView` is **CSRF-exempt** because it performs read-only validation: it reads text and returns highlighted output, but makes no changes to application state.
 
 !!! warning "Do not use for side-effecting operations"
     Because the view is CSRF-exempt, do not subclass `FormworkValidateView` for any operation that writes to the database, sends emails, or has any other side effect. For operations with side effects, use a regular Django view with CSRF protection enabled.

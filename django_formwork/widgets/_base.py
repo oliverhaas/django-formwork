@@ -39,7 +39,7 @@ class _ModuleScript(str):
 def _resolve_initial_results(registry_key: str | None) -> tuple[int | None, list[dict[str, Any]]]:
     """Resolve ``(total_count, initial_options)`` from the registry for first-page render.
 
-    Called on every render — no caching.  The initial options are
+    Called on every render, with no caching.  The initial options are
     pre-rendered into the listbox so the dropdown opens with real data;
     htmx replaces them on first focus.  Total count drives the
     ``show_search`` decision (compared against ``search_threshold``).
@@ -63,7 +63,7 @@ def _resolve_initial_results(registry_key: str | None) -> tuple[int | None, list
             return _initial_from_queryset(reg)
         if reg.search_func is not None:
             return _initial_from_search_func(reg)
-    except Exception:  # noqa: BLE001 — initial render must never crash
+    except Exception:  # noqa: BLE001 (initial render must never crash)
         return None, []
     return None, []
 
@@ -73,7 +73,7 @@ def _initial_from_queryset(reg: SearchRegistration) -> tuple[int, list[dict[str,
     qs = reg.queryset_factory()
     # NOTE: full ``COUNT(*)`` is wasteful when we only care whether it
     # crosses the search threshold.  Worth a PostgreSQL approximate-count
-    # path later (pg_class.reltuples) — left exact for now.
+    # path later (pg_class.reltuples), left exact for now.
     total = qs.count()
     items = [
         {

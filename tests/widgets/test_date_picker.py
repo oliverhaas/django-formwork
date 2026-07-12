@@ -1,12 +1,6 @@
-"""Tests for the DatePicker widget.
-
-Levels:
-    1. unit        — widget object: instantiation, input_type, default format
-    2. unit        — widget rendering: HTML structure, placeholder, value
-    3. integration — form integration: field template, error state, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — smoke: calendar opens and picking a day fills the input
-    6–8. e2e / screenshot — SKIPPED (gaps; smoke coverage only)
+"""Tests for the DatePicker widget: unit tests for the widget object and its
+rendering, integration tests for form wiring and Jinja2/DTL parity, and an
+e2e smoke test for opening the calendar and picking a day (screenshot tests skipped).
 """
 
 from __future__ import annotations

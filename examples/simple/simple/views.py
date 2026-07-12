@@ -28,7 +28,7 @@ def contact_view(request):
 
     is_htmx = request.headers.get("HX-Request") == "true"
     if is_htmx:
-        # htmx request — return just the form HTML for morphing.
+        # For an htmx request, return just the form HTML for morphing.
         return render(request, "form_partial.html", {"form": form})
     return render(request, "contact.html", {"form": form})
 

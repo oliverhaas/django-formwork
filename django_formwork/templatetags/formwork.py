@@ -14,7 +14,7 @@ def formwork_css() -> str:
         {% load formwork %}
         {% formwork_css %}
     """
-    # SECURITY: safe — URL comes from Django's static file resolver, not user input.
+    # SECURITY: safe. URL comes from Django's static file resolver, not user input.
     url = static("formwork/formwork.css")
     return mark_safe(f'<link rel="stylesheet" href="{url}">')  # noqa: S308
 
@@ -29,7 +29,7 @@ def formwork_js() -> str:
     ``formwork/widgets/*.js``.
 
     For per-form loading via ``{{ form.media }}``, use
-    ``{% formwork_core_js %}`` instead — that loads only the page-global
+    ``{% formwork_core_js %}`` instead, which loads only the page-global
     core; widget JS is then included automatically per form via
     Django's Media plumbing.
 
@@ -38,7 +38,7 @@ def formwork_js() -> str:
         {% load formwork %}
         {% formwork_js %}
     """
-    # SECURITY: safe — URL comes from Django's static file resolver, not user input.
+    # SECURITY: safe. URL comes from Django's static file resolver, not user input.
     url = static("formwork/formwork.js")
     return mark_safe(f'<script type="module" src="{url}"></script>')  # noqa: S308
 
@@ -47,7 +47,7 @@ def formwork_js() -> str:
 def formwork_core_js() -> str:
     """Output a ``<script type="module">`` tag for the formwork core only.
 
-    Loads ``formwork-core.js`` — the page-global htmx morph extension,
+    Loads ``formwork-core.js``: the page-global htmx morph extension,
     dirty-tracking, and native-validation disabling.  Use together with
     ``{{ form.media }}`` to load per-widget Alpine code on a per-form
     basis instead of via the full bundle.
@@ -62,6 +62,6 @@ def formwork_core_js() -> str:
         {% formwork_core_js %}
         {{ form.media }}
     """
-    # SECURITY: safe — URL comes from Django's static file resolver, not user input.
+    # SECURITY: safe. URL comes from Django's static file resolver, not user input.
     url = static("formwork/formwork-core.js")
     return mark_safe(f'<script type="module" src="{url}"></script>')  # noqa: S308

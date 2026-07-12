@@ -504,7 +504,7 @@ class TestFormworkAutoSearchView:
         assert response.status_code == 403
 
     def test_search_decorator_none_allows_anonymous(self):
-        """search_decorator=None means public — no auth check."""
+        """search_decorator=None means public: no auth check."""
         from django_formwork.views import FormworkAutoSearchView
 
         reg = SearchRegistration(
@@ -520,8 +520,7 @@ class TestFormworkAutoSearchView:
         assert response.status_code == 200
 
     def test_no_oob_total_count_in_response(self, registered_key):
-        """The response is just the option markup — no OOB total swap.
-        Widgets know the total at render time from the registry."""
+        """The response is just the option markup, not an OOB total swap: widgets know the total at render time from the registry."""
         from django_formwork.views import FormworkAutoSearchView
 
         request = factory.get("/search/", {"q": "", "type": "search_select", "name": "user"})
@@ -790,7 +789,7 @@ class TestChoicesAutoRegistration:
 
 
 # ---------------------------------------------------------------------------
-# FormworkAutoSearchView — choices-backed dispatch
+# FormworkAutoSearchView: choices-backed dispatch
 # ---------------------------------------------------------------------------
 
 
@@ -826,8 +825,7 @@ class TestAutoSearchViewChoices:
         assert "New York" in buttons[0].get_text()
 
     def test_no_oob_total_count_in_response(self, choices_key):
-        """The response is just option markup — no OOB total swap.
-        Widgets know the total at render time from the registry."""
+        """The response is just option markup, not an OOB total swap: widgets know the total at render time from the registry."""
         from django_formwork.views import FormworkAutoSearchView
 
         request = factory.get("/search/", {"q": "lon", "type": "search_select", "name": "city"})

@@ -1,14 +1,14 @@
 """Tests for the DataList widget.
 
 Levels:
-    1. unit        — widget object: instantiation, get_context, value_from_datadict
-    2. unit        — widget rendering: HTML structure, attributes
-    3. integration — form integration: field template, error state, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — user interaction: renders, fill input
-    6. e2e         — error flow: SKIPPED (see comment)
-    7. e2e         — morph resilience: typed value preserved across morph
-    8. screenshot  — visual states: default, filled
+    1. unit: widget object (instantiation, get_context, value_from_datadict)
+    2. unit: widget rendering (HTML structure, attributes)
+    3. integration: form integration (field template, error state, prefix)
+    4. integration: Jinja2/DTL parity (identical HTML across engines)
+    5. e2e: user interaction (renders, fill input)
+    6. e2e: error flow, SKIPPED (see comment)
+    7. e2e: morph resilience (typed value preserved across morph)
+    8. screenshot: visual states (default, filled)
 """
 
 from __future__ import annotations
@@ -300,7 +300,7 @@ def test_datalist_user_can_type(simple_page):
 #
 # DataList is not required on the /simple/ page (required=False), so no
 # error-flow tests can be triggered without a separate required-DataList
-# page fixture.  Left as a gap — tracked as part of broader error-state
+# page fixture.  Left as a gap, tracked as part of broader error-state
 # test coverage work.
 
 
@@ -331,7 +331,7 @@ def test_datalist_morph_preserves_empty(simple_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — these tests produce PNG artifacts in `test-results/`
+# Scaffolding only: these tests produce PNG artifacts in `test-results/`
 # that can be reviewed manually.  True baseline comparison requires
 # wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
 # as a follow-up.

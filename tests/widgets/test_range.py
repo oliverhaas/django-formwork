@@ -8,13 +8,13 @@ regression).  Each level is marked so you can run fast-feedback subsets:
     uv run pytest tests/widgets/test_range.py -m "not e2e"    # skip browser tests
 
 Levels:
-    1. unit        — widget object: instantiation, get_context, value_from_datadict
-    2. unit        — widget rendering: HTML structure, type="range", min/max/step attrs
-    3. integration — form integration: field template, error state, morph IDs
-    5. e2e         — user interaction: set value
-    6. e2e         — error flow: SKIPPED (no required Range field on /simple/)
-    7. e2e         — morph resilience: value preserved across htmx morphs
-    8. screenshot  — visual states: default, set-value
+    1. unit: widget object, covering instantiation, get_context, value_from_datadict
+    2. unit: widget rendering, covering HTML structure, type="range", min/max/step attrs
+    3. integration: form integration, covering field template, error state, morph IDs
+    5. e2e: user interaction, setting a value
+    6. e2e: error flow, SKIPPED (no required Range field on /simple/)
+    7. e2e: morph resilience, value preserved across htmx morphs
+    8. screenshot: visual states, default and set-value
 """
 
 from __future__ import annotations
@@ -93,7 +93,7 @@ def test_range_value_from_datadict_missing_key():
 
 @pytest.mark.unit
 def test_range_get_context_with_value_none():
-    """Passing value=None is tolerated — widget renders without a value attr."""
+    """Passing value=None is tolerated: the widget renders without a value attr."""
     widget = Range()
     ctx = widget.get_context("level", None, {"id": "id_level"})
     assert ctx["widget"]["value"] is None
@@ -254,7 +254,7 @@ def test_range_user_can_set_value(simple_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# The /simple/ page does not have a required Range field — volume is
+# The /simple/ page does not have a required Range field.  Volume is
 # always valid (any integer passes).  Dedicated error-flow tests would
 # need a separate test page with a required Range with restricted values.
 # Deferred until that dedicated test page exists.
@@ -289,7 +289,7 @@ def test_range_morph_preserves_default_value(simple_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — these tests produce PNG artifacts in `test-results/`
+# Scaffolding only.  These tests produce PNG artifacts in `test-results/`
 # that can be reviewed manually.  True baseline comparison requires
 # wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
 # as a follow-up.  See issue #26 for the plan.

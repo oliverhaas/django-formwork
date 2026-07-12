@@ -51,7 +51,7 @@ def _settle_auto_validate(page):
 
 def _toggle_multiselect_option(page, value, label):
     """Open MultiSelect and toggle an option via Alpine data store."""
-    # Use Alpine's toggle method directly — more reliable than clicking
+    # Use Alpine's toggle method directly: it's more reliable than clicking
     # checkboxes injected by htmx (avoids timing issues with Alpine init).
     page.evaluate(
         f"""(() => {{
@@ -168,7 +168,7 @@ class TestComplexFormValidation:
 
 
 class TestComplexFormMorphResilience:
-    """Morph resilience tests — client-side state survives server-side morphing."""
+    """Morph resilience tests: client-side state survives server-side morphing."""
 
     def test_search_select_value_survives_morph(self, complex_page):
         """SearchSelect selected value persists through morph."""
@@ -219,7 +219,7 @@ class TestComplexFormMorphResilience:
         page.evaluate("document.querySelector('details.search-select').open = true")
         page.wait_for_timeout(300)
         assert page.evaluate("document.querySelector('details.search-select').open")
-        # Submit via JS — open dropdown's summary::before overlay blocks clicks
+        # Submit via JS: open dropdown's summary::before overlay blocks clicks
         page.evaluate(
             """(() => {
             const form = document.querySelector('form[hx-post]');

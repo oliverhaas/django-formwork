@@ -8,7 +8,7 @@ For projects using Jinja2, use
 ``FORM_RENDERER = "django_formwork.FormworkJinja2Renderer"`` instead.
 
 Django admin is unaffected because admin templates render fields
-individually — they never call ``{{ form }}`` or ``as_field_group()``.
+individually: they never call ``{{ form }}`` or ``as_field_group()``.
 """
 
 from __future__ import annotations

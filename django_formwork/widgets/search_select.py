@@ -19,7 +19,7 @@ class SearchSelect(forms.Select):
     options.  Submits a single key value via a hidden ``<input>`` element.
     Uses Alpine.js for filtering, keyboard navigation, and selection.
 
-    This is a ``<select>`` replacement — the submitted value is a key
+    This is a ``<select>`` replacement: the submitted value is a key
     from the choices list, not free text.
 
     Server-side search auto-wires through the formwork registry: pair the
@@ -75,7 +75,7 @@ class SearchSelect(forms.Select):
         from django_formwork.fields import ChoiceLabel
 
         context = super().get_context(name, value, attrs)
-        # Select.format_value() wraps value in a list — unwrap for template.
+        # Select.format_value() wraps value in a list; unwrap for template.
         fmt_value = context["widget"]["value"]
         if isinstance(fmt_value, (list, tuple)):
             context["widget"]["value"] = fmt_value[0] if fmt_value else ""

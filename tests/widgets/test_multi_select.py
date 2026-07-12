@@ -8,15 +8,15 @@ regression).  Each level is marked so you can run fast-feedback subsets:
     uv run pytest tests/widgets/test_multi_select.py -m "not e2e"   # skip browser tests
 
 Levels:
-    1. unit        — widget object: instantiation, choices, search_url, get_context
-    2. unit        — widget rendering: HTML structure, attributes, htmx attrs
-    3. integration — form integration: field template, error state, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — user interaction: open, check, search filter
-    6. e2e         — error flow: (SKIP — MultiSelect is required=False by default on
+    1. unit        : widget object: instantiation, choices, search_url, get_context
+    2. unit        : widget rendering: HTML structure, attributes, htmx attrs
+    3. integration : form integration: field template, error state, prefix
+    4. integration : Jinja2/DTL parity: identical HTML across engines
+    5. e2e         : user interaction: open, check, search filter
+    6. e2e         : error flow: (SKIP because MultiSelect is required=False by default on
                      the /multi-select/ page; no dedicated error page exists yet)
-    7. e2e         — morph resilience: checked options and dropdown state preserved
-    8. screenshot  — visual states: default (closed), open, options selected
+    7. e2e         : morph resilience: checked options and dropdown state preserved
+    8. screenshot  : visual states: default (closed), open, options selected
 """
 
 from __future__ import annotations
@@ -253,7 +253,7 @@ def test_multi_select_no_group_headers_for_flat_choices():
 def test_multi_select_grouped_group_header_xshow_includes_child_labels_when_searchable():
     """When the widget shows a search box, group headers carry ``x-show`` so
     they hide if no child matches the query."""
-    # Force show_search=True via search_threshold=0 — easier than 21 choices.
+    # Force show_search=True via search_threshold=0, which is easier than 21 choices.
     choices = [("Group", [("a", "Alpha"), ("b", "Beta")])]
     widget = MultiSelect(choices=choices, show_search=True)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
@@ -594,7 +594,7 @@ def test_multi_select_no_htmx_attrs_without_search_url():
 
 @pytest.mark.unit
 def test_multi_select_static_choices_ignored_when_search_url():
-    """Static ``choices`` are ignored when server search is wired — the
+    """Static ``choices`` are ignored when server search is wired: the
     listbox renders pre-rendered registry options instead.  ``count=0``
     here so the listbox renders only the empty-state alert."""
     widget = make_server_widget(MultiSelect, count=0, choices=[("a", "A")])
@@ -608,7 +608,7 @@ def test_multi_select_static_choices_ignored_when_search_url():
 
 @pytest.mark.unit
 def test_multi_select_renders_no_results_alert_when_initial_options_empty():
-    """An empty initial set still communicates state — the listbox carries
+    """An empty initial set still communicates state: the listbox carries
     the same ``role=status`` alert that the htmx response would render."""
     widget = make_server_widget(MultiSelect, count=0)
     soup = render_widget(widget, attrs={"id": "id_test"})
@@ -628,7 +628,7 @@ def test_multi_select_htmx_mode_passes_initial_selected_json():
     details = soup.find("details")
     assert details["x-data"] == "formworkMultiSelect"
     assert details["data-has-search-url"] == "true"
-    # data-initial-selected holds a JSON array (empty here — nothing pre-selected).
+    # data-initial-selected holds a JSON array (empty here: nothing pre-selected).
     assert json.loads(details["data-initial-selected"]) == []
 
 
@@ -657,7 +657,7 @@ def test_multi_select_htmx_wrapper_has_id():
 @pytest.mark.unit
 def test_multi_select_prerenders_initial_options_when_registered():
     """The first ``max_results`` registry items are baked straight into the
-    listbox so the dropdown opens with real data — htmx replaces them on
+    listbox so the dropdown opens with real data; htmx replaces them on
     first focus."""
     widget = make_server_widget(MultiSelect, count=3)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
@@ -1011,7 +1011,7 @@ def test_multi_select_wrapper_has_id_e2e(multi_select_page):
     assert "_multiselect" in wrapper_id
 
 
-# ─── Level 5b: E2e — grouped MultiSelect ─────────────────────────────────
+# ─── Level 5b: E2e, grouped MultiSelect ─────────────────────────────────
 #
 # cities_grouped is the 4th MultiSelect on the page (nth(3)).
 
@@ -1058,7 +1058,7 @@ def test_multi_select_grouped_pick_via_click(multi_select_page):
     assert "London" in summary_text
 
 
-# ─── Level 5c: E2e — search auto-focus ───────────────────────────────────
+# ─── Level 5c: E2e, search auto-focus ───────────────────────────────────
 
 
 @pytest.mark.e2e
@@ -1103,7 +1103,7 @@ def test_multi_select_no_search_no_focus_error(multi_select_page):
     assert errors == []
 
 
-# ─── Level 5d: E2e — keyboard navigation ─────────────────────────────────
+# ─── Level 5d: E2e, keyboard navigation ─────────────────────────────────
 #
 # Uses the grouped MultiSelect (nth(3)) which is fixed-size and searchable.
 # Keyboard handlers are on the <details> root; the search input naturally
@@ -1242,10 +1242,10 @@ def test_multi_select_keyboard_close_clears_highlight(multi_select_page):
 # MultiSelect fields on the /multi-select/ page are all required=False, so
 # submitting without values does not trigger visible validation errors.
 # A dedicated error-flow test would require a page with a required=True
-# MultiSelect — that page does not exist yet.  Tracked as a coverage gap.
+# MultiSelect. That page does not exist yet.  Tracked as a coverage gap.
 
 
-# ─── Level 6b: E2e — server-side search loading + failure UX ─────────────
+# ─── Level 6b: E2e, server-side search loading + failure UX ─────────────
 #
 # Indices on /multi-select/:  2 = languages_htmx (working),
 #                             4 = languages_failing (slow + always 500).
@@ -1253,13 +1253,9 @@ def test_multi_select_keyboard_close_clears_highlight(multi_select_page):
 
 @pytest.mark.e2e
 def test_multi_select_prerenders_options_on_initial_load(multi_select_page):
-    """Real options render in every htmx-mode MultiSelect on first page
-    load, before any user interaction — no skeleton flicker.
-
-    The dropdown at index 2 wires ``search_choices_languages_htmx`` against
-    ``E2E_LANGUAGES`` (6 entries), all of which are baked in (default
-    ``reg.max_results`` is 50).
-    """
+    """Real options render in every htmx-mode MultiSelect on first page load, with no
+    skeleton flicker: the dropdown at index 2 wires ``search_choices_languages_htmx``
+    against all 6 ``E2E_LANGUAGES`` entries, which fit under the default ``reg.max_results`` of 50."""
     htmx_dropdown = multi_select_page.locator("details.dropdown.multiselect").nth(2)
     items = htmx_dropdown.locator("ul[role='listbox'] > li")
     assert items.count() == 6
@@ -1268,7 +1264,7 @@ def test_multi_select_prerenders_options_on_initial_load(multi_select_page):
 @pytest.mark.e2e
 def test_multi_select_options_refresh_on_first_focus(multi_select_page):
     """First focus fires htmx; the swap replaces pre-rendered options with
-    the fresh response — same count, same listbox."""
+    the fresh response: same count, same listbox."""
     from playwright.sync_api import expect
 
     multi = multi_select_page.locator("details.dropdown.multiselect").nth(2)
@@ -1306,7 +1302,7 @@ def test_multi_select_failing_search_shows_error_alert(multi_select_page):
 
 @pytest.mark.e2e
 def test_multi_select_search_input_works_after_error(multi_select_page):
-    """The search input remains usable after a failure — typing fires a new
+    """The search input remains usable after a failure: typing fires a new
     request and the value lands in the input."""
     from playwright.sync_api import expect
 
@@ -1390,7 +1386,7 @@ def test_multi_select_morph_preserves_dropdown_open(multi_select_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — these tests produce PNG artifacts in `test-results/`
+# Scaffolding only: these tests produce PNG artifacts in `test-results/`
 # that can be reviewed manually.  True baseline comparison requires
 # wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
 # as a follow-up.

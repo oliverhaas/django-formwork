@@ -8,14 +8,14 @@ regression).  Each level is marked so you can run fast-feedback subsets:
     uv run pytest tests/widgets/test_image_drop_zone.py -m "not e2e"    # skip browser tests
 
 Levels:
-    1. unit        — widget object: instantiation, get_context, value_from_datadict, edge cases
-    2. unit        — widget rendering: HTML structure, attributes, Alpine, icons
-    3. integration — form integration: field template, error state, prefix
-    4. integration — Jinja2/DTL parity: identical HTML across engines
-    5. e2e         — user interaction: upload, preview, remove
-    6. e2e         — error flow: SKIPPED (no dedicated error-flow page)
-    7. e2e         — morph resilience: preview state preserved across morphs
-    8. screenshot  — visual states: default, with-image
+    1. unit: widget object, instantiation, get_context, value_from_datadict, edge cases
+    2. unit: widget rendering, HTML structure, attributes, Alpine, icons
+    3. integration: form integration, field template, error state, prefix
+    4. integration: Jinja2/DTL parity, identical HTML across engines
+    5. e2e: user interaction, upload, preview, remove
+    6. e2e: error flow, SKIPPED (no dedicated error-flow page)
+    7. e2e: morph resilience, preview state preserved across morphs
+    8. screenshot: visual states, default, with-image
 """
 
 from __future__ import annotations
@@ -393,7 +393,7 @@ def test_image_drop_zone_preview_and_remove(uploads_page):
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # There is no dedicated page with a required ImageDropZone that shows
-# validation errors — the /uploads/ page marks the field as optional.
+# validation errors: the /uploads/ page marks the field as optional.
 # Error-flow tests are deferred until a suitable page is added.
 
 
@@ -409,7 +409,7 @@ def test_image_drop_zone_preview_and_remove(uploads_page):
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Scaffolding only — produces PNG artifacts in `test-results/`.
+# Scaffolding only, producing PNG artifacts in `test-results/`.
 
 
 @pytest.mark.screenshot

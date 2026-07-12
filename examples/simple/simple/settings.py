@@ -41,7 +41,7 @@ TEMPLATES = [
     },
 ]
 
-# Use formwork renderer for ALL forms — no need for FormworkForm base class.
+# Use formwork renderer for ALL forms: no need for FormworkForm base class.
 FORM_RENDERER = "django_formwork.FormworkRenderer"
 
 STATIC_URL = "/static/"

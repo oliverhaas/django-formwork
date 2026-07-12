@@ -77,7 +77,6 @@ class TestHelpTextToggle:
         assert "truncate" in (helptext.get_attribute("class") or "")
 
     def test_toggle_shown_when_text_overflows(self, basic_page):
-        """The "agree" field's help text overflows, so the toggle is shown."""
         self._narrow(basic_page)
         toggle = basic_page.locator("#id_agree_helptext button")
         assert toggle.is_visible()
@@ -99,7 +98,6 @@ class TestHelpTextToggle:
         assert "truncate" in (helptext.get_attribute("class") or "")
 
     def test_expanded_icon_and_button_align_to_edges(self, basic_page):
-        """When expanded, the icon top-aligns and the toggle bottom-aligns to the row."""
         self._narrow(basic_page)
         toggle = basic_page.locator("#id_agree_helptext button")
         toggle.click()

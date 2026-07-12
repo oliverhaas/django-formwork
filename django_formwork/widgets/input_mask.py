@@ -34,7 +34,7 @@ class InputMask(forms.TextInput):
         context = super().get_context(name, value, attrs)
         context["widget"]["mask"] = self.mask
         # Build placeholder from mask pattern.
-        # Use middle dot (·) instead of underscore — underscores sit at the
+        # Use middle dot (·) instead of underscore, since underscores sit at the
         # text baseline and are clipped/invisible in DaisyUI's input component.
         placeholder = self.mask.replace("#", "\u00b7").replace("A", "\u00b7").replace("*", "\u00b7")
         if "placeholder" not in context["widget"]["attrs"]:
