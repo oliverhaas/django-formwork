@@ -1097,7 +1097,7 @@
 <h1 id="server-side-views">Server-side Views<a class="headerlink" href="#server-side-views" title="Permanent link">&para;</a></h1>
 <p>Formwork provides three class-based views for server-side search and validation. All are importable from <code>django_formwork</code> (or from <code>django_formwork.views</code>).</p>
 <h2 id="formworksearchview">FormworkSearchView<a class="headerlink" href="#formworksearchview" title="Permanent link">&para;</a></h2>
-<p>Base view for the registry-driven search endpoint. <code>FormworkAutoSearchView</code> (below) inherits from it and serves every auto-registered widget; you'd subclass <code>FormworkSearchView</code> directly only if you want to render the formwork response templates (the <code>&lt;li&gt;</code> fragments that htmx swaps in) from a custom endpoint of your own — e.g. for a non-formwork widget that reuses the same look.</p>
+<p>Base view for the registry-driven search endpoint. <code>FormworkAutoSearchView</code> (below) inherits from it and serves every auto-registered widget; you'd subclass <code>FormworkSearchView</code> directly only if you want to render the formwork response templates (the <code>&lt;li&gt;</code> fragments that htmx swaps in) from a custom endpoint of your own, e.g. for a non-formwork widget that reuses the same look.</p>
 <h3 id="response-templates">Response templates<a class="headerlink" href="#response-templates" title="Permanent link">&para;</a></h3>
 <p>The HTML fragment is rendered by one of three class-level Django templates, selected by the view's <code>widget_type</code> (<code>"search_select"</code>, <code>"combo_box"</code>, or <code>"multi_select"</code>). Auto-registered endpoints take it from the registration; subclasses set the class attribute. A client-supplied <code>type</code> query parameter is ignored, so callers cannot switch templates:</p>
 <table>
@@ -1175,7 +1175,7 @@
 <p>This mounts one URL: <code>__formwork__/search/&lt;key&gt;/</code> which <code>FormworkAutoSearchView</code> handles.</p>
 <h3 id="auto-registration">Auto-registration<a class="headerlink" href="#auto-registration" title="Permanent link">&para;</a></h3>
 <p>Registration happens automatically when a <code>FormworkForm</code> or <code>FormworkModelForm</code> is instantiated. Two modes are supported:</p>
-<p><strong>Model-backed</strong> — The widget has <code>search_fields</code> and the field is a <code>ModelChoiceField</code> or <code>ModelMultipleChoiceField</code>. Formwork registers an endpoint that filters the queryset using <code>__icontains</code> on the listed fields:</p>
+<p><strong>Model-backed</strong>: The widget has <code>search_fields</code> and the field is a <code>ModelChoiceField</code> or <code>ModelMultipleChoiceField</code>. Formwork registers an endpoint that filters the queryset using <code>__icontains</code> on the listed fields:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">SearchSelect</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
@@ -1185,7 +1185,7 @@
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span><span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;country__name&quot;</span><span class="p">]),</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="p">)</span>
 </span></code></pre></div>
-<p><strong>Choices-backed</strong> — The form defines a <code>search_choices_&lt;fieldname&gt;(query, request)</code> method. It receives the search query and the request, and returns a list of dicts or <code>(value, label)</code> tuples:</p>
+<p><strong>Choices-backed</strong>: The form defines a <code>search_choices_&lt;fieldname&gt;(query, request)</code> method. It receives the search query and the request, and returns a list of dicts or <code>(value, label)</code> tuples:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">SearchSelect</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
@@ -1199,7 +1199,7 @@
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="p">]</span>
 </span></code></pre></div>
 <h3 id="access-control">Access control<a class="headerlink" href="#access-control" title="Permanent link">&para;</a></h3>
-<p>Auto-registered endpoints require a <code>search_decorator</code> on the widget. Omitting it raises <code>ImproperlyConfigured</code> — formwork refuses to silently expose an unauthenticated search endpoint.</p>
+<p>Auto-registered endpoints require a <code>search_decorator</code> on the widget. Omitting it raises <code>ImproperlyConfigured</code>: formwork refuses to silently expose an unauthenticated search endpoint.</p>
 <p>Pass a standard Django auth decorator:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">login_required</span><span class="p">,</span> <span class="n">permission_required</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
@@ -1218,7 +1218,7 @@
 <p>To explicitly allow unauthenticated access (public endpoint), pass <code>None</code>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">SearchSelect</span><span class="p">(</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">search_decorator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># public — no auth required</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">search_decorator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># public, no auth required</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>The decorator wraps <code>FormworkAutoSearchView.dispatch</code> for that endpoint.</p>
@@ -1226,8 +1226,8 @@
 <h2 id="formworkvalidateview">FormworkValidateView<a class="headerlink" href="#formworkvalidateview" title="Permanent link">&para;</a></h2>
 <p>Base view for server-side textarea validation. It handles POST requests, calls <code>get_errors()</code>, and returns:</p>
 <ol>
-<li>An HTML fragment with <code>&lt;mark&gt;</code> tags wrapping error spans — htmx swaps this into the <code>ValidatedTextarea</code> highlights overlay.</li>
-<li>An out-of-band (<code>hx-swap-oob</code>) fragment with error messages — htmx swaps this into the error display area.</li>
+<li>An HTML fragment with <code>&lt;mark&gt;</code> tags wrapping error spans: htmx swaps this into the <code>ValidatedTextarea</code> highlights overlay.</li>
+<li>An out-of-band (<code>hx-swap-oob</code>) fragment with error messages: htmx swaps this into the error display area.</li>
 </ol>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># views.py</span>
@@ -1296,7 +1296,7 @@
 <h3 id="max_text_length"><code>MAX_TEXT_LENGTH</code><a class="headerlink" href="#max_text_length" title="Permanent link">&para;</a></h3>
 <p>Text longer than <code>MAX_TEXT_LENGTH</code> characters (default <code>50_000</code>) is truncated before being passed to <code>get_errors()</code>, mirroring <code>MAX_QUERY_LENGTH</code> on the search side. Override the class attribute to change the limit.</p>
 <h3 id="security-note">Security note<a class="headerlink" href="#security-note" title="Permanent link">&para;</a></h3>
-<p><code>FormworkValidateView</code> is <strong>CSRF-exempt</strong> because it performs read-only validation — it reads text and returns highlighted output, but makes no changes to application state.</p>
+<p><code>FormworkValidateView</code> is <strong>CSRF-exempt</strong> because it performs read-only validation: it reads text and returns highlighted output, but makes no changes to application state.</p>
 <div class="admonition warning">
 <p class="admonition-title">Do not use for side-effecting operations</p>
 <p>Because the view is CSRF-exempt, do not subclass <code>FormworkValidateView</code> for any operation that writes to the database, sends emails, or has any other side effect. For operations with side effects, use a regular Django view with CSRF protection enabled.</p>

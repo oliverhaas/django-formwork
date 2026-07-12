@@ -875,16 +875,16 @@
 </tbody>
 </table>
 <h2 id="where-each-feature-is-used">Where each feature is used<a class="headerlink" href="#where-each-feature-is-used" title="Permanent link">&para;</a></h2>
-<p><strong><code>:has()</code></strong> — used throughout <code>formwork.css</code> to style fieldsets contextually: single-checkbox two-column layout, multi-widget side-by-side layout, error tooltip sizing, ClearableFileInput flow layout, and validated textarea error state.</p>
-<p><strong><code>color-mix(in oklab, ...)</code></strong> — used for placeholder color on <code>&lt;select&gt;</code> and summary triggers, upload widget icon color, and the error highlight background on <code>ValidatedTextarea</code>. Browsers that don't support <code>color-mix()</code> fall back to a hardcoded <code>rgba()</code> value immediately before each <code>color-mix()</code> declaration.</p>
-<p><strong>CSS Grid <code>subgrid</code></strong> — used so checkbox and multi-widget inputs inside an error tooltip wrapper stay aligned with the parent fieldset's column grid.</p>
-<p><strong>CSS Nesting</strong> — used inside <code>@layer components</code> rule blocks (e.g. <code>.fieldset + .fieldset</code>). Browsers that don't support nesting will silently drop those rules.</p>
-<p><strong><code>@layer</code></strong> — all <code>formwork.css</code> rules are wrapped in <code>@layer components</code>. This ensures Tailwind utilities in HTML (which are in <code>@layer utilities</code>) always take precedence, and users can override formwork styles with unlayered CSS. Browsers that don't support <code>@layer</code> receive no formwork styles at all.</p>
+<p><strong><code>:has()</code></strong>: used throughout <code>formwork.css</code> to style fieldsets contextually: single-checkbox two-column layout, multi-widget side-by-side layout, error tooltip sizing, ClearableFileInput flow layout, and validated textarea error state.</p>
+<p><strong><code>color-mix(in oklab, ...)</code></strong>: used for placeholder color on <code>&lt;select&gt;</code> and summary triggers, upload widget icon color, and the error highlight background on <code>ValidatedTextarea</code>. Browsers that don't support <code>color-mix()</code> fall back to a hardcoded <code>rgba()</code> value immediately before each <code>color-mix()</code> declaration.</p>
+<p><strong>CSS Grid <code>subgrid</code></strong>: used so checkbox and multi-widget inputs inside an error tooltip wrapper stay aligned with the parent fieldset's column grid.</p>
+<p><strong>CSS Nesting</strong>: used inside <code>@layer components</code> rule blocks (e.g. <code>.fieldset + .fieldset</code>). Browsers that don't support nesting will silently drop those rules.</p>
+<p><strong><code>@layer</code></strong>: all <code>formwork.css</code> rules are wrapped in <code>@layer components</code>. This ensures Tailwind utilities in HTML (which are in <code>@layer utilities</code>) always take precedence, and users can override formwork styles with unlayered CSS. Browsers that don't support <code>@layer</code> receive no formwork styles at all.</p>
 <h2 id="effective-minimum">Effective minimum<a class="headerlink" href="#effective-minimum" title="Permanent link">&para;</a></h2>
 <p>All five features are available in Chrome 117+, Firefox 121+, Safari 16.5+, and Edge 117+. Browsers released before these versions will have visual regressions (misaligned layouts, missing placeholder colors, broken subgrid alignment), but the forms remain functional.</p>
 <div class="admonition note">
 <p class="admonition-title">Fallbacks</p>
-<p><code>color-mix()</code> rules always include a <code>rgba()</code> fallback on the preceding line, so colors degrade gracefully on older browsers. All other features have no fallback — if you need to support older browsers, you will need to add custom CSS overrides.</p>
+<p><code>color-mix()</code> rules always include a <code>rgba()</code> fallback on the preceding line, so colors degrade gracefully on older browsers. All other features have no fallback. If you need to support older browsers, you will need to add custom CSS overrides.</p>
 </div>
 
 
