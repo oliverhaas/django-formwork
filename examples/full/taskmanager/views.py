@@ -13,7 +13,6 @@ from .forms import (
     TaskFilterForm,
     TaskForm,
     TaskQuickAddForm,
-    TaskStatusForm,
     WizardConfigForm,
     WizardFirstTaskForm,
     WizardProjectForm,
@@ -88,6 +87,10 @@ def task_list(request):
         if priority:
             tasks = tasks.filter(priority=priority)
 
+    tasks = list(tasks)
+    for t in tasks:
+        t.row_form = TaskForm(instance=t, editable_fields=["status"], auto_id=f"id_row_{t.pk}_%s")
+
     if request.headers.get("HX-Request") == "true":
         return render(request, "tasks/_list_rows.html", {"tasks": tasks})
     return render(request, "tasks/list.html", {"tasks": tasks, "filter_form": form})
@@ -132,11 +135,12 @@ def task_delete(request, pk):
 
 
 def task_status(request, pk):
-    """Inline status edit — htmx POST returns a single updated row."""
+    """Inline row edit via htmx, using TaskForm with only status editable."""
     task = get_object_or_404(Task, pk=pk)
-    form = TaskStatusForm(request.POST, instance=task)
+    form = TaskForm(request.POST, instance=task, editable_fields=["status"], auto_id=f"id_row_{task.pk}_%s")
     if form.is_valid():
         form.save()
+    task.row_form = form
     return render(request, "tasks/_list_row.html", {"task": task})
 
 

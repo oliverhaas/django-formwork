@@ -62,6 +62,7 @@ class TaskForm(FormworkModelForm):
     rating = forms.TypedChoiceField(
         choices=Rating.make_choices(5),
         coerce=int,
+        empty_value=None,
         widget=Rating(allow_clear=True),
         required=False,
         help_text="Quality rating (after completion).",
@@ -90,13 +91,19 @@ class TaskForm(FormworkModelForm):
             "attachment": FileDropZone(max_size=10 * 1024 * 1024),
         }
 
-
-class TaskStatusForm(forms.ModelForm):
-    """Single-field form for the htmx inline status edit on the list."""
-
-    class Meta:
-        model = Task
-        fields = ["status"]
+    def __init__(self, *args, editable_fields=None, **kwargs):
+        """``editable_fields``: iterable of field names left editable; every
+        other field is marked ``disabled`` so its cleaned value always comes
+        from the bound instance rather than POST data, regardless of what
+        (if anything) was submitted for it. Lets the same form back a
+        row's single-field inline edit (htmx) and the full edit page
+        without risking clobbering fields the row doesn't render.
+        """
+        super().__init__(*args, **kwargs)
+        if editable_fields is not None:
+            for name, field in self.fields.items():
+                if name not in editable_fields:
+                    field.disabled = True
 
 
 class TaskQuickAddForm(forms.Form):

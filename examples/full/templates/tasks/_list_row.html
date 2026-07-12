@@ -9,11 +9,7 @@
           hx-swap="outerHTML"
           hx-trigger="change">
       {% csrf_token %}
-      <select name="status" class="select select-sm select-ghost">
-        {% for value, label in task.STATUS_CHOICES %}
-          <option value="{{ value }}" {% if task.status == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
+      {{ task.row_form.status }}
     </form>
   </td>
   <td>
