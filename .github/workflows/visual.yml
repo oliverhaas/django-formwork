@@ -64,10 +64,10 @@ jobs:
         id: screenshots
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            uv run pytest tests/widgets/ -m screenshot --update-screenshots --no-cov -q
+            uv run pytest tests/ -m screenshot --update-screenshots --no-cov -q
           else
             set +e
-            uv run pytest tests/widgets/ -m screenshot --no-cov -q
+            uv run pytest tests/ -m screenshot --no-cov -q
             echo "exit_code=$?" >> "$GITHUB_OUTPUT"
             set -e
           fi
@@ -85,7 +85,8 @@ jobs:
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         id: schedule_diff
         run: |
-          if git diff --quiet tests/widgets/screenshots/; then
+          # git status --porcelain also catches brand-new (untracked) baselines.
+          if [ -z "$(git status --porcelain -- tests/widgets/screenshots/ tests/e2e/screenshots/)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -103,7 +104,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           BRANCH="chore/update-screenshots-scheduled"
           git checkout -B "$BRANCH"
-          git add tests/widgets/screenshots/
+          git add tests/widgets/screenshots/ tests/e2e/screenshots/
           git commit -m "chore: update screenshot baselines [auto]"
           git push --force origin "$BRANCH"
           if gh pr list --head "$BRANCH" --state open --json number -q '.[0].number' | grep -q .; then
@@ -132,13 +133,14 @@ jobs:
       # ---------- Phase C: pull_request flow ----------
       - name: Regenerate baselines for failing PR
         if: github.event_name == 'pull_request' && steps.screenshots.outputs.exit_code != '0'
-        run: uv run pytest tests/widgets/ -m screenshot --update-screenshots --no-cov -q || true
+        run: uv run pytest tests/ -m screenshot --update-screenshots --no-cov -q || true
 
       - name: Check for PR baseline changes
         if: github.event_name == 'pull_request' && steps.screenshots.outputs.exit_code != '0'
         id: pr_diff
         run: |
-          if git diff --quiet tests/widgets/screenshots/; then
+          # git status --porcelain also catches brand-new (untracked) baselines.
+          if [ -z "$(git status --porcelain -- tests/widgets/screenshots/ tests/e2e/screenshots/)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -164,7 +166,7 @@ jobs:
           git fetch origin "$SOURCE_BRANCH"
           git reset --soft "origin/$SOURCE_BRANCH"
           git reset -- .
-          git add tests/widgets/screenshots/
+          git add tests/widgets/screenshots/ tests/e2e/screenshots/
           git commit -m "chore: update screenshot baselines for ${SOURCE_BRANCH} [auto]"
           git checkout -B "$UPDATE_BRANCH"
           git push --force origin "$UPDATE_BRANCH"

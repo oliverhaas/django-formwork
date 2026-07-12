@@ -4,6 +4,8 @@ Tests auto-save via htmx morph, caret/selection preservation,
 required error suppression, and explicit submit behavior.
 """
 
+import pytest
+
 from .conftest import submit
 
 
@@ -267,65 +269,69 @@ class TestPersistenceAndReset:
             assert autosave_page.locator('input[name="name"]').input_value() == ""
 
 
-class TestAutoSaveVisualStates:
-    """Percy visual regression snapshots for auto-save form state transitions."""
+def test_multiple_fields_persist_after_reload(autosave_page):
+    """All auto-saved field types are restored from the DB on reload."""
+    page = autosave_page
+    page.locator('input[name="name"]').fill("Persisted User")
+    page.locator('input[name="email"]').fill("persist@test.com")
+    page.locator('select[name="priority"]').select_option("medium")
+    page.locator('input[name="agree"]').check()
+    _trigger_input_event(page, 'input[name="name"]')
+    _wait_for_autosave(page, timeout=1500)
 
-    def test_autosave_field_by_field(self, autosave_page):
-        """Walk through filling fields one by one, snapshot after each morph."""
-        page = autosave_page
+    page.reload()
+    page.wait_for_timeout(500)
 
-        page.locator('input[name="name"]').fill("Jane Doe")
-        _trigger_input_event(page, 'input[name="name"]')
-        _wait_for_autosave(page)
+    assert page.locator('input[name="name"]').input_value() == "Persisted User"
+    assert page.locator('input[name="email"]').input_value() == "persist@test.com"
+    assert page.locator('select[name="priority"]').input_value() == "medium"
+    assert page.locator('input[name="agree"]').is_checked()
 
-        page.locator('input[name="email"]').fill("jane@example.com")
-        _trigger_input_event(page, 'input[name="email"]')
-        _wait_for_autosave(page)
 
-        page.locator('textarea[name="message"]').fill("Hello,\nThis is a multi-line message.")
-        _trigger_input_event(page, 'textarea[name="message"]')
-        _wait_for_autosave(page)
+@pytest.mark.screenshot
+def test_autosave_filled_form_screenshot(autosave_page, assert_screenshot):
+    """Visual snapshot: form after filling every field, auto-saved field by field."""
+    page = autosave_page
 
-        page.locator('select[name="priority"]').select_option("high")
-        page.evaluate(
-            """document.querySelector('select[name="priority"]')"""
-            """.dispatchEvent(new Event('change', {bubbles: true}))""",
-        )
-        _wait_for_autosave(page)
+    page.locator('input[name="name"]').fill("Jane Doe")
+    _trigger_input_event(page, 'input[name="name"]')
+    _wait_for_autosave(page)
 
-        page.locator('input[name="notify"][value="sms"]').click(force=True)
-        _wait_for_autosave(page)
+    page.locator('input[name="email"]').fill("jane@example.com")
+    _trigger_input_event(page, 'input[name="email"]')
+    _wait_for_autosave(page)
 
-        page.locator('input[name="agree"]').check()
-        _wait_for_autosave(page)
+    page.locator('textarea[name="message"]').fill("Hello,\nThis is a multi-line message.")
+    _trigger_input_event(page, 'textarea[name="message"]')
+    _wait_for_autosave(page)
 
-    def test_autosave_error_cycle(self, autosave_page):
-        """Error appears on bad email, disappears when fixed."""
-        page = autosave_page
+    page.locator('select[name="priority"]').select_option("high")
+    page.evaluate(
+        """document.querySelector('select[name="priority"]')"""
+        """.dispatchEvent(new Event('change', {bubbles: true}))""",
+    )
+    _wait_for_autosave(page)
 
-        page.locator('input[name="email"]').fill("not-valid")
-        _trigger_input_event(page, 'input[name="email"]')
-        _wait_for_autosave(page)
+    page.locator('input[name="notify"][value="sms"]').click(force=True)
+    _wait_for_autosave(page)
 
-        page.locator('input[name="email"]').fill("fixed@example.com")
-        _trigger_input_event(page, 'input[name="email"]')
-        _wait_for_autosave(page)
+    page.locator('input[name="agree"]').check()
+    _wait_for_autosave(page)
 
-    def test_autosave_persist_and_reload(self, autosave_page):
-        """Fill fields, reload, verify data persists, then delete."""
-        page = autosave_page
+    assert_screenshot(page.locator("#autosave-form"), "autosave-form-filled.png")
 
-        page.locator('input[name="name"]').fill("Persisted User")
-        page.locator('input[name="email"]').fill("persist@test.com")
-        page.locator('select[name="priority"]').select_option("medium")
-        page.locator('input[name="agree"]').check()
-        _trigger_input_event(page, 'input[name="name"]')
-        _wait_for_autosave(page, timeout=1500)
 
-        page.reload()
-        page.wait_for_timeout(500)
+@pytest.mark.screenshot
+def test_autosave_error_cycle_screenshot(autosave_page, assert_screenshot):
+    """Visual snapshot: email format error appears on auto-save, then clears."""
+    page = autosave_page
 
-        delete_btn = page.locator('button:text("Delete")')
-        if delete_btn.count() > 0:
-            delete_btn.click()
-            page.wait_for_timeout(500)
+    page.locator('input[name="email"]').fill("not-valid")
+    _trigger_input_event(page, 'input[name="email"]')
+    _wait_for_autosave(page)
+    assert_screenshot(page.locator("#id_email_field"), "autosave-email-error.png")
+
+    page.locator('input[name="email"]').fill("fixed@example.com")
+    _trigger_input_event(page, 'input[name="email"]')
+    _wait_for_autosave(page)
+    assert_screenshot(page.locator("#id_email_field"), "autosave-email-fixed.png")
