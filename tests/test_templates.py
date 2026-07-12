@@ -270,6 +270,11 @@ class TestInlineErrorRendering:
         helptext = soup.find("p", attrs={"id": "id_name_helptext"})
         assert helptext is not None
         assert "Enter your name" in helptext.get_text()
+        # Server-render the collapsed state into the static class so the help is
+        # hidden on first paint and stays hidden even if Alpine never reprocesses
+        # this node after the htmx morph. The :class binding then lets [more]
+        # reveal it (expanded -> sr-only removed).
+        assert "sr-only" in (helptext.get("class") or [])
         assert "sr-only" in helptext.get(":class", "")
 
     def test_no_more_button_when_no_help_text_and_no_overflow(self):
