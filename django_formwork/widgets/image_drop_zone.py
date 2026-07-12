@@ -6,7 +6,7 @@ from typing import Any
 
 from django import forms
 
-from ._base import _DropZoneMixin
+from ._base import _DropZoneMixin, _ModuleScript
 
 
 class ImageDropZone(_DropZoneMixin, forms.FileInput):
@@ -22,6 +22,9 @@ class ImageDropZone(_DropZoneMixin, forms.FileInput):
     """
 
     template_name = "formwork/widgets/image_upload.html"
+
+    class Media:
+        js = (_ModuleScript("formwork/widgets/image_upload.js"),)
 
     def __init__(
         self,

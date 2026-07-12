@@ -165,19 +165,27 @@ def test_image_drop_zone_alpine_x_data_present():
 
 
 @pytest.mark.unit
-def test_image_drop_zone_alpine_x_data_preview():
-    """x-data includes a 'preview:' state property."""
+def test_image_drop_zone_alpine_x_data_component():
+    """x-data binds to the formworkImageUpload Alpine.data component."""
     soup = render_widget(ImageDropZone())
     wrapper = soup.find("div", attrs={"x-data": True})
-    assert "preview:" in wrapper["x-data"]
+    assert wrapper["x-data"] == "formworkImageUpload"
 
 
 @pytest.mark.unit
-def test_image_drop_zone_alpine_x_data_dragging():
-    """x-data includes a 'dragging:' state property."""
+def test_image_drop_zone_data_max_size_default_zero():
+    """Without max_size, data-max-size renders '0' (client-side check disabled)."""
     soup = render_widget(ImageDropZone())
     wrapper = soup.find("div", attrs={"x-data": True})
-    assert "dragging:" in wrapper["x-data"]
+    assert wrapper["data-max-size"] == "0"
+
+
+@pytest.mark.unit
+def test_image_drop_zone_data_max_size_attribute():
+    """max_size rides in the data-max-size attribute read by the component."""
+    soup = render_widget(ImageDropZone(max_size=2 * 1024 * 1024))
+    wrapper = soup.find("div", attrs={"x-data": True})
+    assert wrapper["data-max-size"] == "2097152"
 
 
 @pytest.mark.unit
@@ -360,6 +368,26 @@ def test_image_drop_zone_has_icon(uploads_page):
     zone = uploads_page.locator(".image-upload").first
     svg = zone.locator(".image-upload-prompt-icon")
     assert svg.is_visible()
+
+
+@pytest.mark.e2e
+def test_image_drop_zone_preview_and_remove(uploads_page):
+    """Selecting an image shows the FileReader preview; remove clears it."""
+    import base64
+
+    from playwright.sync_api import expect
+
+    png_1x1 = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    )
+    uploads_page.locator('input[name="avatar"]').set_input_files(
+        [{"name": "dot.png", "mimeType": "image/png", "buffer": png_1x1}],
+    )
+    zone = uploads_page.locator(".image-upload").first
+    preview = zone.locator("img.image-upload-preview")
+    expect(preview).to_be_visible()
+    zone.locator(".image-upload-remove").click()
+    expect(preview).not_to_be_visible()
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────

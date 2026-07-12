@@ -6,7 +6,7 @@ from typing import Any
 
 from django import forms
 
-from ._base import _DropZoneMixin
+from ._base import _DropZoneMixin, _ModuleScript
 
 
 class FileDropZone(_DropZoneMixin, forms.FileInput):
@@ -31,6 +31,9 @@ class FileDropZone(_DropZoneMixin, forms.FileInput):
 
     template_name = "formwork/widgets/drop_zone.html"
     allow_multiple_selected = True
+
+    class Media:
+        js = (_ModuleScript("formwork/widgets/drop_zone.js"),)
 
     def __init__(
         self,

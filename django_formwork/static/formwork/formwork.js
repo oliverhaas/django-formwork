@@ -33,6 +33,8 @@ import "./widgets/search_select.js";
 import "./widgets/multi_select.js";
 import "./widgets/combo_box.js";
 import "./widgets/date_picker.js";
+import "./widgets/drop_zone.js";
+import "./widgets/image_upload.js";
 import "./widgets/input_mask.js";
 import "./widgets/input_number.js";
 import "./widgets/otp_input.js";

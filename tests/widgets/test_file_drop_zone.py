@@ -151,12 +151,27 @@ def test_file_drop_zone_renders_file_input():
 
 @pytest.mark.unit
 def test_file_drop_zone_alpine_x_data():
-    """Root div has x-data with 'files' and 'dragging' keys."""
+    """Root div binds to the formworkDropZone Alpine.data component."""
     soup = render_widget(FileDropZone())
     wrapper = soup.find("div", attrs={"x-data": True})
     assert wrapper is not None
-    assert "files:" in wrapper["x-data"]
-    assert "dragging:" in wrapper["x-data"]
+    assert wrapper["x-data"] == "formworkDropZone"
+
+
+@pytest.mark.unit
+def test_file_drop_zone_data_max_size_default_zero():
+    """Without max_size, data-max-size renders '0' (client-side check disabled)."""
+    soup = render_widget(FileDropZone())
+    wrapper = soup.find("div", attrs={"x-data": True})
+    assert wrapper["data-max-size"] == "0"
+
+
+@pytest.mark.unit
+def test_file_drop_zone_data_max_size_attribute():
+    """max_size rides in the data-max-size attribute read by the component."""
+    soup = render_widget(FileDropZone(max_size=5 * 1024 * 1024))
+    wrapper = soup.find("div", attrs={"x-data": True})
+    assert wrapper["data-max-size"] == "5242880"
 
 
 @pytest.mark.unit
@@ -400,6 +415,31 @@ def test_file_drop_zone_restricted_shows_file_type(uploads_page):
     zone = uploads_page.locator(".dropzone").nth(1)
     text = zone.text_content().upper()
     assert "PDF" in text
+
+
+@pytest.mark.e2e
+def test_file_drop_zone_selecting_file_shows_preview(uploads_page):
+    """Choosing a file shows its name and formatted size in the preview area."""
+    from playwright.sync_api import expect
+
+    uploads_page.locator('input[name="dropzone"]').set_input_files(
+        [{"name": "notes.txt", "mimeType": "text/plain", "buffer": b"formwork"}],
+    )
+    zone = uploads_page.locator(".dropzone").first
+    expect(zone.locator(".dropzone-file-name")).to_have_text("notes.txt")
+    expect(zone.locator(".dropzone-file-size")).to_have_text("8 B")
+
+
+@pytest.mark.e2e
+def test_file_drop_zone_rejects_wrong_type_with_alert(uploads_page):
+    """The restricted zone rejects a non-PDF file and announces the error."""
+    from playwright.sync_api import expect
+
+    uploads_page.locator('input[name="dropzone_restricted"]').set_input_files(
+        [{"name": "notes.txt", "mimeType": "text/plain", "buffer": b"formwork"}],
+    )
+    error = uploads_page.locator(".dropzone").nth(1).locator(".dropzone-error")
+    expect(error).to_have_text("1 file(s) wrong type")
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
