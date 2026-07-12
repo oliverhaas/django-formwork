@@ -228,7 +228,9 @@ class TestInlineErrorRendering:
         form.is_valid()
         soup = render_html(form)
         error_row = soup.find("p", attrs={"id": "id_name_error"})
-        icon = error_row.find("i", class_="icon-circle-alert")
+        # A warning triangle, distinct from the info circle the help text uses,
+        # so an error never reads as help at icon size.
+        icon = error_row.find("i", class_="icon-triangle-alert")
         assert icon is not None
         assert icon.get("aria-hidden") == "true"
 
