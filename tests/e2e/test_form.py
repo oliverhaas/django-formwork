@@ -54,6 +54,43 @@ class TestFormStructure:
         assert no_validate is True
 
 
+class TestHelpTextToggle:
+    """Help text truncates to one line, with a [more]/[less] toggle when it overflows."""
+
+    def _narrow(self, basic_page):
+        basic_page.set_viewport_size({"width": 480, "height": 720})
+        basic_page.reload()
+        basic_page.wait_for_load_state("domcontentloaded")
+        basic_page.wait_for_timeout(300)
+
+    def test_toggle_hidden_when_text_fits(self, basic_page):
+        """The "name" field's help text fits on one line, so no toggle is shown."""
+        toggle = basic_page.locator("#id_name_helptext button")
+        assert not toggle.is_visible()
+
+    def test_toggle_shown_when_text_overflows(self, basic_page):
+        """The "agree" field's help text overflows, so the toggle is shown."""
+        self._narrow(basic_page)
+        toggle = basic_page.locator("#id_agree_helptext button")
+        assert toggle.is_visible()
+        assert toggle.text_content() == "[more]"
+
+    def test_click_expands_and_collapses(self, basic_page):
+        self._narrow(basic_page)
+        helptext = basic_page.locator("#id_agree_helptext span")
+        toggle = basic_page.locator("#id_agree_helptext button")
+
+        assert "truncate" in (helptext.get_attribute("class") or "")
+
+        toggle.click()
+        assert toggle.text_content() == "[less]"
+        assert "truncate" not in (helptext.get_attribute("class") or "")
+
+        toggle.click()
+        assert toggle.text_content() == "[more]"
+        assert "truncate" in (helptext.get_attribute("class") or "")
+
+
 class TestMorphInfrastructure:
     """Verify htmx 4 morph swap and the formwork-morph extension are registered."""
 

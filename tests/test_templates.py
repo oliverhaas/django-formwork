@@ -63,6 +63,16 @@ class TestFieldsetStructure:
         helptext = soup.find("p", class_="label", id="id_name_helptext")
         assert helptext is not None
 
+    def test_help_text_has_leading_info_icon(self):
+        class F(FormworkForm):
+            name = forms.CharField(help_text="Enter your name")
+
+        soup = render_html(F())
+        helptext = soup.find("p", class_="label")
+        icon = helptext.find("i", class_="icon-info")
+        assert icon is not None
+        assert icon.get("aria-hidden") == "true"
+
     def test_multi_widget_uses_legend(self):
         """RadioSelect fields use <legend> instead of <label>."""
 

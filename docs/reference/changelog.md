@@ -113,6 +113,12 @@
 - **`search_decorator` is typed `Callable | None`** on `SearchSelect`, `MultiSelect`, and
   `ComboBox` (was `Callable | object`). Runtime behavior is unchanged: omitting the argument
   still raises `ImproperlyConfigured` when server-side search is registered.
+- **Help text now renders as a single truncated line with a leading info icon** instead of
+  wrapping across multiple lines. When the text overflows, a `[more]`/`[less]` toggle
+  appears at the end of the line to expand or collapse it. This changes the DOM inside the
+  help-text `<p class="label">` in `formwork_field.html` (both template engines): if you
+  override this template, the help text now lives in a nested `<span>` alongside the icon
+  and toggle button rather than directly in the `<p>`.
 
 ### Fixed
 
