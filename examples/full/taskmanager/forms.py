@@ -102,15 +102,13 @@ class TaskForm(FormworkModelForm):
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
-            "priority": SearchSelect(choices=Task.PRIORITY_CHOICES),
-            "status": SearchSelect(choices=Task.STATUS_CHOICES),
             "due_date": DatePicker,
             "cover_image": ImageDropZone(max_size=5 * 1024 * 1024),
             "attachment": FileDropZone(max_size=10 * 1024 * 1024),
         }
         help_texts = {
-            "priority": "SearchSelect over the priority choices.",
-            "status": "SearchSelect over the status choices.",
+            "priority": "Plain native select. Four static options don't need SearchSelect.",
+            "status": "Plain native select, same reasoning as priority.",
             "due_date": "DatePicker with a calendar dropdown.",
             "cover_image": "Shown as a thumbnail in the task list (ImageDropZone, ≤5 MB).",
             "attachment": "Any single file (FileDropZone, ≤10 MB).",
@@ -139,9 +137,8 @@ class TaskQuickAddForm(forms.Form):
         widget=forms.TextInput(attrs={"placeholder": "What needs doing?"}),
     )
     priority = forms.ChoiceField(
-        choices=Task.PRIORITY_CHOICES,
-        widget=SearchSelect(choices=Task.PRIORITY_CHOICES),
-        initial="medium",
+        choices=Task.Priority.choices,
+        initial=Task.Priority.MEDIUM,
     )
 
 
@@ -154,12 +151,12 @@ class TaskFilterForm(forms.Form):
         label="",
     )
     status = forms.ChoiceField(
-        choices=[("", "All statuses"), *Task.STATUS_CHOICES],
+        choices=[("", "All statuses"), *Task.Status.choices],
         required=False,
         label="",
     )
     priority = forms.ChoiceField(
-        choices=[("", "All priorities"), *Task.PRIORITY_CHOICES],
+        choices=[("", "All priorities"), *Task.Priority.choices],
         required=False,
         label="",
     )
@@ -210,9 +207,8 @@ class WizardFirstTaskForm(FormworkForm):
 
     first_task = forms.CharField(max_length=200, label="Title")
     first_task_priority = forms.ChoiceField(
-        choices=Task.PRIORITY_CHOICES,
-        widget=SearchSelect(choices=Task.PRIORITY_CHOICES),
-        initial="medium",
+        choices=Task.Priority.choices,
+        initial=Task.Priority.MEDIUM,
         label="Priority",
     )
     first_task_due = forms.DateField(widget=DatePicker, required=False, label="Due date")

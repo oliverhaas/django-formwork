@@ -30,19 +30,19 @@ def dashboard(request):
     qs = Task.objects.all()
     by_status = dict(qs.values_list("status").annotate(n=Count("id")))
     status_icons = {
-        "todo": "icon-circle-dashed",
-        "in_progress": "icon-loader",
-        "review": "icon-eye",
-        "done": "icon-check",
+        Task.Status.TODO: "icon-circle-dashed",
+        Task.Status.IN_PROGRESS: "icon-loader",
+        Task.Status.REVIEW: "icon-eye",
+        Task.Status.DONE: "icon-check",
     }
     stats_data = [
         {
-            "key": key,
-            "label": label,
-            "icon": status_icons[key],
-            "count": by_status.get(key, 0),
+            "key": status,
+            "label": status.label,
+            "icon": status_icons[status],
+            "count": by_status.get(status, 0),
         }
-        for key, label in Task.STATUS_CHOICES
+        for status in Task.Status
     ]
     recent = qs.order_by("-updated_at")[:8]
 
@@ -188,7 +188,7 @@ def wizard_confirm(request):
 
     task = Task.objects.create(
         title=first.get("first_task", "Untitled"),
-        priority=first.get("first_task_priority", "medium"),
+        priority=first.get("first_task_priority", Task.Priority.MEDIUM),
         description=f"Project: {project.get('project_name', 'Unnamed')}",
         due_date=first.get("first_task_due"),
     )
