@@ -8,36 +8,34 @@ File:line refs are where the evidence lives.
 ## Where it stands
 
 The three original release blockers (security/correctness, CSS/icon distribution, API
-naming lock-in) are resolved. What remains is one architectural root cause plus scoped
-work: most widgets still inline their JS as duplicated `x-data` blocks across both
-template engines (the audit counted 11 of 17 before the widget removals). That
-duplication is why the escaping bug class existed and what makes the a11y/i18n gaps
-expensive to close. (Update 2026-07-12: the extraction landed; see the first item below.)
+naming lock-in) are resolved, and the architectural root cause is gone: the inline
+`x-data` extraction landed 2026-07-12, so all widget JS now ships as lintable
+`Alpine.data` modules with config passed through autoescaped `data-*` attributes, and
+both template engines are verified in sync. What remains is scoped work: the
+server-side upload enforcement decision, async save-path tests, screenshot coverage,
+dropdown a11y, docs, and the config surface.
 
 ---
 
 ## Should have for 1.0
 
-- [x] **Extract inline `x-data` widgets into shipped `Alpine.data` JS modules.** Inline
-  widget JS is duplicated byte-for-byte across DTL and Jinja2: un-lintable, un-testable,
-  un-minifiable, and where the two engines silently drift. At minimum the
-  security-sensitive ones (`date_picker`, `otp_input`) before 1.0.
-  (`templates/formwork/widgets/input_mask.html:1`, large)
-  Done 2026-07-12: all 8 remaining inline widgets bind to `formwork/widgets/*.js` modules; no `x-data="{` literal left in either engine, both engines verified in sync.
 - [ ] **Make widget `max_size`/`accept` enforceable server-side (or loudly document them
-  as cosmetic).** Drop zones enforce size/type/count only in client JS; any direct POST
-  uploads arbitrary size/type, a DoS + content-type bypass. It matches plain-Django
-  semantics, but the API *implies* enforcement. Ship a validator auto-attached from the
-  widget config (or `FormworkFileField`/`ImageField`), or at minimum document the
-  footgun. (`django_formwork/widgets/file_drop_zone.py:42`, medium)
+  as cosmetic).** Drop zones enforce size and type only in client JS (file *count* is
+  not enforced even there: a single-file zone accepts a multi-file drop); any direct
+  POST uploads arbitrary size/type, a DoS + content-type bypass. It matches plain-Django
+  semantics, but the API *implies* enforcement. The docs already warn for `max_size`;
+  nothing says `accept` is cosmetic. Ship a validator auto-attached from the widget
+  config (or `FormworkFileField`/`ImageField`), or extend the docs warnings to
+  `accept`/count. (`django_formwork/widgets/file_drop_zone.py:42`, medium)
 - [ ] **Cover the async ModelForm save path.** `avalidate_unique`'s ValidationError
   branch and the entire `_asave_m2m` loop have zero tests; async duplicate-unique
   validation and `asave()` on an M2M form are unexercised.
   (`django_formwork/async_forms.py:156`, medium)
-- [ ] **Add e2e/screenshot coverage for the four untested widgets** (`date_picker`,
-  `input_mask`, `input_number`, `otp_input`). The client-behavior ones have their entire
-  value in JS no browser test drives. Prioritize `otp_input` and `input_mask`.
-  (`tests/widgets/`, large)
+- [ ] **Add screenshot coverage and deeper e2e for** `date_picker`, `input_mask`,
+  `input_number`, `otp_input`. The extraction (2026-07-12) gave each its first browser
+  smoke test, so their JS is no longer entirely undriven; still missing are screenshot
+  baselines (none exist for these four) and the interaction cases the test files list
+  as planned (keyboard navigation, morph preservation). (`tests/widgets/`, medium)
 - [ ] **Fix custom-dropdown accessibility.** `MultiSelect` checkboxes are `display:none`
   (removed from the a11y tree); `keyboardNav` only toggles a CSS class and never sets
   `aria-activedescendant`/`aria-selected`.
@@ -67,9 +65,10 @@ expensive to close. (Update 2026-07-12: the extraction landed; see the first ite
   easy to build fragile, so only with a design that holds up; needs a server-side guard
   so hidden fields skip validation.
   (`templates/django/forms/formwork_field.html:1`, medium)
-- [ ] **Reduce e2e flakiness.** 210 `wait_for_timeout` sleeps violate the project's own
-  Playwright guidance and will intermittently fail as the suite grows. Convert to
-  `expect()` state-based waits. (`tests/widgets/test_search_select.py:1`, medium)
+- [ ] **Reduce e2e flakiness.** 211 `wait_for_timeout` sleeps (recounted 2026-07-12)
+  violate the project's own Playwright guidance and will intermittently fail as the
+  suite grows. Convert to `expect()` state-based waits.
+  (`tests/widgets/test_search_select.py:1`, medium)
 
 ---
 
@@ -90,8 +89,8 @@ expensive to close. (Update 2026-07-12: the extraction landed; see the first ite
   hand-rolled widgets in Django projects. (medium)
 - [ ] **Full internationalization** (gettext + locale catalog + JS string
   externalization). No `{% trans %}` or `locale/` dir anywhere; dozens of hardcoded
-  English strings block non-English deployment. Cleanest *after* the inline-x-data
-  extraction lands. (large)
+  English strings block non-English deployment. The inline-x-data extraction has
+  landed, so this is now unblocked. (large)
 - [ ] **`FormworkWizardView` + an htmx form-submit mixin/helper.** The docs advertise a
   wizard that only exists hand-coded in `examples/full`; every view repeats the same
   `HX-Request` partial-vs-page + `HX-Redirect` branching, exactly the boilerplate the
@@ -115,9 +114,9 @@ expensive to close. (Update 2026-07-12: the extraction landed; see the first ite
 ## Open questions (your calls; decide before the relevant work)
 
 1. **Is i18n a 1.0 requirement or a fast-follow?** Full gettext + locale + JS
-   externalization is large and cheapest *after* the inline-x-data extraction. Blocking
-   1.0 on it could delay significantly; shipping English-only forecloses non-English
-   adopters until a minor release.
+   externalization is large (though the inline-x-data extraction that made it cheap has
+   now landed). Blocking 1.0 on it could delay significantly; shipping English-only
+   forecloses non-English adopters until a minor release.
 2. **Which strategic feature is the 1.0 differentiator?** You can realistically land one
    large feature for 1.0: conditional fields (medium, highest value-per-effort), the
    layout system (large, decides non-trivial CRUD adoption), or the inline-formset UI
