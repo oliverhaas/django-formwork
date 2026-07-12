@@ -19,39 +19,39 @@ class Tag(models.Model):
 class Task(models.Model):
     """A task with priority, status, assignee, tags, and attachments."""
 
-    PRIORITY_CHOICES = [
-        ("low", "Low"),
-        ("medium", "Medium"),
-        ("high", "High"),
-        ("critical", "Critical"),
-    ]
-    STATUS_CHOICES = [
-        ("todo", "To Do"),
-        ("in_progress", "In Progress"),
-        ("review", "In Review"),
-        ("done", "Done"),
-    ]
+    class Priority(models.TextChoices):
+        LOW = "low", "Low"
+        MEDIUM = "medium", "Medium"
+        HIGH = "high", "High"
+        CRITICAL = "critical", "Critical"
+
+    class Status(models.TextChoices):
+        TODO = "todo", "To Do"
+        IN_PROGRESS = "in_progress", "In Progress"
+        REVIEW = "review", "In Review"
+        DONE = "done", "Done"
+
     # Status badges sit on a "lifecycle" ramp (neutral → primary → accent → success).
     # Priority badges sit on a "severity" ramp (info → secondary → warning → error).
     # No two cells in either column share a colour with the other axis, so a
     # row's status and priority badges always read as visually distinct.
-    STATUS_COLORS = {
-        "todo": "neutral",
-        "in_progress": "primary",
-        "review": "accent",
-        "done": "success",
+    STATUS_COLORS: dict[str, str] = {
+        Status.TODO: "neutral",
+        Status.IN_PROGRESS: "primary",
+        Status.REVIEW: "accent",
+        Status.DONE: "success",
     }
-    PRIORITY_COLORS = {
-        "low": "info",
-        "medium": "secondary",
-        "high": "warning",
-        "critical": "error",
+    PRIORITY_COLORS: dict[str, str] = {
+        Priority.LOW: "info",
+        Priority.MEDIUM: "secondary",
+        Priority.HIGH: "warning",
+        Priority.CRITICAL: "error",
     }
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
-    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default="medium")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="todo")
+    priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.MEDIUM)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.TODO)
     assignee = models.CharField(max_length=100, blank=True, default="")
     tags = models.ManyToManyField(Tag, blank=True, related_name="tasks")
     due_date = models.DateField(null=True, blank=True)
@@ -86,11 +86,3 @@ class Task(models.Model):
     @property
     def priority_color(self) -> str:
         return self.PRIORITY_COLORS.get(self.priority, "neutral")
-
-    @property
-    def status_label(self) -> str:
-        return dict(self.STATUS_CHOICES).get(self.status, self.status)
-
-    @property
-    def priority_label(self) -> str:
-        return dict(self.PRIORITY_CHOICES).get(self.priority, self.priority)

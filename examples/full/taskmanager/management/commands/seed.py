@@ -62,7 +62,7 @@ class Command(BaseCommand):
                 priority=priority,
                 assignee=assignee,
                 due_date=(now + timedelta(days=due_offset)).date() if due_offset is not None else None,
-                rating=random.choice([None, 3, 4, 4, 5]) if status == "done" else None,  # noqa: S311
+                rating=random.choice([None, 3, 4, 4, 5]) if status == Task.Status.DONE else None,  # noqa: S311
             )
             t.tags.set([tags[n] for n in tag_keys])
             created += 1

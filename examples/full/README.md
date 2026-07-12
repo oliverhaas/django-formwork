@@ -29,17 +29,17 @@ Open http://localhost:8000/.
 | `/tasks/` | Tasks list — htmx-driven filter bar, table with inline status edit per row |
 | `/tasks/new/` and `/tasks/<id>/edit/` | Two-column task form: full `ModelForm` left, metadata sidebar right |
 | `/wizard/` | Four-step project wizard (Project → Configuration → First task → Review) with the DaisyUI `steps` component |
-| `/settings/` | Showcase page for `PhoneInput`, `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating` |
+| `/settings/` | Showcase page for `PhoneInput`, `SearchSelect`, `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating` |
 
 ## Widgets covered
 
 Every widget in the package gets airtime across these pages. Quick lookup:
 
-- **Dashboard quick-add**: `SearchSelect`
-- **Tasks list filter bar**: `SearchSelect` (status, priority) + plain text input
-- **Task form**: `SearchSelect`, `MultiSelect` (model-backed, auto-wired server search), `DatePicker`, `ImageDropZone`, `FileDropZone`, `Rating`
-- **Wizard**: `ValidatedTextarea`, `Toggle`, `Range`, `RadioSelect`, `SearchSelect`, `DatePicker`, `MultiSelect`
-- **Settings**: `PhoneInput`, `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating`
+- **Dashboard quick-add**: plain Django inputs (a four-option priority doesn't need a fancy widget)
+- **Tasks list filter bar**: plain selects + plain text input
+- **Task form**: `SearchSelect` (assignee), `MultiSelect` (model-backed, auto-wired server search), `DatePicker`, `ImageDropZone`, `FileDropZone`, `Rating`
+- **Wizard**: `ValidatedTextarea`, `Toggle`, `Range`, `RadioSelect`, `DatePicker`, `MultiSelect`
+- **Settings**: `PhoneInput`, `SearchSelect` (country), `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating`
 
 ## What's intentionally not here
 

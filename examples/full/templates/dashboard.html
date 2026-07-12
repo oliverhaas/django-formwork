@@ -62,8 +62,8 @@
                     updated {{ t.updated_at|timesince }} ago
                   </p>
                 </div>
-                <span class="badge badge-{{ t.status_color }} badge-soft whitespace-nowrap">{{ t.status_label }}</span>
-                <span class="badge badge-{{ t.priority_color }} badge-soft badge-sm whitespace-nowrap">{{ t.priority_label }}</span>
+                <span class="badge badge-{{ t.status_color }} badge-soft whitespace-nowrap">{{ t.get_status_display }}</span>
+                <span class="badge badge-{{ t.priority_color }} badge-soft badge-sm whitespace-nowrap">{{ t.get_priority_display }}</span>
               </li>
             {% endfor %}
           </ul>
@@ -79,7 +79,7 @@
     <div class="card bg-base-100 border border-base-300">
       <div class="card-body p-6">
         <h2 class="card-title text-base">Quick add</h2>
-        <p class="text-xs text-base-content/50 mb-3">A one-line task entry — uses <code>SearchSelect</code> for priority.</p>
+        <p class="text-xs text-base-content/50 mb-3">A one-line task entry: title plus a plain priority select.</p>
         <form method="post" action="{% url 'dashboard' %}" class="space-y-3">
           {% csrf_token %}
           {{ form }}
