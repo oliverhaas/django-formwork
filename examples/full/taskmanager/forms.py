@@ -172,7 +172,11 @@ class WizardConfigForm(FormworkForm):
         choices=[("private", "Private"), ("team", "Team"), ("public", "Public")],
         widget=forms.RadioSelect,
         initial="team",
-        help_text="Who can see this project.",
+        help_text=(
+            "Who can see this project. Private means only you, team shares it with "
+            "everyone in your workspace, and public makes it readable by anyone with "
+            "the link. You can change this later in the project settings."
+        ),
     )
 
 
@@ -213,12 +217,20 @@ class SettingsForm(FormworkForm):
     avatar = forms.ImageField(
         widget=ImageDropZone(max_size=2 * 1024 * 1024),
         required=False,
-        help_text="Square-ish PNG or JPG, ≤2 MB.",
+        help_text=(
+            "Square-ish PNG or JPG, ≤2 MB. The picture is shown at small sizes "
+            "throughout the app, so pick something that stays recognizable as a "
+            "tiny thumbnail. A close-up works better than a wide shot."
+        ),
     )
     new_password = forms.CharField(
         widget=PasswordReveal,
         required=False,
-        help_text="Leave blank to keep current.",
+        help_text=(
+            "Leave blank to keep your current password. If you do change it, use at "
+            "least 12 characters and avoid reusing a password from another site. A "
+            "passphrase of a few unrelated words is easy to remember and hard to guess."
+        ),
     )
     two_factor_code = forms.CharField(
         widget=OTPInput(length=6),
