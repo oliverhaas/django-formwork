@@ -5,7 +5,6 @@
     "dev": "tailwindcss -i tests/e2e/app.css -o django_formwork/static/formwork/formwork-dist.css --watch"
   },
   "devDependencies": {
-    "@percy/cli": "^1",
     "@tailwindcss/cli": "^4",
     "daisyui": "^5.6.18",
     "tailwindcss": "^4"
