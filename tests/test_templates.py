@@ -228,9 +228,11 @@ class TestInlineErrorRendering:
         form.is_valid()
         soup = render_html(form)
         error_row = soup.find("p", attrs={"id": "id_name_error"})
-        # A warning triangle, distinct from the info circle the help text uses,
-        # so an error never reads as help at icon size.
-        icon = error_row.find("i", class_="icon-triangle-alert")
+        # An X-in-circle error glyph, not the "!"-in-circle alert (which is
+        # near-identical to the info icon the help text uses at 16px). The X
+        # reads as "invalid/failed" and stays distinct from help, without
+        # borrowing a warning triangle to mean "error".
+        icon = error_row.find("i", class_="icon-circle-x")
         assert icon is not None
         assert icon.get("aria-hidden") == "true"
 

@@ -371,6 +371,12 @@ class BuiltinWidgetsForm(FormworkForm):
         label="Favorite color",
         help_text="ColorInput \u2014 native color picker.",
     )
+    search = forms.CharField(
+        widget=forms.TextInput(attrs={"type": "search", "placeholder": "Search\u2026"}),
+        required=False,
+        label="Search",
+        help_text="SearchInput \u2014 native search box with a built-in clear affordance.",
+    )
 
 
 _COUNTRIES = [
@@ -1393,11 +1399,6 @@ _INDEX_HTML = (
     '<body class="min-h-screen p-8 bg-base-200">\n' + _THEME_SWITCHER + "\n"
     '<div class="max-w-2xl mx-auto flex flex-col gap-8">\n'
     '  <h1 class="text-2xl font-bold">Formwork Showcase</h1>\n' + _LAZY_CARDS + "\n</div>\n"
-    "<script>\n"
-    '  document.body.addEventListener("htmx:after:settle", function(e) {\n'
-    "    if (window.Alpine) Alpine.initTree(e.detail.target);\n"
-    "  });\n"
-    "</script>\n"
     "</body>\n</html>"
 )
 
