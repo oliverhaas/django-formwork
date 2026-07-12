@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from django import forms
+from django.utils.html import format_html
 
-from django_formwork import FormworkForm, FormworkModelForm
+from django_formwork import FormworkForm, FormworkModelChoiceField, FormworkModelForm
 from django_formwork.widgets import (
     ComboBox,
     DatePicker,
@@ -20,19 +21,8 @@ from django_formwork.widgets import (
     ValidatedTextarea,
 )
 
-from .models import Profile, Tag, Task
+from .models import Member, Profile, Tag, Task
 from .widgets import PhoneInput
-
-# Demo roster; real projects would look this up (users, team members, ...).
-_ASSIGNEE_CHOICES = [
-    ("", "Unassigned"),
-    ("Devon", "Devon"),
-    ("Mira", "Mira"),
-    ("Sasha", "Sasha"),
-    ("Iris", "Iris"),
-    ("Kai", "Kai"),
-    ("Robin", "Robin"),
-]
 
 
 class TaskForm(FormworkModelForm):
@@ -40,10 +30,16 @@ class TaskForm(FormworkModelForm):
     auto-wired server search) + DatePicker + ImageDropZone + FileDropZone + Rating.
     """
 
-    assignee = forms.ChoiceField(
-        choices=_ASSIGNEE_CHOICES,
+    assignee = FormworkModelChoiceField(
+        queryset=Member.objects.all(),
         required=False,
-        widget=SearchSelect(choices=_ASSIGNEE_CHOICES),
+        empty_label="Unassigned",
+        widget=SearchSelect(search_fields=["name", "email"], search_decorator=None),
+        icon_from_instance=lambda member: format_html(
+            "<span class='badge badge-neutral badge-sm'>{}</span>", member.initials
+        ),
+        description_from_instance=lambda member: member.email,
+        help_text="SearchSelect over the Member model: server-side search, initials badge, email line.",
     )
 
     tags = forms.ModelMultipleChoiceField(

@@ -44,7 +44,7 @@ def dashboard(request):
         }
         for status in Task.Status
     ]
-    recent = qs.order_by("-updated_at")[:8]
+    recent = qs.prefetch_related("assignee").order_by("-updated_at")[:8]
 
     if request.method == "POST":
         form = TaskQuickAddForm(request.POST)
@@ -77,7 +77,7 @@ def dashboard(request):
 def task_list(request):
     """List tasks with htmx search/filter."""
     form = TaskFilterForm(request.GET)
-    tasks = Task.objects.prefetch_related("tags")
+    tasks = Task.objects.prefetch_related("tags", "assignee")
 
     if form.is_valid():
         q = form.cleaned_data.get("q")

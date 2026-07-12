@@ -37,13 +37,13 @@ Every widget in the package gets airtime across these pages. Quick lookup:
 
 - **Dashboard quick-add**: plain Django inputs (a four-option priority doesn't need a fancy widget)
 - **Tasks list filter bar**: plain selects + plain text input
-- **Task form**: `SearchSelect` (assignee), `MultiSelect` (model-backed, auto-wired server search), `DatePicker`, `ImageDropZone`, `FileDropZone`, `Rating`
+- **Task form**: `SearchSelect` (assignee, backed by the `Member` model with an initials badge and email per option), `MultiSelect` (model-backed, auto-wired server search), `DatePicker`, `ImageDropZone`, `FileDropZone`, `Rating`
 - **Wizard**: `ValidatedTextarea`, `Toggle`, `Range`, `RadioSelect`, `DatePicker`, `MultiSelect`
 - **Settings**: `PhoneInput`, `SearchSelect` (country), `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating`
 
 ## What's intentionally not here
 
-- Auth — there is no login. Settings are pinned to one local `Profile` row.
+- Auth — there is no login. Settings are pinned to one local `Profile` row, and assignees are plain `Member` rows rather than Django users.
 - File processing — uploaded files are saved to `media/` and rendered, nothing else.
 - Real-time anything — htmx morph swaps where it makes sense, no SSE / WebSockets.
 
@@ -55,7 +55,7 @@ The example doubles as an integration test bed for the package:
 uv run pytest
 ```
 
-Covers the persisted settings flow (Profile singleton, phone validation, avatar upload).
+Covers the persisted settings flow (Profile singleton, phone validation, avatar upload) and the task flows (Member assignee, htmx inline row edits).
 
 ## CSS theme switching
 

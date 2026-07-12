@@ -17,6 +17,33 @@ class Tag(models.Model):
         return self.name
 
 
+class Member(models.Model):
+    """A person tasks can be assigned to. Stands in for a real user model
+    so the assignee SearchSelect has actual rows to search over.
+    """
+
+    name = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def initials(self) -> str:
+        """First letters of first + last name, or first two letters of a
+        single name.
+        """
+        parts = self.name.split()
+        if not parts:
+            return ""
+        if len(parts) == 1:
+            return parts[0][:2].upper()
+        return (parts[0][:1] + parts[-1][:1]).upper()
+
+
 class Task(models.Model):
     """A task with priority, status, assignee, tags, and attachments."""
 
@@ -53,7 +80,13 @@ class Task(models.Model):
     description = models.TextField(blank=True, default="")
     priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.MEDIUM)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.TODO)
-    assignee = models.CharField(max_length=100, blank=True, default="")
+    assignee = models.ForeignKey(
+        Member,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="tasks",
+    )
     tags = models.ManyToManyField(Tag, blank=True, related_name="tasks")
     due_date = models.DateField(null=True, blank=True)
     cover_image = models.ImageField(upload_to="covers/", blank=True, null=True)
@@ -67,18 +100,6 @@ class Task(models.Model):
 
     def __str__(self):
         return self.title
-
-    @property
-    def assignee_initials(self) -> str:
-        """First letters of first + last name, or first two letters of the
-        single name. Empty for unassigned tasks (template handles that case).
-        """
-        parts = self.assignee.split()
-        if not parts:
-            return ""
-        if len(parts) == 1:
-            return parts[0][:2].upper()
-        return (parts[0][:1] + parts[-1][:1]).upper()
 
     @property
     def status_color(self) -> str:
