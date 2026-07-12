@@ -90,6 +90,21 @@ class TestHelpTextToggle:
         assert toggle.text_content() == "[more]"
         assert "truncate" in (helptext.get_attribute("class") or "")
 
+    def test_expanded_icon_and_button_align_to_edges(self, basic_page):
+        """When expanded, the icon top-aligns and the toggle bottom-aligns to the row."""
+        self._narrow(basic_page)
+        toggle = basic_page.locator("#id_agree_helptext button")
+        toggle.click()
+
+        icon_box = basic_page.locator("#id_agree_helptext i").bounding_box()
+        toggle_box = toggle.bounding_box()
+        row_box = basic_page.locator("#id_agree_helptext").bounding_box()
+
+        assert abs(icon_box["y"] - row_box["y"]) <= 3
+        row_bottom = row_box["y"] + row_box["height"]
+        toggle_bottom = toggle_box["y"] + toggle_box["height"]
+        assert abs(toggle_bottom - row_bottom) <= 3
+
 
 class TestMorphInfrastructure:
     """Verify htmx 4 morph swap and the formwork-morph extension are registered."""
