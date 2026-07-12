@@ -6,6 +6,8 @@ from typing import Any
 
 from django import forms
 
+from ._base import _ModuleScript
+
 
 class PasswordReveal(forms.PasswordInput):
     """Password input with a show/hide toggle button.
@@ -21,6 +23,9 @@ class PasswordReveal(forms.PasswordInput):
     """
 
     template_name = "formwork/widgets/password_reveal.html"
+
+    class Media:
+        js = (_ModuleScript("formwork/widgets/password_reveal.js"),)
 
     def __init__(self, attrs: dict[str, Any] | None = None) -> None:
         super().__init__(attrs=attrs, render_value=False)

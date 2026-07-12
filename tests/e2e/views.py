@@ -806,6 +806,12 @@ class NewWidgetsForm(FormworkForm):
         initial=1,
         help_text="Number input with +/- stepper buttons.",
     )
+    price = forms.FloatField(
+        widget=InputNumber(attrs={"min": "0", "max": "10", "step": "0.1"}),
+        initial=0.2,
+        required=False,
+        help_text="Float stepper: 0.1 increments round to step precision.",
+    )
     otp_code = forms.CharField(
         widget=OTPInput(length=6),
         required=False,

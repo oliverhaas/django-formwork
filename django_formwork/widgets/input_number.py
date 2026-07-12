@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from django import forms
 
+from ._base import _ModuleScript
+
 
 class InputNumber(forms.NumberInput):
     """Number input with increment/decrement buttons.
@@ -17,3 +19,6 @@ class InputNumber(forms.NumberInput):
     """
 
     template_name = "formwork/widgets/input_number.html"
+
+    class Media:
+        js = (_ModuleScript("formwork/widgets/input_number.js"),)

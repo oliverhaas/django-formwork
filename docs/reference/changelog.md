@@ -67,6 +67,20 @@
   component name, and the `escapejs` filters were dropped alongside the JS-string literals
   they protected (values no longer pass through an executable context, so autoescaping alone
   is the correct and sufficient defense; there is no security regression).
+- **`InputNumber`, `PasswordReveal`, and `ValidatedTextarea` now bind to shipped Alpine.data
+  components** (`formworkInputNumber`, `formworkPasswordReveal`, `formworkValidatedTextarea`
+  in `formwork/widgets/input_number.js`, `password_reveal.js`, and `validated_textarea.js`)
+  instead of inlining their behavior in the templates' `x-data` attribute. Configuration
+  rides in autoescaped `data-*` attributes read via `dataset` at init: `data-value`,
+  `data-min`, `data-max`, and `data-step` (InputNumber) and `data-has-errors`
+  (ValidatedTextarea); PasswordReveal is config-free. The three widget classes gained a
+  `Media` declaration, so the usual `{% formwork_core_js %}` + `{{ form.media }}` pair loads
+  the new modules automatically. If you override these widget templates, update your copies:
+  `x-data` now holds only the component name, and InputNumber's `escapejs` filter was dropped
+  alongside the JS-string literal it protected (no security regression, see the entry above).
+  In passing this fixes a Jinja2-only bug where an empty-string `min`/`max` attr rendered a
+  bare `min: ,` (a JS syntax error) because `|default("null")` lacked the boolean flag; both
+  engines now treat empty as unset, matching the DTL behavior.
 - **`manage.py formwork install` now writes the generated icon CSS into your project's static
   directory** instead of into the installed `django_formwork` package, which failed on
   read-only installs (containers, system-wide pip, Nix). The file lands at

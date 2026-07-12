@@ -132,10 +132,10 @@ def test_password_reveal_renders_toggle_button():
 
 @pytest.mark.unit
 def test_password_reveal_alpine_x_data():
-    """The wrapper label has Alpine x-data initialising show to false."""
+    """The wrapper label binds to the formworkPasswordReveal Alpine.data component."""
     soup = render_widget(PasswordReveal())
     label = soup.find("label")
-    assert label.get("x-data") == "{ show: false }"
+    assert label.get("x-data") == "formworkPasswordReveal"
 
 
 @pytest.mark.unit

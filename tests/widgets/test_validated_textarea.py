@@ -252,29 +252,30 @@ def test_htmx_config_request_errors_id():
 
 @pytest.mark.unit
 def test_alpine_x_data_present():
-    """With validate_url, the wrapper carries x-data for Alpine state."""
+    """With validate_url, the wrapper binds to the formworkValidatedTextarea component."""
     widget = ValidatedTextarea(validate_url="/validate/")
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
     wrapper = soup.find("div", attrs={"x-data": True})
     assert wrapper is not None
+    assert wrapper["x-data"] == "formworkValidatedTextarea"
 
 
 @pytest.mark.unit
 def test_x_data_has_errors_false_without_errors():
-    """x-data initialises hasErrors to false when no aria-invalid attr is present."""
+    """data-has-errors initialises hasErrors to false when no aria-invalid attr is present."""
     widget = ValidatedTextarea(validate_url="/validate/")
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
     wrapper = soup.find("div", attrs={"x-data": True})
-    assert "hasErrors: false" in wrapper["x-data"]
+    assert wrapper["data-has-errors"] == "false"
 
 
 @pytest.mark.unit
 def test_x_data_has_errors_true_with_aria_invalid():
-    """x-data initialises hasErrors to true when aria-invalid='true' is passed."""
+    """data-has-errors initialises hasErrors to true when aria-invalid='true' is passed."""
     widget = ValidatedTextarea(validate_url="/validate/")
     soup = render_widget(widget, name="content", attrs={"id": "id_content", "aria-invalid": "true"})
     wrapper = soup.find("div", attrs={"x-data": True})
-    assert "hasErrors: true" in wrapper["x-data"]
+    assert wrapper["data-has-errors"] == "true"
 
 
 @pytest.mark.unit

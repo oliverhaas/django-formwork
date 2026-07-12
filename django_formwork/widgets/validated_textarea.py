@@ -6,6 +6,8 @@ from typing import Any
 
 from django import forms
 
+from ._base import _ModuleScript
+
 
 class ValidatedTextarea(forms.Textarea):
     """Textarea with server-side validation and word highlighting.
@@ -26,6 +28,9 @@ class ValidatedTextarea(forms.Textarea):
     """
 
     template_name = "formwork/widgets/validated_textarea.html"
+
+    class Media:
+        js = (_ModuleScript("formwork/widgets/validated_textarea.js"),)
 
     def __init__(self, attrs: dict[str, Any] | None = None, *, validate_url: str | None = None) -> None:
         super().__init__(attrs)
