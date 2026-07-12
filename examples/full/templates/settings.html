@@ -4,38 +4,18 @@
 {% block title %}Settings{% endblock %}
 {% block page_title %}Settings{% endblock %}
 {% block page_subtitle %}
-  <p class="text-xs text-base-content/50">Showcase page for the widgets the task domain doesn't exercise.</p>
+  <p class="text-xs text-base-content/50">Showcase page for the widgets the task domain doesn't exercise. Nothing actually persists.</p>
 {% endblock %}
 
 {% block content %}
-<form method="post" enctype="multipart/form-data" class="grid lg:grid-cols-[1fr_280px] gap-6">
+<form method="post" enctype="multipart/form-data" class="card bg-base-100 border border-base-300 max-w-2xl mx-auto">
   {% csrf_token %}
-
-  <div class="card bg-base-100 border border-base-300">
-    <div class="card-body p-6 lg:p-8 space-y-2">
-      {{ form }}
-      <div class="pt-4">
-        <button type="submit" class="btn btn-primary gap-2">
-          <i class="icon icon-check size-4"></i> Save changes
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div class="space-y-6">
-    <div class="card bg-primary/5 border border-primary/20">
-      <div class="card-body p-5">
-        <h3 class="text-xs font-semibold uppercase tracking-wider text-primary">What's on this page</h3>
-        <ul class="text-xs space-y-1.5 mt-2 text-base-content/70">
-          <li><code>PhoneInput</code> — country code + number</li>
-          <li><code>ImageDropZone</code> — avatar upload</li>
-          <li><code>PasswordReveal</code> — show/hide toggle</li>
-          <li><code>OTPInput</code> — six-digit 2FA</li>
-          <li><code>ComboBox</code> — autocomplete suggestions</li>
-          <li><code>Rating</code> — five-star feedback</li>
-        </ul>
-        <p class="text-xs text-base-content/50 mt-3">This is a demo — nothing actually persists.</p>
-      </div>
+  <div class="card-body p-6 lg:p-8 space-y-2">
+    {{ form }}
+    <div class="pt-4">
+      <button type="submit" class="btn btn-primary gap-2">
+        <i class="icon icon-check size-4"></i> Save changes
+      </button>
     </div>
   </div>
 </form>

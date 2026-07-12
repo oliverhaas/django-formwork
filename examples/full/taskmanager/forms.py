@@ -47,16 +47,34 @@ _COUNTRY_CHOICES = [
     ("ng", "🇳🇬 Nigeria"),
 ]
 
+# Demo roster; real projects would look this up (users, team members, ...).
+_ASSIGNEE_CHOICES = [
+    ("", "Unassigned"),
+    ("Devon", "Devon"),
+    ("Mira", "Mira"),
+    ("Sasha", "Sasha"),
+    ("Iris", "Iris"),
+    ("Kai", "Kai"),
+    ("Robin", "Robin"),
+]
+
 
 class TaskForm(FormworkModelForm):
     """CRUD form for a task. Demonstrates SearchSelect + MultiSelect (model-backed,
     auto-wired server search) + DatePicker + ImageDropZone + FileDropZone + Rating.
     """
 
+    assignee = forms.ChoiceField(
+        choices=_ASSIGNEE_CHOICES,
+        required=False,
+        widget=SearchSelect(choices=_ASSIGNEE_CHOICES),
+    )
+
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
         widget=MultiSelect(search_fields=["name"], search_decorator=None),
+        help_text="MultiSelect with server-side search over tag names.",
     )
 
     rating = forms.TypedChoiceField(
@@ -65,7 +83,7 @@ class TaskForm(FormworkModelForm):
         empty_value=None,
         widget=Rating(allow_clear=True),
         required=False,
-        help_text="Quality rating (after completion).",
+        help_text="Quality rating after completion (clearable Rating stars).",
     )
 
     class Meta:
@@ -89,6 +107,13 @@ class TaskForm(FormworkModelForm):
             "due_date": DatePicker,
             "cover_image": ImageDropZone(max_size=5 * 1024 * 1024),
             "attachment": FileDropZone(max_size=10 * 1024 * 1024),
+        }
+        help_texts = {
+            "priority": "SearchSelect over the priority choices.",
+            "status": "SearchSelect over the status choices.",
+            "due_date": "DatePicker with a calendar dropdown.",
+            "cover_image": "Shown as a thumbnail in the task list (ImageDropZone, ≤5 MB).",
+            "attachment": "Any single file (FileDropZone, ≤10 MB).",
         }
 
     def __init__(self, *args, editable_fields=None, **kwargs):
@@ -207,7 +232,11 @@ class SettingsForm(FormworkForm):
 
     full_name = forms.CharField(max_length=100, initial="Devon Vega")
     email = forms.EmailField(initial="devon@example.com")
-    phone = forms.CharField(widget=PhoneInput, required=False, help_text="Country code + number.")
+    phone = forms.CharField(
+        widget=PhoneInput,
+        required=False,
+        help_text="Country code + number (custom PhoneInput multi-widget).",
+    )
     country = forms.ChoiceField(
         choices=_COUNTRY_CHOICES,
         widget=SearchSelect(),
@@ -218,7 +247,7 @@ class SettingsForm(FormworkForm):
         widget=ImageDropZone(max_size=2 * 1024 * 1024),
         required=False,
         help_text=(
-            "Square-ish PNG or JPG, ≤2 MB. The picture is shown at small sizes "
+            "Square-ish PNG or JPG, ≤2 MB (ImageDropZone). The picture is shown at small sizes "
             "throughout the app, so pick something that stays recognizable as a "
             "tiny thumbnail. A close-up works better than a wide shot."
         ),
@@ -227,7 +256,8 @@ class SettingsForm(FormworkForm):
         widget=PasswordReveal,
         required=False,
         help_text=(
-            "Leave blank to keep your current password. If you do change it, use at "
+            "Leave blank to keep your current password. The eye button (PasswordReveal) "
+            "shows what you typed. If you do change it, use at "
             "least 12 characters and avoid reusing a password from another site. A "
             "passphrase of a few unrelated words is easy to remember and hard to guess."
         ),
@@ -235,17 +265,17 @@ class SettingsForm(FormworkForm):
     two_factor_code = forms.CharField(
         widget=OTPInput(length=6),
         required=False,
-        help_text="Six-digit code from your authenticator.",
+        help_text="Six-digit code from your authenticator (OTPInput).",
     )
     favourite_food = forms.CharField(
         widget=ComboBox(suggestions=["Pizza", "Pasta", "Sushi", "Tacos", "Curry", "Ramen", "Salad"]),
         required=False,
-        help_text="Autocompletes as you type.",
+        help_text="Autocompletes as you type (ComboBox with static suggestions).",
     )
     satisfaction = forms.TypedChoiceField(
         choices=Rating.make_choices(5),
         coerce=int,
         widget=Rating,
         required=False,
-        help_text="How are we doing?",
+        help_text="How are we doing? (five-star Rating widget)",
     )

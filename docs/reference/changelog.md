@@ -91,7 +91,10 @@
   If you override the `drop_zone.html` / `image_upload.html` widget templates, update your
   copies: `x-data` now holds only the component name. The client-side accept/max-size
   checks are unchanged and remain presentational only; server-side enforcement stays a
-  separate roadmap item.
+  separate roadmap item. This completes the extraction: no widget template in either
+  engine carries an inline `x-data` object literal anymore, and the `formwork.js`
+  aggregator imports every widget module, so `{% formwork_js %}` and bundler
+  (`import "django-formwork/formwork.js"`) setups pick up the new files without changes.
 - **`manage.py formwork install` now writes the generated icon CSS into your project's static
   directory** instead of into the installed `django_formwork` package, which failed on
   read-only installs (containers, system-wide pip, Nix). The file lands at

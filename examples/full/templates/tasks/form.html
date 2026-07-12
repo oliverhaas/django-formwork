@@ -15,7 +15,7 @@
 {% endblock %}
 
 {% block content %}
-<form method="post" enctype="multipart/form-data" class="grid lg:grid-cols-[1fr_320px] gap-6">
+<form method="post" enctype="multipart/form-data" class="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6">
   {% csrf_token %}
 
   <div class="card bg-base-100 border border-base-300">
@@ -60,20 +60,6 @@
         </div>
       </div>
     {% endif %}
-
-    <div class="card bg-primary/5 border border-primary/20">
-      <div class="card-body p-5">
-        <h3 class="text-xs font-semibold uppercase tracking-wider text-primary">Widgets in play</h3>
-        <ul class="text-xs space-y-1.5 mt-2 text-base-content/70">
-          <li><code>SearchSelect</code> for priority &amp; status</li>
-          <li><code>MultiSelect</code> for tags (server search)</li>
-          <li><code>DatePicker</code> for due date</li>
-          <li><code>ImageDropZone</code> for cover image</li>
-          <li><code>FileDropZone</code> for attachment</li>
-          <li><code>Rating</code> for quality score</li>
-        </ul>
-      </div>
-    </div>
   </div>
 </form>
 {% endblock %}
