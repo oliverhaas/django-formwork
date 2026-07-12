@@ -99,8 +99,8 @@ dropdown a11y, docs, and the config surface.
   a11y polish (date-picker grid semantics). Lets non-DaisyUI stacks adopt without
   abandoning `{{ form }}`. (medium)
 - [ ] **Repo hygiene.** Publish an npm package (or drop the bundler-import claim that
-  can't resolve today), drop Git LFS for 340 KB of screenshots, fix the dead
-  `publish.yml` version verification on the automated release path. (small)
+  can't resolve today), fix the dead `publish.yml` version verification on the
+  automated release path. (small)
 
 ---
 

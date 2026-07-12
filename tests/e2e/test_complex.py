@@ -1,5 +1,6 @@
 """E2e tests for complex forms with cross-field validation and morph resilience."""
 
+import pytest
 from playwright.sync_api import expect
 
 from .conftest import submit
@@ -28,6 +29,24 @@ def _pick_search_select(page, value, label):
     btn = details.locator(f'button[data-value="{value}"]')
     btn.click()
     page.wait_for_timeout(200)
+
+
+def _fill_base_fields_silently(page):
+    """Set base-field values without input/change events, so no auto-validate fires."""
+    page.evaluate(
+        """(() => {
+            document.querySelector('input[name="password"]').value = 'abc123';
+            document.querySelector('input[name="confirm_password"]').value = 'abc123';
+            document.querySelector('input[name="start_date"]').value = '2025-01-01';
+            document.querySelector('input[name="end_date"]').value = '2025-12-31';
+            document.querySelector('input[name="terms"]').checked = true;
+        })()""",
+    )
+
+
+def _settle_auto_validate(page):
+    """Wait out the auto-validate debounce so its morph lands before we proceed."""
+    page.wait_for_timeout(2500)
 
 
 def _toggle_multiselect_option(page, value, label):
@@ -225,80 +244,123 @@ class TestComplexFormMorphResilience:
         assert "language" in errors.text_content().lower()
 
 
-class TestComplexFormVisualStates:
-    """Percy visual regression snapshots for complex form state transitions."""
+@pytest.mark.screenshot
+def test_search_select_open_screenshot(complex_page, assert_screenshot):
+    """Visual snapshot: SearchSelect dropdown open with server-loaded results."""
+    page = complex_page
+    page.evaluate("document.querySelector('details.search-select').open = true")
+    page.wait_for_timeout(300)
+    search = page.locator("details.search-select input[type='text']")
+    search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
+    page.wait_for_timeout(800)
+    assert_screenshot(
+        page.locator("#id_country_field"),
+        "complex-search-select-open.png",
+        capture_dropdown=True,
+    )
 
-    def test_search_select_dropdown_open_with_results(self, complex_page):
-        """SearchSelect dropdown open showing server-loaded results."""
-        page = complex_page
-        page.evaluate("document.querySelector('details.search-select').open = true")
-        page.wait_for_timeout(300)
-        search = page.locator("details.search-select input[type='text']")
-        search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
-        page.wait_for_timeout(800)
 
-    def test_search_select_dropdown_filtered(self, complex_page):
-        """SearchSelect dropdown with search text filtering results."""
-        page = complex_page
-        page.evaluate("document.querySelector('details.search-select').open = true")
-        page.wait_for_timeout(300)
-        search = page.locator("details.search-select input[type='text']")
-        search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
-        page.wait_for_timeout(800)
-        search.evaluate(
-            """el => {
-            el.value = 'uni';
-            el.dispatchEvent(new Event('input', {bubbles: true}));
-        }""",
-        )
-        page.wait_for_timeout(800)
+@pytest.mark.screenshot
+def test_search_select_filtered_screenshot(complex_page, assert_screenshot):
+    """Visual snapshot: SearchSelect dropdown with search text filtering results."""
+    page = complex_page
+    page.evaluate("document.querySelector('details.search-select').open = true")
+    page.wait_for_timeout(300)
+    search = page.locator("details.search-select input[type='text']")
+    search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
+    page.wait_for_timeout(800)
+    search.evaluate(
+        """el => {
+        el.value = 'uni';
+        el.dispatchEvent(new Event('input', {bubbles: true}));
+    }""",
+    )
+    page.wait_for_timeout(800)
+    assert_screenshot(
+        page.locator("#id_country_field"),
+        "complex-search-select-filtered.png",
+        capture_dropdown=True,
+    )
 
-    def test_multiselect_dropdown_open_with_results(self, complex_page):
-        """MultiSelect dropdown open showing server-loaded options."""
-        page = complex_page
-        page.evaluate("document.querySelector('details.multiselect').open = true")
-        page.wait_for_timeout(300)
-        search = page.locator("details.multiselect input[type='text']")
-        search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
-        page.wait_for_timeout(800)
 
-    def test_multiselect_with_selections(self, complex_page):
-        """MultiSelect with multiple options toggled — showing summary text."""
-        page = complex_page
-        _toggle_multiselect_option(page, "py", "Python")
-        _toggle_multiselect_option(page, "rs", "Rust")
-        _toggle_multiselect_option(page, "go", "Go")
+@pytest.mark.screenshot
+def test_multiselect_open_screenshot(complex_page, assert_screenshot):
+    """Visual snapshot: MultiSelect dropdown open with server-loaded options."""
+    page = complex_page
+    page.evaluate("document.querySelector('details.multiselect').open = true")
+    page.wait_for_timeout(300)
+    search = page.locator("details.multiselect input[type='text']")
+    search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
+    page.wait_for_timeout(800)
+    assert_screenshot(
+        page.locator("#id_languages_field"),
+        "complex-multiselect-open.png",
+        capture_dropdown=True,
+    )
 
-    def test_full_form_filled_before_submit(self, complex_page):
-        """All fields filled correctly before explicit submit."""
-        page = complex_page
-        _fill_base_fields(page)
-        _pick_search_select(page, "de", "Germany")
-        _toggle_multiselect_option(page, "py", "Python")
-        _toggle_multiselect_option(page, "ts", "TypeScript")
 
-    def test_full_form_after_submit(self, complex_page):
-        """All fields filled and submitted — no errors, morphed state."""
-        page = complex_page
-        _fill_base_fields(page)
-        _pick_search_select(page, "de", "Germany")
-        _toggle_multiselect_option(page, "py", "Python")
-        _toggle_multiselect_option(page, "ts", "TypeScript")
-        submit(page)
+@pytest.mark.screenshot
+def test_multiselect_selections_screenshot(complex_page, assert_screenshot):
+    """Visual snapshot: MultiSelect summary with three options toggled."""
+    page = complex_page
+    _toggle_multiselect_option(page, "py", "Python")
+    _toggle_multiselect_option(page, "rs", "Rust")
+    _toggle_multiselect_option(page, "go", "Go")
+    _settle_auto_validate(page)
+    assert_screenshot(page.locator("#id_languages_field"), "complex-multiselect-selected.png")
 
-    def test_password_reveal_toggle_visual(self, complex_page):
-        """PasswordReveal with password visible vs hidden."""
-        page = complex_page
-        page.locator('input[name="password"]').fill("supersecret")
-        page.locator("label.password-reveal button").first.click()
-        page.wait_for_timeout(200)
 
-    def test_auto_validate_then_fix(self, complex_page):
-        """Auto-validate shows error, then adding languages fixes it."""
-        page = complex_page
-        _pick_search_select(page, "us", "United States")
-        page.wait_for_timeout(2500)
-        errors = page.locator("#id_languages_error")
-        expect(errors).to_have_count(1, timeout=3000)
-        _toggle_multiselect_option(page, "py", "Python")
-        page.wait_for_timeout(2500)
+@pytest.mark.screenshot
+def test_full_form_filled_screenshot(complex_page, assert_screenshot):
+    """Visual snapshot: all fields filled correctly before explicit submit."""
+    page = complex_page
+    _pick_search_select(page, "de", "Germany")
+    _toggle_multiselect_option(page, "py", "Python")
+    _toggle_multiselect_option(page, "ts", "TypeScript")
+    _settle_auto_validate(page)
+    # Known wart: the morph resets the SearchSelect summary to "Select…".
+    expect(page.locator('input[name="country"]')).to_have_value("de")
+    _fill_base_fields_silently(page)
+    assert_screenshot(page.locator("#complex-form"), "complex-form-filled.png")
+
+
+@pytest.mark.screenshot
+def test_full_form_after_submit_screenshot(complex_page, assert_screenshot):
+    """Visual snapshot: valid form submitted with no errors, morphed state."""
+    page = complex_page
+    _pick_search_select(page, "de", "Germany")
+    _toggle_multiselect_option(page, "py", "Python")
+    _toggle_multiselect_option(page, "ts", "TypeScript")
+    _settle_auto_validate(page)
+    _fill_base_fields_silently(page)
+    submit(page)
+    expect(page.locator('input[name="country"]')).to_have_value("de")
+    expect(page.locator("#complex-form .tooltip-error")).to_have_count(0)
+    assert_screenshot(page.locator("#complex-form"), "complex-form-submitted.png")
+
+
+@pytest.mark.screenshot
+def test_password_reveal_screenshot(complex_page, assert_screenshot):
+    """Visual snapshot: PasswordReveal with the password shown as text."""
+    page = complex_page
+    field = page.locator("#id_password_field")
+    # Set the value without an input event so no morph can wipe it.
+    page.locator('input[name="password"]').evaluate("el => el.value = 'supersecret'")
+    field.locator("label.password-reveal button").click()
+    page.wait_for_timeout(200)
+    assert_screenshot(field, "complex-password-revealed.png")
+
+
+@pytest.mark.screenshot
+def test_auto_validate_error_then_fix_screenshot(complex_page, assert_screenshot):
+    """Visual snapshot: auto-validate cross-field error, then the fixed state."""
+    page = complex_page
+    _pick_search_select(page, "us", "United States")
+    _settle_auto_validate(page)
+    errors = page.locator("#id_languages_error")
+    expect(errors).to_have_count(1, timeout=3000)
+    assert_screenshot(page.locator("#id_languages_field"), "complex-languages-error.png")
+    _toggle_multiselect_option(page, "py", "Python")
+    _settle_auto_validate(page)
+    expect(errors).to_have_count(0, timeout=3000)
+    assert_screenshot(page.locator("#id_languages_field"), "complex-languages-fixed.png")

@@ -43,17 +43,6 @@ Python 3.14+, Django 6.0, DaisyUI 5, Tailwind CSS 4. DaisyUI and Tailwind are no
 
 https://oliverhaas.github.io/django-formwork/
 
-## Contributing
-
-Screenshot baselines under `tests/widgets/screenshots/` use Git LFS. Install it once globally before cloning:
-
-```bash
-sudo apt install git-lfs   # or brew install git-lfs
-git lfs install
-```
-
-If you cloned before installing LFS, run `git lfs install && git lfs pull` to fetch the PNG bytes.
-
 ## License
 
 BSD 3-Clause. See [LICENSE](LICENSE).
