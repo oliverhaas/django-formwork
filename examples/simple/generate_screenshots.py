@@ -1,12 +1,12 @@
 """Generate cookbook screenshots from the running example app.
 
 Prerequisites (run once, from examples/simple/):
-    uv run python manage.py migrate
-    uv run python manage.py formwork install
+    uv run manage.py migrate
+    uv run manage.py formwork install
     npx @tailwindcss/cli -i app.css -o static/dist.css
 
-Then:
-    uv run python generate_screenshots.py
+Then, from the repo root (needs `playwright`, in the root `dev` group):
+    uv run --group dev python examples/simple/generate_screenshots.py
 
 Writes docs/img/cookbook/step-{1..6}.png at the repo root.
 """

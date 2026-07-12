@@ -4,12 +4,16 @@ Minimal django-formwork setup: one form with standard and custom widgets, DaisyU
 
 ## Setup
 
+This example is a self-contained Django project with its own `pyproject.toml`,
+pinned to the copy of django-formwork in this repo checkout. It's editable, so
+framework changes show up immediately, no reinstall needed.
+
 ```bash
+npm install                                          # once, from the repo root: Tailwind + DaisyUI
 cd examples/simple
-uv pip install django django-formwork                # Python deps
-npm install tailwindcss daisyui                      # CSS build tools
+uv sync                                              # Python deps: Django, django-formwork (editable), Pillow
 uv run manage.py formwork install                    # Icons: SVGs + static/iconx/icons.css
-npx @tailwindcss/cli -i app.css -o static/dist.css  # Build CSS
+npx @tailwindcss/cli -i app.css -o static/dist.css   # Build CSS (resolves Tailwind/DaisyUI from the repo root)
 uv run manage.py migrate                             # Create + seed the cookbook DB
 uv run manage.py runserver
 ```
@@ -36,8 +40,11 @@ legacy ticket), visit:
 - `/cookbook/5/` screenshot upload with `ImageDropZone`
 - `/cookbook/6/` editing with `validate_dirty_only`
 
-Regenerate the docs screenshots (after building CSS and running migrate):
+Regenerate the docs screenshots (after building CSS and running migrate).
+This is a maintainer task: it needs `playwright`, which lives in the repo
+root's `dev` dependency group, not in this example's own `pyproject.toml`.
+Run it from the repo root:
 
 ```bash
-uv run python generate_screenshots.py
+uv run --group dev python examples/simple/generate_screenshots.py
 ```

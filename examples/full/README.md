@@ -4,12 +4,16 @@ A small project-management UI built on django-formwork. Five pages exercise the 
 
 ## Setup
 
+This example is a self-contained Django project with its own `pyproject.toml`,
+pinned to the copy of django-formwork in this repo checkout. It's editable, so
+framework changes show up immediately, no reinstall needed.
+
 ```bash
+npm install                                          # once, from the repo root: Tailwind + DaisyUI
 cd examples/full
-uv pip install django django-formwork pillow         # pillow for ImageField
-npm install tailwindcss daisyui                      # CSS build tools
+uv sync                                              # Python deps: Django, django-formwork (editable), Pillow
 uv run manage.py formwork install                    # icons: SVGs + static/iconx/icons.css
-npx @tailwindcss/cli -i app.css -o static/dist.css   # compile CSS
+npx @tailwindcss/cli -i app.css -o static/dist.css   # compile CSS (resolves Tailwind/DaisyUI from the repo root)
 uv run manage.py migrate
 uv run manage.py seed                                # ~15 sample tasks
 uv run manage.py runserver
