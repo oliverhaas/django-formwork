@@ -1,5 +1,7 @@
 """Form structure and morph infrastructure tests."""
 
+from playwright.sync_api import expect
+
 from .conftest import submit
 
 
@@ -64,9 +66,15 @@ class TestHelpTextToggle:
         basic_page.wait_for_timeout(300)
 
     def test_toggle_hidden_when_text_fits(self, basic_page):
-        """The "name" field's help text fits on one line, so no toggle is shown."""
-        toggle = basic_page.locator("#id_name_helptext button")
-        assert not toggle.is_visible()
+        """The "message" field's help text fits on one line, so the toggle hides after measuring."""
+        toggle = basic_page.locator("#id_message_helptext button")
+        expect(toggle).not_to_be_visible()
+
+    def test_truncate_survives_morph(self, basic_page):
+        """Server HTML carries truncate statically, so a morph cannot wipe it."""
+        submit(basic_page)
+        helptext = basic_page.locator("#id_name_helptext span")
+        assert "truncate" in (helptext.get_attribute("class") or "")
 
     def test_toggle_shown_when_text_overflows(self, basic_page):
         """The "agree" field's help text overflows, so the toggle is shown."""
