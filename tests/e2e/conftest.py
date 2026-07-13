@@ -9,7 +9,7 @@ import os
 import pytest
 
 # Playwright runs an async event loop; Django blocks sync DB calls in async
-# contexts by default.  This is safe for tests — the live_server runs in a
+# contexts by default.  This is safe for tests, the live_server runs in a
 # separate thread.
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 

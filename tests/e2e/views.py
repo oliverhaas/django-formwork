@@ -42,7 +42,7 @@ class BasicForm(FormworkModelForm):
     priority = forms.ChoiceField(
         choices=PRIORITY_CHOICES,
         help_text=(
-            "Required ChoiceField \u2014 rendered as a DaisyUI select dropdown. "
+            "Required ChoiceField, rendered as a DaisyUI select dropdown. "
             "Defaults to \u201cLow\u201d, validated against the choice list server-side."
         ),
     )
@@ -51,14 +51,14 @@ class BasicForm(FormworkModelForm):
         widget=forms.RadioSelect,
         initial="email",
         help_text=(
-            "Required ChoiceField with RadioSelect \u2014 each option is a "
+            "Required ChoiceField with RadioSelect, each option is a "
             "DaisyUI radio. Pre-selects \u201cEmail\u201d via initial."
         ),
     )
     agree = forms.BooleanField(
         label="I agree to the terms",
         help_text=(
-            "Required BooleanField \u2014 DaisyUI checkbox. Must be checked "
+            "Required BooleanField, DaisyUI checkbox. Must be checked "
             "to submit; enforced client-side and server-side."
         ),
     )
@@ -76,16 +76,16 @@ class BasicForm(FormworkModelForm):
         }
         help_texts = {
             "name": (
-                "Required CharField \u2014 TextInput styled as a DaisyUI input. "
+                "Required CharField, TextInput styled as a DaisyUI input. "
                 "Validates non-empty on both client and server side."
             ),
             "email": (
-                "Required EmailField \u2014 EmailInput with type=email for native "
+                "Required EmailField, EmailInput with type=email for native "
                 "browser validation. Server-side format check via Django."
             ),
-            "message": ("Optional CharField \u2014 Textarea styled as a DaisyUI textarea. No validation required."),
+            "message": ("Optional CharField, Textarea styled as a DaisyUI textarea. No validation required."),
             "attachment": (
-                "Optional FileField \u2014 standard file input with DaisyUI "
+                "Optional FileField, standard file input with DaisyUI "
                 "file-input styling. No type or size restrictions."
             ),
         }
@@ -98,7 +98,7 @@ class AutoSaveForm(FormworkModelForm):
         choices=PRIORITY_CHOICES,
         initial="low",
         help_text=(
-            "Required ChoiceField \u2014 DaisyUI select. Auto-saves on change, "
+            "Required ChoiceField, DaisyUI select. Auto-saves on change, "
             "validated server-side against the choice list."
         ),
     )
@@ -106,11 +106,11 @@ class AutoSaveForm(FormworkModelForm):
         choices=NOTIFY_CHOICES,
         widget=forms.RadioSelect,
         initial="email",
-        help_text=("Required ChoiceField with RadioSelect \u2014 DaisyUI radios. Auto-saves on change."),
+        help_text=("Required ChoiceField with RadioSelect, DaisyUI radios. Auto-saves on change."),
     )
     agree = forms.BooleanField(
         label="I agree to the terms",
-        help_text=("Required BooleanField \u2014 DaisyUI checkbox. Must be checked; validated server-side only."),
+        help_text=("Required BooleanField, DaisyUI checkbox. Must be checked; validated server-side only."),
     )
 
     class Meta:
@@ -126,15 +126,15 @@ class AutoSaveForm(FormworkModelForm):
         }
         help_texts = {
             "name": (
-                "Required CharField \u2014 DaisyUI input. Auto-saves after "
+                "Required CharField, DaisyUI input. Auto-saves after "
                 "you stop typing. Required error suppressed until all fields filled."
             ),
             "email": (
-                "Required EmailField \u2014 DaisyUI input with type=email. "
+                "Required EmailField, DaisyUI input with type=email. "
                 "Format validated server-side on every change."
             ),
-            "message": ("Optional CharField \u2014 DaisyUI textarea. Auto-saves after you stop typing."),
-            "attachment": ("Optional FileField \u2014 DaisyUI file-input. Auto-saves on file selection."),
+            "message": ("Optional CharField, DaisyUI textarea. Auto-saves after you stop typing."),
+            "attachment": ("Optional FileField, DaisyUI file-input. Auto-saves on file selection."),
         }
 
     def __init__(self, *args, **kwargs):
@@ -309,14 +309,14 @@ class BuiltinWidgetsForm(FormworkForm):
         ],
         required=False,
         label="City by region",
-        help_text="ChoiceField with optgroup \u2014 options grouped under region headers.",
+        help_text="ChoiceField with optgroup, options grouped under region headers.",
     )
     city_model = GroupedModelChoiceField(
         queryset=City.objects.none(),
         required=False,
         empty_label="Select a city\u2026",
         label="City by region (model)",
-        help_text="ModelChoiceField with optgroup \u2014 same grouping, backed by database models.",
+        help_text="ModelChoiceField with optgroup, same grouping, backed by database models.",
     )
 
     def __init__(self, *args, **kwargs):
@@ -331,27 +331,27 @@ class BuiltinWidgetsForm(FormworkForm):
         ),
         required=False,
         label="Event date & time",
-        help_text="SplitDateTimeWidget \u2014 paired date + time inputs, side by side via CSS grid.",
+        help_text="SplitDateTimeWidget, paired date + time inputs, side by side via CSS grid.",
     )
     avatar = forms.FileField(
         widget=forms.ClearableFileInput,
         required=False,
         initial=_FakeFile(),
         label="Avatar",
-        help_text="ClearableFileInput \u2014 file input with a \u201cClear\u201d checkbox when a file is set.",
+        help_text="ClearableFileInput, file input with a \u201cClear\u201d checkbox when a file is set.",
     )
     toppings = forms.MultipleChoiceField(
         choices=[("cheese", "Cheese"), ("pepperoni", "Pepperoni"), ("mushrooms", "Mushrooms"), ("olives", "Olives")],
         widget=forms.CheckboxSelectMultiple,
         required=False,
         label="Toppings",
-        help_text="CheckboxSelectMultiple \u2014 checkbox group for multi-value selection.",
+        help_text="CheckboxSelectMultiple, checkbox group for multi-value selection.",
     )
     birthday = forms.DateField(
         widget=forms.SelectDateWidget(years=range(2020, 2031)),
         required=False,
         label="Birthday",
-        help_text="SelectDateWidget \u2014 three dropdowns for month, day, and year.",
+        help_text="SelectDateWidget, three dropdowns for month, day, and year.",
     )
     disabled_text = forms.CharField(
         widget=forms.TextInput(attrs={"disabled": True}),
@@ -371,13 +371,13 @@ class BuiltinWidgetsForm(FormworkForm):
         widget=forms.TextInput(attrs={"type": "color"}),
         required=False,
         label="Favorite color",
-        help_text="ColorInput \u2014 native color picker.",
+        help_text="ColorInput, native color picker.",
     )
     search = forms.CharField(
         widget=forms.TextInput(attrs={"type": "search", "placeholder": "Search\u2026"}),
         required=False,
         label="Search",
-        help_text="SearchInput \u2014 native search box with a built-in clear affordance.",
+        help_text="SearchInput, native search box with a built-in clear affordance.",
     )
 
 
@@ -548,7 +548,7 @@ class SearchSelectForm(FormworkForm):
         required=False,
         label="City by region (grouped)",
         help_text=(
-            "Grouped SearchSelect — optgroup headers shown as section titles, "
+            "Grouped SearchSelect, optgroup headers shown as section titles, "
             "auto-hide when search filters out their children."
         ),
     )
@@ -556,7 +556,7 @@ class SearchSelectForm(FormworkForm):
         widget=SearchSelect(search_decorator=None),
         required=False,
         label="City (server search, always fails)",
-        help_text="Endpoint always raises — exercises the error UX.",
+        help_text="Endpoint always raises, exercises the error UX.",
     )
 
     @staticmethod
@@ -577,7 +577,7 @@ class SearchSelectForm(FormworkForm):
 
 
 class MultiSelectForm(FormworkForm):
-    """MultiSelect \u2014 plain, with icons (auto-search), and server-side search."""
+    """MultiSelect, plain, with icons (auto-search), and server-side search."""
 
     languages_plain = forms.MultipleChoiceField(
         choices=[
@@ -631,13 +631,13 @@ class MultiSelectForm(FormworkForm):
         widget=MultiSelect(show_search=True),
         required=False,
         label="Cities by region (grouped)",
-        help_text="Grouped MultiSelect — optgroup headers, keyboard nav, Enter toggles without closing.",
+        help_text="Grouped MultiSelect, optgroup headers, keyboard nav, Enter toggles without closing.",
     )
     languages_failing = forms.MultipleChoiceField(
         widget=MultiSelect(search_decorator=None),
         required=False,
         label="Languages (server search, always fails)",
-        help_text="Endpoint always raises — exercises the error UX.",
+        help_text="Endpoint always raises, exercises the error UX.",
     )
 
     @staticmethod
@@ -650,7 +650,7 @@ class MultiSelectForm(FormworkForm):
 
 
 class ComboBoxForm(FormworkForm):
-    """ComboBox \u2014 single, multiple, with icons, and server-side search."""
+    """ComboBox, single, multiple, with icons, and server-side search."""
 
     language_single = forms.CharField(
         widget=ComboBox(
@@ -755,7 +755,7 @@ class ComboBoxForm(FormworkForm):
         ),
         required=False,
         label="Food by cuisine (grouped)",
-        help_text="Grouped ComboBox — suggestions grouped by cuisine, optgroup headers hide on filter.",
+        help_text="Grouped ComboBox, suggestions grouped by cuisine, optgroup headers hide on filter.",
     )
     language_failing = forms.CharField(
         widget=ComboBox(
@@ -764,7 +764,7 @@ class ComboBoxForm(FormworkForm):
         ),
         required=False,
         label="Language (server search, always fails)",
-        help_text="Endpoint always raises — exercises the error UX.",
+        help_text="Endpoint always raises, exercises the error UX.",
     )
 
     @staticmethod
@@ -820,7 +820,7 @@ class TextareaForm(FormworkForm):
         ),
         required=False,
         help_text=(
-            "Server-side validated textarea \u2014 try typing "
+            "Server-side validated textarea, try typing "
             "\u201cbadword\u201d or \u201cspam\u201d to see "
             "inline error highlighting."
         ),
@@ -1148,7 +1148,7 @@ def _complex_form_html(url, form_id):
 
 def _autosave_form_html(url, form_id):
     # Cancel pending auto-save timers before any explicit (non-input)
-    # action — submit, reset, delete — so they don't fire afterward and
+    # action (submit, reset, delete) so they don't fire afterward and
     # clobber the result.  htmx 4 keeps timers per-spec, so we walk the
     # form's specs.
     cancel_timers = (
@@ -1323,38 +1323,38 @@ _PAGES = [
         "elements",
         "/elements/",
         "Standalone Elements",
-        "Raw HTML inputs without a Django form \u2014 auto-styled by formwork.css",
+        "Raw HTML inputs without a Django form, auto-styled by formwork.css",
     ),
     ("simple", "/simple/", "Simple Custom Widgets", "Toggle, range slider, password reveal, datalist, and star rating"),
     (
         "inline-errors",
         "/inline-errors/",
         "Inline Errors",
-        "Meta.error_display = \u201cinline\u201d \u2014 errors render like help text, in red, below the field",
+        "Meta.error_display = \u201cinline\u201d, errors render like help text, in red, below the field",
     ),
     (
         "builtin",
         "/builtin/",
         "Built-in Widgets",
-        "Django\u2019s built-in compound widgets \u2014 SplitDateTimeWidget, ClearableFileInput, CheckboxSelectMultiple, SelectDateWidget",
+        "Django\u2019s built-in compound widgets, SplitDateTimeWidget, ClearableFileInput, CheckboxSelectMultiple, SelectDateWidget",
     ),
     (
         "search-select",
         "/search-select/",
         "SearchSelect",
-        "Searchable dropdown \u2014 static, with icons, and server-side search via htmx",
+        "Searchable dropdown, static, with icons, and server-side search via htmx",
     ),
     (
         "multi-select",
         "/multi-select/",
         "MultiSelect",
-        "Multi-select dropdown \u2014 plain, with icons and auto-search, and server-side via htmx",
+        "Multi-select dropdown, plain, with icons and auto-search, and server-side via htmx",
     ),
     (
         "combobox",
         "/combobox/",
         "ComboBox",
-        "Filterable text input \u2014 single, multiple, with icons, and server-side via htmx",
+        "Filterable text input, single, multiple, with icons, and server-side via htmx",
     ),
     ("uploads", "/uploads/", "File Uploads", "Drag-and-drop file and image uploads with size and type restrictions"),
     ("textarea", "/textarea/", "ValidatedTextarea", "Server-side validation with inline word highlighting via htmx"),
@@ -1368,19 +1368,19 @@ _PAGES = [
         "complex",
         "/complex/",
         "Complex Form",
-        "Auto-validated cross-field form \u2014 passwords, dates, SearchSelect, MultiSelect with morph resilience",
+        "Auto-validated cross-field form, passwords, dates, SearchSelect, MultiSelect with morph resilience",
     ),
     (
         "autosave",
         "/autosave/",
         "Auto-Save Form",
-        "Auto-saves on every field change \u2014 server-side validation with htmx morph swap",
+        "Auto-saves on every field change, server-side validation with htmx morph swap",
     ),
     (
         "icon-modifiers",
         "/icon-modifiers/",
         "Icon Modifiers",
-        "Button and alert icon modifier patterns \u2014 btn-icon, btn-loading, alert-icon",
+        "Button and alert icon modifier patterns, btn-icon, btn-loading, alert-icon",
     ),
 ]
 
@@ -1409,7 +1409,7 @@ _INDEX_HTML = (
 
 _ELEMENTS_INNER = (
     '<p class="text-sm text-base-content/60 mb-4">'
-    "These raw HTML inputs are auto-styled by formwork.css \u2014"
+    "These raw HTML inputs are auto-styled by formwork.css,"
     " no Django form needed.</p>\n"
     '<div class="grid gap-4">\n'
     '  <input type="text" placeholder="Text input">\n'

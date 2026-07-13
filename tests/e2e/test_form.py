@@ -254,7 +254,7 @@ class TestMorphInfrastructure:
         assert basic_page.locator("#basic-form").count() == 1
 
     def test_second_morph_clears_errors(self, basic_page):
-        """Fill required fields and re-submit — errors should disappear."""
+        """Fill required fields and re-submit, errors should disappear."""
         submit(basic_page)
         assert basic_page.locator("#basic-form .tooltip-error").count() >= 1
 
