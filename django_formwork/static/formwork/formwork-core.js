@@ -109,10 +109,13 @@ document.addEventListener("htmx:after:swap", initAllDirtyForms);
 // appear and the summary act as a toggle; otherwise the summary stays a plain,
 // non-focusable one-line label.
 //
-// Runs on initial load and after every htmx settle.  <details open> state is
-// preserved across morphs (open is in htmx.config.morphIgnore) and no Alpine
-// :class binding fights it, so an expanded row stays open; this pass only
-// re-derives whether the row is expandable.
+// Overflow depends on text metrics, which move under the widget's feet:
+// web fonts load after first paint (a row that fit the fallback font can
+// overflow the real one) and the viewport resizes.  So this reruns on
+// initial load, once document.fonts settles, on window resize, and after
+// every htmx settle.  <details open> state is preserved across morphs (open
+// is in htmx.config.morphIgnore) and no Alpine :class binding fights it, so
+// an expanded row stays open; this pass only re-derives expandability.
 
 const measureDisclosures = (target) => {
   const root = target instanceof Element ? target : document;
@@ -135,6 +138,11 @@ const measureDisclosures = (target) => {
       expandable = true;
     } else {
       const text = summary.querySelector(".formwork-disclosure-text") || summary;
+      // Measure against the affordance-free width.  The [more] label is itself
+      // a flex item that narrows the text (~44px), so leaving a stale
+      // data-expandable set would bias this measurement and make the result
+      // depend on the previous state.  Strip it first for a stable baseline.
+      d.removeAttribute("data-expandable");
       expandable = text.scrollWidth > text.clientWidth;
     }
 
@@ -159,6 +167,21 @@ if (document.readyState === "loading") {
 } else {
   scheduleMeasureDisclosures(document);
 }
+// Web fonts change glyph widths after first paint; re-derive once they load.
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => measureDisclosures(document));
+}
+// Viewport width drives one-line overflow; re-derive on resize, coalesced to
+// one measurement per frame.
+let resizeScheduled = false;
+window.addEventListener("resize", () => {
+  if (resizeScheduled) return;
+  resizeScheduled = true;
+  requestAnimationFrame(() => {
+    resizeScheduled = false;
+    measureDisclosures(document);
+  });
+});
 document.addEventListener("htmx:after:settle", (e) => {
   scheduleMeasureDisclosures(e.detail && e.detail.target ? e.detail.target : document);
 });

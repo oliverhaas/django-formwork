@@ -100,6 +100,28 @@ class TestHelpTextToggle:
         assert _is_expandable(basic_page, disclosure) is True
         assert _after_content(basic_page, f"{disclosure} > summary") == '"[more]"'
 
+    def test_affordance_re_derived_on_resize_without_reload(self, basic_page):
+        """Overflow is re-measured on viewport resize (the same code path that
+        re-runs once web fonts load, which previously left overflowing rows
+        wrongly non-expandable). A help row that fits while wide gains [more]
+        when the viewport narrows, with no reload, and stays a single line."""
+        disclosure = "#id_message_disclosure"
+        basic_page.set_viewport_size({"width": 1280, "height": 720})
+        basic_page.wait_for_function(
+            "() => !document.querySelector('#id_message_disclosure')"
+            ".hasAttribute('data-expandable')",
+        )
+        # Narrow past the point where the multi-word help fits one line.
+        basic_page.set_viewport_size({"width": 400, "height": 720})
+        basic_page.wait_for_function(
+            "() => document.querySelector('#id_message_disclosure')"
+            ".hasAttribute('data-expandable')",
+        )
+        assert _after_content(basic_page, f"{disclosure} > summary") == '"[more]"'
+        # Truncated to one line, not wrapped to two.
+        height = basic_page.locator(f"{disclosure} > summary").bounding_box()["height"]
+        assert height < 30
+
     def test_click_expands_and_collapses(self, basic_page):
         self._narrow(basic_page)
         disclosure = "#id_agree_disclosure"
