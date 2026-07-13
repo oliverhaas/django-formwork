@@ -243,6 +243,8 @@ When `search_fields` is provided (or the form defines `search_choices_<fieldname
 
 For icons/descriptions on choice labels, wrap the label in [`ChoiceLabel`](https://github.com/oliverhaas/django-formwork/blob/main/django_formwork/fields.py); for model-backed widgets, use `FormworkModelChoiceField` and pass `icon_from_instance` / `description_from_instance`.
 
+`ChoiceLabel` also carries a `selected_toggle_class`: a free-form CSS class string that the widget moves onto the closed trigger (the `<summary>` box) whenever that option is the selected one. It is applied on the server-rendered initial value, restored after a validation error, and swapped client-side when the user picks a different option, with no round-trip. The library relays the string verbatim; it never interprets, validates, or restricts it, so any class works (a DaisyUI `select-*` color, a utility, or your own class). For model-backed widgets, pass `selected_toggle_class_from_instance` to `FormworkModelChoiceField`.
+
 ### Usage
 
 ```python
@@ -258,6 +260,16 @@ city = forms.ChoiceField(
     widget=SearchSelect,
 )
 
+# Recolor the closed box by the selected option:
+priority = forms.ChoiceField(
+    choices=[
+        ("low", ChoiceLabel("Low", selected_toggle_class="select-success")),
+        ("mid", ChoiceLabel("Medium", selected_toggle_class="select-warning")),
+        ("high", ChoiceLabel("High", selected_toggle_class="select-error")),
+    ],
+    widget=SearchSelect,
+)
+
 # Auto-registered server-side search (model queryset):
 class CityForm(FormworkForm):
     city = forms.ModelChoiceField(
@@ -268,6 +280,14 @@ class CityForm(FormworkForm):
         ),
     )
 ```
+
+#### Making the class available to Tailwind
+
+The class you pass in `selected_toggle_class` only styles the trigger if it exists in your compiled CSS. DaisyUI v5 (and Tailwind) generate rules on demand, so an arbitrary class exists only when Tailwind sees the token.
+
+- **DaisyUI `select-*` colors** (the `priority` example above) need nothing extra: `formwork.css` already safelists every `{select,input,textarea}-{color}` modifier, so `select-success` / `select-warning` / `select-error` are guaranteed to compile in any app that imports it. This is the same library safelist behind [Color variants](#color-variants).
+- **Other literal class names** written out in full in Tailwind-scanned source (a template, a `views.py`, a form definition) are picked up automatically by the content scan. No safelist needed as long as the exact token appears somewhere Tailwind reads.
+- **Interpolated or computed class names**, where the full token never appears in source (e.g. `f"select-{level}"` or a `badge-{{ status }}` template expression), are invisible to the content scan. Only these need a safelist: add them to your app's Tailwind entrypoint with `@source inline("...")`, the same way `badge-*` colors are safelisted elsewhere in this codebase.
 
 **Requires Alpine.js and htmx** (for server-side search).
 

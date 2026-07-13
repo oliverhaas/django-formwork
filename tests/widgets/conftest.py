@@ -41,12 +41,13 @@ def render_widget(widget, name: str = "test", value=None, attrs: dict | None = N
     return BeautifulSoup(html, "html.parser")
 
 
-def attach_server_search(
+def attach_server_search(  # noqa: PLR0913
     widget,
     *,
     count: int | None = None,
     icons: bool = False,
     descriptions: bool = False,
+    selected_toggle_classes: bool = False,
     key: str | None = None,
 ) -> None:
     """Wire a SearchSelect/MultiSelect/ComboBox into the registry as if it were
@@ -54,7 +55,8 @@ def attach_server_search(
     without going through a full FormworkForm.
 
     ``count`` populates a fake queryset whose ``.count()`` and slicing yield
-    that many objects with ``label`` / ``icon`` / ``description`` attributes.
+    that many objects with ``label`` / ``icon`` / ``description`` /
+    ``selected_toggle_class`` attributes.
     """
     from django_formwork._registry import SearchRegistration, register
 
@@ -66,6 +68,7 @@ def attach_server_search(
             self.label = f"Item {i}"
             self.icon = f"\U0001f4cd{i}" if icons else ""
             self.description = f"desc {i}" if descriptions else ""
+            self.selected_toggle_class = "select-error" if selected_toggle_classes else ""
 
         def __str__(self) -> str:
             return self.label
@@ -96,6 +99,9 @@ def attach_server_search(
             label_from_instance=(lambda obj: obj.label) if factory else None,
             icon_from_instance=(lambda obj: obj.icon) if (factory and icons) else None,
             description_from_instance=(lambda obj: obj.description) if (factory and descriptions) else None,
+            selected_toggle_class_from_instance=(
+                (lambda obj: obj.selected_toggle_class) if (factory and selected_toggle_classes) else None
+            ),
         ),
     )
     widget._registry_key = key
@@ -107,6 +113,7 @@ def make_server_widget(
     count: int | None = 10,
     icons: bool = False,
     descriptions: bool = False,
+    selected_toggle_classes: bool = False,
     **kwargs,
 ):
     """Build a SearchSelect/MultiSelect/ComboBox already wired into the registry.
@@ -115,7 +122,13 @@ def make_server_widget(
     and expected server-side mode to be active.
     """
     widget = widget_cls(**kwargs)
-    attach_server_search(widget, count=count, icons=icons, descriptions=descriptions)
+    attach_server_search(
+        widget,
+        count=count,
+        icons=icons,
+        descriptions=descriptions,
+        selected_toggle_classes=selected_toggle_classes,
+    )
     return widget
 
 

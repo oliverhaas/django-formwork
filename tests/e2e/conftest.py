@@ -84,6 +84,12 @@ def inline_errors_page(page, live_server):
 
 
 @pytest.fixture
+def tight_page(page, live_server):
+    """Navigate to the tight form (Meta.error_display = "tooltip") page."""
+    return _navigate(page, live_server, "/tight/")
+
+
+@pytest.fixture
 def toggle_page(page, live_server):
     """Navigate to a page containing the Toggle widget."""
     return _navigate(page, live_server, "/simple/")

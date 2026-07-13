@@ -169,9 +169,11 @@ class _AutoSearchMixin:
         label_func = getattr(field, "label_from_instance", None)
         icon_func = None
         desc_func = None
+        selected_toggle_class_func = None
         if isinstance(field, (FormworkModelChoiceField, FormworkModelMultipleChoiceField)):
             icon_func = field.icon_from_instance
             desc_func = field.description_from_instance
+            selected_toggle_class_func = field.selected_toggle_class_from_instance
         base_qs = queryset
 
         registration = SearchRegistration(
@@ -181,6 +183,7 @@ class _AutoSearchMixin:
             label_from_instance=label_func,
             icon_from_instance=icon_func,
             description_from_instance=desc_func,
+            selected_toggle_class_from_instance=selected_toggle_class_func,
             search_decorator=widget.search_decorator if callable(widget.search_decorator) else None,
             widget_type=widget_type,
         )

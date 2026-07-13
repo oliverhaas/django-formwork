@@ -101,8 +101,8 @@ class TestComplexFormValidation:
 
     def test_submit_empty_shows_errors(self, complex_page):
         submit(complex_page)
-        tooltips = complex_page.locator("#complex-form .tooltip-error")
-        assert tooltips.count() >= 3
+        errors = complex_page.locator("#complex-form details.formwork-errors")
+        assert errors.count() >= 3
 
     def test_password_mismatch_error(self, complex_page):
         complex_page.locator('input[name="password"]').fill("abc123")
@@ -335,7 +335,7 @@ def test_full_form_after_submit_screenshot(complex_page, assert_screenshot):
     _fill_base_fields_silently(page)
     submit(page)
     expect(page.locator('input[name="country"]')).to_have_value("de")
-    expect(page.locator("#complex-form .tooltip-error")).to_have_count(0)
+    expect(page.locator("#complex-form details.formwork-errors")).to_have_count(0)
     assert_screenshot(page.locator("#complex-form"), "complex-form-submitted.png")
 
 

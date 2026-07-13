@@ -81,18 +81,18 @@ class TestAutoSaveBehavior:
         email = autosave_page.locator('input[name="email"]')
         email.fill("not-an-email")
         _wait_for_autosave(autosave_page)
-        email_tooltip = autosave_page.locator("#id_email_tooltip")
-        assert email_tooltip.count() == 1
+        email_error = autosave_page.locator("#id_email_error")
+        assert email_error.count() == 1
 
     def test_valid_email_clears_error(self, autosave_page):
         """Fixing a format error clears the error on next auto-save."""
         email = autosave_page.locator('input[name="email"]')
         email.fill("bad")
         _wait_for_autosave(autosave_page)
-        assert autosave_page.locator("#id_email_tooltip").count() == 1
+        assert autosave_page.locator("#id_email_error").count() == 1
         email.fill("good@example.com")
         _wait_for_autosave(autosave_page)
-        assert autosave_page.locator("#id_email_tooltip").count() == 0
+        assert autosave_page.locator("#id_email_error").count() == 0
 
 
 class TestMorphPreservation:
@@ -200,7 +200,7 @@ class TestExplicitSubmit:
         # Wait for auto-save morphs to settle before explicit submit
         _wait_for_autosave(autosave_page)
         submit(autosave_page)
-        errors = autosave_page.locator("#autosave-form .tooltip-error")
+        errors = autosave_page.locator("#autosave-form details.formwork-errors")
         assert errors.count() == 0
 
     def test_submit_missing_required_shows_errors(self, autosave_page):
@@ -211,7 +211,7 @@ class TestExplicitSubmit:
         autosave_page.locator('input[name="agree"]').uncheck(force=True)
         _wait_for_autosave(autosave_page)
         submit(autosave_page)
-        errors = autosave_page.locator("#autosave-form .tooltip-error")
+        errors = autosave_page.locator("#autosave-form details.formwork-errors")
         assert errors.count() >= 1
 
     def test_submit_preserves_values_on_error(self, autosave_page):

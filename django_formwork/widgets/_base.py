@@ -81,6 +81,9 @@ def _initial_from_queryset(reg: SearchRegistration) -> tuple[int, list[dict[str,
             "label": str(reg.label_from_instance(obj)) if reg.label_from_instance else str(obj),
             "icon": reg.icon_from_instance(obj) if reg.icon_from_instance else "",
             "description": reg.description_from_instance(obj) if reg.description_from_instance else "",
+            "selected_toggle_class": (
+                reg.selected_toggle_class_from_instance(obj) if reg.selected_toggle_class_from_instance else ""
+            ),
         }
         for obj in qs[: reg.max_results]
     ]
@@ -100,11 +103,18 @@ def _initial_from_search_func(reg: SearchRegistration) -> tuple[int, list[dict[s
                     "label": str(item.get("label", "")),
                     "icon": item.get("icon", "") or "",
                     "description": item.get("description", "") or "",
+                    "selected_toggle_class": item.get("selected_toggle_class", "") or "",
                 },
             )
         else:
             items.append(
-                {"value": str(item[0]), "label": str(item[1]), "icon": "", "description": ""},
+                {
+                    "value": str(item[0]),
+                    "label": str(item[1]),
+                    "icon": "",
+                    "description": "",
+                    "selected_toggle_class": "",
+                },
             )
     return total, items
 

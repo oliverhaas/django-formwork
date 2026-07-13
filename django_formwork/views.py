@@ -64,7 +64,7 @@ class FormworkSearchView(View):
     #: entity-decoded attribute, so HTML autoescaping alone does not defend.
     SEARCH_SELECT_TEMPLATE = (
         """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value|escapejs }}" data-label="{{ item.label|escapejs }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
+<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value|escapejs }}" data-label="{{ item.label|escapejs }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}{% if item.selected_toggle_class %} data-selected-toggle-class="{{ item.selected_toggle_class }}"{% endif %}>
   <span class="formwork-check shrink-0 opacity-0" :class="value === '{{ item.value|escapejs }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>{% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
 {% if not results %}"""
@@ -240,6 +240,8 @@ class FormworkAutoSearchView(FormworkSearchView):
                 result["icon"] = reg.icon_from_instance(obj)
             if reg.description_from_instance:
                 result["description"] = reg.description_from_instance(obj)
+            if reg.selected_toggle_class_from_instance:
+                result["selected_toggle_class"] = reg.selected_toggle_class_from_instance(obj)
             results.append(result)
         return results
 

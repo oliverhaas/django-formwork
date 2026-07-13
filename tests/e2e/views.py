@@ -58,15 +58,13 @@ class BasicForm(FormworkModelForm):
     agree = forms.BooleanField(
         label="I agree to the terms",
         help_text=(
-            "Required BooleanField, DaisyUI checkbox. Must be checked "
-            "to submit; enforced client-side and server-side."
+            "Required BooleanField, DaisyUI checkbox. Must be checked to submit; enforced client-side and server-side."
         ),
     )
 
     class Meta:
         model = BasicFormData
         fields = "__all__"
-        error_display = "tooltip"
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "Your name"}),
             "email": forms.EmailInput(attrs={"placeholder": "you@example.com"}),
@@ -85,8 +83,7 @@ class BasicForm(FormworkModelForm):
             ),
             "message": ("Optional CharField, Textarea styled as a DaisyUI textarea. No validation required."),
             "attachment": (
-                "Optional FileField, standard file input with DaisyUI "
-                "file-input styling. No type or size restrictions."
+                "Optional FileField, standard file input with DaisyUI file-input styling. No type or size restrictions."
             ),
         }
 
@@ -98,8 +95,7 @@ class AutoSaveForm(FormworkModelForm):
         choices=PRIORITY_CHOICES,
         initial="low",
         help_text=(
-            "Required ChoiceField, DaisyUI select. Auto-saves on change, "
-            "validated server-side against the choice list."
+            "Required ChoiceField, DaisyUI select. Auto-saves on change, validated server-side against the choice list."
         ),
     )
     notify = forms.ChoiceField(
@@ -116,7 +112,6 @@ class AutoSaveForm(FormworkModelForm):
     class Meta:
         model = AutoSaveFormData
         fields = "__all__"
-        error_display = "tooltip"
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "Your name"}),
             "email": forms.EmailInput(attrs={"placeholder": "you@example.com"}),
@@ -130,8 +125,7 @@ class AutoSaveForm(FormworkModelForm):
                 "you stop typing. Required error suppressed until all fields filled."
             ),
             "email": (
-                "Required EmailField, DaisyUI input with type=email. "
-                "Format validated server-side on every change."
+                "Required EmailField, DaisyUI input with type=email. Format validated server-side on every change."
             ),
             "message": ("Optional CharField, DaisyUI textarea. Auto-saves after you stop typing."),
             "attachment": ("Optional FileField, DaisyUI file-input. Auto-saves on file selection."),
@@ -247,6 +241,31 @@ class InlineErrorsForm(FormworkForm):
 
     class Meta:
         error_display = "inline"
+
+
+class TightForm(FormworkForm):
+    """Compact form, no help text: Meta.error_display = "tooltip" overlays
+    errors on the field instead of pushing the tightly-packed rows apart."""
+
+    username = forms.CharField(
+        min_length=3,
+        widget=forms.TextInput(attrs={"placeholder": "Username"}),
+    )
+    pin = forms.CharField(
+        widget=forms.TextInput(attrs={"placeholder": "PIN", "inputmode": "numeric"}),
+    )
+
+    def clean_username(self):
+        # "admin" is native-valid (non-empty, 3+ chars), so it reaches the
+        # server; this rule then rejects it. That is the case that surfaces a
+        # tooltip rather than a native browser bubble.
+        username = self.cleaned_data["username"]
+        if username.strip().lower() == "admin":
+            raise forms.ValidationError("That name is reserved.")
+        return username
+
+    class Meta:
+        error_display = "tooltip"
 
 
 class _FakeFile:
@@ -557,6 +576,23 @@ class SearchSelectForm(FormworkForm):
         required=False,
         label="City (server search, always fails)",
         help_text="Endpoint always raises, exercises the error UX.",
+    )
+    # Appended last so it does not shift the nth() indices the other e2e
+    # tests rely on.  Each option carries a free-form ``selected_toggle_class``
+    # that the widget moves onto the closed trigger when selected, recoloring
+    # the box.  These are DaisyUI select-* colors, which formwork.css already
+    # safelists, so they compile with no extra config here.
+    priority = forms.ChoiceField(
+        choices=[
+            ("", ""),
+            ("low", ChoiceLabel("Low", selected_toggle_class="select-success")),
+            ("mid", ChoiceLabel("Medium", selected_toggle_class="select-warning")),
+            ("high", ChoiceLabel("High", selected_toggle_class="select-error")),
+        ],
+        widget=SearchSelect,
+        required=False,
+        label="Priority (trigger recolors by selection)",
+        help_text="Selecting an option applies its class to the closed select box.",
     )
 
     @staticmethod
@@ -872,9 +908,6 @@ class NewWidgetsForm(FormworkForm):
 
 class ComplexForm(FormworkForm):
     """Cross-field validation with dropdowns, auto-validated on every change."""
-
-    class Meta:
-        error_display = "tooltip"
 
     password = forms.CharField(
         widget=PasswordReveal(attrs={"placeholder": "Password"}),
@@ -1333,6 +1366,12 @@ _PAGES = [
         "Meta.error_display = \u201cinline\u201d, errors render like help text, in red, below the field",
     ),
     (
+        "tight",
+        "/tight/",
+        "Tight Form",
+        "Compact form, no help text, Meta.error_display = \u201ctooltip\u201d, errors overlay instead of pushing the packed rows apart",
+    ),
+    (
         "builtin",
         "/builtin/",
         "Built-in Widgets",
@@ -1598,6 +1637,10 @@ def simple_view(request: HttpRequest) -> HttpResponse:
 
 def inline_errors_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, InlineErrorsForm, "inline-errors")
+
+
+def tight_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, TightForm, "tight")
 
 
 def builtin_view(request: HttpRequest) -> HttpResponse:

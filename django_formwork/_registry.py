@@ -41,6 +41,7 @@ class SearchRegistration:
     label_from_instance: Callable[..., str] | None = None
     icon_from_instance: Callable[..., str] | None = None
     description_from_instance: Callable[..., str] | None = None
+    selected_toggle_class_from_instance: Callable[..., str] | None = None
     search_decorator: Callable | None = None
     max_results: int = 50
     widget_type: str = "search_select"
