@@ -112,7 +112,6 @@ class SearchSelect(forms.Select):
 
             search_url = reverse("formwork:search", kwargs={"key": self._registry_key})
         context["widget"]["search_url"] = search_url
-        context["widget"]["search_threshold"] = self.search_threshold
         # Server-side search: pre-render the first ``max_results`` options
         # directly in the listbox so the dropdown opens with real data; htmx
         # replaces them on first focus.  Total count drives the

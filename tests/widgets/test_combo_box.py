@@ -77,7 +77,7 @@ def test_combo_box_get_context_suggestions_as_dicts():
     """get_context() converts suggestion strings to dicts with text/icon/description."""
     widget = ComboBox(suggestions=["A", "B"], icons={"A": mark_safe("<svg/>")})
     ctx = widget.get_context("test", "", {})
-    sugs = ctx["widget"]["suggestions"]
+    _name, sugs = ctx["widget"]["suggestion_groups"][0]
     assert sugs[0] == {"text": "A", "icon": mark_safe("<svg/>"), "description": ""}
     assert sugs[1] == {"text": "B", "icon": "", "description": ""}
 
@@ -135,10 +135,10 @@ def test_combo_box_value_from_datadict_empty():
 
 @pytest.mark.unit
 def test_combo_box_empty_suggestions_get_context():
-    """ComboBox with no suggestions produces an empty suggestions list in context."""
+    """ComboBox with no suggestions produces a single empty group in context."""
     widget = ComboBox()
     ctx = widget.get_context("test", "", {})
-    assert ctx["widget"]["suggestions"] == []
+    assert ctx["widget"]["suggestion_groups"] == [("", [])]
 
 
 @pytest.mark.unit
@@ -206,15 +206,6 @@ def test_combo_box_get_context_grouped_populates_suggestion_groups():
     name, items = groups[0]
     assert name == "Cuisine"
     assert [it["text"] for it in items] == ["Pizza", "Sushi"]
-
-
-@pytest.mark.unit
-def test_combo_box_get_context_grouped_keeps_flat_suggestions():
-    """For backward compatibility, ``suggestions`` is still a flat list."""
-    widget = ComboBox(suggestions=[("G1", ["A", "B"]), ("G2", ["C"])])
-    ctx = widget.get_context("test", "", {})
-    flat = ctx["widget"]["suggestions"]
-    assert [it["text"] for it in flat] == ["A", "B", "C"]
 
 
 @pytest.mark.unit

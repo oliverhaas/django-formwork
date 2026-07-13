@@ -100,8 +100,7 @@ class ComboBox(forms.TextInput):
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         groups = self._suggestion_groups()
-        # Flat list for backward compatibility with the existing template loop.
-        context["widget"]["suggestions"] = [item for _g, items in groups for item in items]
+        flat_suggestions = [item for _g, items in groups for item in items]
         context["widget"]["suggestion_groups"] = groups
         context["widget"]["multiple"] = self.multiple
         context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
@@ -114,7 +113,7 @@ class ComboBox(forms.TextInput):
             search_url = reverse("formwork:search", kwargs={"key": self._registry_key})
         context["widget"]["search_url"] = search_url
         # Build initial icon map from current value for unfocused display.
-        flat_texts = [item["text"] for item in context["widget"]["suggestions"]]
+        flat_texts = [item["text"] for item in flat_suggestions]
         context["widget"]["icons_json"] = json.dumps(
             {s: self.icons[s] for s in flat_texts if s in self.icons},
             ensure_ascii=False,
