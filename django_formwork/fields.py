@@ -30,22 +30,38 @@ class ChoiceLabel:
 
     Any code expecting a plain string (Django admin, built-in widgets,
     templates) sees the label text via ``__str__``.  Widgets that understand
-    ``ChoiceLabel`` can read ``.icon`` and ``.description``.
+    ``ChoiceLabel`` can read ``.icon``, ``.description`` and
+    ``.selected_toggle_class``.
+
+    ``selected_toggle_class`` is a free-form CSS class the ``SearchSelect``
+    widget moves onto its trigger while this option is selected (e.g. a
+    DaisyUI ``select-error`` to recolor the closed box).  It is relayed
+    verbatim: the library never interprets or validates it, and the consuming
+    app is responsible for making the class exist in its compiled CSS.
 
     Usage::
 
         choices = [
             ("nyc", ChoiceLabel("New York", icon="building")),
             ("ldn", ChoiceLabel("London", icon="landmark")),
+            ("high", ChoiceLabel("High", selected_toggle_class="select-error")),
         ]
     """
 
-    __slots__ = ("description", "icon", "label")
+    __slots__ = ("description", "icon", "label", "selected_toggle_class")
 
-    def __init__(self, label: str, *, icon: str = "", description: str = "") -> None:
+    def __init__(
+        self,
+        label: str,
+        *,
+        icon: str = "",
+        description: str = "",
+        selected_toggle_class: str = "",
+    ) -> None:
         self.label = label
         self.icon = icon
         self.description = description
+        self.selected_toggle_class = selected_toggle_class
 
     def __str__(self) -> str:
         return self.label
@@ -56,13 +72,20 @@ class ChoiceLabel:
             parts.append(f"icon={self.icon!r}")
         if self.description:
             parts.append(f"description={self.description!r}")
+        if self.selected_toggle_class:
+            parts.append(f"selected_toggle_class={self.selected_toggle_class!r}")
         return f"ChoiceLabel({', '.join(parts)})"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, str):
             return self.label == other
         if isinstance(other, ChoiceLabel):
-            return self.label == other.label and self.icon == other.icon and self.description == other.description
+            return (
+                self.label == other.label
+                and self.icon == other.icon
+                and self.description == other.description
+                and self.selected_toggle_class == other.selected_toggle_class
+            )
         return NotImplemented
 
     def __hash__(self) -> int:
@@ -79,6 +102,7 @@ class _ChoiceIterator(ModelChoiceIterator):
             field.label_from_instance(obj),
             icon=field.icon_from_instance(obj),
             description=field.description_from_instance(obj),
+            selected_toggle_class=field.selected_toggle_class_from_instance(obj),
         )
         return (ModelChoiceIteratorValue(value, obj), label)
 
@@ -99,6 +123,7 @@ class FormworkModelChoiceField(ModelChoiceField):
         label_from_instance: Callable[..., str] | None = None,
         icon_from_instance: Callable[..., str] | None = None,
         description_from_instance: Callable[..., str] | None = None,
+        selected_toggle_class_from_instance: Callable[..., str] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -108,6 +133,8 @@ class FormworkModelChoiceField(ModelChoiceField):
             self.icon_from_instance = icon_from_instance  # type: ignore[method-assign]
         if description_from_instance is not None:
             self.description_from_instance = description_from_instance  # type: ignore[method-assign]
+        if selected_toggle_class_from_instance is not None:
+            self.selected_toggle_class_from_instance = selected_toggle_class_from_instance  # type: ignore[method-assign]
 
     def label_from_instance(self, obj: Model) -> str:
         return str(obj)
@@ -116,6 +143,9 @@ class FormworkModelChoiceField(ModelChoiceField):
         return ""
 
     def description_from_instance(self, obj: Model) -> str:  # noqa: ARG002
+        return ""
+
+    def selected_toggle_class_from_instance(self, obj: Model) -> str:  # noqa: ARG002
         return ""
 
     @classmethod
@@ -153,6 +183,7 @@ class FormworkModelMultipleChoiceField(ModelMultipleChoiceField):
         label_from_instance: Callable[..., str] | None = None,
         icon_from_instance: Callable[..., str] | None = None,
         description_from_instance: Callable[..., str] | None = None,
+        selected_toggle_class_from_instance: Callable[..., str] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -162,6 +193,8 @@ class FormworkModelMultipleChoiceField(ModelMultipleChoiceField):
             self.icon_from_instance = icon_from_instance  # type: ignore[method-assign]
         if description_from_instance is not None:
             self.description_from_instance = description_from_instance  # type: ignore[method-assign]
+        if selected_toggle_class_from_instance is not None:
+            self.selected_toggle_class_from_instance = selected_toggle_class_from_instance  # type: ignore[method-assign]
 
     def label_from_instance(self, obj: Model) -> str:
         return str(obj)
@@ -170,6 +203,9 @@ class FormworkModelMultipleChoiceField(ModelMultipleChoiceField):
         return ""
 
     def description_from_instance(self, obj: Model) -> str:  # noqa: ARG002
+        return ""
+
+    def selected_toggle_class_from_instance(self, obj: Model) -> str:  # noqa: ARG002
         return ""
 
     @classmethod

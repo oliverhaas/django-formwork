@@ -708,6 +708,105 @@ def test_search_select_option_data_icon_attribute_escaped():
     assert button["data-icon"] == icon
 
 
+# ─── Level 2c: selected_toggle_class (trigger recolor) ───────────────────
+
+
+@pytest.mark.unit
+def test_search_select_get_context_optgroups_with_selected_toggle_class():
+    """selected_toggle_class from ChoiceLabel is injected into optgroups."""
+    widget = SearchSelect(
+        choices=[
+            ("a", ChoiceLabel("Alpha", selected_toggle_class="select-error")),
+            ("b", "Beta"),
+        ],
+    )
+    ctx = widget.get_context("test", "", {})
+    for _group, options, _index in ctx["widget"]["optgroups"]:
+        for option in options:
+            if option["value"] == "a":
+                assert option["selected_toggle_class"] == "select-error"
+            else:
+                assert option["selected_toggle_class"] == ""
+
+
+@pytest.mark.unit
+def test_search_select_widget_selected_toggle_class_seeded_from_selection():
+    """The preselected option's class is exposed at widget level so JS init seeds it."""
+    widget = SearchSelect(
+        choices=[
+            ("a", ChoiceLabel("Alpha", selected_toggle_class="select-error")),
+            ("b", ChoiceLabel("Beta", selected_toggle_class="select-success")),
+        ],
+    )
+    ctx = widget.get_context("test", "b", {})
+    assert ctx["widget"]["selected_toggle_class"] == "select-success"
+
+
+@pytest.mark.unit
+def test_search_select_widget_selected_toggle_class_empty_without_selection():
+    """No selection → the widget-level class seed is empty."""
+    widget = SearchSelect(choices=[("a", ChoiceLabel("Alpha", selected_toggle_class="select-error"))])
+    ctx = widget.get_context("test", "", {})
+    assert ctx["widget"]["selected_toggle_class"] == ""
+
+
+@pytest.mark.unit
+def test_search_select_option_data_selected_toggle_class_attribute():
+    """Option buttons carry data-selected-toggle-class; the attribute is absent when empty."""
+    widget = SearchSelect(
+        choices=[
+            ("a", ChoiceLabel("Alpha", selected_toggle_class="select-error")),
+            ("b", "Beta"),
+        ],
+    )
+    soup = render_widget(widget, name="test")
+    a = soup.find("button", attrs={"data-value": "a"})
+    b = soup.find("button", attrs={"data-value": "b"})
+    assert a["data-selected-toggle-class"] == "select-error"
+    assert not b.has_attr("data-selected-toggle-class")
+
+
+@pytest.mark.unit
+def test_search_select_root_data_selected_toggle_class_from_preselected():
+    """The root <details> carries the selected option's class for JS init."""
+    widget = SearchSelect(
+        choices=[
+            ("", ""),
+            ("a", ChoiceLabel("Alpha", selected_toggle_class="select-error")),
+        ],
+    )
+    soup = render_widget(widget, name="test", value="a", attrs={"id": "id_test"})
+    details = soup.find("details")
+    assert details["data-selected-toggle-class"] == "select-error"
+
+
+@pytest.mark.unit
+def test_search_select_summary_class_binding_includes_selected_toggle_class():
+    """The summary :class array binds selectedToggleClass so Alpine can swap it live."""
+    widget = SearchSelect(choices=[("a", "Alpha")])
+    soup = render_widget(widget, name="test")
+    summary = soup.find("summary")
+    assert "selectedToggleClass" in summary.get(":class", "")
+
+
+@pytest.mark.unit
+def test_search_select_option_data_selected_toggle_class_escaped():
+    """A class string with a quote must not break the data attribute (plain autoescape suffices)."""
+    widget = SearchSelect(choices=[("a", ChoiceLabel("Alpha", selected_toggle_class='c" x'))])
+    soup = render_widget(widget, name="test")
+    button = soup.find("button", attrs={"data-value": "a"})
+    assert button["data-selected-toggle-class"] == 'c" x'
+
+
+@pytest.mark.unit
+def test_search_select_prerendered_options_include_selected_toggle_class_when_registered():
+    """When selected_toggle_class_from_instance is registered, pre-rendered options carry the data attr."""
+    widget = make_server_widget(SearchSelect, count=1, selected_toggle_classes=True)
+    soup = render_widget(widget, attrs={"id": "id_x"})
+    first = soup.find("li", attrs={"role": "option"}).find("button")
+    assert first["data-selected-toggle-class"] == "select-error"
+
+
 # ─── Level 2b: Optgroup rendering ────────────────────────────────────────
 
 
@@ -876,6 +975,27 @@ def test_search_select_grouped_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
     assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
+@pytest.mark.integration
+def test_search_select_selected_toggle_class_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
+    """selected_toggle_class renders identically via DTL and Jinja2 (root + option attrs)."""
+
+    class PriorityForm(FormworkForm):
+        priority = forms.ChoiceField(
+            choices=[
+                ("", ""),
+                ("low", ChoiceLabel("Low", selected_toggle_class="select-success")),
+                ("high", ChoiceLabel("High", selected_toggle_class="select-error")),
+            ],
+            widget=SearchSelect,
+            required=False,
+        )
+
+    # Bound with "high" so the root data attr and the option attrs both render.
+    soup_dtl = render_form(PriorityForm({"priority": "high"}), renderer=dtl_renderer)
+    soup_jinja2 = render_form(PriorityForm({"priority": "high"}), renderer=jinja2_renderer)
+    assert_html_equivalent(soup_dtl, soup_jinja2)
+
+
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
 
 
@@ -1018,6 +1138,45 @@ def test_search_select_icons_pick_shows_label_in_summary(search_select_page):
     sel.locator("button", has_text="New York").click()
     search_select_page.wait_for_timeout(100)
     assert "New York" in summary.text_content()
+
+
+@pytest.mark.e2e
+def test_search_select_selected_toggle_class_applied_on_pick(search_select_page):
+    """Picking a priority option moves its class onto the closed trigger, no round-trip.
+
+    The priority dropdown is the 9th SearchSelect on the page (nth(8)); it is
+    appended last precisely so it does not shift the other dropdowns' indices.
+    """
+    sel = search_select_page.locator("details.dropdown.search-select").nth(8)
+    summary = sel.locator("summary")
+    # Nothing selected yet: the trigger carries none of the priority classes.
+    assert "select-error" not in (summary.get_attribute("class") or "")
+    summary.click()
+    search_select_page.wait_for_timeout(200)
+    sel.locator("button", has_text="High").click()
+    search_select_page.wait_for_timeout(100)
+    assert sel.get_attribute("open") is None
+    assert "High" in summary.text_content()
+    assert "select-error" in (summary.get_attribute("class") or "")
+
+
+@pytest.mark.e2e
+def test_search_select_selected_toggle_class_swaps_between_options(search_select_page):
+    """Re-picking swaps the trigger class: the previous option's class is removed."""
+    sel = search_select_page.locator("details.dropdown.search-select").nth(8)
+    summary = sel.locator("summary")
+    summary.click()
+    search_select_page.wait_for_timeout(200)
+    sel.locator("button", has_text="High").click()
+    search_select_page.wait_for_timeout(100)
+    assert "select-error" in (summary.get_attribute("class") or "")
+    summary.click()
+    search_select_page.wait_for_timeout(200)
+    sel.locator("button", has_text="Low").click()
+    search_select_page.wait_for_timeout(100)
+    cls = summary.get_attribute("class") or ""
+    assert "select-success" in cls
+    assert "select-error" not in cls
 
 
 @pytest.mark.e2e
@@ -1710,6 +1869,22 @@ def test_search_select_screenshot_selected(search_select_page, assert_screenshot
     search_select_page.wait_for_timeout(100)
     wrapper = search_select_page.locator("#id_city_plain_field")
     assert_screenshot(wrapper, "search-select-selected.png")
+
+
+@pytest.mark.screenshot
+def test_search_select_screenshot_selected_toggle_class(search_select_page, assert_screenshot):
+    """Visual snapshot: priority SearchSelect trigger recolored by the picked option."""
+    search_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.search-select');
+        dds[8].open = true;
+        dds[8].dispatchEvent(new Event('toggle'));
+    }""")
+    search_select_page.wait_for_timeout(200)
+    sel = search_select_page.locator("details.dropdown.search-select").nth(8)
+    sel.locator("button", has_text="High").click()
+    search_select_page.wait_for_timeout(100)
+    wrapper = search_select_page.locator("#id_priority_field")
+    assert_screenshot(wrapper, "search-select-selected-toggle-class.png")
 
 
 @pytest.mark.screenshot

@@ -558,6 +558,23 @@ class SearchSelectForm(FormworkForm):
         label="City (server search, always fails)",
         help_text="Endpoint always raises, exercises the error UX.",
     )
+    # Appended last so it does not shift the nth() indices the other e2e
+    # tests rely on.  Each option carries a free-form ``selected_toggle_class``
+    # that the widget moves onto the closed trigger when selected, recoloring
+    # the box.  These are DaisyUI select-* colors, which formwork.css already
+    # safelists, so they compile with no extra config here.
+    priority = forms.ChoiceField(
+        choices=[
+            ("", ""),
+            ("low", ChoiceLabel("Low", selected_toggle_class="select-success")),
+            ("mid", ChoiceLabel("Medium", selected_toggle_class="select-warning")),
+            ("high", ChoiceLabel("High", selected_toggle_class="select-error")),
+        ],
+        widget=SearchSelect,
+        required=False,
+        label="Priority (trigger recolors by selection)",
+        help_text="Selecting an option applies its class to the closed select box.",
+    )
 
     @staticmethod
     def search_choices_city_htmx(query, request=None):

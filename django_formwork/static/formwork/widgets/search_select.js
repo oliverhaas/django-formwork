@@ -11,6 +11,7 @@ document.addEventListener("alpine:init", () => {
     value: "",
     label: "",
     icon: "",
+    selectedToggleClass: "",
     hasError: false,
     highlightedEl: null,
 
@@ -21,6 +22,7 @@ document.addEventListener("alpine:init", () => {
         this.value = el.dataset.value || "";
         this.label = el.dataset.label || "";
         this.icon = el.dataset.icon || "";
+        this.selectedToggleClass = el.dataset.selectedToggleClass || "";
         this._v++;
       };
       sync();
@@ -31,7 +33,7 @@ document.addEventListener("alpine:init", () => {
       // lag one swap behind the confirmed server state.
       new MutationObserver(sync).observe(el, {
         attributes: true,
-        attributeFilter: ["data-value", "data-label", "data-icon"],
+        attributeFilter: ["data-value", "data-label", "data-icon", "data-selected-toggle-class"],
       });
     },
 
@@ -78,12 +80,19 @@ document.addEventListener("alpine:init", () => {
     confirm() {
       let target = this.highlightedEl;
       if (!target || target.offsetParent === null) target = this._visibleOptions()[0];
-      if (target) this.pick(target.dataset.value, target.dataset.label, target.dataset.icon || "");
+      if (target)
+        this.pick(
+          target.dataset.value,
+          target.dataset.label,
+          target.dataset.icon || "",
+          target.dataset.selectedToggleClass || "",
+        );
     },
-    pick(val, lbl, ic) {
+    pick(val, lbl, ic, selectedToggleClass) {
       this.value = val;
       this.label = lbl;
       this.icon = ic || "";
+      this.selectedToggleClass = selectedToggleClass || "";
       this.search = "";
       this._v++;
       clearHighlight(this);
@@ -94,6 +103,7 @@ document.addEventListener("alpine:init", () => {
       this.value = "";
       this.label = "";
       this.icon = "";
+      this.selectedToggleClass = "";
       this.search = "";
       this._v++;
       clearHighlight(this);
