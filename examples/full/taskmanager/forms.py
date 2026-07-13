@@ -103,10 +103,9 @@ class TaskForm(FormworkModelForm):
             "attachment": "Any single file (FileDropZone, ≤10 MB).",
         }
 
-    # Ghost variants keep inline table cells text-like; min-w-fit stops the
-    # table from squeezing the native status select below its widest option.
+    # Ghost variants keep inline table cells text-like.
     ROW_WIDGET_CLASSES = {
-        "status": "select-ghost min-w-fit",
+        "status": "select-ghost",
         "assignee": "select-ghost",
         "tags": "select-ghost",
         "due_date": "input-ghost",
