@@ -5,7 +5,7 @@ from __future__ import annotations
 from django import forms
 from django.utils.html import format_html
 
-from django_formwork import FormworkForm, FormworkModelChoiceField, FormworkModelForm
+from django_formwork import ChoiceLabel, FormworkForm, FormworkModelChoiceField, FormworkModelForm
 from django_formwork.widgets import (
     ComboBox,
     DatePicker,
@@ -26,9 +26,27 @@ from .widgets import PhoneInput
 
 
 class TaskForm(FormworkModelForm):
-    """CRUD form for a task. Demonstrates SearchSelect + MultiSelect (model-backed,
-    auto-wired server search) + DatePicker + ImageDropZone + FileDropZone + Rating.
+    """CRUD form for a task. Demonstrates SearchSelect (static choices with
+    selected_toggle_class, and model-backed auto-wired server search) +
+    MultiSelect + DatePicker + ImageDropZone + FileDropZone + Rating.
     """
+
+    priority = forms.ChoiceField(
+        choices=[
+            (
+                value,
+                ChoiceLabel(
+                    label,
+                    selected_toggle_class=f"select-soft select-{Task.PRIORITY_COLORS[value]}",
+                ),
+            )
+            for value, label in Task.Priority.choices
+        ],
+        initial=Task.Priority.MEDIUM,
+        widget=SearchSelect,
+        help_text="SearchSelect whose closed trigger adopts each option's selected_toggle_class: "
+        "select-soft tinted by severity, recoloring on pick without a round-trip.",
+    )
 
     assignee = FormworkModelChoiceField(
         queryset=Member.objects.all(),
@@ -79,8 +97,7 @@ class TaskForm(FormworkModelForm):
             "attachment": FileDropZone(max_size=10 * 1024 * 1024),
         }
         help_texts = {
-            "priority": "Native select tinted with the select-soft variant, coloured by the task's own severity.",
-            "status": "Plain native select, same reasoning as priority.",
+            "status": "Plain native select (a four-option lifecycle doesn't need a fancy widget).",
             "due_date": "DatePicker with a calendar dropdown.",
             "cover_image": "Shown as a thumbnail in the task list (ImageDropZone, ≤5 MB).",
             "attachment": "Any single file (FileDropZone, ≤10 MB).",
@@ -99,13 +116,6 @@ class TaskForm(FormworkModelForm):
             for name, field in self.fields.items():
                 if name not in editable_fields:
                     field.disabled = True
-
-        # Colour the priority control with the select-soft variant, tinted by
-        # the task's own severity colour (reuses Task.PRIORITY_COLORS). Shows
-        # select-soft composing with the daisyUI colour modifiers: the whole
-        # control is filled, and it re-tints live when the value changes.
-        color = Task.PRIORITY_COLORS.get(self.instance.priority, "neutral")
-        self.fields["priority"].widget.attrs["class"] = f"select-soft select-{color}"
 
 
 class TaskQuickAddForm(forms.Form):

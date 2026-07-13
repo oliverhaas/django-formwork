@@ -80,6 +80,14 @@ def test_deleting_a_member_keeps_the_task(client, db):
     assert task.assignee is None
 
 
+def test_task_row_priority_trigger_carries_severity_class(client, db):
+    """The priority SearchSelect seeds its trigger class from the saved severity."""
+    Task.objects.create(title="Recolor me", priority=Task.Priority.HIGH)
+    response = client.get(reverse("task_list"))
+    assert response.status_code == 200
+    assert b'data-selected-toggle-class="select-soft select-warning"' in response.content
+
+
 def test_dashboard_shows_assignee_initials_badge(client, db):
     Task.objects.create(title="Badge check", assignee=_member())
     response = client.get(reverse("dashboard"))
