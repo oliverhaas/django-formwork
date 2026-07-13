@@ -85,6 +85,7 @@ document.addEventListener("alpine:init", () => {
         this._v++;
         clearHighlight(this);
         this.open = false;
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
       }
     },
     _visibleOptions() {

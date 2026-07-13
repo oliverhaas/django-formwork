@@ -196,6 +196,46 @@ def test_otp_input_typing_auto_advances(new_widgets_page):
     expect(hidden).to_have_value("123456")
 
 
+def _paste_into_first_box(page, text):
+    page.evaluate(
+        """(text) => {
+            const box = document.querySelector('#id_otp_code_otp .otp-digit');
+            const dt = new DataTransfer();
+            dt.setData('text/plain', text);
+            box.dispatchEvent(new ClipboardEvent('paste', {clipboardData: dt, bubbles: true, cancelable: true}));
+        }""",
+        text,
+    )
+
+
+@pytest.mark.e2e
+def test_otp_input_paste_fills_digits_and_fires_input(new_widgets_page):
+    """Pasting a code fills the boxes, updates the hidden input, and fires input."""
+    from playwright.sync_api import expect
+
+    new_widgets_page.evaluate("""() => {
+        window._otpInputEvents = 0;
+        document.querySelector("input[name='otp_code']")
+            .addEventListener('input', () => window._otpInputEvents++);
+    }""")
+    new_widgets_page.locator("#id_otp_code_otp .otp-digit").nth(0).click()
+    _paste_into_first_box(new_widgets_page, "987654")
+    hidden = new_widgets_page.locator("input[name='otp_code']")
+    expect(hidden).to_have_value("987654")
+    assert new_widgets_page.evaluate("() => window._otpInputEvents") >= 1
+
+
+@pytest.mark.e2e
+def test_otp_input_paste_filters_non_digits(new_widgets_page):
+    """Pasted text keeps only digits, matching the numeric input boxes."""
+    from playwright.sync_api import expect
+
+    new_widgets_page.locator("#id_otp_code_otp .otp-digit").nth(0).click()
+    _paste_into_first_box(new_widgets_page, "12-34 ab5")
+    hidden = new_widgets_page.locator("input[name='otp_code']")
+    expect(hidden).to_have_value("12345")
+
+
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # Requires a dedicated error-flow page.  Left as a gap.

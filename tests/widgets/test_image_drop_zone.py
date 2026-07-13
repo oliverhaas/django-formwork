@@ -390,6 +390,56 @@ def test_image_drop_zone_preview_and_remove(uploads_page):
     expect(preview).not_to_be_visible()
 
 
+PNG_1X1_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+
+
+def _pick_valid_png(page):
+    import base64
+
+    page.locator('input[name="avatar_restricted"]').set_input_files(
+        [{"name": "dot.png", "mimeType": "image/png", "buffer": base64.b64decode(PNG_1X1_B64)}],
+    )
+
+
+@pytest.mark.e2e
+def test_image_drop_zone_rejected_type_clears_stale_preview(uploads_page):
+    """Picking a disallowed file type after a valid one shows the error, not the old preview."""
+    import base64
+
+    from playwright.sync_api import expect
+
+    _pick_valid_png(uploads_page)
+    zone = uploads_page.locator("#id_avatar_restricted_upload")
+    preview = zone.locator("img.image-upload-preview")
+    expect(preview).to_be_visible()
+    uploads_page.locator('input[name="avatar_restricted"]').set_input_files(
+        [{"name": "anim.gif", "mimeType": "image/gif", "buffer": base64.b64decode(PNG_1X1_B64)}],
+    )
+    error = zone.locator(".image-upload-error")
+    expect(error).to_be_visible()
+    expect(error).to_have_text("File type not accepted")
+    expect(preview).not_to_be_visible()
+
+
+@pytest.mark.e2e
+def test_image_drop_zone_oversize_pick_clears_stale_preview(uploads_page):
+    """Picking an oversize file after a valid one shows the error, not the old preview."""
+    from playwright.sync_api import expect
+
+    _pick_valid_png(uploads_page)
+    zone = uploads_page.locator("#id_avatar_restricted_upload")
+    preview = zone.locator("img.image-upload-preview")
+    expect(preview).to_be_visible()
+    oversize = b"\x89PNG" + b"0" * (2 * 1024 * 1024 + 1)
+    uploads_page.locator('input[name="avatar_restricted"]').set_input_files(
+        [{"name": "big.png", "mimeType": "image/png", "buffer": oversize}],
+    )
+    error = zone.locator(".image-upload-error")
+    expect(error).to_be_visible()
+    expect(error).to_have_text("File too large")
+    expect(preview).not_to_be_visible()
+
+
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # There is no dedicated page with a required ImageDropZone that shows

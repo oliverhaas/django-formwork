@@ -26,13 +26,19 @@ document.addEventListener("alpine:init", () => {
     },
     handlePaste(e) {
       e.preventDefault();
-      const text = (e.clipboardData || window.clipboardData).getData("text").slice(0, this.digits.length);
+      // Keep only digits, matching the inputmode="numeric" boxes.
+      const text = (e.clipboardData || window.clipboardData)
+        .getData("text")
+        .replace(/\D/g, "")
+        .slice(0, this.digits.length);
+      if (!text) return;
       for (let i = 0; i < text.length; i++) {
         this.digits[i] = text[i];
       }
       const next = Math.min(text.length, this.digits.length - 1);
       this.$refs["d" + next].focus();
       this.$refs.hidden.value = this.combined;
+      this.$refs.hidden.dispatchEvent(new Event("input", { bubbles: true }));
     },
   }));
 });

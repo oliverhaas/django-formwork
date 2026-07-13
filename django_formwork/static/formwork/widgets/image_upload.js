@@ -51,9 +51,16 @@ document.addEventListener("alpine:init", () => {
         this.preview = null;
         return;
       }
+      if (!this.isAccepted(file)) {
+        this.error = "File type not accepted";
+        e.target.value = "";
+        this.preview = null;
+        return;
+      }
       if (this.maxSize && file.size > this.maxSize) {
         this.error = "File too large";
         e.target.value = "";
+        this.preview = null;
         return;
       }
       this.loadPreview(file);

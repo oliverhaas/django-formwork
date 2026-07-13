@@ -856,6 +856,27 @@ def test_combo_box_pick_suggestion(combobox_page):
 
 
 @pytest.mark.e2e
+def test_combo_box_single_pick_dispatches_input_event(combobox_page):
+    """Picking a suggestion in single mode fires a bubbling input event."""
+    inp = combobox_page.locator('input[name="language_single"]')
+    inp.click()
+    inp.fill("Ru")
+    combobox_page.wait_for_timeout(150)
+    combobox_page.evaluate("""() => {
+        window._comboInputEvents = 0;
+        document.querySelector('input[name="language_single"]').closest('form')
+            .addEventListener('input', (e) => {
+                if (e.target.name === 'language_single') window._comboInputEvents++;
+            });
+    }""")
+    combo = combobox_page.locator(".dropdown.combobox").first
+    combo.locator("button", has_text="Rust").click()
+    combobox_page.wait_for_timeout(100)
+    assert inp.input_value() == "Rust"
+    assert combobox_page.evaluate("() => window._comboInputEvents") >= 1
+
+
+@pytest.mark.e2e
 def test_combo_box_free_text_allowed(combobox_page):
     """Arbitrary text can be typed (ComboBox is free text, not constrained)."""
     inp = combobox_page.locator('input[name="language_single"]')
