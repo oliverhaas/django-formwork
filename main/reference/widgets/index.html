@@ -881,6 +881,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#making-the-class-available-to-tailwind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Making the class available to Tailwind
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1653,6 +1670,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#making-the-class-available-to-tailwind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Making the class available to Tailwind
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -2367,6 +2401,7 @@ state and <code>-soft</code> flow through the same <code>--input-color</code> va
 </tbody>
 </table>
 <p>For icons/descriptions on choice labels, wrap the label in <a href="https://github.com/oliverhaas/django-formwork/blob/main/django_formwork/fields.py"><code>ChoiceLabel</code></a>; for model-backed widgets, use <code>FormworkModelChoiceField</code> and pass <code>icon_from_instance</code> / <code>description_from_instance</code>.</p>
+<p><code>ChoiceLabel</code> also carries a <code>selected_toggle_class</code>: a free-form CSS class string that the widget moves onto the closed trigger (the <code>&lt;summary&gt;</code> box) whenever that option is the selected one. It is applied on the server-rendered initial value, restored after a validation error, and swapped client-side when the user picks a different option, with no round-trip. The library relays the string verbatim; it never interprets, validates, or restricts it, so any class works (a DaisyUI <code>select-*</code> color, a utility, or your own class). For model-backed widgets, pass <code>selected_toggle_class_from_instance</code> to <code>FormworkModelChoiceField</code>.</p>
 <h3 id="usage_5">Usage<a class="headerlink" href="#usage_5" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Static choices with icons:</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.html</span><span class="w"> </span><span class="kn">import</span> <span class="n">mark_safe</span>
@@ -2380,16 +2415,33 @@ state and <code>-soft</code> flow through the same <code>--input-color</code> va
 </span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">,</span>
 </span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="p">)</span>
 </span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="c1"># Auto-registered server-side search (model queryset):</span>
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="k">class</span><span class="w"> </span><span class="nc">CityForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    <span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>        <span class="n">queryset</span><span class="o">=</span><span class="n">City</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
-</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>        <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span>
-</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>            <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;country__name&quot;</span><span class="p">],</span>
-</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>            <span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">,</span>
-</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>        <span class="p">),</span>
-</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    <span class="p">)</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="c1"># Recolor the closed box by the selected option:</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="n">priority</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>        <span class="p">(</span><span class="s2">&quot;low&quot;</span><span class="p">,</span> <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">&quot;Low&quot;</span><span class="p">,</span> <span class="n">selected_toggle_class</span><span class="o">=</span><span class="s2">&quot;select-success&quot;</span><span class="p">)),</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>        <span class="p">(</span><span class="s2">&quot;mid&quot;</span><span class="p">,</span> <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">&quot;Medium&quot;</span><span class="p">,</span> <span class="n">selected_toggle_class</span><span class="o">=</span><span class="s2">&quot;select-warning&quot;</span><span class="p">)),</span>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>        <span class="p">(</span><span class="s2">&quot;high&quot;</span><span class="p">,</span> <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">&quot;High&quot;</span><span class="p">,</span> <span class="n">selected_toggle_class</span><span class="o">=</span><span class="s2">&quot;select-error&quot;</span><span class="p">)),</span>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>    <span class="p">],</span>
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">,</span>
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="p">)</span>
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="c1"># Auto-registered server-side search (model queryset):</span>
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a><span class="k">class</span><span class="w"> </span><span class="nc">CityForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>    <span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>        <span class="n">queryset</span><span class="o">=</span><span class="n">City</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>        <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span>
+</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>            <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;country__name&quot;</span><span class="p">],</span>
+</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>            <span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">,</span>
+</span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>        <span class="p">),</span>
+</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>    <span class="p">)</span>
 </span></code></pre></div>
+<h4 id="making-the-class-available-to-tailwind">Making the class available to Tailwind<a class="headerlink" href="#making-the-class-available-to-tailwind" title="Permanent link">&para;</a></h4>
+<p>The class you pass in <code>selected_toggle_class</code> only styles the trigger if it exists in your compiled CSS. DaisyUI v5 (and Tailwind) generate rules on demand, so an arbitrary class exists only when Tailwind sees the token.</p>
+<ul>
+<li><strong>DaisyUI <code>select-*</code> colors</strong> (the <code>priority</code> example above) need nothing extra: <code>formwork.css</code> already safelists every <code>{select,input,textarea}-{color}</code> modifier, so <code>select-success</code> / <code>select-warning</code> / <code>select-error</code> are guaranteed to compile in any app that imports it. This is the same library safelist behind <a href="#color-variants">Color variants</a>.</li>
+<li><strong>Other literal class names</strong> written out in full in Tailwind-scanned source (a template, a <code>views.py</code>, a form definition) are picked up automatically by the content scan. No safelist needed as long as the exact token appears somewhere Tailwind reads.</li>
+<li><strong>Interpolated or computed class names</strong>, where the full token never appears in source (e.g. <code>f"select-{level}"</code> or a <code>badge-{{ status }}</code> template expression), are invisible to the content scan. Only these need a safelist: add them to your app's Tailwind entrypoint with <code>@source inline("...")</code>, the same way <code>badge-*</code> colors are safelisted elsewhere in this codebase.</li>
+</ul>
 <p><strong>Requires Alpine.js and htmx</strong> (for server-side search).</p>
 <hr />
 <h2 id="combobox">ComboBox<a class="headerlink" href="#combobox" title="Permanent link">&para;</a></h2>
