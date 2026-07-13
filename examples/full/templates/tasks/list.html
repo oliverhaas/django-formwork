@@ -22,7 +22,7 @@
           hx-get="{% url 'task_list' %}"
           hx-trigger="input changed delay:300ms from:input, change from:select, change from:input[type=checkbox]"
           hx-target="#task-rows"
-          hx-swap="outerHTML"
+          hx-swap="outerMorph"
           hx-push-url="true"
           class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-end p-4 border-b border-base-300">
       {{ filter_form }}

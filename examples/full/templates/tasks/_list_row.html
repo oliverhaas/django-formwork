@@ -6,7 +6,7 @@
   <td>
     <form hx-post="{% url 'task_status' task.pk %}"
           hx-target="#task-row-{{ task.pk }}"
-          hx-swap="outerHTML"
+          hx-swap="outerMorph"
           hx-trigger="change delay:400ms">
       {% csrf_token %}
       <input type="hidden" name="field" value="status">
@@ -16,7 +16,7 @@
   <td>
     <form hx-post="{% url 'task_status' task.pk %}"
           hx-target="#task-row-{{ task.pk }}"
-          hx-swap="outerHTML"
+          hx-swap="outerMorph"
           hx-trigger="change delay:400ms">
       {% csrf_token %}
       <input type="hidden" name="field" value="priority">
@@ -26,7 +26,7 @@
   <td class="text-sm">
     <form hx-post="{% url 'task_status' task.pk %}"
           hx-target="#task-row-{{ task.pk }}"
-          hx-swap="outerHTML"
+          hx-swap="outerMorph"
           hx-trigger="change delay:400ms">
       {% csrf_token %}
       <input type="hidden" name="field" value="assignee">
@@ -36,7 +36,7 @@
   <td>
     <form hx-post="{% url 'task_status' task.pk %}"
           hx-target="#task-row-{{ task.pk }}"
-          hx-swap="outerHTML"
+          hx-swap="outerMorph"
           hx-trigger="change delay:400ms">
       {% csrf_token %}
       <input type="hidden" name="field" value="tags">
@@ -46,7 +46,7 @@
   <td class="text-sm whitespace-nowrap">
     <form hx-post="{% url 'task_status' task.pk %}"
           hx-target="#task-row-{{ task.pk }}"
-          hx-swap="outerHTML"
+          hx-swap="outerMorph"
           hx-trigger="change delay:400ms">
       {% csrf_token %}
       <input type="hidden" name="field" value="due_date">
