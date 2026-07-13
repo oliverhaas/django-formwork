@@ -1430,6 +1430,20 @@ _ELEMENTS_INNER = (
     '<input type="radio" name="radio-demo"> Radio B</label>\n'
     '  <input type="file">\n'
     '  <input type="range" min="0" max="100">\n'
+    '  <p class="text-sm font-medium mt-2">'
+    "Soft colour variants (select-soft / input-soft / textarea-soft)</p>\n"
+    '  <select class="select-soft select-accent">\n'
+    "    <option>Accent soft select</option>\n"
+    "    <option>Option A</option>\n"
+    "    <option>Option B</option>\n"
+    "  </select>\n"
+    '  <select class="select-soft select-error">\n'
+    "    <option>Error soft select</option>\n"
+    "    <option>Option A</option>\n"
+    "    <option>Option B</option>\n"
+    "  </select>\n"
+    '  <input type="text" class="input-soft input-accent" value="Accent soft input">\n'
+    '  <textarea class="textarea-soft textarea-accent" rows="2">Accent soft textarea</textarea>\n'
     "</div>"
 )
 
