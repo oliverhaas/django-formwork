@@ -410,11 +410,11 @@ i.icon {
 }
 
 .input-number > .btn:first-child {
-    @apply left-0 rounded-none rounded-l-[--radius-field];
+    @apply left-0 rounded-none rounded-l-(--radius-field);
 }
 
 .input-number > .btn:last-child {
-    @apply right-0 rounded-none rounded-r-[--radius-field];
+    @apply right-0 rounded-none rounded-r-(--radius-field);
 }
 
 /* Hide browser-native number spinners. */
@@ -1152,12 +1152,12 @@ fieldset.formwork-dirty label.password-reveal {
    ================================================================ */
 
 .alert-soft {
-    background-color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 15%, var(--color-base-0));
-    border-color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 18%, var(--color-base-0));
+    background-color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 15%, var(--color-base-100));
+    border-color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 18%, var(--color-base-100));
 }
 
 .alert-icon {
-    --icon-url: url("/static/icons/lucide/info.svg");
+    --icon-url: url("../icons/lucide/info.svg");
 }
 
 .alert-icon::before {
@@ -1207,15 +1207,15 @@ fieldset.formwork-dirty label.password-reveal {
     mask-mode: revert-layer;
 }
 
-.icon-upload         { --icon-url: url("/static/icons/lucide/upload.svg"); }
-.icon-pencil         { --icon-url: url("/static/icons/lucide/pencil.svg"); }
-.icon-chevron-right  { --icon-url: url("/static/icons/lucide/chevron-right.svg"); }
-.icon-search         { --icon-url: url("/static/icons/lucide/search.svg"); }
-.icon-info           { --icon-url: url("/static/icons/lucide/info.svg"); }
-.icon-circle-alert   { --icon-url: url("/static/icons/lucide/circle-alert.svg"); }
-.icon-circle-check   { --icon-url: url("/static/icons/lucide/circle-check.svg"); }
-.icon-circle-x       { --icon-url: url("/static/icons/lucide/circle-x.svg"); }
-.icon-triangle-alert { --icon-url: url("/static/icons/lucide/triangle-alert.svg"); }
+.icon-upload         { --icon-url: url("../icons/lucide/upload.svg"); }
+.icon-pencil         { --icon-url: url("../icons/lucide/pencil.svg"); }
+.icon-chevron-right  { --icon-url: url("../icons/lucide/chevron-right.svg"); }
+.icon-search         { --icon-url: url("../icons/lucide/search.svg"); }
+.icon-info           { --icon-url: url("../icons/lucide/info.svg"); }
+.icon-circle-alert   { --icon-url: url("../icons/lucide/circle-alert.svg"); }
+.icon-circle-check   { --icon-url: url("../icons/lucide/circle-check.svg"); }
+.icon-circle-x       { --icon-url: url("../icons/lucide/circle-x.svg"); }
+.icon-triangle-alert { --icon-url: url("../icons/lucide/triangle-alert.svg"); }
 
 
 /* ================================================================
