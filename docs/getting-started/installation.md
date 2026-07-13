@@ -109,7 +109,7 @@ And link the built file in your base template:
 <link rel="stylesheet" href="{% static 'dist.css' %}">
 ```
 
-The `examples/simple` app in the repository is a working copy of exactly this setup.
+The `examples/full` app in the repository is a working copy of exactly this setup.
 
 ### DaisyUI version
 
