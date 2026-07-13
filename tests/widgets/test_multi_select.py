@@ -426,14 +426,15 @@ def test_multi_select_checkmark_present():
 
 
 @pytest.mark.unit
-def test_multi_select_checkmark_before_label_text():
-    """Label structure is: input, checkmark span, text span (in that order)."""
+def test_multi_select_checkmark_after_label_text():
+    """Label structure is: input, text span, trailing checkmark span."""
     widget = MultiSelect(choices=[("a", "A")])
     soup = render_widget(widget, name="test")
     label = soup.find("label")
     children = [c for c in label.children if getattr(c, "name", None)]
-    names = [c.name for c in children]
-    assert names == ["input", "span", "span"]
+    assert [c.name for c in children] == ["input", "span", "span"]
+    assert "formwork-check" in children[-1].get("class", [])
+    assert "formwork-check" not in children[1].get("class", [])
 
 
 @pytest.mark.unit
@@ -677,7 +678,6 @@ def test_multi_select_prerendered_options_include_icons_when_registry_has_icons(
     widget = make_server_widget(MultiSelect, count=1, icons=True)
     soup = render_widget(widget, attrs={"id": "id_x"})
     first = soup.find("li").find("label")
-    # Icon span appears between the checkmark and the label text.
     assert "📍0" in first.get_text()
 
 

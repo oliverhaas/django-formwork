@@ -1242,6 +1242,18 @@ def test_combo_box_screenshot_grouped_open(combobox_page, assert_screenshot):
 
 
 @pytest.mark.screenshot
+def test_combo_box_screenshot_multiple_selected_open(combobox_page, assert_screenshot):
+    """Visual snapshot: multiple-mode ComboBox open with a checked suggestion."""
+    inp = combobox_page.locator('input[name="language_icons_multi"]')
+    inp.click()
+    combobox_page.wait_for_timeout(150)
+    wrapper = combobox_page.locator("#id_language_icons_multi_combobox")
+    wrapper.locator("button", has_text="Python").click()
+    combobox_page.wait_for_timeout(100)
+    assert_screenshot(wrapper, "combobox-multiple-selected-open.png", capture_dropdown=True)
+
+
+@pytest.mark.screenshot
 def test_combo_box_screenshot_keyboard_highlighted(combobox_page, assert_screenshot):
     """Visual snapshot: ComboBox with a suggestion highlighted via keyboard."""
     inp = combobox_page.locator('input[name="language_single"]')
