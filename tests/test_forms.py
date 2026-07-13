@@ -2,8 +2,13 @@ import pytest
 from django import forms
 from django.test import override_settings
 
-from django_formwork.forms import FormworkForm, FormworkModelForm
-from django_formwork.renderers import FormworkRenderer
+from django_formwork.forms import (
+    FormworkForm,
+    FormworkJinja2Form,
+    FormworkJinja2ModelForm,
+    FormworkModelForm,
+)
+from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
 
 
 class TestFormworkForm:
@@ -282,3 +287,31 @@ def test_metaclass_leaves_declared_plain_model_choice_field_alone():
     field = _Form.base_fields["region"]
     assert type(field) is forms.ModelChoiceField
     assert field.template_name == "custom/field.html"
+
+
+def test_formwork_jinja2_form_renders_formwork_markup():
+    """FormworkJinja2Form renders formwork fieldset markup via the Jinja2 renderer."""
+
+    class F(FormworkJinja2Form):
+        name = forms.CharField()
+
+    assert F.default_renderer is FormworkJinja2Renderer
+    html = str(F())
+    assert "fieldset-legend" in html
+    assert 'name="name"' in html
+
+
+@pytest.mark.django_db
+def test_formwork_jinja2_model_form_renders_formwork_markup():
+    """FormworkJinja2ModelForm renders formwork fieldset markup via the Jinja2 renderer."""
+    from e2e.models import BasicFormData
+
+    class F(FormworkJinja2ModelForm):
+        class Meta:
+            model = BasicFormData
+            fields = ["name"]
+
+    assert F.default_renderer is FormworkJinja2Renderer
+    html = str(F())
+    assert "fieldset-legend" in html
+    assert 'name="name"' in html

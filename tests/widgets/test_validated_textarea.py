@@ -7,7 +7,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import ValidatedTextarea
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, render_form, render_widget, submit
 
 
 class ValidatedTextareaForm(FormworkForm):
@@ -416,105 +416,6 @@ def test_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────────
 
 
-@pytest.mark.e2e
-def test_renders_on_page(textarea_page):
-    """ValidatedTextarea wrapper is visible on the /textarea/ page."""
-    wrapper = textarea_page.locator(".validated-textarea")
-    assert wrapper.is_visible()
-
-
-@pytest.mark.e2e
-def test_has_overlay(textarea_page):
-    """A single highlights div is present on the page."""
-    highlights = textarea_page.locator(".validated-textarea-highlights")
-    assert highlights.count() == 1
-
-
-@pytest.mark.e2e
-def test_has_errors_tooltip(textarea_page):
-    """An errors container inside the tooltip is present on the page."""
-    tooltip = textarea_page.locator(".validated-textarea-tooltip .formwork-errors")
-    assert tooltip.count() == 1
-
-
-@pytest.mark.e2e
-def test_clean_text_no_marks(textarea_page):
-    """Clean text produces no mark elements in the highlights div."""
-    textarea_page.evaluate(
-        """(text) => {
-        const textarea = document.querySelector('textarea[name="bio"]');
-        textarea.value = text;
-        const url = textarea.getAttribute('hx-post');
-        const highlightsId = textarea.getAttribute('hx-target');
-        const params = new URLSearchParams();
-        params.append('text', text);
-        params.append('field_name', 'bio');
-        params.append('errors_id', textarea.id + '_error');
-        fetch(url, {method: 'POST', body: params})
-            .then(r => r.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString('<div>' + html + '</div>', 'text/html');
-                const oob = doc.querySelector('[hx-swap-oob]');
-                const errorsTarget = document.getElementById(textarea.id + '_error');
-                if (oob && errorsTarget) {
-                    errorsTarget.innerHTML = oob.innerHTML;
-                    oob.remove();
-                }
-                const target = document.querySelector(highlightsId);
-                const remaining = doc.body.firstChild;
-                target.innerHTML = remaining.innerHTML;
-            });
-    }""",
-        "Hello world",
-    )
-    textarea_page.wait_for_timeout(500)
-    marks = textarea_page.locator(".validated-textarea-highlights mark")
-    assert marks.count() == 0
-
-
-@pytest.mark.e2e
-def test_bad_text_shows_marks(textarea_page):
-    """Text containing a flagged word produces a <mark> element in the highlights."""
-    from playwright.sync_api import expect
-
-    textarea_page.evaluate(
-        """(text) => {
-        const textarea = document.querySelector('textarea[name="bio"]');
-        textarea.value = text;
-        const url = textarea.getAttribute('hx-post');
-        const highlightsId = textarea.getAttribute('hx-target');
-        const params = new URLSearchParams();
-        params.append('text', text);
-        params.append('field_name', 'bio');
-        params.append('errors_id', textarea.id + '_error');
-        fetch(url, {method: 'POST', body: params})
-            .then(r => r.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString('<div>' + html + '</div>', 'text/html');
-                const oob = doc.querySelector('[hx-swap-oob]');
-                const errorsTarget = document.getElementById(textarea.id + '_error');
-                if (oob && errorsTarget) {
-                    errorsTarget.innerHTML = oob.innerHTML;
-                    oob.remove();
-                }
-                const target = document.querySelector(highlightsId);
-                const remaining = doc.body.firstChild;
-                target.innerHTML = remaining.innerHTML;
-            });
-    }""",
-        "This has a badword in it",
-    )
-    textarea_page.wait_for_timeout(500)
-    marks = textarea_page.locator(".validated-textarea-highlights mark")
-    expect(marks).to_have_count(1, timeout=3000)
-    assert marks.first.text_content() == "badword"
-
-
-# ─── Level 6: E2e error flow ─────────────────────────────────────────────────
-
-
 def _trigger_validation(page, text):
     """Trigger htmx validation POST via fetch (bypasses htmx debounce)."""
     page.evaluate(
@@ -545,6 +446,51 @@ def _trigger_validation(page, text):
     }""",
         text,
     )
+
+
+@pytest.mark.e2e
+def test_renders_on_page(textarea_page):
+    """ValidatedTextarea wrapper is visible on the /textarea/ page."""
+    wrapper = textarea_page.locator(".validated-textarea")
+    assert wrapper.is_visible()
+
+
+@pytest.mark.e2e
+def test_has_overlay(textarea_page):
+    """A single highlights div is present on the page."""
+    highlights = textarea_page.locator(".validated-textarea-highlights")
+    assert highlights.count() == 1
+
+
+@pytest.mark.e2e
+def test_has_errors_tooltip(textarea_page):
+    """An errors container inside the tooltip is present on the page."""
+    tooltip = textarea_page.locator(".validated-textarea-tooltip .formwork-errors")
+    assert tooltip.count() == 1
+
+
+@pytest.mark.e2e
+def test_clean_text_no_marks(textarea_page):
+    """Clean text produces no mark elements in the highlights div."""
+    _trigger_validation(textarea_page, "Hello world")
+    textarea_page.wait_for_timeout(500)
+    marks = textarea_page.locator(".validated-textarea-highlights mark")
+    assert marks.count() == 0
+
+
+@pytest.mark.e2e
+def test_bad_text_shows_marks(textarea_page):
+    """Text containing a flagged word produces a <mark> element in the highlights."""
+    from playwright.sync_api import expect
+
+    _trigger_validation(textarea_page, "This has a badword in it")
+    textarea_page.wait_for_timeout(500)
+    marks = textarea_page.locator(".validated-textarea-highlights mark")
+    expect(marks).to_have_count(1, timeout=3000)
+    assert marks.first.text_content() == "badword"
+
+
+# ─── Level 6: E2e error flow ─────────────────────────────────────────────────
 
 
 @pytest.mark.e2e
@@ -642,8 +588,6 @@ def test_aria_invalid_clears_when_errors_resolve(textarea_page):
 @pytest.mark.e2e
 def test_morph_preserves_value(textarea_page):
     """Typed content is preserved across an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     ta = textarea_page.locator('textarea[name="bio"]')
     ta.fill("Some bio text")
     submit(textarea_page)

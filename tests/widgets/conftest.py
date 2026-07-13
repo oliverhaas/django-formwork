@@ -14,9 +14,8 @@ from bs4 import BeautifulSoup, NavigableString, Tag
 
 from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
 
-# Re-export e2e fixtures and the autouse settings override so e2e widget
-# tests in this directory can use them.  Listed in __all__ to satisfy
-# ruff's unused-import check.
+# Re-export e2e fixtures, the submit helper, and the autouse settings
+# override so e2e widget tests in this directory can use them.
 from tests.e2e.conftest import (  # noqa: F401
     _e2e_settings,
     basic_page,
@@ -26,6 +25,7 @@ from tests.e2e.conftest import (  # noqa: F401
     new_widgets_page,
     search_select_page,
     simple_page,
+    submit,
     textarea_page,
     toggle_page,
     uploads_page,
@@ -137,6 +137,22 @@ def render_form(form, renderer: BaseRenderer | None = None) -> BeautifulSoup:
     if renderer is not None:
         form.renderer = renderer
     return BeautifulSoup(str(form), "html.parser")
+
+
+def open_dropdown(page, css_class: str, index: int, settle_ms: int = 150):
+    """Open the nth <details> dropdown widget by clicking its summary; returns its locator."""
+    widget = page.locator(f"details.dropdown.{css_class}").nth(index)
+    widget.locator("summary").click()
+    page.wait_for_timeout(settle_ms)
+    return widget
+
+
+def open_combo_box(page, name: str):
+    """Open a ComboBox by clicking its input; returns the input locator."""
+    inp = page.locator(f'input[name="{name}"]')
+    inp.click()
+    page.wait_for_timeout(150)
+    return inp
 
 
 def _normalize(node: Tag | NavigableString) -> tuple:

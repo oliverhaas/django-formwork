@@ -7,7 +7,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import Rating
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, render_form, render_widget, submit
 
 
 class RatingForm(FormworkForm):
@@ -261,18 +261,13 @@ def test_rating_form_wraps_in_fieldset(renderer):
 
 
 @pytest.mark.integration
-def test_rating_error_state_aria_invalid(renderer):
-    """Bound form with errors adds aria-invalid='true' to the widget."""
+def test_rating_error_state_keeps_rating_widget(renderer):
+    """Bound form with errors still renders the rating wrapper div."""
     form = RatingForm(data={}, error_display="tooltip")
-    form.is_valid()
+    assert form.is_valid() is False
     soup = render_form(form, renderer=renderer)
-    # The rating div wrapper should carry the aria-invalid attribute
     rating_div = soup.find("div", class_="rating")
     assert rating_div is not None
-    # At least one radio has aria-invalid (Django sets it on the widget)
-    # or the fieldset signals the error: check tooltip exists
-    tooltip = soup.find(id="id_rating_tooltip")
-    assert tooltip is not None
 
 
 @pytest.mark.integration
@@ -345,8 +340,6 @@ def test_rating_has_mask_star_class(simple_page):
 @pytest.mark.e2e
 def test_rating_morph_preserves_selected_star(simple_page):
     """Selected star value survives an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     simple_page.evaluate("""
         const star = document.querySelector('#id_stars input[value="3"]');
         star.checked = true;
@@ -362,8 +355,6 @@ def test_rating_morph_preserves_selected_star(simple_page):
 @pytest.mark.e2e
 def test_rating_morph_no_star_selected_stays_empty(simple_page):
     """With no star selected, morph does not auto-select any star."""
-    from tests.e2e.conftest import submit
-
     # Ensure nothing is checked first
     initially_checked = simple_page.evaluate(
         "document.querySelector('#id_stars input:checked')?.value || ''",

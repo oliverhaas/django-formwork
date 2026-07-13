@@ -7,7 +7,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import DataList
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, render_form, render_widget, submit
 
 
 class DataListForm(FormworkForm):
@@ -294,8 +294,6 @@ def test_datalist_user_can_type(simple_page):
 @pytest.mark.e2e
 def test_datalist_morph_preserves_typed_value(simple_page):
     """Typed value in the datalist input survives an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     inp = simple_page.locator('input[name="browser"]')
     inp.fill("Chrome")
     submit(simple_page)
@@ -305,8 +303,6 @@ def test_datalist_morph_preserves_typed_value(simple_page):
 @pytest.mark.e2e
 def test_datalist_morph_preserves_empty(simple_page):
     """Empty datalist input remains empty after morph."""
-    from tests.e2e.conftest import submit
-
     inp = simple_page.locator('input[name="browser"]')
     assert inp.input_value() == ""
     submit(simple_page)

@@ -120,7 +120,7 @@ class TestAisValid:
 
     async def test_populates_errors_and_cleaned_data(self):
         form = SyncCleanForm(data={"name": "alice", "email": "a@b.com"})
-        await form.ais_valid()
+        assert await form.ais_valid() is True
         assert form.errors == {}
         assert form.cleaned_data == {"name": "ALICE", "email": "a@b.com"}
 
@@ -197,28 +197,28 @@ class TestAsave:
 
     async def test_save_updates_instance(self):
         form = BasicModelForm(data={"name": "alice", "email": "a@b.com", "message": "hi"})
-        await form.ais_valid()
+        assert await form.ais_valid() is True
         instance = await form.asave()
 
         form2 = BasicModelForm(
             data={"name": "bob", "email": "b@c.com", "message": "bye"},
             instance=instance,
         )
-        await form2.ais_valid()
+        assert await form2.ais_valid() is True
         updated = await form2.asave()
         assert updated.pk == instance.pk
         assert updated.name == "bob"
 
     async def test_save_commit_false(self):
         form = BasicModelForm(data={"name": "alice", "email": "a@b.com", "message": "hi"})
-        await form.ais_valid()
+        assert await form.ais_valid() is True
         instance = await form.asave(commit=False)
         assert instance.pk is None
         assert instance.name == "alice"
 
     async def test_save_raises_on_errors(self):
         form = BasicModelForm(data={"name": "", "email": "bad", "message": ""})
-        await form.ais_valid()
+        assert await form.ais_valid() is False
         with pytest.raises(ValueError, match="could not be created"):
             await form.asave()
 

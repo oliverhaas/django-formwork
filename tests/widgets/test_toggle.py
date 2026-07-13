@@ -26,7 +26,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import Toggle
 
-from .conftest import render_form, render_widget
+from .conftest import render_form, render_widget, submit
 
 
 class ToggleForm(FormworkForm):
@@ -221,8 +221,6 @@ def test_toggle_morph_preserves_checked(toggle_page):
     """Checked state survives an htmx form morph."""
     from playwright.sync_api import expect
 
-    from tests.e2e.conftest import submit
-
     toggle = toggle_page.locator('input[name="toggle"]')
     toggle.check()
     expect(toggle).to_be_checked()
@@ -234,8 +232,6 @@ def test_toggle_morph_preserves_checked(toggle_page):
 def test_toggle_morph_preserves_unchecked(toggle_page):
     """Unchecked state survives an htmx form morph."""
     from playwright.sync_api import expect
-
-    from tests.e2e.conftest import submit
 
     toggle = toggle_page.locator('input[name="toggle"]')
     expect(toggle).not_to_be_checked()

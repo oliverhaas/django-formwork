@@ -7,7 +7,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import PasswordReveal
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, render_form, render_widget, submit
 
 
 class PasswordRevealForm(FormworkForm):
@@ -21,9 +21,9 @@ class PasswordRevealForm(FormworkForm):
 
 @pytest.mark.unit
 def test_password_reveal_instantiation():
-    """PasswordReveal widget can be instantiated without arguments."""
+    """PasswordReveal renders through the formwork password_reveal template."""
     widget = PasswordReveal()
-    assert widget is not None
+    assert widget.template_name == "formwork/widgets/password_reveal.html"
 
 
 @pytest.mark.unit
@@ -284,8 +284,6 @@ def test_password_reveal_wrapper_has_id_attr(simple_page):
 @pytest.mark.e2e
 def test_password_reveal_morph_clears_value(simple_page):
     """Django's PasswordInput doesn't render values; morph clears the field."""
-    from tests.e2e.conftest import submit
-
     inp = simple_page.locator('input[name="password"]')
     inp.fill("secret123")
     submit(simple_page)
@@ -295,8 +293,6 @@ def test_password_reveal_morph_clears_value(simple_page):
 @pytest.mark.e2e
 def test_password_reveal_morph_preserves_reveal_state(simple_page):
     """Show/hide toggle state persists through an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     inp = simple_page.locator('input[name="password"]')
     inp.fill("secret")
     simple_page.locator("label.password-reveal button").click()

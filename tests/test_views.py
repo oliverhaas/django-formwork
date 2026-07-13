@@ -3,6 +3,7 @@
 import json
 import re
 
+import pytest
 from bs4 import BeautifulSoup
 from django.test import Client, RequestFactory
 from django.utils.safestring import mark_safe
@@ -710,3 +711,11 @@ def test_validate_view_csrf_exempt(settings):
     response = client.post("/e2e/validate/bio/", {"text": "hello", "errors_id": ""})
     assert response.status_code == 200
     assert response.content.decode() == "hello"
+
+
+def test_normalize_results_malformed_item_raises_type_error():
+    """A search result that is neither a dict nor a (value, label) pair raises TypeError."""
+    from django_formwork.views import FormworkAutoSearchView
+
+    with pytest.raises(TypeError, match=r"got int: 42"):
+        FormworkAutoSearchView._normalize_results([42])

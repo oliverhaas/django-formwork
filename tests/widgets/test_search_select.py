@@ -14,7 +14,7 @@ from django_formwork.fields import ChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import SearchSelect
 
-from .conftest import assert_html_equivalent, make_server_widget, render_form, render_widget
+from .conftest import assert_html_equivalent, make_server_widget, open_dropdown, render_form, render_widget, submit
 
 
 class SearchSelectForm(FormworkForm):
@@ -1512,17 +1512,10 @@ def test_search_select_no_search_no_focus_error(search_select_page):
 # root; the search input is auto-focused on open so events bubble up.
 
 
-def _open_grouped_search(page):
-    sel = page.locator("details.dropdown.search-select").nth(6)
-    sel.locator("summary").click()
-    page.wait_for_timeout(200)
-    return sel
-
-
 @pytest.mark.e2e
 def test_search_select_keyboard_arrowdown_highlights_first(search_select_page):
     """ArrowDown highlights the first visible option."""
-    sel = _open_grouped_search(search_select_page)
+    sel = open_dropdown(search_select_page, "search-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="text"]')
     search.press("ArrowDown")
     search_select_page.wait_for_timeout(50)
@@ -1534,7 +1527,7 @@ def test_search_select_keyboard_arrowdown_highlights_first(search_select_page):
 @pytest.mark.e2e
 def test_search_select_keyboard_arrowdown_navigates(search_select_page):
     """Each ArrowDown moves to the next option, skipping group headers."""
-    sel = _open_grouped_search(search_select_page)
+    sel = open_dropdown(search_select_page, "search-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="text"]')
     for _ in range(3):  # ldn, par, ber
         search.press("ArrowDown")
@@ -1546,7 +1539,7 @@ def test_search_select_keyboard_arrowdown_navigates(search_select_page):
 @pytest.mark.e2e
 def test_search_select_keyboard_arrowdown_wraps_to_first(search_select_page):
     """ArrowDown past the last option wraps to the first."""
-    sel = _open_grouped_search(search_select_page)
+    sel = open_dropdown(search_select_page, "search-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="text"]')
     for _ in range(10):  # 9 + 1 wrap
         search.press("ArrowDown")
@@ -1557,7 +1550,7 @@ def test_search_select_keyboard_arrowdown_wraps_to_first(search_select_page):
 @pytest.mark.e2e
 def test_search_select_keyboard_arrowup_wraps_to_last(search_select_page):
     """ArrowUp from no highlight goes to the last visible option."""
-    sel = _open_grouped_search(search_select_page)
+    sel = open_dropdown(search_select_page, "search-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="text"]')
     search.press("ArrowUp")
     search_select_page.wait_for_timeout(50)
@@ -1567,7 +1560,7 @@ def test_search_select_keyboard_arrowup_wraps_to_last(search_select_page):
 @pytest.mark.e2e
 def test_search_select_keyboard_filter_skips_hidden_options(search_select_page):
     """After filtering, ArrowDown only highlights visible (matching) options."""
-    sel = _open_grouped_search(search_select_page)
+    sel = open_dropdown(search_select_page, "search-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="text"]')
     search.fill("lon")  # Matches only "London"
     search_select_page.wait_for_timeout(150)
@@ -1582,7 +1575,7 @@ def test_search_select_keyboard_filter_skips_hidden_options(search_select_page):
 @pytest.mark.e2e
 def test_search_select_keyboard_enter_picks_and_closes(search_select_page):
     """Enter on highlighted option sets value and closes the dropdown."""
-    sel = _open_grouped_search(search_select_page)
+    sel = open_dropdown(search_select_page, "search-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="text"]')
     search.press("ArrowDown")  # ldn
     search.press("ArrowDown")  # par
@@ -1596,7 +1589,7 @@ def test_search_select_keyboard_enter_picks_and_closes(search_select_page):
 @pytest.mark.e2e
 def test_search_select_keyboard_enter_no_highlight_picks_first(search_select_page):
     """With no highlight, Enter picks the first visible option."""
-    sel = _open_grouped_search(search_select_page)
+    sel = open_dropdown(search_select_page, "search-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="text"]')
     search.fill("tok")
     search_select_page.wait_for_timeout(150)
@@ -1609,7 +1602,7 @@ def test_search_select_keyboard_enter_no_highlight_picks_first(search_select_pag
 @pytest.mark.e2e
 def test_search_select_keyboard_close_clears_highlight(search_select_page):
     """Closing the dropdown via summary click clears ``.highlighted``."""
-    sel = _open_grouped_search(search_select_page)
+    sel = open_dropdown(search_select_page, "search-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="text"]')
     search.press("ArrowDown")
     search_select_page.wait_for_timeout(50)
@@ -1709,8 +1702,6 @@ def test_search_select_search_input_works_after_error(search_select_page):
 @pytest.mark.e2e
 def test_search_select_morph_preserves_value(search_select_page):
     """Selected value survives an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     sel = search_select_page.locator("details.dropdown.search-select").first
     search_select_page.evaluate("""
         document.querySelector('details.dropdown.search-select').open = true;
@@ -1734,8 +1725,6 @@ def test_search_select_morph_preserves_value(search_select_page):
 @pytest.mark.e2e
 def test_search_select_morph_preserves_dropdown_closed(search_select_page):
     """Closed dropdown stays closed after a morph."""
-    from tests.e2e.conftest import submit
-
     sel = search_select_page.locator("details.dropdown.search-select").first
     search_select_page.evaluate("""
         document.querySelector('details.dropdown.search-select').open = true;
@@ -1771,8 +1760,6 @@ def test_search_select_toggle_class_survives_noop_morph(search_select_page):
     A re-render of already-saved state changes no data attributes, so nothing
     re-evaluates the :class binding; the morph itself must keep the classes.
     """
-    from tests.e2e.conftest import submit
-
     sel = search_select_page.locator("details.dropdown.search-select").nth(8)
     summary = sel.locator("summary")
     summary.click()

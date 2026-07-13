@@ -187,3 +187,9 @@ def test_floating_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
     soup_dtl = render_form(FloatingForm(), renderer=dtl_renderer)
     soup_jinja2 = render_form(FloatingForm(), renderer=jinja2_renderer)
     assert_html_equivalent(soup_dtl, soup_jinja2)
+
+
+# ─── Level 5+: E2e, morph, screenshot ────────────────────────────────────
+#
+# No e2e page renders Floating widgets yet, so the e2e, morph-resilience,
+# and screenshot levels are missing entirely.

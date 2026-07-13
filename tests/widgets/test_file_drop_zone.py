@@ -24,9 +24,9 @@ class FileDropZoneForm(FormworkForm):
 
 @pytest.mark.unit
 def test_file_drop_zone_instantiation_default():
-    """FileDropZone can be instantiated with no arguments."""
+    """FileDropZone renders through the formwork drop_zone template."""
     widget = FileDropZone()
-    assert isinstance(widget, FileDropZone)
+    assert widget.template_name == "formwork/widgets/drop_zone.html"
 
 
 @pytest.mark.unit

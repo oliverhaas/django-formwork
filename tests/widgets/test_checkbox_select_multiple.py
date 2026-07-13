@@ -8,7 +8,7 @@ from django.http import QueryDict
 
 from django_formwork.forms import FormworkForm
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, render_form, render_widget, submit
 
 TOPPING_CHOICES = [
     ("cheese", "Cheese"),
@@ -43,9 +43,10 @@ class CheckboxSelectMultipleRequiredForm(FormworkForm):
 
 @pytest.mark.unit
 def test_checkbox_select_multiple_instantiation():
-    """CheckboxSelectMultiple widget can be instantiated without arguments."""
+    """CheckboxSelectMultiple is a checkbox-typed widget allowing multiple selection."""
     widget = forms.CheckboxSelectMultiple()
-    assert widget is not None
+    assert widget.input_type == "checkbox"
+    assert widget.allow_multiple_selected is True
 
 
 @pytest.mark.unit
@@ -166,17 +167,13 @@ def test_checkbox_select_multiple_form_wraps_in_fieldset(renderer):
 
 @pytest.mark.integration
 def test_checkbox_select_multiple_error_state(renderer):
-    """Bound required form with no selection adds aria-invalid to the widget."""
+    """Bound required form with no selection adds aria-invalid to every checkbox."""
     form = CheckboxSelectMultipleRequiredForm(data={}, error_display="tooltip")
-    form.is_valid()
+    assert form.is_valid() is False
     soup = render_form(form, renderer=renderer)
-    # The inner fieldset should carry aria-invalid when in error state
     checkboxes = soup.find_all("input", attrs={"name": "toppings"})
-    # At least one checkbox should have aria-invalid, or the fieldset should
-    # Django 6.0 adds aria-invalid to the widget container (fieldset)
-    inner_fieldset = soup.find("fieldset", id="id_toppings_field")
-    assert inner_fieldset is not None
-    # Confirm the tooltip error node exists
+    assert len(checkboxes) == 4
+    assert all(cb.get("aria-invalid") == "true" for cb in checkboxes)
     tooltip = soup.find(id="id_toppings_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
@@ -268,8 +265,6 @@ def test_checkbox_select_multiple_labels_clickable(builtin_page):
 def test_checkbox_select_multiple_morph_preserves_selections(builtin_page):
     """Checked toppings survive an htmx form morph."""
     from playwright.sync_api import expect
-
-    from tests.e2e.conftest import submit
 
     cheese = builtin_page.locator('input[name="toppings"][value="cheese"]')
     olives = builtin_page.locator('input[name="toppings"][value="olives"]')

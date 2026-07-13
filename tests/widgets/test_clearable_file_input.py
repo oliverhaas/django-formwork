@@ -8,7 +8,7 @@ from django.http import QueryDict
 
 from django_formwork.forms import FormworkForm
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, render_form, render_widget, submit
 
 
 class _FakeFile:
@@ -35,9 +35,10 @@ class ClearableFileForm(FormworkForm):
 
 @pytest.mark.unit
 def test_clearable_file_input_instantiation():
-    """ClearableFileInput can be instantiated with no arguments."""
+    """ClearableFileInput is a file-typed widget using the clearable template."""
     widget = forms.ClearableFileInput()
-    assert isinstance(widget, forms.ClearableFileInput)
+    assert widget.input_type == "file"
+    assert widget.template_name == "django/forms/widgets/clearable_file_input.html"
 
 
 @pytest.mark.unit
@@ -194,8 +195,6 @@ def test_clearable_file_input_clear_checkbox_interaction(builtin_page):
 def test_clearable_file_input_morph_preserves_clear_checkbox(builtin_page):
     """Checked clear checkbox state survives an htmx form morph."""
     from playwright.sync_api import expect
-
-    from tests.e2e.conftest import submit
 
     checkbox = builtin_page.locator('input[name="avatar-clear"]')
     checkbox.check()

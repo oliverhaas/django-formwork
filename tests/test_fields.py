@@ -40,6 +40,22 @@ class TestChoiceLabel:
         assert "NYC" in repr(label)
 
 
+def test_choice_label_eq_choice_label_all_attributes():
+    """Two ChoiceLabels compare equal only when all four attributes match."""
+    a = ChoiceLabel("NY", icon="b", description="d", selected_toggle_class="c")
+    b = ChoiceLabel("NY", icon="b", description="d", selected_toggle_class="c")
+    assert a == b
+    assert a != ChoiceLabel("NY", icon="other", description="d", selected_toggle_class="c")
+
+
+def test_choice_label_hash_equal_for_equal_labels():
+    """Equal ChoiceLabels hash identically, so they collapse in sets."""
+    a = ChoiceLabel("NY", icon="b")
+    b = ChoiceLabel("NY", icon="b")
+    assert hash(a) == hash(b)
+    assert len({a, b}) == 1
+
+
 @pytest.mark.django_db
 class TestFormworkModelChoiceField:
     @pytest.fixture(autouse=True)

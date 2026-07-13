@@ -8,7 +8,7 @@ from django.http import QueryDict
 
 from django_formwork.forms import FormworkForm
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, render_form, render_widget, submit
 
 
 class SplitDateTimeForm(FormworkForm):
@@ -140,15 +140,14 @@ def test_split_datetime_form_wraps_in_fieldset(renderer):
 def test_split_datetime_error_state(renderer):
     """Bound form with errors adds aria-invalid='true' to both sub-inputs."""
     form = SplitDateTimeForm(data={})
-    form.is_valid()
+    assert form.is_valid() is False
     soup = render_form(form, renderer=renderer)
     date_input = soup.find("input", attrs={"name": "event_at_0"})
     time_input = soup.find("input", attrs={"name": "event_at_1"})
     assert date_input is not None
     assert time_input is not None
-    # At least one of the sub-inputs should be marked invalid
-    invalid_inputs = [inp for inp in [date_input, time_input] if inp.get("aria-invalid") == "true"]
-    assert len(invalid_inputs) > 0
+    assert date_input.get("aria-invalid") == "true"
+    assert time_input.get("aria-invalid") == "true"
 
 
 @pytest.mark.integration
@@ -220,8 +219,6 @@ def test_split_datetime_side_by_side_layout(builtin_page):
 @pytest.mark.e2e
 def test_split_datetime_morph_preserves_values(builtin_page):
     """Filled date and time values survive an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     date_input = builtin_page.locator('input[name="event_at_0"]')
     time_input = builtin_page.locator('input[name="event_at_1"]')
     date_input.fill("2024-06-15")

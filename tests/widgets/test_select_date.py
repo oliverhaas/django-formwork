@@ -8,7 +8,7 @@ from django.http import QueryDict
 
 from django_formwork.forms import FormworkForm
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, render_form, render_widget, submit
 
 
 class SelectDateForm(FormworkForm):
@@ -212,8 +212,6 @@ def test_select_date_three_column_layout(builtin_page):
 @pytest.mark.e2e
 def test_select_date_morph_preserves_date(builtin_page):
     """Selected month/day/year survive an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     builtin_page.select_option('select[name="birthday_month"]', value="3")
     builtin_page.select_option('select[name="birthday_day"]', value="14")
     builtin_page.select_option('select[name="birthday_year"]', value="2025")

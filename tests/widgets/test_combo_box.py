@@ -10,7 +10,7 @@ from django.utils.safestring import mark_safe
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import ComboBox
 
-from .conftest import assert_html_equivalent, make_server_widget, render_form, render_widget
+from .conftest import assert_html_equivalent, make_server_widget, open_combo_box, render_form, render_widget, submit
 
 
 class ComboBoxForm(FormworkForm):
@@ -108,7 +108,7 @@ def test_combo_box_value_from_datadict_returns_string():
 
 @pytest.mark.unit
 def test_combo_box_value_from_datadict_empty():
-    """value_from_datadict returns empty string when nothing submitted."""
+    """value_from_datadict returns None when nothing submitted."""
     widget = ComboBox(suggestions=["Alpha"])
     data = QueryDict("")
     val = widget.value_from_datadict(data, {}, "test")
@@ -857,9 +857,12 @@ def test_combo_box_single_pick_dispatches_change_event(combobox_page):
     combobox_page.wait_for_timeout(100)
     assert inp.input_value() == "Rust"
     assert combobox_page.evaluate("() => window._comboChangeEvents") >= 1
-    assert combobox_page.evaluate(
-        "() => Alpine.$data(document.querySelector('.dropdown.combobox')).open",
-    ) is False
+    assert (
+        combobox_page.evaluate(
+            "() => Alpine.$data(document.querySelector('.dropdown.combobox')).open",
+        )
+        is False
+    )
 
 
 @pytest.mark.e2e
@@ -959,18 +962,10 @@ def test_combo_box_grouped_pick_from_group(combobox_page):
 # so the input must be focused (dropdown open) for events to bubble up.
 
 
-def _open_combo_box(page, name: str):
-    """Open a ComboBox by clicking its input; returns input + wrapper locators."""
-    inp = page.locator(f'input[name="{name}"]')
-    inp.click()
-    page.wait_for_timeout(150)
-    return inp
-
-
 @pytest.mark.e2e
 def test_combo_box_keyboard_arrowdown_highlights_first(combobox_page):
     """ArrowDown highlights the first visible suggestion."""
-    inp = _open_combo_box(combobox_page, "language_single")
+    inp = open_combo_box(combobox_page, "language_single")
     inp.press("ArrowDown")
     combobox_page.wait_for_timeout(100)
     highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
@@ -981,7 +976,7 @@ def test_combo_box_keyboard_arrowdown_highlights_first(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_keyboard_arrowdown_navigates(combobox_page):
     """Each ArrowDown moves to the next suggestion."""
-    inp = _open_combo_box(combobox_page, "language_single")
+    inp = open_combo_box(combobox_page, "language_single")
     inp.press("ArrowDown")
     inp.press("ArrowDown")
     combobox_page.wait_for_timeout(50)
@@ -992,7 +987,7 @@ def test_combo_box_keyboard_arrowdown_navigates(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_keyboard_arrowdown_wraps_to_first(combobox_page):
     """ArrowDown past the last suggestion wraps back to the first."""
-    inp = _open_combo_box(combobox_page, "language_single")
+    inp = open_combo_box(combobox_page, "language_single")
     # 6 options: Python, JavaScript, Go, Rust, TypeScript, Ruby
     for _ in range(7):
         inp.press("ArrowDown")
@@ -1004,7 +999,7 @@ def test_combo_box_keyboard_arrowdown_wraps_to_first(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_keyboard_arrowup_wraps_to_last(combobox_page):
     """ArrowUp from no highlight goes to the last visible suggestion."""
-    inp = _open_combo_box(combobox_page, "language_single")
+    inp = open_combo_box(combobox_page, "language_single")
     inp.press("ArrowUp")
     combobox_page.wait_for_timeout(50)
     highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
@@ -1014,7 +1009,7 @@ def test_combo_box_keyboard_arrowup_wraps_to_last(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_keyboard_filter_skips_hidden_options(combobox_page):
     """After filtering, ArrowDown only highlights visible (matching) options."""
-    inp = _open_combo_box(combobox_page, "language_single")
+    inp = open_combo_box(combobox_page, "language_single")
     inp.fill("Ru")  # Matches Rust + Ruby
     combobox_page.wait_for_timeout(150)
     inp.press("ArrowDown")
@@ -1031,7 +1026,7 @@ def test_combo_box_keyboard_filter_skips_hidden_options(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_single_keyboard_enter_picks_and_closes(combobox_page):
     """Single-mode: Enter on highlighted option sets value and closes dropdown."""
-    inp = _open_combo_box(combobox_page, "language_single")
+    inp = open_combo_box(combobox_page, "language_single")
     inp.press("ArrowDown")
     inp.press("ArrowDown")  # JavaScript
     combobox_page.wait_for_timeout(50)
@@ -1048,7 +1043,7 @@ def test_combo_box_single_keyboard_enter_picks_and_closes(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_single_keyboard_enter_no_highlight_picks_first(combobox_page):
     """With no highlight, Enter picks the first visible suggestion."""
-    inp = _open_combo_box(combobox_page, "language_single")
+    inp = open_combo_box(combobox_page, "language_single")
     inp.fill("Go")
     combobox_page.wait_for_timeout(150)
     inp.press("Enter")
@@ -1059,7 +1054,7 @@ def test_combo_box_single_keyboard_enter_no_highlight_picks_first(combobox_page)
 @pytest.mark.e2e
 def test_combo_box_multiple_keyboard_enter_toggles_keeps_open(combobox_page):
     """Multi-mode: Enter on highlighted toggles into the comma list, dropdown stays open."""
-    inp = _open_combo_box(combobox_page, "toppings_multi")
+    inp = open_combo_box(combobox_page, "toppings_multi")
     inp.press("ArrowDown")  # Pizza
     combobox_page.wait_for_timeout(50)
     inp.press("Enter")
@@ -1075,7 +1070,7 @@ def test_combo_box_multiple_keyboard_enter_toggles_keeps_open(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_multiple_keyboard_enter_toggles_off(combobox_page):
     """Multi-mode: pressing Enter again on the same value removes it."""
-    inp = _open_combo_box(combobox_page, "toppings_multi")
+    inp = open_combo_box(combobox_page, "toppings_multi")
     inp.press("ArrowDown")
     inp.press("Enter")  # Add Pizza
     combobox_page.wait_for_timeout(150)
@@ -1092,7 +1087,7 @@ def test_combo_box_multiple_keyboard_enter_toggles_off(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_keyboard_close_clears_highlight(combobox_page):
     """Closing the dropdown via Escape clears ``.highlighted`` from the DOM."""
-    inp = _open_combo_box(combobox_page, "language_single")
+    inp = open_combo_box(combobox_page, "language_single")
     inp.press("ArrowDown")
     combobox_page.wait_for_timeout(50)
     combo = combobox_page.locator(".dropdown.combobox").first
@@ -1105,7 +1100,7 @@ def test_combo_box_keyboard_close_clears_highlight(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_keyboard_escape_closes_dropdown(combobox_page):
     """Escape closes the dropdown (open=false)."""
-    inp = _open_combo_box(combobox_page, "language_single")
+    inp = open_combo_box(combobox_page, "language_single")
     inp.press("Escape")
     combobox_page.wait_for_timeout(150)
     is_open = combobox_page.evaluate(
@@ -1188,8 +1183,6 @@ def test_combo_box_input_works_after_error(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_morph_preserves_typed_value(combobox_page):
     """Typed free-text value survives an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     inp = combobox_page.locator('input[name="language_single"]')
     inp.fill("Haskell")
     submit(combobox_page)
@@ -1199,8 +1192,6 @@ def test_combo_box_morph_preserves_typed_value(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_morph_preserves_multiple_selected(combobox_page):
     """Comma-separated multiple selections survive an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     combo = combobox_page.locator(".dropdown.combobox").nth(1)
     inp = combobox_page.locator('input[name="toppings_multi"]')
     inp.click()

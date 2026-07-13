@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime
+
 import pytest
 from django import forms
 
@@ -37,6 +39,18 @@ def test_date_picker_default_format():
     """DatePicker defaults to '%Y-%m-%d' format."""
     widget = DatePicker()
     assert widget.format == "%Y-%m-%d"
+
+
+@pytest.mark.unit
+def test_date_picker_custom_format_round_trips():
+    """A custom format string formats the date value in both get_context and render."""
+    widget = DatePicker(format="%d.%m.%Y")
+    value = datetime.date(2026, 7, 13)
+    ctx = widget.get_context("due_date", value, {"id": "id_due_date"})
+    assert ctx["widget"]["value"] == "13.07.2026"
+    soup = render_widget(widget, name="due_date", value=value, attrs={"id": "id_due_date"})
+    inp = soup.find("input", attrs={"name": "due_date"})
+    assert inp["value"] == "13.07.2026"
 
 
 @pytest.mark.unit

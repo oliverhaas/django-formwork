@@ -7,7 +7,7 @@ from django import forms
 
 from django_formwork.forms import FormworkForm
 
-from .conftest import render_form, render_widget
+from .conftest import render_form, render_widget, submit
 
 
 class DisabledFieldForm(FormworkForm):
@@ -221,8 +221,6 @@ def test_readonly_field_morph_preserves_value(builtin_page):
     """Readonly field value survives an htmx form morph."""
     from playwright.sync_api import expect
 
-    from tests.e2e.conftest import submit
-
     inp = builtin_page.locator('input[name="readonly_text"]')
     submit(builtin_page)
     expect(inp).to_have_value("Read-only value")
@@ -263,8 +261,6 @@ def test_color_input_renders_on_page(builtin_page):
 def test_color_input_morph_preserves_value(builtin_page):
     """Color input value survives an htmx form morph."""
     from playwright.sync_api import expect
-
-    from tests.e2e.conftest import submit
 
     builtin_page.evaluate("""
         const inp = document.querySelector('input[name="color"]');

@@ -13,7 +13,7 @@ from django_formwork.fields import ChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import MultiSelect
 
-from .conftest import assert_html_equivalent, make_server_widget, render_form, render_widget
+from .conftest import assert_html_equivalent, make_server_widget, open_dropdown, render_form, render_widget, submit
 
 
 class MultiSelectForm(FormworkForm):
@@ -155,7 +155,7 @@ def test_multi_select_value_from_datadict_empty():
     widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
     data = QueryDict("")
     result = widget.value_from_datadict(data, {}, "field")
-    assert result is None or result == []
+    assert result == []
 
 
 @pytest.mark.unit
@@ -234,7 +234,7 @@ def test_multi_select_no_group_headers_for_flat_choices():
 def test_multi_select_grouped_group_header_xshow_includes_child_labels_when_searchable():
     """When the widget shows a search box, group headers carry ``x-show`` so
     they hide if no child matches the query."""
-    # Force show_search=True via search_threshold=0, which is easier than 21 choices.
+    # show_search=True overrides the 20-choice threshold that would hide the box.
     choices = [("Group", [("a", "Alpha"), ("b", "Beta")])]
     widget = MultiSelect(choices=choices, show_search=True)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
@@ -1033,20 +1033,13 @@ def test_multi_select_grouped_filter_hides_empty_groups(multi_select_page):
 @pytest.mark.e2e
 def test_multi_select_grouped_pick_via_click(multi_select_page):
     """Clicking a checkbox label inside a group toggles its checked state."""
+    from playwright.sync_api import expect
+
     multi = multi_select_page.locator("details.dropdown.multiselect").nth(3)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(150)
-    multi_select_page.evaluate(
-        """() => {
-            const dd = document.querySelectorAll('details.dropdown.multiselect')[3];
-            const cb = dd.querySelector('input[value="ldn"]');
-            cb.checked = true;
-            cb.dispatchEvent(new Event('change', {bubbles: true}));
-        }""",
-    )
-    multi_select_page.wait_for_timeout(100)
-    summary_text = multi.locator("summary").text_content()
-    assert "London" in summary_text
+    multi.locator('label[data-value="ldn"]').click()
+    expect(multi.locator('input[value="ldn"]')).to_be_checked()
+    expect(multi.locator("summary")).to_contain_text("London")
 
 
 # ─── Level 5c: E2e, search auto-focus ───────────────────────────────────
@@ -1101,17 +1094,10 @@ def test_multi_select_no_search_no_focus_error(multi_select_page):
 # has focus once the dropdown is open, so events bubble to the handlers.
 
 
-def _open_grouped_multi(page):
-    multi = page.locator("details.dropdown.multiselect").nth(3)
-    multi.locator("summary").click()
-    page.wait_for_timeout(150)
-    return multi
-
-
 @pytest.mark.e2e
 def test_multi_select_keyboard_arrowdown_highlights_first(multi_select_page):
     """ArrowDown from no highlight goes to the first visible option."""
-    multi = _open_grouped_multi(multi_select_page)
+    multi = open_dropdown(multi_select_page, "multiselect", 3)
     search = multi.locator('.dropdown-content input[type="text"]')
     search.press("ArrowDown")
     multi_select_page.wait_for_timeout(50)
@@ -1123,7 +1109,7 @@ def test_multi_select_keyboard_arrowdown_highlights_first(multi_select_page):
 @pytest.mark.e2e
 def test_multi_select_keyboard_arrowdown_navigates(multi_select_page):
     """Each ArrowDown moves to the next option, skipping group headers."""
-    multi = _open_grouped_multi(multi_select_page)
+    multi = open_dropdown(multi_select_page, "multiselect", 3)
     search = multi.locator('.dropdown-content input[type="text"]')
     search.press("ArrowDown")  # ldn
     search.press("ArrowDown")  # par
@@ -1140,7 +1126,7 @@ def test_multi_select_keyboard_arrowdown_navigates(multi_select_page):
 @pytest.mark.e2e
 def test_multi_select_keyboard_arrowdown_wraps_to_first(multi_select_page):
     """Pressing ArrowDown past the last option wraps to the first."""
-    multi = _open_grouped_multi(multi_select_page)
+    multi = open_dropdown(multi_select_page, "multiselect", 3)
     search = multi.locator('.dropdown-content input[type="text"]')
     # 9 options total; 10 ArrowDowns from no-highlight = 9 to last + 1 wrap
     for _ in range(10):
@@ -1152,7 +1138,7 @@ def test_multi_select_keyboard_arrowdown_wraps_to_first(multi_select_page):
 @pytest.mark.e2e
 def test_multi_select_keyboard_arrowup_wraps_to_last(multi_select_page):
     """ArrowUp from no highlight goes to the last visible option."""
-    multi = _open_grouped_multi(multi_select_page)
+    multi = open_dropdown(multi_select_page, "multiselect", 3)
     search = multi.locator('.dropdown-content input[type="text"]')
     search.press("ArrowUp")
     multi_select_page.wait_for_timeout(50)
@@ -1162,7 +1148,7 @@ def test_multi_select_keyboard_arrowup_wraps_to_last(multi_select_page):
 @pytest.mark.e2e
 def test_multi_select_keyboard_filter_skips_hidden_options(multi_select_page):
     """After filtering, ArrowDown only highlights visible (matching) options."""
-    multi = _open_grouped_multi(multi_select_page)
+    multi = open_dropdown(multi_select_page, "multiselect", 3)
     search = multi.locator('.dropdown-content input[type="text"]')
     search.fill("lon")  # Matches only "London"
     multi_select_page.wait_for_timeout(150)
@@ -1177,7 +1163,7 @@ def test_multi_select_keyboard_filter_skips_hidden_options(multi_select_page):
 @pytest.mark.e2e
 def test_multi_select_keyboard_enter_toggles_keeps_open(multi_select_page):
     """Enter toggles the highlighted checkbox; dropdown stays open."""
-    multi = _open_grouped_multi(multi_select_page)
+    multi = open_dropdown(multi_select_page, "multiselect", 3)
     search = multi.locator('.dropdown-content input[type="text"]')
     search.press("ArrowDown")  # Highlight ldn
     search.press("Enter")
@@ -1194,7 +1180,7 @@ def test_multi_select_keyboard_enter_toggles_keeps_open(multi_select_page):
 @pytest.mark.e2e
 def test_multi_select_keyboard_enter_again_toggles_off(multi_select_page):
     """Pressing Enter twice on the same option toggles it off again."""
-    multi = _open_grouped_multi(multi_select_page)
+    multi = open_dropdown(multi_select_page, "multiselect", 3)
     search = multi.locator('.dropdown-content input[type="text"]')
     search.press("ArrowDown")
     search.press("Enter")
@@ -1208,7 +1194,7 @@ def test_multi_select_keyboard_enter_again_toggles_off(multi_select_page):
 @pytest.mark.e2e
 def test_multi_select_keyboard_enter_no_highlight_toggles_first(multi_select_page):
     """With no highlight, Enter toggles the first visible option."""
-    multi = _open_grouped_multi(multi_select_page)
+    multi = open_dropdown(multi_select_page, "multiselect", 3)
     search = multi.locator('.dropdown-content input[type="text"]')
     search.press("Enter")
     multi_select_page.wait_for_timeout(100)
@@ -1218,7 +1204,7 @@ def test_multi_select_keyboard_enter_no_highlight_toggles_first(multi_select_pag
 @pytest.mark.e2e
 def test_multi_select_keyboard_close_clears_highlight(multi_select_page):
     """Closing the dropdown clears the ``.highlighted`` class."""
-    multi = _open_grouped_multi(multi_select_page)
+    multi = open_dropdown(multi_select_page, "multiselect", 3)
     search = multi.locator('.dropdown-content input[type="text"]')
     search.press("ArrowDown")
     multi_select_page.wait_for_timeout(50)
@@ -1385,8 +1371,6 @@ def test_multi_select_search_input_works_after_error(multi_select_page):
 @pytest.mark.e2e
 def test_multi_select_morph_preserves_values(multi_select_page):
     """Checked options survive an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     multi_select_page.evaluate("""
         document.querySelector('details.dropdown.multiselect').open = true;
     """)

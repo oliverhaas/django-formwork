@@ -7,7 +7,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import Range
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import assert_html_equivalent, render_form, render_widget, submit
 
 
 class RangeForm(FormworkForm):
@@ -223,8 +223,8 @@ def test_range_has_correct_attrs(simple_page):
 
 
 @pytest.mark.e2e
-def test_range_user_can_set_value(simple_page):
-    """User can set the range value via JavaScript dispatch."""
+def test_range_set_value_via_js_dispatch(simple_page):
+    """Setting the range value via JS dispatch updates the input value."""
     simple_page.evaluate("""
         const r = document.querySelector('input[name="volume"]');
         r.value = '70';
@@ -245,8 +245,6 @@ def test_range_user_can_set_value(simple_page):
 @pytest.mark.e2e
 def test_range_morph_preserves_value(simple_page):
     """Set range value survives an htmx form morph."""
-    from tests.e2e.conftest import submit
-
     simple_page.evaluate("""
         const r = document.querySelector('input[name="volume"]');
         r.value = '70';
@@ -259,8 +257,6 @@ def test_range_morph_preserves_value(simple_page):
 @pytest.mark.e2e
 def test_range_morph_preserves_default_value(simple_page):
     """Default range value survives an htmx form morph without any change."""
-    from tests.e2e.conftest import submit
-
     initial = simple_page.locator('input[name="volume"]').input_value()
     submit(simple_page)
     assert simple_page.locator('input[name="volume"]').input_value() == initial
