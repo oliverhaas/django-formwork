@@ -831,72 +831,6 @@ details.dropdown[open] > summary::before {
     @apply fixed inset-0 cursor-default;
 }
 
-/* Dropdown widgets: fill container like other form elements, with a
-   content-derived minimum measured through .formwork-autowidth below.
-   Layered so user width utilities (w-*, min-w-*) win by layer order. */
-@layer components {
-    details.dropdown.multiselect,
-    details.dropdown.search-select,
-    .dropdown.combobox {
-        width: 100%;
-        min-width: fit-content;
-        max-width: 100%;
-    }
-
-    /* Native selects: the browser already sizes them to their widest
-       option, and that minimum cannot be capped from CSS, so they get a
-       fixed floor instead of a measured one. */
-    select {
-        min-width: min(100%, var(--formwork-autowidth-min, 6rem));
-    }
-}
-
-/* Autowidth plumbing. Dropdown options live in an out-of-flow panel that
-   intrinsic sizing cannot see, so each trigger carries a hidden copy of
-   its option labels and fit-content on the root measures that copy. The
-   visible label overlays the copy and stays out of the measurement:
-   width is fixed at render time, and async results or long picked values
-   ellipsize instead of resizing the trigger. Unlayered: a layered
-   variant would lose to the unlayered defaults in this file. */
-.formwork-autowidth-stack {
-    position: relative;
-    display: block;
-    flex: 1 1 0%;
-    min-width: 0;
-}
-
-.formwork-autowidth-stack > :first-child {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.formwork-autowidth {
-    visibility: hidden;
-    height: 1lh;
-    overflow: hidden;
-    max-width: var(--formwork-autowidth-max, 16rem);
-}
-
-.formwork-autowidth > span {
-    display: block;
-}
-
-/* Nothing to measure (server-side search renders the copy empty): fall
-   back to a fixed floor. Requires the templates to render the empty copy
-   without whitespace, which they do. */
-.formwork-autowidth:empty {
-    min-width: var(--formwork-autowidth-min, 6rem);
-}
-
-/* ComboBox: the copy is a plain sibling of the input, not an overlay
-   stack; zero height so it adds no vertical space below the input. */
-.dropdown.combobox > .formwork-autowidth {
-    height: 0;
-}
-
 /* Dropdown search inputs: no focus border/outline — the parent
    dropdown already has focus styling on the summary trigger. */
 .dropdown-content input:focus {
@@ -1178,6 +1112,76 @@ fieldset.formwork-dirty label.password-reveal {
 }
 
 } /* @layer components */
+
+
+/* Dropdown widgets: fill container like other form elements, with a
+   content-derived minimum measured through .formwork-autowidth below.
+   Layered so user width utilities (w-*, min-w-*) win by layer order. */
+@layer components {
+    details.dropdown.multiselect,
+    details.dropdown.search-select,
+    .dropdown.combobox {
+        width: 100%;
+        min-width: fit-content;
+        max-width: 100%;
+    }
+
+    /* Native selects: the browser already sizes them to their widest
+       option, and that minimum cannot be capped from CSS, so they get a
+       fixed floor instead of a measured one. */
+    select {
+        min-width: min(100%, var(--formwork-autowidth-min, 6rem));
+    }
+}
+
+/* Autowidth plumbing. Dropdown options live in an out-of-flow panel that
+   intrinsic sizing cannot see, so each trigger carries a hidden copy of
+   its option labels and fit-content on the root measures that copy. The
+   visible label overlays the copy and stays out of the measurement:
+   width is fixed at render time, and async results or long picked values
+   ellipsize instead of resizing the trigger. Unlayered: a layered
+   variant would lose to the unlayered defaults in this file. The copy
+   must be a block box: on an inline box height and overflow are ignored,
+   so its display:block children would stack up as full extra lines. */
+.formwork-autowidth-stack {
+    position: relative;
+    display: block;
+    flex: 1 1 0%;
+    min-width: 0;
+}
+
+.formwork-autowidth-stack > :first-child {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.formwork-autowidth {
+    display: block;
+    visibility: hidden;
+    height: 1lh;
+    overflow: hidden;
+    max-width: var(--formwork-autowidth-max, 16rem);
+}
+
+.formwork-autowidth > span {
+    display: block;
+}
+
+/* Nothing to measure (server-side search renders the copy empty): fall
+   back to a fixed floor. Requires the templates to render the empty copy
+   without whitespace, which they do. */
+.formwork-autowidth:empty {
+    min-width: var(--formwork-autowidth-min, 6rem);
+}
+
+/* ComboBox: the copy is a plain sibling of the input, not an overlay
+   stack; zero height so it adds no vertical space below the input. */
+.dropdown.combobox > .formwork-autowidth {
+    height: 0;
+}
 
 
 /* ================================================================
