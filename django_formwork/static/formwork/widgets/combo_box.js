@@ -85,7 +85,8 @@ document.addEventListener("alpine:init", () => {
         this._v++;
         clearHighlight(this);
         this.open = false;
-        inp.dispatchEvent(new Event("input", { bubbles: true }));
+        // change, not input: the template's @input handler reopens the dropdown.
+        inp.dispatchEvent(new Event("change", { bubbles: true }));
       }
     },
     _visibleOptions() {

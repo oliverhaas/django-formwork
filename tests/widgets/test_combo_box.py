@@ -838,24 +838,28 @@ def test_combo_box_pick_suggestion(combobox_page):
 
 
 @pytest.mark.e2e
-def test_combo_box_single_pick_dispatches_input_event(combobox_page):
-    """Picking a suggestion in single mode fires a bubbling input event."""
+def test_combo_box_single_pick_dispatches_change_event(combobox_page):
+    """Picking a suggestion in single mode fires a bubbling change event and keeps the dropdown closed."""
+    # change, not input: the input handler reopens the dropdown (dirty tracking listens to both).
     inp = combobox_page.locator('input[name="language_single"]')
     inp.click()
     inp.fill("Ru")
     combobox_page.wait_for_timeout(150)
     combobox_page.evaluate("""() => {
-        window._comboInputEvents = 0;
+        window._comboChangeEvents = 0;
         document.querySelector('input[name="language_single"]').closest('form')
-            .addEventListener('input', (e) => {
-                if (e.target.name === 'language_single') window._comboInputEvents++;
+            .addEventListener('change', (e) => {
+                if (e.target.name === 'language_single') window._comboChangeEvents++;
             });
     }""")
     combo = combobox_page.locator(".dropdown.combobox").first
     combo.locator("button", has_text="Rust").click()
     combobox_page.wait_for_timeout(100)
     assert inp.input_value() == "Rust"
-    assert combobox_page.evaluate("() => window._comboInputEvents") >= 1
+    assert combobox_page.evaluate("() => window._comboChangeEvents") >= 1
+    assert combobox_page.evaluate(
+        "() => Alpine.$data(document.querySelector('.dropdown.combobox')).open",
+    ) is False
 
 
 @pytest.mark.e2e
