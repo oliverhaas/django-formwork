@@ -226,8 +226,8 @@ class _BatchedUniquenessMixin:
         rather than a query per form: field-based ``UniqueConstraint`` s
         (:meth:`_is_batchable_unique`, prefetched here) and every
         ``CheckConstraint`` (:meth:`_evaluate_batched_checks`).  Whatever neither
-        pass can batch -- conditional or expression uniques, custom-message
-        uniques, generated or custom-collation fields -- falls through to a
+        pass can batch (conditional or expression uniques, custom-message
+        uniques, generated or custom-collation fields) falls through to a
         per-form ``constraint.validate()``.
         """
         if not forms:

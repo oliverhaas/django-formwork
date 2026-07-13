@@ -4,7 +4,7 @@
 :class:`~django_formwork.renderers.FormworkRenderer` so that both
 ``{{ form }}`` and ``{{ field.as_field_group }}`` produce DaisyUI-styled
 markup.  All component styling is handled by the formwork CSS file via
-``@apply`` — no widget attributes are mutated in Python.
+``@apply``.  No widget attributes are mutated in Python.
 
 Using ``FORM_RENDERER = "django_formwork.FormworkRenderer"`` in settings
 is preferred over these base classes (it applies to *all* forms), but
@@ -53,7 +53,7 @@ class FormworkModelFormMetaclass(ModelFormMetaclass):
     Auto-generated ``ModelChoiceField`` / ``ModelMultipleChoiceField`` instances
     (from ``Meta.model`` / ``Meta.fields``) are swapped for their Formwork
     equivalents so icon/description callbacks can be attached to the field.
-    Explicit field declarations — including custom subclasses — are left alone.
+    Explicit field declarations, including custom subclasses, are left alone.
     """
 
     def __new__(
@@ -138,7 +138,7 @@ class _AutoSearchMixin:
             if not has_model_search and not has_choices_search:
                 continue
 
-            # Enforce search_decorator — developer must make a conscious
+            # Enforce search_decorator: developer must make a conscious
             # choice about auth for auto-registered search endpoints.
             raw_decorator = getattr(widget, "search_decorator", _NOT_SET)
             if raw_decorator is _NOT_SET:
