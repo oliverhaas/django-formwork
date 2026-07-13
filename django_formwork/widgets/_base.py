@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from django_formwork._registry import SearchRegistration
+
+logger = logging.getLogger(__name__)
 
 # Sentinel: distinguishes "developer didn't pass search_decorator" from
 # "developer explicitly passed None" (= no decorator, public endpoint).
@@ -64,6 +67,7 @@ def _resolve_initial_results(registry_key: str | None) -> tuple[int | None, list
         if reg.search_func is not None:
             return _initial_from_search_func(reg)
     except Exception:  # noqa: BLE001 (initial render must never crash)
+        logger.warning("Failed to resolve initial results for registry key %r", registry_key, exc_info=True)
         return None, []
     return None, []
 
