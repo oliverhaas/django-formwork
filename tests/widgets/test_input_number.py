@@ -1,14 +1,3 @@
-"""Tests for the InputNumber widget.
-
-Levels:
-    1. unit (widget object): instantiation, get_context, value_from_datadict
-    2. unit (widget rendering): HTML structure, attributes
-    3. integration (form integration): field template, error state, prefix
-    4. integration (Jinja2/DTL parity): identical HTML across engines
-    5. e2e (smoke): +/- buttons step the value, incl. float-step rounding
-    6 to 8. e2e / screenshot: SKIPPED (gaps; smoke coverage only)
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -35,7 +24,7 @@ class InputNumberForm(FormworkForm):
 
 @pytest.mark.unit
 def test_input_number_instantiation():
-    """InputNumber can be instantiated and exposes the expected template_name."""
+    """InputNumber uses the formwork input_number template."""
     widget = InputNumber()
     assert widget.template_name == "formwork/widgets/input_number.html"
 
@@ -125,7 +114,7 @@ def test_input_number_steps_round_to_step_precision():
 
 @pytest.mark.integration
 def test_input_number_renders_via_form(renderer):
-    """InputNumber renders correctly when used inside a FormworkForm."""
+    """Field renders as a number input named after the form field."""
     form = InputNumberForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "quantity"})
@@ -226,16 +215,14 @@ def test_input_number_float_step_rounds(new_widgets_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# Requires a dedicated error-flow page.  Left as a gap.
+# No error-flow test for InputNumber yet.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
 #
-# Key case to cover: stepper value preserved across htmx morph.
-# Left as a gap.
+# No morph test yet; key case: stepper value preserved across htmx morph.
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Planned screenshots: input-number-default.png,
-# input-number-incremented.png.  Left as a gap.
+# No InputNumber screenshot baselines yet.

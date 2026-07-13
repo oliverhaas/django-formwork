@@ -1,16 +1,3 @@
-"""Tests for the DataList widget.
-
-Levels:
-    1. unit: widget object (instantiation, get_context, value_from_datadict)
-    2. unit: widget rendering (HTML structure, attributes)
-    3. integration: form integration (field template, error state, prefix)
-    4. integration: Jinja2/DTL parity (identical HTML across engines)
-    5. e2e: user interaction (renders, fill input)
-    6. e2e: error flow, SKIPPED (see comment)
-    7. e2e: morph resilience (typed value preserved across morph)
-    8. screenshot: visual states (default, filled)
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -187,7 +174,7 @@ def test_datalist_preserves_placeholder():
 
 @pytest.mark.integration
 def test_datalist_renders_via_form(renderer):
-    """DataList renders correctly when used inside a FormworkForm."""
+    """Field renders as a text input named after the form field."""
     form = DataListForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "browser"})
@@ -281,7 +268,7 @@ def test_datalist_has_list_attribute(simple_page):
 
 @pytest.mark.e2e
 def test_datalist_page_has_options(simple_page):
-    """The datalist element on the page has the expected options."""
+    """The linked datalist element contains all five browser options."""
     inp = simple_page.locator('input[name="browser"]')
     list_id = inp.get_attribute("list")
     options = simple_page.locator(f"#{list_id} option")
@@ -298,10 +285,7 @@ def test_datalist_user_can_type(simple_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# DataList is not required on the /simple/ page (required=False), so no
-# error-flow tests can be triggered without a separate required-DataList
-# page fixture.  Left as a gap, tracked as part of broader error-state
-# test coverage work.
+# Needs a page with a required DataList; /simple/ has none.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
@@ -330,11 +314,6 @@ def test_datalist_morph_preserves_empty(simple_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only: these tests produce PNG artifacts in `test-results/`
-# that can be reviewed manually.  True baseline comparison requires
-# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
-# as a follow-up.
 
 
 @pytest.mark.screenshot

@@ -1,22 +1,4 @@
-"""Tests for Django's built-in ClearableFileInput widget as styled by formwork.
-
-Tests progress from simple (pure Python) to complex (browser visual
-regression).  Each level is marked so you can run fast-feedback subsets:
-
-    uv run pytest tests/widgets/test_clearable_file_input.py                 # everything
-    uv run pytest tests/widgets/ -m unit                                     # all widgets, unit only
-    uv run pytest tests/widgets/test_clearable_file_input.py -m "not e2e"   # skip browser tests
-
-Levels:
-    1. unit (widget object): instantiation, is_multipart, value_from_datadict
-    2. unit (widget rendering): file input, clear checkbox, filename display
-    3. integration (form integration): fieldset, error state, prefix
-    4. integration (Jinja2/DTL parity): identical HTML across engines
-    5. e2e (user interaction): renders, filename, clear checkbox
-    6. e2e (error flow): SKIPPED (avatar is not required on /builtin/)
-    7. e2e (morph resilience): checked clear checkbox survives morph
-    8. screenshot (visual states): default
-"""
+"""Django's built-in ClearableFileInput under formwork styling."""
 
 from __future__ import annotations
 
@@ -122,7 +104,7 @@ def test_clearable_file_input_shows_current_filename():
 
 @pytest.mark.integration
 def test_clearable_file_input_renders_via_form(renderer):
-    """ClearableFileInput renders correctly inside a FormworkForm."""
+    """Field renders as a file input named after the form field."""
     form = ClearableFileForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "document", "type": "file"})
@@ -202,9 +184,7 @@ def test_clearable_file_input_clear_checkbox_interaction(builtin_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# avatar is not required on the /builtin/ page, so a dedicated error-flow
-# test would need a separate page with a required ClearableFileInput.
-# Skipped for now. Tracked as a gap in error-state coverage.
+# Needs a page with a required ClearableFileInput; avatar on /builtin/ is optional.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
@@ -225,9 +205,6 @@ def test_clearable_file_input_morph_preserves_clear_checkbox(builtin_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only: produces PNG artifacts in test-results/ for manual
-# review.  True baseline comparison requires a visual-regression plugin.
 
 
 @pytest.mark.screenshot

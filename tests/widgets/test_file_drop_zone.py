@@ -1,16 +1,3 @@
-"""Tests for the FileDropZone widget.
-
-Levels:
-    1. unit (widget object): instantiation, get_context, value_from_datadict
-    2. unit (widget rendering): HTML structure, Alpine bindings, attributes
-    3. integration (form integration): fieldset, error state, prefix
-    4. integration (Jinja2/DTL parity): identical HTML across engines
-    5. e2e (user interaction): renders, browse text, file input, area
-    6. e2e (error flow): SKIPPED (no required FileDropZone on /uploads/ page)
-    7. e2e (morph resilience): file state preserved across htmx morphs
-    8. screenshot (visual states): default, with-file
-"""
-
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -327,7 +314,7 @@ def test_file_drop_zone_max_size_display_shown():
 
 @pytest.mark.integration
 def test_file_drop_zone_renders_via_form(renderer):
-    """FileDropZone renders correctly when used inside a FormworkForm."""
+    """Field renders as a file input named after the form field."""
     form = FileDropZoneForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", {"type": "file", "name": "upload"})
@@ -491,27 +478,15 @@ def test_file_drop_zone_rejects_wrong_type_with_alert(uploads_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# SKIPPED: There is no required FileDropZone field on the /uploads/ page
-# (all file fields are required=False), so a dedicated error-flow test
-# would require a separate page.  Tracked as a gap for future work.
+# Needs a page with a required FileDropZone; all /uploads/ file fields are optional.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
 #
-# FileDropZone state (files list) is held in Alpine.js memory and the
-# actual files in the input element.  After a form morph the Alpine x-data
-# is preserved (formwork.js blocks x-data updates) so the files list
-# survives the morph.  However, triggering a real file upload in Playwright
-# and then morphing requires a round-trip with multipart/form-data, which
-# the current /uploads/ page does not support in a testable way.
-# This is left as a gap until a dedicated morph-resilience page exists.
+# Needs a page with a multipart htmx round-trip; /uploads/ has none.
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only, producing PNG artifacts in test-results/ for manual
-# review.  True baseline comparison requires pytest-playwright-visual.
-# See issue #26.
 
 
 @pytest.mark.screenshot

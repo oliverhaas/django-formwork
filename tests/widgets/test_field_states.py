@@ -1,14 +1,4 @@
-"""Tests for cross-cutting field states: disabled, readonly, required indicator, color input.
-
-These test formwork's handling of standard Django field attributes that
-apply across all widget types, not specific to any single widget.
-
-Levels:
-    1. unit: widget rendering, disabled/readonly attrs in HTML
-    2. integration: form integration, fieldset structure, required indicator
-    3. e2e: user interaction, disabled/readonly behavior, asterisk visibility
-    4. screenshot: visual states, disabled, readonly
-"""
+"""Cross-cutting field states (disabled, readonly, required indicator, color input) that apply to all widget types."""
 
 from __future__ import annotations
 
@@ -132,7 +122,7 @@ def test_optional_field_no_asterisk(renderer):
 
 @pytest.mark.integration
 def test_disabled_field_renders_via_form(renderer):
-    """Disabled field renders correctly inside a FormworkForm."""
+    """Disabled form field renders its input with the disabled attribute."""
     form = DisabledFieldForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "name"})
@@ -151,7 +141,7 @@ def test_disabled_field_wraps_in_fieldset(renderer):
 
 @pytest.mark.integration
 def test_readonly_field_renders_via_form(renderer):
-    """Readonly field renders correctly inside a FormworkForm."""
+    """Readonly form field renders its input with the readonly attribute."""
     form = ReadonlyFieldForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "name"})
@@ -161,7 +151,7 @@ def test_readonly_field_renders_via_form(renderer):
 
 @pytest.mark.integration
 def test_color_input_renders_via_form(renderer):
-    """Color input renders correctly inside a FormworkForm."""
+    """Color field renders as an input with type='color'."""
     form = ColorInputForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "color"})

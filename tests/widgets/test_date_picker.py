@@ -1,8 +1,3 @@
-"""Tests for the DatePicker widget: unit tests for the widget object and its
-rendering, integration tests for form wiring and Jinja2/DTL parity, and an
-e2e smoke test for opening the calendar and picking a day (screenshot tests skipped).
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -126,7 +121,7 @@ def test_date_picker_month_nav_buttons_have_aria_labels():
 
 @pytest.mark.integration
 def test_date_picker_renders_via_form(renderer):
-    """DatePicker renders correctly when used inside a FormworkForm."""
+    """Field renders as a text input named after the form field."""
     form = DatePickerForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "due_date"})
@@ -214,14 +209,14 @@ def test_date_picker_opens_and_picks_day(new_widgets_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# Requires a dedicated error-flow page.  Left as a gap.
+# Needs a page with a required DatePicker; due_date on /new-widgets/ is optional.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
 #
-# Requires an e2e page fixture.  Left as a gap.
+# No morph test for DatePicker yet.
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Requires an e2e page fixture.  Left as a gap.
+# No DatePicker screenshot baselines yet.

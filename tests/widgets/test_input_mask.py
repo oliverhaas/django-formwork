@@ -1,14 +1,3 @@
-"""Tests for the InputMask widget.
-
-Levels:
-    1. unit, widget object: instantiation, get_context, placeholder generation
-    2. unit, widget rendering: HTML structure, placeholder attribute
-    3. integration, form integration: field template, error state, prefix
-    4. integration, Jinja2/DTL parity: identical HTML across engines
-    5. e2e, smoke: typing applies the mask pattern
-    6 to 8. e2e / screenshot, SKIPPED (gaps; smoke coverage only)
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -108,7 +97,7 @@ def test_input_mask_alpine_x_data():
 
 @pytest.mark.integration
 def test_input_mask_renders_via_form(renderer):
-    """InputMask renders correctly when used inside a FormworkForm."""
+    """Field renders an input named after the form field."""
     form = InputMaskForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "phone"})
@@ -187,14 +176,15 @@ def test_input_mask_formats_typed_input(new_widgets_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# Requires a dedicated error-flow page.  Left as a gap.
+# Needs a page with a required InputMask; both masked fields on /new-widgets/
+# are optional.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
 #
-# Requires an e2e page fixture.  Left as a gap.
+# No morph test for InputMask yet.
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# Requires an e2e page fixture.  Left as a gap.
+# No InputMask screenshot baselines yet.

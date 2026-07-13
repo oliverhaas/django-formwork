@@ -1,23 +1,4 @@
-"""Tests for the MultiSelect widget.
-
-Tests progress from simple (pure Python) to complex (browser visual
-regression).  Each level is marked so you can run fast-feedback subsets:
-
-    uv run pytest tests/widgets/test_multi_select.py                 # everything
-    uv run pytest tests/widgets/ -m unit                             # all widgets, unit only
-    uv run pytest tests/widgets/test_multi_select.py -m "not e2e"   # skip browser tests
-
-Levels:
-    1. unit        : widget object: instantiation, choices, search_url, get_context
-    2. unit        : widget rendering: HTML structure, attributes, htmx attrs
-    3. integration : form integration: field template, error state, prefix
-    4. integration : Jinja2/DTL parity: identical HTML across engines
-    5. e2e         : user interaction: open, check, search filter
-    6. e2e         : error flow: (SKIP because MultiSelect is required=False by default on
-                     the /multi-select/ page; no dedicated error page exists yet)
-    7. e2e         : morph resilience: checked options and dropdown state preserved
-    8. screenshot  : visual states: default (closed), open, options selected
-"""
+"""MultiSelect tests, including server-side search loading and failure UX (level 6b)."""
 
 from __future__ import annotations
 
@@ -657,7 +638,7 @@ def test_multi_select_htmx_mode_hidden_inputs_template():
 
 @pytest.mark.unit
 def test_multi_select_htmx_wrapper_has_id():
-    """<details> id is set correctly in htmx mode too."""
+    """htmx mode also derives the <details> id from the widget id."""
     widget = make_server_widget(MultiSelect, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="multiselect")
@@ -792,7 +773,7 @@ def test_multi_select_no_icon_when_not_provided():
 
 @pytest.mark.integration
 def test_multi_select_renders_via_form(renderer):
-    """MultiSelect renders correctly when used inside a FormworkForm."""
+    """Field renders the <details class="multiselect"> dropdown."""
     form = MultiSelectForm()
     soup = render_form(form, renderer=renderer)
     details = soup.find("details", class_="multiselect")
@@ -1306,10 +1287,7 @@ def test_multi_select_client_dirty_clears_on_revert(multi_select_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# MultiSelect fields on the /multi-select/ page are all required=False, so
-# submitting without values does not trigger visible validation errors.
-# A dedicated error-flow test would require a page with a required=True
-# MultiSelect. That page does not exist yet.  Tracked as a coverage gap.
+# Needs a page with a required MultiSelect; all /multi-select/ fields are optional.
 
 
 # ─── Level 6b: E2e, server-side search loading + failure UX ─────────────
@@ -1452,11 +1430,6 @@ def test_multi_select_morph_preserves_dropdown_open(multi_select_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only: these tests produce PNG artifacts in `test-results/`
-# that can be reviewed manually.  True baseline comparison requires
-# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
-# as a follow-up.
 
 
 @pytest.mark.screenshot

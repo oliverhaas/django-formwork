@@ -2,7 +2,7 @@
 
 
 class TestValidatedTextareaInline:
-    """Verify inline validation toggles error state correctly."""
+    """Inline htmx validation adds and removes the error state as the text changes."""
 
     def _trigger_validation(self, page):
         """Dispatch input event to trigger htmx debounced validation."""

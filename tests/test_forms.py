@@ -192,7 +192,7 @@ def test_model_form_validation_errors():
 
 @pytest.mark.integration
 def test_formset_renders_with_formwork_renderer():
-    """Formsets render correctly with FormworkRenderer."""
+    """Formset rendering emits per-form field names and fieldset markup."""
     from django.forms import formset_factory
 
     class ItemForm(FormworkForm):

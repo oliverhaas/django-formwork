@@ -312,7 +312,7 @@ def test_multiselect_selections_screenshot(complex_page, assert_screenshot):
 
 @pytest.mark.screenshot
 def test_full_form_filled_screenshot(complex_page, assert_screenshot):
-    """Visual snapshot: all fields filled correctly before explicit submit."""
+    """Visual snapshot: all fields filled, before explicit submit."""
     page = complex_page
     _pick_search_select(page, "de", "Germany")
     _toggle_multiselect_option(page, "py", "Python")

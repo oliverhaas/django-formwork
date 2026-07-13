@@ -1,16 +1,3 @@
-"""Tests for the OTPInput widget.
-
-Levels:
-    1. unit (widget object: instantiation, get_context, value_from_datadict)
-    2. unit (widget rendering: HTML structure, attributes)
-    3. integration (form integration: field template, prefix)
-    4. integration (Jinja2/DTL parity: identical HTML across engines)
-    5. e2e (smoke: typing advances focus, hidden input collects value)
-    6. e2e: SKIPPED (gap; smoke coverage only)
-    7. e2e: SKIPPED (see above)
-    8. screenshot: SKIPPED (no baseline for OTPInput yet)
-"""
-
 from __future__ import annotations
 
 import json
@@ -124,7 +111,7 @@ def test_otp_input_digit_boxes_have_aria_labels():
 
 @pytest.mark.integration
 def test_otp_input_renders_via_form(renderer):
-    """OTPInput renders correctly when used inside a FormworkForm."""
+    """Field renders a hidden input that carries the combined OTP value."""
     form = OTPForm()
     soup = render_form(form, renderer=renderer)
     hidden = soup.find("input", attrs={"type": "hidden", "name": "code"})
@@ -246,16 +233,14 @@ def test_otp_input_paste_filters_non_digits(new_widgets_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# Requires a dedicated error-flow page.  Left as a gap.
+# Needs a page with a required OTPInput; otp_code on /new-widgets/ is optional.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
 #
-# No e2e page exists for OTPInput yet.  Key case to cover once available:
-# entered digits preserved across htmx morph.
+# No morph test yet; key case: entered digits preserved across htmx morph.
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
 #
-# No e2e page exists for OTPInput yet.  Planned screenshots:
-# otp-input-empty.png, otp-input-filled.png.
+# No OTPInput screenshot baselines yet.

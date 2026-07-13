@@ -1,22 +1,3 @@
-"""Tests for the Range widget (range slider).
-
-Tests progress from simple (pure Python) to complex (browser visual
-regression).  Each level is marked so you can run fast-feedback subsets:
-
-    uv run pytest tests/widgets/test_range.py                 # everything
-    uv run pytest tests/widgets/ -m unit                       # all widgets, unit only
-    uv run pytest tests/widgets/test_range.py -m "not e2e"    # skip browser tests
-
-Levels:
-    1. unit: widget object, covering instantiation, get_context, value_from_datadict
-    2. unit: widget rendering, covering HTML structure, type="range", min/max/step attrs
-    3. integration: form integration, covering field template, error state, morph IDs
-    5. e2e: user interaction, setting a value
-    6. e2e: error flow, SKIPPED (no required Range field on /simple/)
-    7. e2e: morph resilience, value preserved across htmx morphs
-    8. screenshot: visual states, default and set-value
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -149,7 +130,7 @@ def test_range_renders_with_value():
 
 @pytest.mark.integration
 def test_range_renders_via_form(renderer):
-    """Range renders correctly when used inside a FormworkForm."""
+    """Field renders as a range input named after the form field."""
     form = RangeForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "level"})
@@ -233,7 +214,7 @@ def test_range_renders_on_page(simple_page):
 
 @pytest.mark.e2e
 def test_range_has_correct_attrs(simple_page):
-    """Range input has expected type and min/max/step attributes."""
+    """The volume range on /simple/ carries min=0, max=100, step=10."""
     rng = simple_page.locator('input[name="volume"]')
     assert rng.get_attribute("type") == "range"
     assert rng.get_attribute("min") == "0"
@@ -254,10 +235,8 @@ def test_range_user_can_set_value(simple_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# The /simple/ page does not have a required Range field.  Volume is
-# always valid (any integer passes).  Dedicated error-flow tests would
-# need a separate test page with a required Range with restricted values.
-# Deferred until that dedicated test page exists.
+# Needs a page with a Range that can fail validation; volume on /simple/
+# accepts any integer.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
@@ -288,11 +267,6 @@ def test_range_morph_preserves_default_value(simple_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only.  These tests produce PNG artifacts in `test-results/`
-# that can be reviewed manually.  True baseline comparison requires
-# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
-# as a follow-up.  See issue #26 for the plan.
 
 
 @pytest.mark.screenshot

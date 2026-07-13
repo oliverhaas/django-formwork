@@ -1,15 +1,4 @@
-"""Tests for Django's built-in SplitDateTimeWidget as styled by formwork.
-
-Levels:
-    1. unit, widget object: instantiation, get_context, value_from_datadict
-    2. unit, widget rendering: two inputs, types, name suffixes
-    3. integration, form integration: field template, error state, prefix
-    4. integration, Jinja2/DTL parity: identical HTML across engines
-    5. e2e, user interaction: renders, fill date and time, side-by-side layout
-    6. e2e, error flow: SKIPPED (event_at is not required on the builtin page)
-    7. e2e, morph resilience: filled values preserved across htmx morph
-    8. screenshot, visual states: default, filled
-"""
+"""Django's built-in SplitDateTimeWidget under formwork styling."""
 
 from __future__ import annotations
 
@@ -129,7 +118,7 @@ def test_split_datetime_renders_name_suffixes():
 
 @pytest.mark.integration
 def test_split_datetime_renders_via_form(renderer):
-    """SplitDateTimeWidget renders correctly when used inside a FormworkForm."""
+    """Field renders separate date (_0) and time (_1) inputs."""
     form = SplitDateTimeForm()
     soup = render_form(form, renderer=renderer)
     date_input = soup.find("input", attrs={"name": "event_at_0"})
@@ -222,9 +211,7 @@ def test_split_datetime_side_by_side_layout(builtin_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# event_at is not required on the /builtin/ page (required=False), so no
-# error-flow tests can be triggered without a separate required-field page.
-# Left as a gap, tracked as part of broader error-state test coverage work.
+# Needs a page with a required SplitDateTimeField; event_at on /builtin/ is optional.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
@@ -245,11 +232,6 @@ def test_split_datetime_morph_preserves_values(builtin_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only: these tests produce PNG artifacts in `test-results/`
-# that can be reviewed manually.  True baseline comparison requires
-# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
-# as a follow-up.  See issue #26 for the plan.
 
 
 @pytest.mark.screenshot

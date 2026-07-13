@@ -135,7 +135,7 @@ def test_toggle_renders_unchecked_state():
 
 @pytest.mark.integration
 def test_toggle_renders_via_form(renderer):
-    """Toggle renders correctly when used inside a FormworkForm."""
+    """Field renders as a checkbox input named after the form field."""
     form = ToggleForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "enabled"})
@@ -210,10 +210,7 @@ def test_toggle_user_can_click_on_off(toggle_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# Toggle is not required on the /simple/ page, so dedicated error-flow
-# tests would need a separate page with a required=True Toggle.  Left as
-# a gap until that page exists. Tracked under #28 (missing test
-# coverage) as part of the broader error-state test work.
+# Needs a page with a required=True Toggle; /simple/ has none.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
@@ -247,11 +244,6 @@ def test_toggle_morph_preserves_unchecked(toggle_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only: these tests produce PNG artifacts in `test-results/`
-# that can be reviewed manually.  True baseline comparison requires
-# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
-# as a follow-up.  See issue #26 for the plan.
 
 
 @pytest.mark.screenshot

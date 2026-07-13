@@ -1,22 +1,4 @@
-"""Canonical test patterns for the ComboBox widget.
-
-Tests progress from simple (pure Python) to complex (browser visual
-regression).  Each level is marked so you can run fast-feedback subsets:
-
-    uv run pytest tests/widgets/test_combo_box.py                 # everything
-    uv run pytest tests/widgets/ -m unit                         # all widgets, unit only
-    uv run pytest tests/widgets/test_combo_box.py -m "not e2e"   # skip browser tests
-
-Levels:
-    1. unit        : widget object: instantiation, get_context, value_from_datadict
-    2. unit        : widget rendering: HTML structure, classes, attributes
-    3. integration : form integration: field template, error state, morph IDs
-    4. integration : Jinja2/DTL parity: identical HTML across engines
-    5. e2e         : user interaction: typing, picking suggestion, clear
-    6. e2e         : error flow: skipped (no required ComboBox on the /combobox/ page)
-    7. e2e         : morph resilience: typed value and selected suggestions preserved
-    8. screenshot  : visual states: default, open dropdown, suggestion selected
-"""
+"""ComboBox tests, including server-side search loading and failure UX (level 6b)."""
 
 from __future__ import annotations
 
@@ -84,7 +66,7 @@ def test_combo_box_get_context_suggestions_as_dicts():
 
 @pytest.mark.unit
 def test_combo_box_get_context_multiple_mode():
-    """get_context() exposes multiple flag correctly."""
+    """multiple=True is passed through to the widget context."""
     widget = ComboBox(suggestions=["A", "B"], multiple=True)
     ctx = widget.get_context("test", "", {})
     assert ctx["widget"]["multiple"] is True
@@ -690,7 +672,7 @@ def test_combo_box_xdata_binds_alpine_component():
 
 @pytest.mark.integration
 def test_combo_box_renders_via_form(renderer):
-    """ComboBox renders correctly when used inside a FormworkForm."""
+    """Field renders as a text input named after the form field."""
     form = ComboBoxForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "tag"})
@@ -1130,9 +1112,7 @@ def test_combo_box_keyboard_escape_closes_dropdown(combobox_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# The /combobox/ page has no required ComboBox fields (all required=False),
-# so dedicated error-flow tests cannot be triggered without a separate page.
-# Skipped until a required-field variant of the ComboBox page is available.
+# Needs a page with a required ComboBox; /combobox/ has none.
 
 
 # ─── Level 6b: E2e, server-side search loading + failure UX ──────────────
@@ -1236,11 +1216,6 @@ def test_combo_box_morph_preserves_multiple_selected(combobox_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only: these tests produce PNG artifacts in `test-results/`
-# that can be reviewed manually.  True baseline comparison requires
-# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
-# as a follow-up.
 
 
 @pytest.mark.screenshot

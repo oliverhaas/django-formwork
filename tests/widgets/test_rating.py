@@ -1,23 +1,3 @@
-"""Canonical tests for the Rating widget.
-
-Tests progress from simple (pure Python) to complex (browser visual
-regression).  Each level is marked so you can run fast-feedback subsets:
-
-    uv run pytest tests/widgets/test_rating.py                 # everything
-    uv run pytest tests/widgets/ -m unit                       # all widgets, unit only
-    uv run pytest tests/widgets/test_rating.py -m "not e2e"    # skip browser tests
-
-Levels:
-    1. unit: widget object, instantiation, make_choices, get_context, value_from_datadict
-    2. unit: widget rendering, HTML structure, classes, checked state, allow_clear
-    3. integration: form integration, field template, fieldset wrapping, error state, prefix
-    4. integration: Jinja2/DTL parity, identical HTML across engines
-    5. e2e: user interaction, click a star
-    6. e2e: error flow, SKIPPED (no required-Rating-only page yet)
-    7. e2e: morph resilience, selected star preserved across htmx morphs
-    8. screenshot: visual states, default, one-star-selected
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -264,7 +244,7 @@ def test_rating_custom_star_class_in_output():
 
 @pytest.mark.integration
 def test_rating_renders_via_form(renderer):
-    """Rating renders correctly when used inside a FormworkForm."""
+    """Field renders five radio inputs sharing the field name."""
     form = RatingForm()
     soup = render_form(form, renderer=renderer)
     radios = soup.find_all("input", {"type": "radio", "name": "rating"})
@@ -355,11 +335,8 @@ def test_rating_has_mask_star_class(simple_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# The /simple/ page requires a Rating field (stars), but submitting with no
-# star selected also triggers errors on the other required fields, making
-# isolated Rating error-flow tests noisy.  A dedicated page with only a
-# required Rating field is needed.  Skipped until that page exists; tracked
-# under the broader error-state test coverage work.
+# Needs a page where Rating is the only required field; on /simple/ the
+# other required fields fail alongside it.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
@@ -401,11 +378,6 @@ def test_rating_morph_no_star_selected_stays_empty(simple_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only: these tests produce PNG artifacts in `test-results/`
-# that can be reviewed manually.  True baseline comparison requires
-# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
-# as a follow-up.  See issue #26 for the plan.
 
 
 @pytest.mark.screenshot

@@ -27,7 +27,7 @@ def _is_open(page, selector):
 
 
 class TestFormStructure:
-    """Form renders correctly with all expected structural elements."""
+    """Basic form page structure: form, fieldsets, legends, help text."""
 
     def test_page_loads(self, basic_page):
         assert basic_page.title() == "Basic Form"

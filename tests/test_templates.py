@@ -562,7 +562,7 @@ class TestMorphingIds:
 
 
 class TestTemplateTags:
-    """The formwork_css and formwork_js template tags output correct HTML."""
+    """formwork_css / formwork_js emit link and script tags for the static assets."""
 
     def test_formwork_css_tag(self):
         template = Template("{% load formwork %}{% formwork_css %}")

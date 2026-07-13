@@ -1,22 +1,4 @@
-"""Tests for Django's built-in SelectDateWidget as styled by formwork.
-
-Tests progress from simple (pure Python) to complex (browser visual
-regression).  Each level is marked so you can run fast-feedback subsets:
-
-    uv run pytest tests/widgets/test_select_date.py                 # everything
-    uv run pytest tests/widgets/ -m unit                             # all widgets, unit only
-    uv run pytest tests/widgets/test_select_date.py -m "not e2e"    # skip browser tests
-
-Levels:
-    1. unit        : widget object: instantiation, get_context, value_from_datadict
-    2. unit        : widget rendering: HTML structure, option counts, name suffixes
-    3. integration : form integration: field template, fieldset wrapper, prefix
-    4. integration : Jinja2/DTL parity: identical HTML across engines
-    5. e2e         : user interaction: visible selects, option counts, selecting a date
-    6. e2e         : error flow: SKIPPED (birthday is not required on /builtin/)
-    7. e2e         : morph resilience: selected date preserved across htmx morphs
-    8. screenshot  : visual states: default, filled
-"""
+"""Django's built-in SelectDateWidget under formwork styling."""
 
 from __future__ import annotations
 
@@ -136,7 +118,7 @@ def test_select_date_renders_name_suffixes():
 
 @pytest.mark.integration
 def test_select_date_renders_via_form(renderer):
-    """SelectDateWidget renders correctly when used inside a FormworkForm."""
+    """Field renders three selects with _month/_day/_year name suffixes."""
     form = SelectDateForm()
     soup = render_form(form, renderer=renderer)
     assert soup.find("select", attrs={"name": "birthday_month"}) is not None
@@ -221,10 +203,7 @@ def test_select_date_three_column_layout(builtin_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# The birthday field is not required on the /builtin/ page, so no
-# validation errors are triggered by leaving it empty.  Dedicated
-# error-flow tests would need a separate page with a required DateField.
-# Deferred until that page exists.
+# Needs a page with a required DateField; birthday on /builtin/ is optional.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
@@ -245,11 +224,6 @@ def test_select_date_morph_preserves_date(builtin_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only. These tests produce PNG artifacts in `test-results/`
-# that can be reviewed manually.  True baseline comparison requires
-# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
-# as a follow-up.  See issue #26 for the plan.
 
 
 @pytest.mark.screenshot

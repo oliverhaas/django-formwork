@@ -1,23 +1,3 @@
-"""Tests for the PasswordReveal widget.
-
-Tests progress from simple (pure Python) to complex (browser visual
-regression).  Each level is marked so you can run fast-feedback subsets:
-
-    uv run pytest tests/widgets/test_password_reveal.py                 # everything
-    uv run pytest tests/widgets/ -m unit                                # all widgets, unit only
-    uv run pytest tests/widgets/test_password_reveal.py -m "not e2e"   # skip browser tests
-
-Levels:
-    1. unit: widget object (instantiation, get_context, value_from_datadict)
-    2. unit: widget rendering (HTML structure, classes, attributes)
-    3. integration: form integration (field template, error state, morph IDs)
-    4. integration: Jinja2/DTL parity (identical HTML across engines)
-    5. e2e: user interaction (toggle password visibility)
-    6. e2e: error flow, SKIPPED (see comment)
-    7. e2e: morph resilience (show/hide state preserved across morphs)
-    8. screenshot: visual states, default (hidden) and revealed
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -184,7 +164,7 @@ def test_password_reveal_no_wrapper_id_without_id():
 
 @pytest.mark.integration
 def test_password_reveal_renders_via_form(renderer):
-    """PasswordReveal renders correctly when used inside a FormworkForm."""
+    """Field renders an input named after the form field."""
     form = PasswordRevealForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", attrs={"name": "password"})
@@ -294,10 +274,8 @@ def test_password_reveal_wrapper_has_id_attr(simple_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# PasswordReveal on the /simple/ page is required, but testing error display
-# requires a form without other required fields that would also fail.
-# Dedicated error-flow tests would need a standalone page for PasswordReveal
-# only.  Skipped until that page exists.
+# Needs a page where PasswordReveal is the only required field; on /simple/
+# the other required fields fail alongside it.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
@@ -339,11 +317,6 @@ def test_password_reveal_morph_preserves_reveal_state(simple_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only: these tests produce PNG artifacts in `test-results/`
-# that can be reviewed manually.  True baseline comparison requires
-# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
-# as a follow-up.  See issue #26 for the plan.
 
 
 @pytest.mark.screenshot

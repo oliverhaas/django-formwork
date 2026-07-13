@@ -1,6 +1,3 @@
-"""Tests for ValidatedTextarea widget: unit (object, rendering), integration (form wrapping,
-Jinja2/DTL parity), end-to-end (interaction, errors, morph resilience), and screenshot (visual states)."""
-
 from __future__ import annotations
 
 import pytest
@@ -368,7 +365,7 @@ def test_textarea_has_after_swap_handler():
 
 @pytest.mark.integration
 def test_renders_via_form(renderer):
-    """ValidatedTextarea renders correctly when used inside a FormworkForm."""
+    """Field renders a textarea named after the form field."""
     form = ValidatedTextareaForm()
     soup = render_form(form, renderer=renderer)
     textarea = soup.find("textarea", attrs={"name": "content"})
@@ -654,10 +651,6 @@ def test_morph_preserves_value(textarea_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────────
-#
-# Scaffolding only: these tests produce PNG artifacts in `test-results/`
-# for manual review.  True baseline comparison requires a visual-regression
-# plugin (e.g. `pytest-playwright-visual`) as a follow-up.
 
 
 @pytest.mark.screenshot

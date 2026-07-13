@@ -1,23 +1,3 @@
-"""Tests for the ImageDropZone widget.
-
-Tests progress from simple (pure Python) to complex (browser visual
-regression).  Each level is marked so you can run fast-feedback subsets:
-
-    uv run pytest tests/widgets/test_image_drop_zone.py                 # everything
-    uv run pytest tests/widgets/ -m unit                                 # all widgets, unit only
-    uv run pytest tests/widgets/test_image_drop_zone.py -m "not e2e"    # skip browser tests
-
-Levels:
-    1. unit: widget object, instantiation, get_context, value_from_datadict, edge cases
-    2. unit: widget rendering, HTML structure, attributes, Alpine, icons
-    3. integration: form integration, field template, error state, prefix
-    4. integration: Jinja2/DTL parity, identical HTML across engines
-    5. e2e: user interaction, upload, preview, remove
-    6. e2e: error flow, SKIPPED (no dedicated error-flow page)
-    7. e2e: morph resilience, preview state preserved across morphs
-    8. screenshot: visual states, default, with-image
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -280,7 +260,7 @@ def test_image_drop_zone_id_on_file_input():
 
 @pytest.mark.integration
 def test_image_drop_zone_renders_via_form(renderer):
-    """ImageDropZone renders correctly when used inside a FormworkForm."""
+    """Field renders as a file input named after the form field."""
     form = ImageDropZoneForm()
     soup = render_form(form, renderer=renderer)
     inp = soup.find("input", {"type": "file", "name": "avatar"})
@@ -442,24 +422,15 @@ def test_image_drop_zone_oversize_pick_clears_stale_preview(uploads_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# There is no dedicated page with a required ImageDropZone that shows
-# validation errors: the /uploads/ page marks the field as optional.
-# Error-flow tests are deferred until a suitable page is added.
+# Needs a page with a required ImageDropZone; avatar on /uploads/ is optional.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
 #
-# ImageDropZone relies on Alpine.js FileReader-based preview (client-side
-# blob URL).  After a form morph the server-rendered HTML has no
-# preview, and htmx's morph would normally clear it.  However the /uploads/
-# page does not include htmx morph wiring, so morph resilience cannot
-# currently be tested end-to-end.  These tests are left as a gap pending
-# a dedicated uploads morph page.
+# Needs an uploads page with htmx morph wiring; /uploads/ has none.
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only, producing PNG artifacts in `test-results/`.
 
 
 @pytest.mark.screenshot

@@ -1,22 +1,4 @@
-"""Tests for Django's CheckboxSelectMultiple widget as styled by formwork.
-
-Tests progress from simple (pure Python) to complex (browser visual
-regression).  Each level is marked so you can run fast-feedback subsets:
-
-    uv run pytest tests/widgets/test_checkbox_select_multiple.py         # everything
-    uv run pytest tests/widgets/ -m unit                                 # all widgets, unit only
-    uv run pytest tests/widgets/test_checkbox_select_multiple.py -m "not e2e"  # skip browser
-
-Levels:
-    1. unit        : widget object: instantiation, get_context, value_from_datadict
-    2. unit        : widget rendering: HTML structure, attributes
-    3. integration : form integration: field template, error state, prefix
-    4. integration : Jinja2/DTL parity: identical HTML across engines
-    5. e2e         : user interaction: renders, check multiple, label clicks
-    6. e2e         : error flow: SKIPPED (toppings not required on builtin page)
-    7. e2e         : morph resilience: checked boxes survive htmx morphs
-    8. screenshot  : visual states: default, some checked
-"""
+"""Django's built-in CheckboxSelectMultiple under formwork styling."""
 
 from __future__ import annotations
 
@@ -164,7 +146,7 @@ def test_checkbox_select_multiple_renders_all_unchecked():
 
 @pytest.mark.integration
 def test_checkbox_select_multiple_renders_via_form(renderer):
-    """CheckboxSelectMultiple renders correctly when used inside a FormworkForm."""
+    """Field renders one checkbox input per choice, all sharing the field name."""
     form = CheckboxSelectMultipleForm()
     soup = render_form(form, renderer=renderer)
     checkboxes = soup.find_all("input", attrs={"type": "checkbox", "name": "toppings"})
@@ -276,9 +258,7 @@ def test_checkbox_select_multiple_labels_clickable(builtin_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# toppings is not required on the /builtin/ page (required=False), so no
-# error-flow tests can be triggered without a separate required-toppings
-# page fixture.  Left as a gap until that page exists.
+# Needs a page with a required toppings field; /builtin/ has none.
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
@@ -305,11 +285,6 @@ def test_checkbox_select_multiple_morph_preserves_selections(builtin_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only. These tests produce PNG artifacts in `test-results/`
-# that can be reviewed manually.  True baseline comparison requires
-# wiring up a visual-regression plugin (e.g. `pytest-playwright-visual`)
-# as a follow-up.
 
 
 @pytest.mark.screenshot
