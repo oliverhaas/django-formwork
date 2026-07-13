@@ -45,7 +45,7 @@
             {% for t in recent %}
               <li class="py-3 flex items-center gap-3">
                 {% if t.assignee %}
-                  <span class="badge badge-neutral badge-sm shrink-0">{{ t.assignee.initials }}</span>
+                  <span class="badge badge-neutral badge-sm w-8 shrink-0">{{ t.assignee.initials }}</span>
                 {% else %}
                   <span class="badge badge-ghost badge-sm shrink-0"><i class="icon icon-user size-3"></i></span>
                 {% endif %}

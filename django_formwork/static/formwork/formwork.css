@@ -18,7 +18,7 @@
  * All DaisyUI component classes are applied via @apply so that
  * Django's standard widget templates can be used without modification.
  *
- * All rules live in @layer components so that:
+ * Most rules live in @layer components so that:
  *   - Tailwind utility classes in HTML always win (utilities > components)
  *   - Users can override with unlayered CSS or higher-priority layers
  */
@@ -734,69 +734,6 @@ input.combobox-input {
 }
 
 
-/* ================================================================
-   Error states
-   Django adds aria-invalid="true" on widgets with validation errors.
-   ================================================================ */
-
-input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.date-picker-label *) {
-    @apply input-error;
-}
-
-/* DatePicker: style the wrapper label based on the inner input's state. */
-.date-picker-label:has(> input[aria-invalid="true"]) {
-    @apply input-error;
-}
-
-textarea[aria-invalid="true"] {
-    @apply textarea-error;
-}
-
-select[aria-invalid="true"] {
-    @apply select-error;
-}
-
-/* Single checkbox or checkbox inside a group wrapper. */
-input[type="checkbox"][aria-invalid="true"]:not(.toggle):not(.hidden),
-[aria-invalid="true"] input[type="checkbox"]:not(.toggle):not(.hidden) {
-    @apply checkbox-error;
-}
-
-/* Single radio or radio inside a group wrapper. */
-input[type="radio"][aria-invalid="true"]:not(.mask):not(.rating-hidden),
-[aria-invalid="true"] input[type="radio"]:not(.mask):not(.rating-hidden) {
-    @apply radio-error;
-}
-
-input[type="file"][aria-invalid="true"]:not(.dropzone *):not(.image-upload *) {
-    @apply file-input-error;
-}
-
-input[type="range"][aria-invalid="true"] {
-    @apply range-error;
-}
-
-input.toggle[aria-invalid="true"] {
-    @apply toggle-error;
-}
-
-/* PasswordReveal: style the wrapper label based on the inner input's state. */
-label.password-reveal:has(> input[aria-invalid="true"]) {
-    @apply input-error;
-}
-
-/* MultiSelect / SearchSelect: aria-invalid is rendered on the <summary> trigger. */
-details.search-select > summary[aria-invalid="true"],
-details.multiselect > summary[aria-invalid="true"] {
-    @apply select-error;
-}
-
-/* ComboBox: the text input trigger has aria-invalid. */
-input.combobox-input[aria-invalid="true"] {
-    @apply input-error;
-}
-
-
 /* Soft color variant (select-soft / input-soft / textarea-soft) and its
    dropdown-panel fill are defined unlayered near the top of this file, so a
    single .select-soft class wins over the higher-specificity base rules
@@ -1126,6 +1063,74 @@ fieldset.formwork-dirty label.password-reveal {
 }
 
 } /* @layer components */
+
+
+/* ================================================================
+   Error states
+   Django adds aria-invalid="true" on widgets with validation errors.
+
+   MUST be unlayered: literal DaisyUI form-control classes in markup
+   (e.g. a custom widget passing class="input" via attrs) are generated
+   into @layer utilities, which outranks @layer components regardless
+   of specificity. The error recolor has to beat those classes too.
+   ================================================================ */
+
+input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(.password-reveal *):not(.dropdown-content *):not(.date-picker-label *) {
+    @apply input-error;
+}
+
+/* DatePicker: style the wrapper label based on the inner input's state. */
+.date-picker-label:has(> input[aria-invalid="true"]) {
+    @apply input-error;
+}
+
+textarea[aria-invalid="true"] {
+    @apply textarea-error;
+}
+
+select[aria-invalid="true"] {
+    @apply select-error;
+}
+
+/* Single checkbox or checkbox inside a group wrapper. */
+input[type="checkbox"][aria-invalid="true"]:not(.toggle):not(.hidden),
+[aria-invalid="true"] input[type="checkbox"]:not(.toggle):not(.hidden) {
+    @apply checkbox-error;
+}
+
+/* Single radio or radio inside a group wrapper. */
+input[type="radio"][aria-invalid="true"]:not(.mask):not(.rating-hidden),
+[aria-invalid="true"] input[type="radio"]:not(.mask):not(.rating-hidden) {
+    @apply radio-error;
+}
+
+input[type="file"][aria-invalid="true"]:not(.dropzone *):not(.image-upload *) {
+    @apply file-input-error;
+}
+
+input[type="range"][aria-invalid="true"] {
+    @apply range-error;
+}
+
+input.toggle[aria-invalid="true"] {
+    @apply toggle-error;
+}
+
+/* PasswordReveal: style the wrapper label based on the inner input's state. */
+label.password-reveal:has(> input[aria-invalid="true"]) {
+    @apply input-error;
+}
+
+/* MultiSelect / SearchSelect: aria-invalid is rendered on the <summary> trigger. */
+details.search-select > summary[aria-invalid="true"],
+details.multiselect > summary[aria-invalid="true"] {
+    @apply select-error;
+}
+
+/* ComboBox: the text input trigger has aria-invalid. */
+input.combobox-input[aria-invalid="true"] {
+    @apply input-error;
+}
 
 
 /* Dropdown widgets: fill container like other form elements, with a
