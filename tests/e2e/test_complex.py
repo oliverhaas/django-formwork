@@ -318,7 +318,8 @@ def test_full_form_filled_screenshot(complex_page, assert_screenshot):
     _toggle_multiselect_option(page, "py", "Python")
     _toggle_multiselect_option(page, "ts", "TypeScript")
     _settle_auto_validate(page)
-    # Known wart: the morph resets the SearchSelect summary to "Select…".
+    # The morph preserves the SearchSelect summary label now; the hidden
+    # input carries the submitted key.
     expect(page.locator('input[name="country"]')).to_have_value("de")
     _fill_base_fields_silently(page)
     assert_screenshot(page.locator("#complex-form"), "complex-form-filled.png")
