@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import inspect
 from itertools import chain
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ValidationError
@@ -55,8 +55,9 @@ class AsyncFormMixin:
         """Async version of ``is_valid()``."""
         if not self.is_bound:
             return False
-        await self.afull_clean()
-        return not self.errors
+        if self._errors is None:
+            await self.afull_clean()
+        return not self._errors
 
     async def afull_clean(self: Any) -> None:
         """Async version of ``full_clean()``."""
@@ -139,7 +140,9 @@ class AsyncModelFormMixin(AsyncFormMixin):
 
     async def asave(self: Any, commit: bool = True) -> models.Model:  # noqa: FBT001, FBT002
         """Async version of ``ModelForm.save()``."""
-        if self.errors:
+        if self._errors is None:
+            await self.afull_clean()
+        if self._errors:
             raise ValueError(
                 "The {} could not be {} because the data didn't validate.".format(
                     self.instance._meta.object_name,  # noqa: SLF001
@@ -150,10 +153,16 @@ class AsyncModelFormMixin(AsyncFormMixin):
             await self.instance.asave()
             await self._asave_m2m()
         else:
-            self.save_m2m = self._asave_m2m
+            self.asave_m2m = self._asave_m2m
+            self.save_m2m = self._reject_sync_save_m2m
         return self.instance
 
     asave.alters_data = True  # type: ignore[attr-defined]
+
+    def _reject_sync_save_m2m(self: Any) -> NoReturn:
+        """Raise on the sync ``save_m2m`` hook after ``asave(commit=False)``."""
+        msg = "This form was saved with asave(commit=False). Await form.asave_m2m() instead of calling save_m2m()."
+        raise RuntimeError(msg)
 
     async def _asave_m2m(self: Any) -> None:
         """Async version of ``_save_m2m()``."""

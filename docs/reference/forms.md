@@ -141,7 +141,10 @@ async def signup(request):
 
 `asave(commit=True)` mirrors `ModelForm.save()`: it awaits the instance's
 `asave()` and then saves many-to-many relations. With `commit=False` it
-returns the unsaved instance and exposes `save_m2m` as an async callable.
+returns the unsaved instance and exposes `asave_m2m` as an async callable;
+call `await form.asave_m2m()` after saving the instance. Calling the sync
+`save_m2m` hook on a form saved with `asave(commit=False)` raises
+`RuntimeError` so the mistake cannot silently skip M2M data.
 
 Set `FORMWORK_FORCE_ASYNC = True` in settings to make the sync entry points
 (`is_valid()`, `full_clean()`, `save()`) raise `RuntimeError`. Use it to keep

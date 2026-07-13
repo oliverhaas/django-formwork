@@ -160,14 +160,10 @@ class TestAsyncFormClean:
         assert await form.ais_valid() is True
 
     async def test_async_clean_validation_error(self):
-        form = AsyncFormCleanForm(data={"name": "match", "email": "match"})
-        await form.ais_valid()
-        # "match" fails EmailField validation, so clean() never runs.
-        # Use matching valid values instead:
-        form2 = AsyncFormCleanForm(data={"name": "x@y.com", "email": "x@y.com"})
-        assert await form2.ais_valid() is False
-        assert "__all__" in form2.errors
-        assert "Name and email must differ" in form2.errors["__all__"][0]
+        form = AsyncFormCleanForm(data={"name": "x@y.com", "email": "x@y.com"})
+        assert await form.ais_valid() is False
+        assert "__all__" in form.errors
+        assert "Name and email must differ" in form.errors["__all__"][0]
 
 
 @pytest.mark.asyncio(loop_scope="class")
@@ -258,6 +254,88 @@ class TestAsyncConstraintValidation:
         assert await form.ais_valid() is True
         instance = await form.asave()
         assert instance.pk is not None
+
+
+# ---------------------------------------------------------------------------
+# Validation caching and asave hook tests
+# ---------------------------------------------------------------------------
+
+
+class CountingCleanForm(FormworkForm):
+    """Counts clean_name invocations to detect duplicate validation runs."""
+
+    name = forms.CharField()
+
+    clean_calls = 0
+
+    async def clean_name(self):
+        type(self).clean_calls += 1
+        return self.cleaned_data["name"]
+
+
+@pytest.mark.asyncio
+async def test_ais_valid_twice_runs_clean_methods_once():
+    """A second ais_valid() call reuses cached errors instead of re-cleaning."""
+    CountingCleanForm.clean_calls = 0
+    form = CountingCleanForm(data={"name": "alice"})
+    assert await form.ais_valid() is True
+    assert await form.ais_valid() is True
+    assert CountingCleanForm.clean_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_add_error_before_ais_valid_survives():
+    """An error added via add_error() is not wiped by a later ais_valid() call."""
+    form = SyncCleanForm(data={"name": "alice", "email": "a@b.com"})
+    form.add_error("name", "Rejected")
+    assert await form.ais_valid() is False
+    assert "Rejected" in form.errors["name"]
+
+
+@pytest.mark.asyncio
+async def test_add_error_after_ais_valid_survives():
+    """An error added after a passing ais_valid() flips the next call to False."""
+    form = SyncCleanForm(data={"name": "alice", "email": "a@b.com"})
+    assert await form.ais_valid() is True
+    form.add_error("name", "Rejected")
+    assert await form.ais_valid() is False
+    assert "Rejected" in form.errors["name"]
+
+
+@pytest.mark.asyncio
+async def test_asave_unvalidated_valid_form_validates_and_saves():
+    """asave() on a not-yet-validated form runs async validation, then saves."""
+    form = ConstraintModelForm(data={"name": "fine", "email": "a@b.com"})
+    instance = await form.asave()
+    assert instance.pk is not None
+    assert form.errors == {}
+
+
+@pytest.mark.asyncio
+async def test_asave_unvalidated_invalid_form_raises_value_error():
+    """asave() on a not-yet-validated invalid form raises ValueError."""
+    form = ConstraintModelForm(data={"name": "LEGACY_BAD_CONSTRAINT", "email": "a@b.com"})
+    with pytest.raises(ValueError, match="could not be created"):
+        await form.asave()
+
+
+@pytest.mark.asyncio
+async def test_asave_commit_false_exposes_asave_m2m():
+    """asave(commit=False) binds the async M2M hook under the asave_m2m name."""
+    form = BasicModelForm(data={"name": "alice", "email": "a@b.com", "message": "hi"})
+    instance = await form.asave(commit=False)
+    assert instance.pk is None
+    await instance.asave()
+    await form.asave_m2m()
+
+
+@pytest.mark.asyncio
+async def test_sync_save_m2m_after_asave_commit_false_raises():
+    """Calling the sync save_m2m hook after asave(commit=False) fails loudly."""
+    form = BasicModelForm(data={"name": "alice", "email": "a@b.com", "message": "hi"})
+    await form.asave(commit=False)
+    with pytest.raises(RuntimeError, match="asave_m2m"):
+        form.save_m2m()
 
 
 # ---------------------------------------------------------------------------
