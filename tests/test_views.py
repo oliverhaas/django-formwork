@@ -4,7 +4,7 @@ import json
 import re
 
 from bs4 import BeautifulSoup
-from django.test import RequestFactory
+from django.test import Client, RequestFactory
 from django.utils.safestring import mark_safe
 
 from django_formwork.views import FormworkSearchView, FormworkValidateView
@@ -400,12 +400,6 @@ class TestFormworkValidateViewDefaults:
         TrackingView.as_view()(request)
         assert received["request"] is request
 
-    def test_csrf_exempt(self):
-        """POST without CSRF token should not be rejected."""
-        request = factory.post("/validate/", {"text": "hello", "errors_id": ""})
-        response = FormworkValidateView.as_view()(request)
-        assert response.status_code == 200
-
 
 class TestFormworkValidateViewMergeSpans:
     def test_overlapping_spans_merged(self):
@@ -704,3 +698,15 @@ class TestFormworkValidateViewHardening:
         request = factory.post("/validate/", {"text": "hello", "errors_id": ""})
         response = FormworkValidateView.as_view()(request)
         assert response.status_code == 200
+
+
+def test_validate_view_csrf_exempt(settings):
+    """A tokenless POST through the middleware stack succeeds because dispatch is csrf_exempt."""
+    # Client(enforce_csrf_checks=True) only enforces when CsrfViewMiddleware
+    # runs; the test settings do not install it, so add it here.
+    settings.ROOT_URLCONF = "e2e.urls"
+    settings.MIDDLEWARE = [*settings.MIDDLEWARE, "django.middleware.csrf.CsrfViewMiddleware"]
+    client = Client(enforce_csrf_checks=True)
+    response = client.post("/e2e/validate/bio/", {"text": "hello", "errors_id": ""})
+    assert response.status_code == 200
+    assert response.content.decode() == "hello"

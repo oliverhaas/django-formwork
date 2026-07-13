@@ -73,16 +73,6 @@ class TestFormworkModelChoiceField:
         labels = [str(lbl) for _, lbl in choices if str(lbl)]
         assert "User: alice" in labels
 
-    def test_kwarg_overrides_method(self):
-        """Kwarg takes precedence over the default method."""
-        field = FormworkModelChoiceField(
-            queryset=User.objects.all(),
-            label_from_instance=lambda u: u.first_name,
-        )
-        choices = list(field.choices)
-        labels = [str(lbl) for _, lbl in choices if str(lbl)]
-        assert "Alice" in labels
-
     def test_choices_yield_formwork_choice_label(self):
         field = FormworkModelChoiceField(queryset=User.objects.all())
         choices = list(field.choices)

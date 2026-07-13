@@ -5,6 +5,7 @@ required error suppression, and explicit submit behavior.
 """
 
 import pytest
+from playwright.sync_api import expect
 
 from .conftest import submit
 
@@ -250,12 +251,11 @@ class TestPersistenceAndReset:
         inp = autosave_page.locator('input[name="name"]')
         inp.fill("ToDelete")
         _wait_for_autosave(autosave_page)
-        # Click Delete
+        # The button only renders once the auto-save morph marked the form as saved.
         delete_btn = autosave_page.locator('button:text("Delete")')
-        if delete_btn.count() > 0:
-            delete_btn.click()
-            autosave_page.wait_for_timeout(500)
-            assert autosave_page.locator('input[name="name"]').input_value() == ""
+        expect(delete_btn).to_be_visible()
+        delete_btn.click()
+        expect(inp).to_have_value("")
 
     def test_reset_clears_to_defaults(self, autosave_page):
         """Reset button clears saved data but keeps the form."""
@@ -263,10 +263,10 @@ class TestPersistenceAndReset:
         inp.fill("ToReset")
         _wait_for_autosave(autosave_page)
         reset_btn = autosave_page.locator('button:text("Reset")')
-        if reset_btn.count() > 0:
-            reset_btn.click()
-            autosave_page.wait_for_timeout(500)
-            assert autosave_page.locator('input[name="name"]').input_value() == ""
+        expect(reset_btn).to_be_visible()
+        reset_btn.click()
+        expect(inp).to_have_value("")
+        expect(autosave_page.locator("#autosave-form")).to_be_visible()
 
 
 def test_multiple_fields_persist_after_reload(autosave_page):

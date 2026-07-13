@@ -37,7 +37,7 @@ class TestBtnIcon:
         assert size["h"] != "0px"
 
     def test_btn_icon_square(self, icon_modifiers_page):
-        """Square icon-only button renders correctly."""
+        """Icon-only square button is visible and keeps its aria-label."""
         btn = icon_modifiers_page.locator("#btn-icon-square")
         assert btn.is_visible()
         assert btn.get_attribute("aria-label") == "Edit"
@@ -133,10 +133,23 @@ class TestBtnLoading:
         assert "0, 0, 0, 0" not in color
 
     def test_loading_dots_variant(self, icon_modifiers_page):
-        """btn-loading-dots applies a different loading animation."""
+        """btn-loading-dots swaps the spinner mask for the dots animation."""
         page = icon_modifiers_page
         btn = page.locator("#btn-loading-dots")
         assert btn.is_visible()
+
+        page.evaluate(
+            """() => ['btn-loading-standalone', 'btn-loading-dots'].forEach(
+                (id) => document.getElementById(id).classList.add('htmx-request'))""",
+        )
+        spinner_mask, dots_mask = page.evaluate(
+            """() => ['btn-loading-standalone', 'btn-loading-dots'].map((id) => {
+                const style = getComputedStyle(document.getElementById(id), '::before');
+                return style.maskImage || style.webkitMaskImage;
+            })""",
+        )
+        assert dots_mask not in ("", "none")
+        assert dots_mask != spinner_mask
 
 
 class TestAlertIcon:
@@ -160,12 +173,18 @@ class TestAlertIcon:
         assert pseudo["h"] != "0px"
 
     def test_alert_icon_custom_glyph(self, icon_modifiers_page):
-        """alert-icon with icon-* override renders the custom glyph."""
+        """alert-icon with icon-* override renders a different ::before glyph than the default."""
         page = icon_modifiers_page
         alert = page.locator("#alert-icon-custom")
         assert alert.is_visible()
-        classes = alert.get_attribute("class")
-        assert "icon-triangle-alert" in classes
+        default_mask, custom_mask = page.evaluate(
+            """() => ['alert-icon-default', 'alert-icon-custom'].map((id) => {
+                const style = getComputedStyle(document.getElementById(id), '::before');
+                return style.maskImage || style.webkitMaskImage;
+            })""",
+        )
+        assert custom_mask not in ("", "none")
+        assert custom_mask != default_mask
 
     def test_alert_col_layout(self, icon_modifiers_page):
         """alert-col switches to vertical stacked layout."""
@@ -193,12 +212,27 @@ class TestAlertIcon:
         assert size["h"] >= 40
 
     def test_alert_soft_styling(self, icon_modifiers_page):
-        """alert-soft has a lighter background than default alert."""
+        """alert-soft tints the background differently from a same-color default alert."""
         page = icon_modifiers_page
         alert = page.locator("#alert-soft")
         assert alert.is_visible()
-        classes = alert.get_attribute("class")
-        assert "alert-soft" in classes
+        # Compare against a synthetic plain alert-info sibling, isolating the tint.
+        soft_bg, default_bg = page.evaluate(
+            """() => {
+                const soft = document.getElementById('alert-soft');
+                const plain = document.createElement('div');
+                plain.className = 'alert alert-info alert-icon';
+                soft.parentElement.appendChild(plain);
+                const colors = [
+                    getComputedStyle(soft).backgroundColor,
+                    getComputedStyle(plain).backgroundColor,
+                ];
+                plain.remove();
+                return colors;
+            }""",
+        )
+        assert soft_bg not in ("", "rgba(0, 0, 0, 0)")
+        assert soft_bg != default_bg
 
     def test_alert_text_wrap(self, icon_modifiers_page):
         """All alerts have text-wrap: pretty."""
