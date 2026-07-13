@@ -19,9 +19,25 @@ total (no condition, no expressions, default message), and every
 tableless query ``Q.check`` runs, wrapped as side-by-side scalar subqueries).
 The only constraints still replayed per form with Django's own
 ``constraint.validate()`` are the ones neither pass can batch: conditional or
-expression unique constraints and custom message uniques.  The validation
-outcome is identical to stock Django: same errors, same messages, same placement
-(field key vs ``__all__``); only the query count changes.
+expression unique constraints, custom message uniques, and unique constraints
+touching a ``GeneratedField`` or a field with a custom ``db_collation``.  The
+validation outcome is identical to stock Django: same errors, same messages,
+same placement (field key vs ``__all__``); only the query count changes.
+
+Two known divergences remain, both Python-side replays of a comparison the
+database performs in SQL on the stock path.  Classic ``unique`` /
+``unique_together`` lookups group prefetched rows by Python equality, so a
+case-insensitive column collation (MySQL ``*_ci`` collations,
+``db_collation="NOCASE"``, PostgreSQL citext) can hide a duplicate that stock's
+collation-aware SQL comparison would report; the batched path then defers it to
+the ``IntegrityError`` at save time.  ``UniqueConstraint`` s over such fields
+opt out of batching (see ``_is_batchable_unique``), but classic unique fields
+with a custom ``db_collation`` stay batched.  Likewise, ``unique_for_<date>``
+checks against a ``DateTimeField`` group prefetched rows by
+``.year``/``.month``/``.day`` of the stored (UTC) value, while stock's
+``__year``/``__month``/``__day`` lookups convert to the current time zone in
+SQL, so under a non-UTC ``TIME_ZONE`` a row near midnight can be keyed to a
+different day than stock and its duplicate missed.
 """
 
 from __future__ import annotations
@@ -62,6 +78,10 @@ __all__ = [
 UniqueCheck = tuple[type["Model"], tuple[str, ...]]
 # A single date check: ``(model_class, lookup_type, field, unique_for)``.
 DateCheck = tuple[type["Model"], str, str, str]
+# Prefetched existence sets per unique check, keyed by
+# ``(id(model_class), fields, using)``: each maps a lookup-value tuple to the
+# pks of the existing rows that carry those values.
+TakenUniques = dict[tuple[int, tuple[str, ...], str | None], dict[tuple[Any, ...], set[Any]]]
 
 
 class _BatchedUniquenessMixin:
@@ -78,8 +98,10 @@ class _BatchedUniquenessMixin:
     as total (no condition, no expressions, default message, nulls distinct), and
     every ``CheckConstraint`` (all forms in one round trip).  What stays on
     Django's per-form ``constraint.validate()`` path is only what cannot share a
-    batched query: conditional or expression ``UniqueConstraint`` s and custom
-    violation messages.  Either way the result is identical to stock.
+    batched query: conditional or expression ``UniqueConstraint`` s, custom
+    violation messages, and constraints touching a ``GeneratedField`` or a
+    custom ``db_collation``.  Either way the result is identical to stock; see
+    the module docstring for the known collation and time-zone divergences.
     """
 
     if TYPE_CHECKING:
@@ -117,7 +139,7 @@ class _BatchedUniquenessMixin:
         return [form for form in self.forms if getattr(form, "_uniqueness_deferred", False) and form not in deleted]
 
     @staticmethod
-    def _is_batchable_unique(constraint: Any) -> TypeGuard[UniqueConstraint]:  # noqa: ANN401
+    def _is_batchable_unique(constraint: Any, model_class: type[Model]) -> TypeGuard[UniqueConstraint]:  # noqa: ANN401
         """True for the ``UniqueConstraint`` s Django folds into unique checks.
 
         These are the "total" unique constraints (``Meta.total_unique_constraints``):
@@ -125,14 +147,22 @@ class _BatchedUniquenessMixin:
         whose error is byte-for-byte a classic uniqueness error: nulls distinct
         (so a NULL skips the check, as ``_perform_unique_checks`` does) and the
         default violation message (so Django uses ``unique_error_message``).
+        Constraints touching a ``GeneratedField`` bail out because stock
+        ``UniqueConstraint.validate`` substitutes the field's DB expression where
+        the batched lookup would read a value the database has not computed yet;
+        a custom ``db_collation`` bails out because the batched replay compares
+        values with Python equality, not the column's collation.
         """
-        return (
+        if not (
             isinstance(constraint, UniqueConstraint)
             and constraint.condition is None
             and not constraint.contains_expressions
             and constraint.nulls_distinct is not False
             and constraint.violation_error_message == constraint.default_violation_error_message
-        )
+        ):
+            return False
+        fields = [model_class._meta.get_field(name) for name in constraint.fields]  # noqa: SLF001
+        return not any(getattr(f, "generated", False) or getattr(f, "db_collation", None) for f in fields)
 
     def _meta_unique_checks(self, instance: Model, exclude: set[str]) -> list[UniqueCheck]:
         """Batchable ``UniqueConstraint`` s as ``(model_class, fields)`` checks.
@@ -145,7 +175,8 @@ class _BatchedUniquenessMixin:
             (model_class, tuple(constraint.fields))
             for model_class, constraints in instance.get_constraints()
             for constraint in constraints
-            if self._is_batchable_unique(constraint) and not any(name in exclude for name in constraint.fields)
+            if self._is_batchable_unique(constraint, model_class)
+            and not any(name in exclude for name in constraint.fields)
         ]
 
     def _perform_classic_unique_checks(self, forms: list[Any]) -> None:
@@ -172,8 +203,15 @@ class _BatchedUniquenessMixin:
         taken_dates = self._prefetch_dates(forms, date_by_form)
 
         for form in forms:
-            errors: dict[str, list[ValidationError]] = {}
-            self._collect_unique_errors(form, unique_by_form[form], taken, errors)
+            errors: dict[str, list[ValidationError]]
+            if taken is None:
+                # The batched query failed as one statement (see the
+                # DatabaseError note in _prefetch_unique); replay stock's
+                # per-form checks, which query one check at a time.
+                errors = form.instance._perform_unique_checks(unique_by_form[form])  # noqa: SLF001
+            else:
+                errors = {}
+                self._collect_unique_errors(form, unique_by_form[form], taken, errors)
             self._collect_date_errors(form, date_by_form[form], taken_dates, errors)
             if errors:
                 form._update_errors(ValidationError(errors))  # noqa: SLF001
@@ -189,18 +227,20 @@ class _BatchedUniquenessMixin:
         (:meth:`_is_batchable_unique`, prefetched here) and every
         ``CheckConstraint`` (:meth:`_evaluate_batched_checks`).  Whatever neither
         pass can batch -- conditional or expression uniques, custom-message
-        uniques -- falls through to a per-form ``constraint.validate()``.
+        uniques, generated or custom-collation fields -- falls through to a
+        per-form ``constraint.validate()``.
         """
         if not forms:
             return
 
         # One prefetch covering the batchable meta-uniques across every form, so
-        # the in-order replay below is pure dict lookups, not N queries.
+        # the in-order replay below is pure dict lookups, not N queries.  It
+        # runs against the write database, as stock validate_constraints does.
         meta_unique_by_form = {
             form: self._meta_unique_checks(form.instance, form._get_validation_exclusions())  # noqa: SLF001
             for form in forms
         }
-        taken = self._prefetch_unique(forms, meta_unique_by_form)
+        taken = self._prefetch_unique(forms, meta_unique_by_form, for_write=True)
         check_verdicts = self._evaluate_batched_checks(forms)
 
         for form in forms:
@@ -211,13 +251,14 @@ class _BatchedUniquenessMixin:
     def _collect_meta_constraint_errors(
         self,
         form: Any,  # noqa: ANN401
-        taken: dict[tuple[int, tuple[str, ...]], dict[tuple[Any, ...], set[Any]]],
+        taken: TakenUniques | None,
         check_verdicts: dict[tuple[int, int], bool] | None,
     ) -> dict[str, list[ValidationError]]:
         """One form's ``validate_constraints`` errors, in ``Meta`` order.
 
         Batchable uniques consult ``taken`` and batched checks consult
-        ``check_verdicts``; anything else falls back to the constraint's own
+        ``check_verdicts``; anything else, including every constraint when a
+        batched pass reported ``None``, falls back to the constraint's own
         ``validate()``.  Errors accumulate in iteration order, so a check and a
         unique that both fail land in ``__all__`` exactly as stock orders them.
         """
@@ -227,12 +268,18 @@ class _BatchedUniquenessMixin:
         errors: dict[str, list[ValidationError]] = {}
         for model_class, constraints in instance.get_constraints():
             for constraint in constraints:
-                if self._is_batchable_unique(constraint):
+                if taken is not None and self._is_batchable_unique(constraint, model_class):
                     # validate() early-returns on an excluded field; mirror that,
                     # otherwise consult the prefetched existence set in this
                     # constraint's Meta position.
                     if not any(name in exclude for name in constraint.fields):
-                        self._collect_unique_errors(form, [(model_class, tuple(constraint.fields))], taken, errors)
+                        self._collect_unique_errors(
+                            form,
+                            [(model_class, tuple(constraint.fields))],
+                            taken,
+                            errors,
+                            using=using,
+                        )
                     continue
                 key = (id(form), id(constraint))
                 if check_verdicts is not None and key in check_verdicts:
@@ -345,7 +392,7 @@ class _BatchedUniquenessMixin:
             # here to keep the boolean out of a positional argument.
             query.add_q(Q(Coalesce(condition, Value(value=True), output_field=BooleanField())))
         else:
-            query.add_q(condition)
+            query.add_q(Q(condition))
         return query
 
     # -- unique / unique_together ---------------------------------------------
@@ -373,26 +420,52 @@ class _BatchedUniquenessMixin:
         self,
         forms: list[Any],
         unique_by_form: dict[Any, list[UniqueCheck]],
-    ) -> dict[tuple[int, tuple[str, ...]], dict[tuple[Any, ...], set[Any]]]:
-        wanted: dict[tuple[int, tuple[str, ...]], UniqueCheck] = {}
-        rows_wanted: dict[tuple[int, tuple[str, ...]], set[tuple[Any, ...]]] = defaultdict(set)
+        *,
+        for_write: bool = False,
+    ) -> TakenUniques | None:
+        """Existence sets for every wanted unique lookup, in one query per check.
+
+        ``for_write`` routes each form's lookups to its write database, as stock
+        ``validate_constraints`` does for ``Meta.constraints``; the default read
+        routing matches stock ``_perform_unique_checks``.  Returns ``None`` to
+        tell the caller to fall back to Django's per-form path (see the
+        ``DatabaseError`` note).
+        """
+        wanted: dict[tuple[int, tuple[str, ...], str | None], tuple[type[Model], tuple[str, ...], str | None]] = {}
+        rows_wanted: dict[tuple[int, tuple[str, ...], str | None], set[tuple[Any, ...]]] = defaultdict(set)
         for form in forms:
+            instance = form.instance
+            using = router.db_for_write(instance.__class__, instance=instance) if for_write else None
             for model_class, fields in unique_by_form[form]:
-                lookup = self._unique_lookup(form.instance, model_class, fields)
+                lookup = self._unique_lookup(instance, model_class, fields)
                 if lookup is None:
                     continue
-                key = (id(model_class), fields)
-                wanted[key] = (model_class, fields)
+                key = (id(model_class), fields, using)
+                wanted[key] = (model_class, fields, using)
                 rows_wanted[key].add(lookup)
 
-        taken: dict[tuple[int, tuple[str, ...]], dict[tuple[Any, ...], set[Any]]] = {}
-        for key, (model_class, fields) in wanted.items():
+        taken: TakenUniques = {}
+        for key, (model_class, fields, using) in wanted.items():
             query = Q()
             for lookup in rows_wanted[key]:
                 query |= Q(**dict(zip(fields, lookup, strict=True)))
+            manager = model_class._default_manager  # noqa: SLF001
+            queryset = (manager.using(using) if using is not None else manager).filter(query)
             existing: dict[tuple[Any, ...], set[Any]] = defaultdict(set)
-            for row in model_class._default_manager.filter(query).values_list(*fields, "pk"):  # noqa: SLF001
-                existing[tuple(row[:-1])].add(row[-1])
+            # Isolate the read in a savepoint when already inside a transaction,
+            # so a backend error rolls back cleanly (as _run_batched_checks does).
+            atomic = (
+                transaction.atomic(using=queryset.db) if connections[queryset.db].in_atomic_block else nullcontext()
+            )
+            try:
+                with atomic:
+                    for row in queryset.values_list(*fields, "pk"):
+                        existing[tuple(row[:-1])].add(row[-1])
+            except DatabaseError:
+                # One OR-of-all-forms statement can fail where stock's per-form
+                # lookups succeed (e.g. backend parameter limits on a very large
+                # formset); fall back to Django's per-form path rather than 500.
+                return None
             taken[key] = existing
         return taken
 
@@ -400,15 +473,16 @@ class _BatchedUniquenessMixin:
         self,
         form: Any,  # noqa: ANN401
         checks: list[UniqueCheck],
-        taken: dict[tuple[int, tuple[str, ...]], dict[tuple[Any, ...], set[Any]]],
+        taken: TakenUniques,
         errors: dict[str, list[ValidationError]],
+        using: str | None = None,
     ) -> None:
         instance = form.instance
         for model_class, fields in checks:
             lookup = self._unique_lookup(instance, model_class, fields)
             if lookup is None:
                 continue
-            pks = set(taken.get((id(model_class), fields), {}).get(lookup, set()))
+            pks = set(taken.get((id(model_class), fields, using), {}).get(lookup, set()))
             if not instance._state.adding and instance._is_pk_set(model_class._meta):  # noqa: SLF001
                 pks.discard(instance._get_pk_val(model_class._meta))  # noqa: SLF001
             if pks:

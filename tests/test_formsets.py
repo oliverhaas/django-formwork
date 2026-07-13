@@ -18,7 +18,9 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from django.db import connection
+from django.db import DatabaseError, connection, models
+from django.db.models import QuerySet
+from django.db.models.functions import Upper
 from django.forms import inlineformset_factory, modelformset_factory
 from django.test.utils import CaptureQueriesContext
 from e2e.models import (
@@ -36,6 +38,7 @@ from e2e.models import (
 )
 
 from django_formwork.formsets import (
+    FormworkBaseModelFormSet,
     formwork_inlineformset_factory,
     formwork_modelformset_factory,
 )
@@ -581,3 +584,110 @@ class TestCheckBatchingEfficiency:
             assert self._our(UniqueAndCheckPair, ["left", "right"], big).is_valid()
 
         assert len(q_small.captured_queries) == len(q_big.captured_queries)
+
+
+# ---------------------------------------------------------------------------
+# Non-batchable: GeneratedField and custom-collation unique constraints
+# ---------------------------------------------------------------------------
+
+
+class GeneratedItem(models.Model):
+    """Unique constraint covering a GeneratedField; must not be batched."""
+
+    base = models.CharField(max_length=50)
+    upper = models.GeneratedField(
+        expression=Upper("base"),
+        output_field=models.CharField(max_length=50),
+        db_persist=True,
+    )
+
+    class Meta:
+        app_label = "e2e"
+        constraints = [models.UniqueConstraint(fields=["upper"], name="uq_generated_item_upper")]
+
+    def __str__(self):
+        return self.base
+
+
+class CollatedItem(models.Model):
+    """Unique constraint over a custom-collation field; must not be batched."""
+
+    code = models.CharField(max_length=50, db_collation="NOCASE")
+
+    class Meta:
+        app_label = "e2e"
+        constraints = [models.UniqueConstraint(fields=["code"], name="uq_collated_item_code")]
+
+    def __str__(self):
+        return self.code
+
+
+def test_plain_unique_constraint_is_batchable():
+    """Control: a plain field-based UniqueConstraint stays on the batched path."""
+    constraint = ConstraintPair._meta.constraints[0]
+    assert FormworkBaseModelFormSet._is_batchable_unique(constraint, ConstraintPair) is True
+
+
+def test_generated_field_unique_constraint_is_not_batchable():
+    """Stock validate substitutes the DB expression, so batching must bail out."""
+    constraint = GeneratedItem._meta.constraints[0]
+    assert FormworkBaseModelFormSet._is_batchable_unique(constraint, GeneratedItem) is False
+
+
+def test_custom_collation_unique_constraint_is_not_batchable():
+    """Python equality cannot replay a case-insensitive column collation."""
+    constraint = CollatedItem._meta.constraints[0]
+    assert FormworkBaseModelFormSet._is_batchable_unique(constraint, CollatedItem) is False
+
+
+@pytest.mark.django_db(transaction=True)
+def test_collated_unique_collision_matches_stock():
+    """A case-insensitive duplicate must raise exactly what stock raises."""
+    with connection.schema_editor() as editor:
+        editor.create_model(CollatedItem)
+    try:
+        CollatedItem.objects.create(code="taken")
+        _assert_parity(CollatedItem, ["code"], _data([{"code": "TAKEN"}]))
+    finally:
+        with connection.schema_editor() as editor:
+            editor.delete_model(CollatedItem)
+
+
+# ---------------------------------------------------------------------------
+# Fallback: a failing batched unique prefetch degrades to per-form checks
+# ---------------------------------------------------------------------------
+
+
+def _raise_database_error(*args, **kwargs):
+    """Stand-in for a batched prefetch that exceeds backend limits."""
+    raise DatabaseError("simulated oversized batched query")
+
+
+def test_unique_prefetch_database_error_falls_back_to_stock_errors(monkeypatch):
+    """Classic unique checks must survive a failing batched prefetch."""
+    UniqueCode.objects.create(code="TAKEN", label="seed")
+    data = _data([{"code": "TAKEN", "label": "x"}, {"code": "FREE", "label": "y"}])
+    stock_cls = modelformset_factory(UniqueCode, fields=["code", "label"], extra=0)
+    stock = stock_cls(data, queryset=UniqueCode.objects.all())
+    assert stock.is_valid() is False
+
+    monkeypatch.setattr(QuerySet, "values_list", _raise_database_error)
+    our_cls = formwork_modelformset_factory(UniqueCode, fields=["code", "label"], extra=0)
+    ours = our_cls(data, queryset=UniqueCode.objects.all())
+    assert ours.is_valid() is False
+    assert _errors_repr(ours) == _errors_repr(stock)
+
+
+def test_meta_unique_prefetch_database_error_falls_back_to_constraint_validate(monkeypatch):
+    """Meta UniqueConstraints must survive a failing batched prefetch."""
+    ConstraintPair.objects.create(left="a", right="1")
+    data = _data([{"left": "a", "right": "1"}, {"left": "b", "right": "2"}])
+    stock_cls = modelformset_factory(ConstraintPair, fields=["left", "right"], extra=0)
+    stock = stock_cls(data, queryset=ConstraintPair.objects.all())
+    assert stock.is_valid() is False
+
+    monkeypatch.setattr(QuerySet, "values_list", _raise_database_error)
+    our_cls = formwork_modelformset_factory(ConstraintPair, fields=["left", "right"], extra=0)
+    ours = our_cls(data, queryset=ConstraintPair.objects.all())
+    assert ours.is_valid() is False
+    assert _errors_repr(ours) == _errors_repr(stock)
