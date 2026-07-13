@@ -516,6 +516,16 @@ def test_multi_select_no_results_alert_hidden_for_few_choices():
 
 
 @pytest.mark.unit
+def test_multi_select_summary_renders_selection_via_x_html():
+    """The summary span uses x-html so mark_safe SVG icons render as markup."""
+    widget = MultiSelect(choices=[("a", "A")])
+    soup = render_widget(widget, name="test")
+    span = soup.find("summary").find("span")
+    assert span.get("x-html") == "displayHtml || 'Select…'"
+    assert "x-text" not in span.attrs
+
+
+@pytest.mark.unit
 def test_multi_select_aria_invalid_on_summary():
     """aria-invalid='true' is forwarded to the <summary> trigger."""
     widget = MultiSelect(choices=[("a", "A")])
@@ -1235,6 +1245,63 @@ def test_multi_select_keyboard_close_clears_highlight(multi_select_page):
     multi.locator("summary").click()  # close
     multi_select_page.wait_for_timeout(150)
     assert multi.locator("[data-value].highlighted").count() == 0
+
+
+# ─── Level 5e: E2e, dirty tracking ───────────────────────────────────────
+#
+# The /multi-select/ page ships formwork-core.js but its form does not opt
+# in to dirty tracking, so the tests enable it in place: set the opt-in
+# attribute and fire the htmx:after:swap event that initAllDirtyForms
+# already listens for.
+
+
+def _enable_dirty_tracking(page):
+    page.evaluate("""() => {
+        document.querySelector('form[hx-post]').setAttribute('data-formwork-dirty', '');
+        document.dispatchEvent(new Event('htmx:after:swap'));
+    }""")
+
+
+def _toggle_checkbox(page, dropdown_index, value_selector):
+    page.evaluate(
+        """([index, selector]) => {
+            const dd = document.querySelectorAll('details.dropdown.multiselect')[index];
+            const cb = dd.querySelector(selector);
+            cb.checked = !cb.checked;
+            cb.dispatchEvent(new Event('change', {bubbles: true}));
+        }""",
+        [dropdown_index, value_selector],
+    )
+
+
+@pytest.mark.e2e
+def test_multi_select_htmx_dirty_clears_on_revert(multi_select_page):
+    """htmx-mode: selecting then unselecting an option leaves the fieldset clean."""
+    import re
+
+    from playwright.sync_api import expect
+
+    _enable_dirty_tracking(multi_select_page)
+    fieldset = multi_select_page.locator("#id_languages_htmx_field")
+    _toggle_checkbox(multi_select_page, 2, 'input[type="checkbox"]')
+    expect(fieldset).to_have_class(re.compile(r"\bformwork-dirty\b"))
+    _toggle_checkbox(multi_select_page, 2, 'input[type="checkbox"]')
+    expect(fieldset).not_to_have_class(re.compile(r"\bformwork-dirty\b"))
+
+
+@pytest.mark.e2e
+def test_multi_select_client_dirty_clears_on_revert(multi_select_page):
+    """Client-mode: checking then unchecking a box leaves the fieldset clean."""
+    import re
+
+    from playwright.sync_api import expect
+
+    _enable_dirty_tracking(multi_select_page)
+    fieldset = multi_select_page.locator("#id_languages_plain_field")
+    _toggle_checkbox(multi_select_page, 0, 'input[value="py"]')
+    expect(fieldset).to_have_class(re.compile(r"\bformwork-dirty\b"))
+    _toggle_checkbox(multi_select_page, 0, 'input[value="py"]')
+    expect(fieldset).not_to_have_class(re.compile(r"\bformwork-dirty\b"))
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────

@@ -8,6 +8,11 @@
 
 import { clearHighlight, keyboardNav, visibleOptions } from "./_helpers.js";
 
+// Labels are interpolated into the summary via x-html (so trusted icon
+// markup like inline SVGs renders); escape them to keep label text inert.
+const escapeHtml = (s) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
 document.addEventListener("alpine:init", () => {
   Alpine.data("formworkMultiSelect", () => ({
     _v: 0,
@@ -62,13 +67,13 @@ document.addEventListener("alpine:init", () => {
         (s) => s.textContent.trim().toLowerCase().includes(q),
       );
     },
-    get displayText() {
+    get displayHtml() {
       this._v;
       if (this.hasSearchUrl) {
         if (!this.selected.size) return "";
         if (this.selected.size > 3) return this.selected.size + " selected";
         return [...this.selected.values()]
-          .map(([lbl, ic]) => (ic ? ic + " " + lbl : lbl))
+          .map(([lbl, ic]) => (ic ? ic + " " + escapeHtml(lbl) : escapeHtml(lbl)))
           .join(", ");
       }
       const checked = [...this.$refs.options.querySelectorAll("input:checked")];
@@ -77,8 +82,8 @@ document.addEventListener("alpine:init", () => {
       return checked.map((input) => {
         const label = input.parentElement;
         const ic = label.querySelector(".shrink-0:not(.formwork-check)");
-        const text = label.querySelector(".select-none").textContent.trim();
-        return ic ? ic.textContent.trim() + " " + text : text;
+        const text = escapeHtml(label.querySelector(".select-none").textContent.trim());
+        return ic ? ic.innerHTML.trim() + " " + text : text;
       }).join(", ");
     },
     _visibleOptions() {
