@@ -17,4 +17,5 @@
     {% if widget.search_url %}<div x-show="hasError" x-cloak role="alert" class="alert alert-error alert-soft m-1.5">Search failed. Please try again.</div>{% endif %}
     {% if not widget.search_url %}<div x-show="noResults" x-cloak role="status" class="alert alert-info alert-soft m-1.5">No results.</div>{% endif %}
   </div>
+  <span class="formwork-autowidth" aria-hidden="true">{% if not widget.search_url %}{% for group, items in widget.suggestion_groups %}{% for suggestion in items %}<span>{{ suggestion.text }}</span>{% endfor %}{% endfor %}{% endif %}</span>
 </div>
