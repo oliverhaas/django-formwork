@@ -48,13 +48,40 @@ const getFieldValue = (el) => {
   return el.value;
 };
 
+// MultiSelect dispatches change events from its <details> root (htmx mode)
+// or from name-less checkboxes inside it; neither carries a comparable
+// .value.  Derive one: the sorted set of selected option values, read from
+// the Alpine-rendered hidden inputs plus the checked boxes.
+const getMultiSelectValue = (details) => {
+  const values = new Set();
+  for (const el of details.querySelectorAll("input[type=hidden][name]")) values.add(el.value);
+  for (const el of details.querySelectorAll("input[type=checkbox]:checked")) values.add(el.value);
+  return [...values].sort().join(",");
+};
+
+// Baseline for an htmx-mode MultiSelect comes from data-initial-selected:
+// Alpine renders the hidden inputs only after its own init, which may run
+// after the snapshot.
+const getMultiSelectBaseline = (details) => {
+  const json = details.dataset.initialSelected;
+  if (json === undefined) return getMultiSelectValue(details);
+  try {
+    return JSON.parse(json).map(([value]) => String(value)).sort().join(",");
+  } catch {
+    return "";
+  }
+};
+
 const initDirtyTracking = (form) => {
   const baseline = new Map();
 
   const snapshot = () => {
     baseline.clear();
     for (const el of form.elements) {
-      if (!el.name || el.type === "hidden") continue;
+      // Hidden inputs stay tracked: widgets (SearchSelect, OTPInput,
+      // InputMask) hold their real value in a hidden input and dispatch
+      // events on it.  MultiSelect internals are tracked as one unit below.
+      if (!el.name || el.closest("details.multiselect")) continue;
       // Radio groups: track the checked value under the group name.
       if (el.type === "radio") {
         if (el.checked) baseline.set(el.name, el.value);
@@ -63,16 +90,29 @@ const initDirtyTracking = (form) => {
         baseline.set(el.id || el.name, getFieldValue(el));
       }
     }
+    for (const details of form.querySelectorAll("details.multiselect")) {
+      baseline.set(details, getMultiSelectBaseline(details));
+    }
   };
 
   const check = (el) => {
-    const fieldset = el.closest("fieldset.fieldset");
+    const multiselect = el.closest?.("details.multiselect");
+    const target = multiselect || el;
+    const fieldset = target.closest("fieldset.fieldset");
     if (!fieldset) return;
-    const key = el.type === "radio" ? el.name : (el.id || el.name);
+    let key;
+    let current;
+    if (multiselect) {
+      key = multiselect;
+      current = getMultiSelectValue(multiselect);
+    } else if (el.type === "radio") {
+      key = el.name;
+      current = form.querySelector(`input[name="${el.name}"]:checked`)?.value ?? "";
+    } else {
+      key = el.id || el.name;
+      current = getFieldValue(el);
+    }
     const initial = baseline.get(key) ?? "";
-    const current = el.type === "radio"
-      ? (form.querySelector(`input[name="${el.name}"]:checked`)?.value ?? "")
-      : getFieldValue(el);
     fieldset.classList.toggle(DIRTY_CLS, current !== initial);
   };
 
