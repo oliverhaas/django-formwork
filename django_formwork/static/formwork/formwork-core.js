@@ -322,6 +322,20 @@ if (typeof htmx !== "undefined") {
         newNode.textContent = oldNode.textContent;
       }
 
+      // Preserve Alpine-applied classes (:class bindings).  Server HTML
+      // carries only the static class attribute, so a morph would strip
+      // classes Alpine added (formwork-placeholder, a selected option's
+      // toggle class, dropdown-open).  When the swap changes no reactive
+      // state (e.g. re-saving an unchanged value), nothing ever re-applies
+      // them.  Union old into new: the server can still add classes, and
+      // classes Alpine no longer wants are removed by its own undo pass
+      // the next time the binding evaluates.
+      if (oldNode.hasAttribute(":class") || oldNode.hasAttribute("x-bind:class")) {
+        for (const cls of oldNode.classList) {
+          newNode.classList.add(cls);
+        }
+      }
+
       // Preserve Alpine-managed HTML content (x-html directive).
       if (oldNode.hasAttribute("x-html")) {
         newNode.innerHTML = oldNode.innerHTML;

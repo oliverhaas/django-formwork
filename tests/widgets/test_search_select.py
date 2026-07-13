@@ -1157,7 +1157,9 @@ def test_search_select_selected_toggle_class_applied_on_pick(search_select_page)
     search_select_page.wait_for_timeout(100)
     assert sel.get_attribute("open") is None
     assert "High" in summary.text_content()
-    assert "select-error" in (summary.get_attribute("class") or "")
+    classes = (summary.get_attribute("class") or "").split()
+    assert "select-error" in classes
+    assert "false" not in classes, "falsy :class array entry stringified into a literal token"
 
 
 @pytest.mark.e2e
@@ -1828,6 +1830,30 @@ def test_search_select_morph_preserves_dropdown_open(search_select_page):
     search_select_page.wait_for_timeout(500)
     sel = search_select_page.locator("details.dropdown.search-select").first
     assert sel.get_attribute("open") is not None
+
+
+@pytest.mark.e2e
+def test_search_select_toggle_class_survives_noop_morph(search_select_page):
+    """Alpine-applied trigger classes survive a no-op morph.
+
+    A re-render of already-saved state changes no data attributes, so nothing
+    re-evaluates the :class binding; the morph itself must keep the classes.
+    """
+    from tests.e2e.conftest import submit
+
+    sel = search_select_page.locator("details.dropdown.search-select").nth(8)
+    summary = sel.locator("summary")
+    summary.click()
+    search_select_page.wait_for_timeout(200)
+    sel.locator("button", has_text="High").click()
+    search_select_page.wait_for_timeout(100)
+    assert "select-error" in (summary.get_attribute("class") or "")
+    submit(search_select_page)
+    assert "select-error" in (summary.get_attribute("class") or "")
+    submit(search_select_page)
+    classes = (summary.get_attribute("class") or "").split()
+    assert "select-error" in classes
+    assert "false" not in classes
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
