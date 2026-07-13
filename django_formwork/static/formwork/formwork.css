@@ -307,6 +307,17 @@ select.select-soft::picker(select) {
     background-color: var(--select-soft-dropdown-bg, var(--color-base-100));
 }
 
+/* Native customizable select: trailing checkmark, matching the custom
+   dropdown widgets (SearchSelect/MultiSelect/ComboBox).  Options are
+   flex rows in base appearance, so order + auto margin pushes the
+   checkmark to the trailing edge; the padding guarantees a gap from the
+   label even when the selected option defines the picker width. */
+option::checkmark {
+    order: 1;
+    margin-inline-start: auto;
+    padding-inline-start: 0.75rem;
+}
+
 @layer components {
 
 /* Vertical spacing between consecutive field groups. */

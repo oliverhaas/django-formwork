@@ -11,7 +11,7 @@
       </button></li>{% endfor %}{% if not widget.initial_options %}<li><div role="status" class="alert alert-info alert-soft m-0.5">No results.</div></li>{% endif %}{% else %}{% for group, items in widget.suggestion_groups %}{% if group %}<li class="menu-title" x-show="[{% for s in items %}'{{ s.text|escapejs }}'{% if not loop.last %},{% endif %}{% endfor %}].some(l => matches(l))">{{ group }}</li>{% endif %}{% for suggestion in items %}
       <li x-show="matches('{{ suggestion.text|escapejs }}')" role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ suggestion.text }}"{% if suggestion.icon %} data-icon="{{ suggestion.icon|force_escape }}"{% endif %}>
         {% if suggestion.icon %}<span class="shrink-0">{{ suggestion.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ suggestion.text }}</span>{% if suggestion.description %}<span class="text-xs text-base-content/50">{{ suggestion.description }}</span>{% endif %}</span>
-        {% if widget.multiple %}<span class="formwork-check ml-auto shrink-0" :class="isSelected('{{ suggestion.text|escapejs }}') ? 'opacity-100' : 'opacity-0'" aria-hidden="true">&#x2713;</span>{% endif %}
+        {% if widget.multiple %}<span class="formwork-check ml-auto pl-3 shrink-0" :class="isSelected('{{ suggestion.text|escapejs }}') ? 'opacity-100' : 'opacity-0'" aria-hidden="true">&#x2713;</span>{% endif %}
       </button></li>{% endfor %}{% endfor %}{% endif %}
     </ul>
     {% if widget.search_url %}<div x-show="hasError" x-cloak role="alert" class="alert alert-error alert-soft m-1.5">Search failed. Please try again.</div>{% endif %}
