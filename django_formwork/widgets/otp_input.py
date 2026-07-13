@@ -34,8 +34,9 @@ class OTPInput(forms.TextInput):
         context = super().get_context(name, value, attrs)
         context["widget"]["length"] = self.length
         context["widget"]["digits"] = list(range(self.length))
-        # Pre-fill individual digits from current value.
-        val = value or ""
+        # Pre-fill individual digits from current value.  Coerce to str:
+        # CharField.prepare_value passes non-str initials (e.g. ints) through.
+        val = "" if value is None else str(value)
         context["widget"]["initial_digits"] = [val[i] if i < len(val) else "" for i in range(self.length)]
         context["widget"]["initial_digits_json"] = json.dumps(context["widget"]["initial_digits"])
         return context

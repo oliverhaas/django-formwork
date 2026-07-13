@@ -158,6 +158,16 @@ def test_otp_input_escapes_digits_in_x_data(renderer):
     assert json.loads(wrapper["data-digits"]) == ["1", "'", "2", "<", "3", "\\"]
 
 
+@pytest.mark.integration
+def test_otp_input_renders_with_int_initial(renderer):
+    """Non-str initial values are coerced to strings instead of crashing the render."""
+    # Regression: int initial raised TypeError in get_context on first render.
+    form = OTPForm(initial={"code": 123456})
+    soup = render_form(form, renderer=renderer)
+    wrapper = soup.find("div", attrs={"x-data": "formworkOtpInput"})
+    assert json.loads(wrapper["data-digits"]) == ["1", "2", "3", "4", "5", "6"]
+
+
 # ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
 
 
