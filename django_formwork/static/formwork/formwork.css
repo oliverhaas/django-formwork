@@ -50,6 +50,50 @@
     min-width: 0;
 }
 
+/* ================================================================
+   Inline disclosure (help text + inline errors) — layout overrides
+   The collapsible help / inline-error row is a native <details>/<summary>.
+   The <summary> carries .label for the muted help-text look, but .label is
+   display:inline-flex (@layer utilities), which would shrink the summary to
+   its content and defeat truncation.  Force a block-level flex row so the
+   summary fills the fieldset column and the text span can ellipsize.
+   These overrides MUST be UNLAYERED to beat .label. */
+details.formwork-disclosure > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    cursor: pointer;
+    list-style: none;
+}
+
+/* Expanded: pin the leading icon to the first text line and let the row
+   grow downward (the [less] affordance drops to the bottom, see below). */
+details.formwork-disclosure[open] > summary {
+    align-items: flex-start;
+}
+
+/* Not expandable (measureDisclosures found nothing to reveal): the summary
+   is a static one-line label, not a control. */
+details.formwork-disclosure:not([data-expandable]) > summary {
+    cursor: default;
+}
+
+/* Disclosure spans every column in multi-column fieldsets (checkbox pairs,
+   date+time, triple-select), like the help-text .label rows it replaces.
+   Safe in single-column fieldsets: grid-template-columns is 1fr, so 1 / -1
+   resolves to the sole column.
+   min-width: 0 is load-bearing: .fieldset is grid-template-columns: 1fr
+   (= minmax(auto, 1fr)), and the `auto` minimum equals the grid item's
+   min-content.  A nowrap summary can't wrap, so its min-content is the full
+   text width, which would force the track — and the whole form — wider than
+   its container and defeat truncation.  min-width: 0 drops the item's
+   automatic minimum to 0 so the 1fr track can shrink and the summary's
+   flex-1/min-w-0 text ellipsizes. */
+fieldset.fieldset > details.formwork-disclosure {
+    grid-column: 1 / -1;
+    min-width: 0;
+}
+
 /* Error tooltip wrapper: when DaisyUI's tooltip wraps the label + widget,
    it collapses two grid items into one, losing a row-gap (6px shift).
    Use display:grid with the same row-gap as .fieldset (gap-y-1.5 = 6px)
@@ -766,13 +810,60 @@ details.dropdown.search-select > .dropdown-content {
 }
 
 /* ================================================================
-   Inline errors (Meta.error_display = "inline")
-   No dedicated CSS block: the error row reuses the help-text `.label`
-   markup verbatim (same flex/gap/grid-column rules, `text-error` for
-   colour) and is never wrapped in `.tooltip`, so it falls through to
-   the same grid selectors used for the no-error / no-tooltip case
-   (checkbox pairs, date+time, triple-select).  See formwork_field.html.
+   Inline disclosure (help text + inline errors)
+
+   A native <details>/<summary> collapsible.  The <summary> is the
+   always-visible one-line row (leading icon + text); when closed the
+   text truncates, when open it un-truncates and any body (help text
+   shown under an inline error) is revealed.  <details open> survives
+   htmx morphs (open is in htmx.config.morphIgnore) and no Alpine :class
+   binding fights it, so expanded content is never re-collapsed by a
+   server-rendered swap.  measureDisclosures() in formwork-core.js sets
+   data-expandable when there is something to reveal (a body, or summary
+   text that overflows one line); the [more]/[less] affordance and the
+   toggle cursor only appear then.  Layout overrides for the summary flex
+   box live unlayered near .fieldset .label (they must beat .label).
    ================================================================ */
+
+/* Drop the native disclosure triangle (Safari/Chrome). */
+details.formwork-disclosure > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Truncate the summary text to one line while closed.  nowrap also makes
+   the span's scrollWidth the full text width, which measureDisclosures
+   compares against clientWidth to detect overflow. */
+details.formwork-disclosure:not([open]) > summary .formwork-disclosure-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* [more]/[less] affordance — a flex item at the end of the summary,
+   shown only when the row is expandable.  Colour is inherited (red on an
+   error summary via .text-error, muted otherwise). */
+details.formwork-disclosure[data-expandable] > summary::after {
+    content: "[more]";
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+details.formwork-disclosure[data-expandable][open] > summary::after {
+    content: "[less]";
+    align-self: flex-end;
+}
+
+/* Expanded multi-line: nudge the leading icon down to the first text line
+   (matches mt-0.75 = 3px used by the other icon rows). */
+details.formwork-disclosure[open] > summary > .icon {
+    margin-top: 0.1875rem;
+}
+
+/* Body (help text under an inline error): match the fieldset row-gap so
+   it lines up with sibling rows. */
+details.formwork-disclosure > .formwork-disclosure-body {
+    margin-top: 6px;
+}
 
 
 /* ================================================================

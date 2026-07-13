@@ -100,6 +100,69 @@ if (document.readyState === "loading") {
 }
 document.addEventListener("htmx:after:swap", initAllDirtyForms);
 
+// --- Inline disclosure sizing (help text + inline errors) ---
+// The help/error collapsible is a native <details class="formwork-disclosure">.
+// CSS cannot tell whether the summary text overflows one line, so this small
+// vanilla pass marks each disclosure `data-expandable` when there is something
+// to reveal: a body (help text shown under an inline error) or summary text
+// that overflows while closed.  Only then does the [more]/[less] affordance
+// appear and the summary act as a toggle; otherwise the summary stays a plain,
+// non-focusable one-line label.
+//
+// Runs on initial load and after every htmx settle.  <details open> state is
+// preserved across morphs (open is in htmx.config.morphIgnore) and no Alpine
+// :class binding fights it, so an expanded row stays open; this pass only
+// re-derives whether the row is expandable.
+
+const measureDisclosures = (target) => {
+  const root = target instanceof Element ? target : document;
+  const list = [];
+  if (target instanceof Element && target.matches("details.formwork-disclosure")) {
+    list.push(target);
+  }
+  list.push(...root.querySelectorAll("details.formwork-disclosure"));
+
+  for (const d of list) {
+    const summary = d.querySelector(":scope > summary");
+    if (!summary) continue;
+
+    const hasBody = !!d.querySelector(":scope > .formwork-disclosure-body");
+    let expandable;
+    if (hasBody || d.open) {
+      // A body always hides revealable content; an already-open row was
+      // expandable when it was opened (and its text is wrapped now, so it
+      // can no longer be measured for overflow).
+      expandable = true;
+    } else {
+      const text = summary.querySelector(".formwork-disclosure-text") || summary;
+      expandable = text.scrollWidth > text.clientWidth;
+    }
+
+    if (expandable) {
+      d.setAttribute("data-expandable", "");
+      summary.removeAttribute("tabindex");
+    } else {
+      d.removeAttribute("data-expandable");
+      // Keep a non-expandable summary out of the tab order: toggling it
+      // would reveal nothing.
+      summary.setAttribute("tabindex", "-1");
+    }
+  }
+};
+
+// Defer to the next frame so layout is settled before measuring.
+const scheduleMeasureDisclosures = (target) =>
+  requestAnimationFrame(() => measureDisclosures(target));
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => scheduleMeasureDisclosures(document));
+} else {
+  scheduleMeasureDisclosures(document);
+}
+document.addEventListener("htmx:after:settle", (e) => {
+  scheduleMeasureDisclosures(e.detail && e.detail.target ? e.detail.target : document);
+});
+
 // --- Alpine initialization for htmx-swapped content ---
 // htmx inserts and morphs server HTML outside Alpine's knowledge.  Two
 // failure modes have to be handled together:

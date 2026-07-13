@@ -5,6 +5,27 @@ from playwright.sync_api import expect
 from .conftest import submit
 
 
+def _after_content(page, selector):
+    """Return the CSS ``content`` of an element's ``::after`` (the [more]/[less]
+    affordance), e.g. ``'"[more]"'`` or ``'none'``."""
+    return page.evaluate(
+        "(sel) => getComputedStyle(document.querySelector(sel), '::after').content",
+        selector,
+    )
+
+
+def _is_expandable(page, selector):
+    """Whether measureDisclosures marked the <details> as having something to reveal."""
+    return page.evaluate(
+        "(sel) => document.querySelector(sel).hasAttribute('data-expandable')",
+        selector,
+    )
+
+
+def _is_open(page, selector):
+    return page.evaluate("(sel) => document.querySelector(sel).open", selector)
+
+
 class TestFormStructure:
     """Form renders correctly with all expected structural elements."""
 
@@ -57,7 +78,8 @@ class TestFormStructure:
 
 
 class TestHelpTextToggle:
-    """Help text truncates to one line, with a [more]/[less] toggle when it overflows."""
+    """Help text lives in a native <details>; when it overflows one line the
+    summary gains a [more]/[less] affordance and truncates while closed."""
 
     def _narrow(self, basic_page):
         basic_page.set_viewport_size({"width": 480, "height": 720})
@@ -65,87 +87,95 @@ class TestHelpTextToggle:
         basic_page.wait_for_load_state("domcontentloaded")
         basic_page.wait_for_timeout(300)
 
-    def test_toggle_hidden_when_text_fits(self, basic_page):
-        """The "message" field's help text fits on one line, so the toggle hides after measuring."""
-        toggle = basic_page.locator("#id_message_helptext button")
-        expect(toggle).not_to_be_visible()
+    def test_no_affordance_when_text_fits(self, basic_page):
+        """The "message" help fits one line, so measureDisclosures leaves it
+        non-expandable: no [more] on the summary."""
+        disclosure = "#id_message_disclosure"
+        assert _is_expandable(basic_page, disclosure) is False
+        assert _after_content(basic_page, f"{disclosure} > summary") == "none"
 
-    def test_truncate_survives_morph(self, basic_page):
-        """Server HTML carries truncate statically, so a morph cannot wipe it."""
-        submit(basic_page)
-        helptext = basic_page.locator("#id_name_helptext span")
-        assert "truncate" in (helptext.get_attribute("class") or "")
-
-    def test_toggle_shown_when_text_overflows(self, basic_page):
+    def test_affordance_shown_when_text_overflows(self, basic_page):
         self._narrow(basic_page)
-        toggle = basic_page.locator("#id_agree_helptext button")
-        assert toggle.is_visible()
-        assert toggle.text_content() == "[more]"
+        disclosure = "#id_agree_disclosure"
+        assert _is_expandable(basic_page, disclosure) is True
+        assert _after_content(basic_page, f"{disclosure} > summary") == '"[more]"'
 
     def test_click_expands_and_collapses(self, basic_page):
         self._narrow(basic_page)
-        helptext = basic_page.locator("#id_agree_helptext span")
-        toggle = basic_page.locator("#id_agree_helptext button")
+        disclosure = "#id_agree_disclosure"
+        summary = basic_page.locator(f"{disclosure} > summary")
 
-        assert "truncate" in (helptext.get_attribute("class") or "")
+        assert _is_open(basic_page, disclosure) is False
 
-        toggle.click()
-        assert toggle.text_content() == "[less]"
-        assert "truncate" not in (helptext.get_attribute("class") or "")
+        summary.click()
+        assert _is_open(basic_page, disclosure) is True
+        assert _after_content(basic_page, f"{disclosure} > summary") == '"[less]"'
 
-        toggle.click()
-        assert toggle.text_content() == "[more]"
-        assert "truncate" in (helptext.get_attribute("class") or "")
+        summary.click()
+        assert _is_open(basic_page, disclosure) is False
+        assert _after_content(basic_page, f"{disclosure} > summary") == '"[more]"'
 
-    def test_expanded_icon_and_button_align_to_edges(self, basic_page):
+    def test_expanded_state_survives_morph(self, basic_page):
+        """Regression: an expanded disclosure used to collapse on the validation
+        swap because Alpine re-ran the collapsed server markup.  Native <details
+        open> is in htmx.config.morphIgnore, so it now stays open across the morph."""
         self._narrow(basic_page)
-        toggle = basic_page.locator("#id_agree_helptext button")
-        toggle.click()
+        disclosure = "#id_agree_disclosure"
+        basic_page.locator(f"{disclosure} > summary").click()
+        assert _is_open(basic_page, disclosure) is True
 
-        icon_box = basic_page.locator("#id_agree_helptext i").bounding_box()
-        toggle_box = toggle.bounding_box()
-        row_box = basic_page.locator("#id_agree_helptext").bounding_box()
+        submit(basic_page)
 
-        assert abs(icon_box["y"] - row_box["y"]) <= 3
-        row_bottom = row_box["y"] + row_box["height"]
-        toggle_bottom = toggle_box["y"] + toggle_box["height"]
-        assert abs(toggle_bottom - row_bottom) <= 3
+        assert _is_open(basic_page, disclosure) is True
+
+    def test_expanded_icon_aligns_to_top(self, basic_page):
+        """When expanded the leading icon pins to the first text line (top of
+        the wrapped row) rather than centering."""
+        self._narrow(basic_page)
+        disclosure = "#id_agree_disclosure"
+        basic_page.locator(f"{disclosure} > summary").click()
+
+        icon_box = basic_page.locator(f"{disclosure} > summary > i").bounding_box()
+        summary_box = basic_page.locator(f"{disclosure} > summary").bounding_box()
+        assert abs(icon_box["y"] - summary_box["y"]) <= 4
 
 
 class TestInlineErrorToggle:
-    """Meta.error_display = "inline": errors render like help text, in red, below the field."""
+    """Meta.error_display = "inline": the error renders in the summary (red, with
+    a circle-x icon); help text moves into the <details> body, revealed with [more]."""
 
     def test_no_tooltip_wrapper(self, inline_errors_page):
         submit(inline_errors_page)
         assert inline_errors_page.locator("#inline-errors-form .tooltip").count() == 0
 
-    def test_error_row_visible_help_text_hidden_when_collapsed(self, inline_errors_page):
+    def test_error_visible_help_hidden_when_collapsed(self, inline_errors_page):
         submit(inline_errors_page)
-        error_row = inline_errors_page.locator("#id_name_error")
+        error = inline_errors_page.locator("#id_name_error")
         helptext = inline_errors_page.locator("#id_name_helptext")
-        assert error_row.is_visible()
-        # sr-only keeps a 1x1px box, so is_visible() reports True; check the
-        # resolved class list (Alpine merges :class into class at runtime).
-        assert "sr-only" in (helptext.get_attribute("class") or "")
+        expect(error).to_be_visible()
+        # Help text is the <details> body, hidden while the disclosure is closed.
+        expect(helptext).not_to_be_visible()
 
     def test_click_more_reveals_error_and_help_text_together(self, inline_errors_page):
         submit(inline_errors_page)
-        toggle = inline_errors_page.locator("#id_name_error button")
-        assert toggle.text_content() == "[more]"
+        disclosure = "#id_name_disclosure"
+        summary = inline_errors_page.locator(f"{disclosure} > summary")
+        assert _after_content(inline_errors_page, f"{disclosure} > summary") == '"[more]"'
 
-        toggle.click()
-        assert toggle.text_content() == "[less]"
-        assert inline_errors_page.locator("#id_name_helptext").is_visible()
-        assert "government-issued" in inline_errors_page.locator("#id_name_helptext").text_content()
+        summary.click()
+        assert _after_content(inline_errors_page, f"{disclosure} > summary") == '"[less]"'
+        helptext = inline_errors_page.locator("#id_name_helptext")
+        expect(helptext).to_be_visible()
+        assert "government-issued" in helptext.text_content()
 
     def test_click_less_collapses_help_text_again(self, inline_errors_page):
         submit(inline_errors_page)
-        toggle = inline_errors_page.locator("#id_name_error button")
-        toggle.click()
-        toggle.click()
-        assert toggle.text_content() == "[more]"
-        helptext = inline_errors_page.locator("#id_name_helptext")
-        assert "sr-only" in (helptext.get_attribute("class") or "")
+        disclosure = "#id_name_disclosure"
+        summary = inline_errors_page.locator(f"{disclosure} > summary")
+        summary.click()
+        summary.click()
+        assert _after_content(inline_errors_page, f"{disclosure} > summary") == '"[more]"'
+        expect(inline_errors_page.locator("#id_name_helptext")).not_to_be_visible()
 
     def test_native_first_real_click_shows_inline_error(self, inline_errors_page):
         # No noValidate cheat: the real native-first click path. "Alice" is

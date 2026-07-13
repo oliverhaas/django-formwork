@@ -46,30 +46,33 @@ class TestFieldsetStructure:
         inp = fieldset.find("input")
         assert inp is not None
 
-    def test_help_text_as_label_paragraph(self):
+    def test_help_text_in_disclosure_summary(self):
         class F(FormworkForm):
             name = forms.CharField(help_text="Enter your name")
 
         soup = render_html(F())
-        helptext = soup.find("p", class_="label")
-        assert helptext is not None
-        assert "Enter your name" in helptext.get_text()
+        details = soup.find("details", class_="formwork-disclosure")
+        assert details is not None
+        summary = details.find("summary", class_="label")
+        assert summary is not None
+        assert "Enter your name" in summary.get_text()
 
     def test_help_text_has_id(self):
         class F(FormworkForm):
             name = forms.CharField(help_text="Enter your name")
 
         soup = render_html(F())
-        helptext = soup.find("p", class_="label", id="id_name_helptext")
+        helptext = soup.find(id="id_name_helptext")
         assert helptext is not None
+        assert "Enter your name" in helptext.get_text()
 
     def test_help_text_has_leading_info_icon(self):
         class F(FormworkForm):
             name = forms.CharField(help_text="Enter your name")
 
         soup = render_html(F())
-        helptext = soup.find("p", class_="label")
-        icon = helptext.find("i", class_="icon-info")
+        summary = soup.find("summary", class_="label")
+        icon = summary.find("i", class_="icon-info")
         assert icon is not None
         assert icon.get("aria-hidden") == "true"
 
@@ -108,8 +111,8 @@ class TestFieldOrdering:
         soup = render_html(F())
         all_elements = list(soup.descendants)
         inp = soup.find("input")
-        helptext = soup.find("p", class_="label")
-        assert all_elements.index(inp) < all_elements.index(helptext)
+        details = soup.find("details", class_="formwork-disclosure")
+        assert all_elements.index(inp) < all_elements.index(details)
 
     def test_errors_before_helptext(self):
         class F(FormworkForm):
@@ -119,7 +122,7 @@ class TestFieldOrdering:
         form.is_valid()
         soup = render_html(form)
         error_div = soup.find("div", class_="tooltip-content")
-        helptext = soup.find("p", attrs={"id": "id_name_helptext"})
+        helptext = soup.find(id="id_name_helptext")
         assert error_div is not None
         assert helptext is not None
         all_elements = list(soup.descendants)
@@ -215,10 +218,12 @@ class TestInlineErrorRendering:
         form = F(data={"name": ""}, error_display="inline")
         form.is_valid()
         soup = render_html(form)
-        error_row = soup.find("p", attrs={"id": "id_name_error"})
-        assert error_row is not None
-        assert error_row["role"] == "alert"
-        assert "text-error" in error_row.get("class", [])
+        error = soup.find(id="id_name_error")
+        assert error is not None
+        assert error["role"] == "alert"
+        # text-error colors the whole summary (icon + text), not just the span.
+        summary = error.find_parent("summary")
+        assert "text-error" in summary.get("class", [])
 
     def test_error_row_has_leading_icon(self):
         class F(FormworkForm):
@@ -227,16 +232,16 @@ class TestInlineErrorRendering:
         form = F(data={"name": ""}, error_display="inline")
         form.is_valid()
         soup = render_html(form)
-        error_row = soup.find("p", attrs={"id": "id_name_error"})
+        summary = soup.find(id="id_name_error").find_parent("summary")
         # An X-in-circle error glyph, not the "!"-in-circle alert (which is
         # near-identical to the info icon the help text uses at 16px). The X
         # reads as "invalid/failed" and stays distinct from help, without
         # borrowing a warning triangle to mean "error".
-        icon = error_row.find("i", class_="icon-circle-x")
+        icon = summary.find("i", class_="icon-circle-x")
         assert icon is not None
         assert icon.get("aria-hidden") == "true"
 
-    def test_error_row_has_formwork_errors_hook(self):
+    def test_disclosure_has_formwork_errors_hook(self):
         # .formwork-errors is what disableNativeValidation() keys off, so inline
         # mode reaches parity with tooltip mode: once a server error is showing,
         # native validation turns off and later errors route to the server.
@@ -246,8 +251,8 @@ class TestInlineErrorRendering:
         form = F(data={"name": ""}, error_display="inline")
         form.is_valid()
         soup = render_html(form)
-        error_row = soup.find("p", attrs={"id": "id_name_error"})
-        assert "formwork-errors" in error_row.get("class", [])
+        disclosure = soup.find(id="id_name_disclosure")
+        assert "formwork-errors" in disclosure.get("class", [])
 
     def test_multiple_errors_joined_in_single_row(self):
         class F(FormworkForm):
@@ -256,40 +261,45 @@ class TestInlineErrorRendering:
         form = F(data={"email": "bad"}, error_display="inline")
         form.is_valid()
         soup = render_html(form)
-        error_row = soup.find("p", attrs={"id": "id_email_error"})
-        assert error_row.find_all("p") == []
+        error = soup.find(id="id_email_error")
+        assert error.find_all("p") == []
         assert len(form.errors["email"]) >= 2
         for message in form.errors["email"]:
-            assert message in error_row.get_text()
+            assert message in error.get_text()
 
-    def test_help_text_hidden_but_present_when_collapsed(self):
+    def test_help_text_present_in_details_body_when_collapsed(self):
         class F(FormworkForm):
             name = forms.CharField(help_text="Enter your name")
 
         form = F(data={"name": ""}, error_display="inline")
         form.is_valid()
         soup = render_html(form)
-        helptext = soup.find("p", attrs={"id": "id_name_helptext"})
+        helptext = soup.find(id="id_name_helptext")
         assert helptext is not None
         assert "Enter your name" in helptext.get_text()
-        # Server-render the collapsed state into the static class so the help is
-        # hidden on first paint and stays hidden even if Alpine never reprocesses
-        # this node after the htmx morph. The :class binding then lets [more]
-        # reveal it (expanded -> sr-only removed).
-        assert "sr-only" in (helptext.get("class") or [])
-        assert "sr-only" in helptext.get(":class", "")
+        # Help lives in the <details> body. The server renders the disclosure
+        # collapsed (no `open`), so native <details> hides the body on first
+        # paint while keeping it in the DOM for aria-describedby. No Alpine and
+        # no sr-only class means the htmx morph has nothing to clobber.
+        details = helptext.find_parent("details")
+        assert details is not None
+        assert not details.has_attr("open")
+        assert "formwork-disclosure-body" in helptext.get("class", [])
 
-    def test_no_more_button_when_no_help_text_and_no_overflow(self):
+    def test_no_body_or_button_when_error_has_no_help_text(self):
         class F(FormworkForm):
             name = forms.CharField()
 
         form = F(data={"name": ""}, error_display="inline")
         form.is_valid()
         soup = render_html(form)
-        error_row = soup.find("p", attrs={"id": "id_name_error"})
-        button = error_row.find("button")
-        assert button is not None
-        assert "x-show" in button.attrs
+        disclosure = soup.find(id="id_name_disclosure")
+        # No help text -> nothing to reveal, so no body. The [more]/[less]
+        # affordance is a CSS ::after gated on data-expandable, which
+        # measureDisclosures sets client-side only when the summary overflows;
+        # the server renders neither a button nor a body.
+        assert disclosure.find("button") is None
+        assert disclosure.find("p", class_="formwork-disclosure-body") is None
 
     def test_inline_mode_is_default(self):
         class F(FormworkForm):
@@ -299,7 +309,7 @@ class TestInlineErrorRendering:
         form.is_valid()
         soup = render_html(form)
         assert soup.find("div", class_="tooltip") is None
-        assert soup.find("p", attrs={"id": "id_name_error"}) is not None
+        assert soup.find(id="id_name_error") is not None
 
 
 class TestNonFieldErrors:
@@ -374,7 +384,7 @@ class TestAriaAttributes:
             assert soup.find(id=ref) is not None, f"aria-describedby points to missing #{ref}"
 
     def test_aria_describedby_targets_exist_in_inline_mode(self):
-        """The sr-only help text must stay in the DOM so aria-describedby still resolves."""
+        """The collapsed <details> body help text stays in the DOM so aria-describedby resolves."""
 
         class F(FormworkForm):
             name = forms.CharField(help_text="Your name")
