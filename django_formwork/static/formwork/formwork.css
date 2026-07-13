@@ -386,6 +386,20 @@ i.icon {
     @apply input w-full;
 }
 
+/* input-ghost passed via widget attrs lands on the inner input, but the
+   border and fill sit on this wrapper; forward the ghost look, mirroring
+   DaisyUI's .input-ghost (same idea as the aria-invalid forwarding). */
+.date-picker-label:has(> input.input-ghost) {
+    box-shadow: none;
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.date-picker-label:has(> input.input-ghost:focus) {
+    background-color: var(--color-base-100);
+    border-color: transparent;
+}
+
 /* DatePicker: toggle button — subtle by default, dark when open. */
 .date-picker-toggle {
     @apply cursor-pointer opacity-40 hover:opacity-70 transition-opacity shrink-0;

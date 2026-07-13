@@ -1,6 +1,6 @@
 <div class="date-picker" :data-open="open"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datepicker"{% endif %} x-data="formworkDatePicker" data-value="{{ widget.value|default('', true) }}" @click.outside="open = false">
   <label class="date-picker-label">
-    <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default("", true) }}"{% include "django/forms/widgets/attrs.html" %} @focus="open = true" @input="value = $el.value" autocomplete="off" class="grow">
+    <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default("", true) }}"{% include "django/forms/widgets/attrs.html" %} @focus="open = true" @input="value = $el.value" autocomplete="off" class="grow{% if widget.extra_class %} {{ widget.extra_class }}{% endif %}">
     <button type="button" class="date-picker-toggle" @click.stop="open = !open" aria-label="Open calendar">
       <i class="icon icon-calendar size-4"></i>
     </button>

@@ -31,3 +31,11 @@ class DatePicker(forms.DateInput):
         if attrs:
             defaults.update(attrs)
         super().__init__(attrs=defaults, format=format or "%Y-%m-%d")
+
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        # The template hardcodes class="grow"; rendering attrs.class too
+        # would emit a duplicate class attribute, so pass it separately.
+        context = super().get_context(name, value, attrs)
+        widget = context["widget"]
+        widget["extra_class"] = widget["attrs"].pop("class", "")
+        return context
