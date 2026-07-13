@@ -6,7 +6,7 @@ import pytest
 from django import forms
 
 from django_formwork.forms import FormworkForm
-from django_formwork.widgets import Select, TextInput, Textarea
+from django_formwork.widgets import Select, Textarea, TextInput
 
 from .conftest import assert_html_equivalent, render_form, render_widget
 

@@ -24,8 +24,8 @@ from django_formwork.widgets import (
     Rating,
     SearchSelect,
     Select,
-    TextInput,
     Textarea,
+    TextInput,
     Toggle,
     ValidatedTextarea,
 )
