@@ -67,7 +67,7 @@ class CityForm(FormworkForm):
     )
 ```
 
-**Choices-backed**: The form defines a `search_choices_<fieldname>(query, request)` method. It receives the search query and the request, and returns a list of dicts or `(value, label)` tuples:
+**Choices-backed**: The form defines a `search_choices_<fieldname>(query, request)` static method. It receives the search query and the request, and returns a list of dicts or `(value, label)` tuples. Declare it `@staticmethod`: the endpoint calls it without the form instance, and formwork raises `ImproperlyConfigured` at form init for an instance method:
 
 ```python
 from django_formwork import FormworkForm
@@ -76,12 +76,19 @@ from django_formwork.widgets import SearchSelect
 class TagForm(FormworkForm):
     tags = forms.ChoiceField(widget=SearchSelect)
 
+    @staticmethod
     def search_choices_tags(query, request):
         return [
             {"value": t.slug, "label": t.name}
             for t in Tag.objects.filter(name__icontains=query)[:20]
         ]
 ```
+
+!!! warning "The registry is per-process"
+    Registration happens in `__init__`, into a per-process registry. In a multi-worker deployment a search request can land on a worker that has not instantiated the form yet (for example right after a deploy) and return an intermittent 404. If that matters for your setup, instantiate the form once at startup, e.g. in `AppConfig.ready()`.
+
+!!! warning "The endpoint serves the queryset captured at form construction"
+    Model-backed registration captures the field's queryset when the form is instantiated. Assigning `form.fields["x"].queryset = scoped_qs` afterwards changes the rendered choices only; the search endpoint keeps serving and labelling results from the originally captured queryset. Do not rely on post-construction assignment for per-user scoping. Bake visibility rules into the class-level queryset and use `search_decorator` for access control.
 
 ### Access control
 

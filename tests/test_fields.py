@@ -205,6 +205,35 @@ class TestFormworkModelMultipleChoiceField:
         assert converted.required is False
 
 
+def test_from_field_preserves_empty_label_for_blank_radio_select():
+    """from_field keeps the empty choice of a blank=True RadioSelect field."""
+    # Regression: blank was read off the source field (always False there),
+    # so the RadioSelect branch forced empty_label to None.
+    from django.forms import ModelChoiceField, RadioSelect
+
+    original = ModelChoiceField(queryset=User.objects.all(), widget=RadioSelect, blank=True)
+    converted = FormworkModelChoiceField.from_field(original)
+    assert converted.empty_label is not None
+
+
+def test_meta_widgets_radio_select_keeps_empty_choice_for_blank_fk():
+    """A blank=True FK swapped by the metaclass keeps its empty choice under RadioSelect."""
+    from django.forms import RadioSelect
+    from e2e.models import DirtyTrackedData
+
+    from django_formwork.forms import FormworkModelForm
+
+    class _Form(FormworkModelForm):
+        class Meta:
+            model = DirtyTrackedData
+            fields = ["name", "email", "region"]
+            widgets = {"region": RadioSelect}
+
+    field = _Form.base_fields["region"]
+    assert isinstance(field, FormworkModelChoiceField)
+    assert field.empty_label is not None
+
+
 @pytest.mark.django_db
 class TestFormworkModelFormMetaclass:
     def test_auto_swaps_model_choice_field(self):

@@ -160,12 +160,13 @@ class CityForm(FormworkForm):
     )
 ```
 
-For choices-backed search, define a `search_choices_<fieldname>` method on the form:
+For choices-backed search, define a `search_choices_<fieldname>` static method on the form. It must be a `@staticmethod`: the endpoint calls it as `(query, request)` without the form instance, and formwork rejects an instance method at form init:
 
 ```python
 class TagForm(FormworkForm):
     tags = forms.ChoiceField(widget=SearchSelect)
 
+    @staticmethod
     def search_choices_tags(query, request):
         return [
             {"value": t.slug, "label": t.name}

@@ -66,7 +66,10 @@ class FormworkModelFormMetaclass(ModelFormMetaclass):
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
         if not hasattr(cls, "base_fields"):
             return cls
+        declared = getattr(cls, "declared_fields", {})
         for field_name, field in cls.base_fields.items():
+            if field_name in declared:
+                continue
             if type(field) is ModelChoiceField:
                 cls.base_fields[field_name] = FormworkModelChoiceField.from_field(field)
             elif type(field) is ModelMultipleChoiceField:
@@ -79,11 +82,28 @@ class _AutoSearchMixin:
 
     Two paths:
 
-    1. **Model-backed** — widget has ``search_fields`` and the field
+    1. **Model-backed**: widget has ``search_fields`` and the field
        provides a queryset (``ModelChoiceField``).
-    2. **Choices-backed** — the form defines a
+    2. **Choices-backed**: the form defines a
        ``search_choices_<fieldname>(query, request)`` method that returns
        results directly (list of dicts or ``(value, label)`` tuples).
+       It is called without the form instance, so declare it
+       ``@staticmethod``.
+
+    Caveats:
+
+    - The registry is per-process and populated when the form is
+      instantiated.  In a multi-worker deployment a search request can land
+      on a worker that has not instantiated the form yet (e.g. right after
+      a deploy) and return 404.  If that matters, instantiate the form once
+      at startup (``AppConfig.ready``).
+    - Model-backed registration captures the field's queryset at form
+      construction time.  Assigning ``form.fields["x"].queryset`` afterwards
+      changes the rendered choices only; the search endpoint keeps serving
+      (and labelling) the originally captured queryset.  Do not rely on
+      post-construction assignment for per-user scoping: bake visibility
+      rules into the class-level queryset and use ``search_decorator`` for
+      access control.
     """
 
     if TYPE_CHECKING:
@@ -129,7 +149,14 @@ class _AutoSearchMixin:
                     f"or None for public access."
                 )
                 raise ImproperlyConfigured(msg)
-            decorator = raw_decorator  # Validated: not _NOT_SET → Callable | None
+            if raw_decorator is not None and not callable(raw_decorator):
+                msg = (
+                    f"Field '{name}' has a non-callable search_decorator "
+                    f"({raw_decorator!r}). Pass a decorator (e.g. login_required) "
+                    f"or None for public access."
+                )
+                raise ImproperlyConfigured(msg)
+            decorator = raw_decorator
 
             # Path 1: model-backed (search_fields on widget + queryset on field).
             if has_model_search and search_fields is not None and queryset is not None:
@@ -139,11 +166,21 @@ class _AutoSearchMixin:
             # Path 2: choices-backed (search_choices_<name> method on form).
             method = getattr(self.__class__, f"search_choices_{name}", None)
             if method is not None:
+                raw_attr = inspect.getattr_static(self.__class__, f"search_choices_{name}", None)
+                if inspect.isfunction(raw_attr):
+                    params = list(inspect.signature(raw_attr).parameters)
+                    if params and params[0] == "self":
+                        msg = (
+                            f"{type(self).__name__}.search_choices_{name} is an instance "
+                            f"method; the search endpoint calls it as (query, request) "
+                            f"without the form instance. Declare it with @staticmethod."
+                        )
+                        raise ImproperlyConfigured(msg)
                 widget_type = self._widget_type_for(widget)
                 key = make_choices_key(self.__class__, name)
                 registration = SearchRegistration(
                     search_func=method,
-                    search_decorator=decorator if callable(decorator) else None,
+                    search_decorator=decorator,
                     widget_type=widget_type,
                 )
                 register(key, registration)
@@ -185,7 +222,7 @@ class _AutoSearchMixin:
             icon_from_instance=icon_func,
             description_from_instance=desc_func,
             selected_toggle_class_from_instance=selected_toggle_class_func,
-            search_decorator=widget.search_decorator if callable(widget.search_decorator) else None,
+            search_decorator=widget.search_decorator,
             widget_type=widget_type,
         )
         register(key, registration)

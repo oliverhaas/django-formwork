@@ -161,7 +161,9 @@ class FormworkModelChoiceField(ModelChoiceField):
             help_text=field.help_text,
             to_field_name=getattr(field, "to_field_name", None),
             limit_choices_to=field.limit_choices_to,
-            blank=getattr(field, "blank", False),
+            # ModelChoiceField consumes blank without storing it; the source
+            # field's resolved empty_label is the only surviving signal.
+            blank=field.empty_label is not None,
         )
         new_field.error_messages = field.error_messages
         new_field.validators = field.validators

@@ -208,3 +208,77 @@ def test_formset_renders_with_formwork_renderer():
     assert 'name="form-1-name"' in html
     # Should have formwork fieldset structure
     assert 'class="fieldset"' in html
+
+
+def test_choices_search_instance_method_raises_improperly_configured():
+    """An instance-method search_choices_<name> is rejected at form init."""
+    # Regression: it registered unbound and blew up with TypeError at request time.
+    from django.core.exceptions import ImproperlyConfigured
+
+    from django_formwork.widgets import SearchSelect
+
+    class _Form(FormworkForm):
+        city = forms.ChoiceField(choices=[("a", "A")], widget=SearchSelect(search_decorator=None))
+
+        def search_choices_city(self, query, request=None):
+            return []
+
+    with pytest.raises(ImproperlyConfigured, match="staticmethod"):
+        _Form()
+
+
+def test_choices_search_staticmethod_registers():
+    """A @staticmethod search_choices_<name> registers without error."""
+    from django_formwork._registry import get_registration, make_choices_key
+    from django_formwork.widgets import SearchSelect
+
+    class _Form(FormworkForm):
+        city = forms.ChoiceField(choices=[("a", "A")], widget=SearchSelect(search_decorator=None))
+
+        @staticmethod
+        def search_choices_city(query, request=None):
+            return []
+
+    _Form()
+    assert get_registration(make_choices_key(_Form, "city")) is not None
+
+
+def test_non_callable_search_decorator_raises_improperly_configured():
+    """A non-callable search_decorator is a configuration error, not a public endpoint."""
+    # Regression: a typo like search_decorator="login_required" silently became None.
+    from django.core.exceptions import ImproperlyConfigured
+
+    from django_formwork.widgets import SearchSelect
+
+    class _Form(FormworkForm):
+        city = forms.ChoiceField(
+            choices=[("a", "A")],
+            widget=SearchSelect(search_decorator="login_required"),
+        )
+
+        @staticmethod
+        def search_choices_city(query, request=None):
+            return []
+
+    with pytest.raises(ImproperlyConfigured, match="non-callable"):
+        _Form()
+
+
+def test_metaclass_leaves_declared_plain_model_choice_field_alone():
+    """A declared plain ModelChoiceField keeps its type and attributes."""
+    # Regression: declared fields were rebuilt through the lossy from_field copy.
+    from e2e.models import DirtyTrackedData, Region
+
+    class _Form(FormworkModelForm):
+        region = forms.ModelChoiceField(
+            queryset=Region.objects.all(),
+            template_name="custom/field.html",
+        )
+
+        class Meta:
+            model = DirtyTrackedData
+            fields = ["name", "email", "region"]
+
+    field = _Form.base_fields["region"]
+    assert type(field) is forms.ModelChoiceField
+    assert field.template_name == "custom/field.html"
