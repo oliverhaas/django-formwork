@@ -68,7 +68,7 @@ jobs:
         run: npx @tailwindcss/cli -i tests/e2e/app.css -o django_formwork/static/formwork/formwork-dist.css
 
       - name: Run tests
-        run: uv run pytest tests/ -m "not screenshot" -n auto
+        run: uv run pytest tests/ -m "not screenshot and not benchmark" -n auto
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7

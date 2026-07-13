@@ -89,7 +89,7 @@ jobs:
         run: uv run ty check django_formwork/
 
       - name: Run tests
-        run: uv run pytest tests/ -m "not screenshot" -n auto
+        run: uv run pytest tests/ -m "not screenshot and not benchmark" -n auto
 
   tag-and-trigger:
     needs: [check-version, test]
