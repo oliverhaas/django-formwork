@@ -765,6 +765,53 @@ def test_search_select_root_data_selected_toggle_class_from_preselected():
 
 
 @pytest.mark.unit
+def test_search_select_summary_static_class_includes_selected_toggle_class():
+    """A preselected option's toggle class is server-rendered on the summary, before Alpine runs."""
+    widget = SearchSelect(
+        choices=[
+            ("", ""),
+            ("a", ChoiceLabel("Alpha", selected_toggle_class="select-error")),
+        ],
+    )
+    soup = render_widget(widget, name="test", value="a")
+    assert "select-error" in soup.find("summary")["class"]
+
+
+@pytest.mark.unit
+def test_search_select_summary_static_placeholder_class_tracks_selection():
+    """Without a selection the summary is server-rendered with formwork-placeholder; with one it is not."""
+    widget = SearchSelect(choices=[("", ""), ("a", "Alpha")])
+    empty = render_widget(widget, name="test")
+    selected = render_widget(widget, name="test", value="a")
+    assert "formwork-placeholder" in empty.find("summary")["class"]
+    assert "formwork-placeholder" not in selected.find("summary")["class"]
+
+
+@pytest.mark.unit
+def test_search_select_selected_icon_server_rendered_without_cloak():
+    """A preselected option's icon is server-rendered inside the trigger span, not x-cloaked."""
+    widget = SearchSelect(
+        choices=[("a", ChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>")))],
+    )
+    soup = render_widget(widget, name="test", value="a")
+    span = soup.find("summary").find("span", attrs={"x-show": "icon"})
+    assert span.find("svg") is not None
+    assert not span.has_attr("x-cloak")
+
+
+@pytest.mark.unit
+def test_search_select_icon_span_cloaked_without_selection():
+    """No selected icon → the trigger icon span stays empty and x-cloaked until Alpine decides."""
+    widget = SearchSelect(
+        choices=[("", ""), ("a", ChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>")))],
+    )
+    soup = render_widget(widget, name="test")
+    span = soup.find("summary").find("span", attrs={"x-show": "icon"})
+    assert span.has_attr("x-cloak")
+    assert span.find("svg") is None
+
+
+@pytest.mark.unit
 def test_search_select_summary_class_binding_includes_selected_toggle_class():
     """The summary :class array binds selectedToggleClass so Alpine can swap it live."""
     widget = SearchSelect(choices=[("a", "Alpha")])

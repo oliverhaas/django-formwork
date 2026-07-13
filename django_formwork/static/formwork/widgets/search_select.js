@@ -18,6 +18,18 @@ document.addEventListener("alpine:init", () => {
     init() {
       const el = this.$el;
       this.showSearch = el.dataset.showSearch === "true";
+      // The template server-renders the initial display classes on the
+      // summary so they are styled at first paint, before Alpine loads.
+      // Strip them here, in the same synchronous pass in which the :class
+      // binding re-applies them: Alpine only ever removes classes it added
+      // itself, so a static copy would go stale on the next pick.
+      const summary = el.querySelector("summary");
+      if (summary) {
+        summary.classList.remove("formwork-placeholder");
+        for (const cls of (el.dataset.selectedToggleClass || "").split(/\s+/)) {
+          if (cls) summary.classList.remove(cls);
+        }
+      }
       const sync = () => {
         const nextValue = el.dataset.value || "";
         const nextLabel = el.dataset.label || "";
