@@ -138,12 +138,24 @@ def test_input_mask_error_state(renderer):
 
 @pytest.mark.integration
 def test_input_mask_form_prefix(renderer):
-    """Form prefix propagates to hidden input name and id."""
+    """Form prefix propagates to the hidden input name and the display input id."""
     form = InputMaskForm(prefix="contact")
     soup = render_form(form, renderer=renderer)
     hidden = soup.find("input", attrs={"name": "contact-phone"})
     assert hidden is not None
-    assert hidden["id"] == "id_contact-phone"
+    assert not hidden.has_attr("id")
+    display = soup.find("input", class_="input-mask-display")
+    assert display["id"] == "id_contact-phone"
+
+
+@pytest.mark.integration
+def test_input_mask_label_targets_display_input(renderer):
+    """The field label's for attribute points at the visible display input."""
+    form = InputMaskForm()
+    soup = render_form(form, renderer=renderer)
+    label = soup.find("label", class_="fieldset-legend")
+    display = soup.find("input", class_="input-mask-display")
+    assert label["for"] == display["id"]
 
 
 # ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────

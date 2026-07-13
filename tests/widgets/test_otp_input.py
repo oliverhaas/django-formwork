@@ -111,6 +111,14 @@ def test_otp_input_alpine_x_data():
     assert json.loads(wrapper["data-digits"]) == ["1", "2", "", ""]
 
 
+@pytest.mark.unit
+def test_otp_input_digit_boxes_have_aria_labels():
+    """Each digit box carries a positional aria-label for assistive tech."""
+    soup = render_widget(OTPInput(length=4), name="code", attrs={"id": "id_code"})
+    labels = [inp.get("aria-label") for inp in soup.find_all("input", class_="otp-digit")]
+    assert labels == [f"Digit {i} of 4" for i in range(1, 5)]
+
+
 # ─── Level 3: Form integration ───────────────────────────────────────────
 
 

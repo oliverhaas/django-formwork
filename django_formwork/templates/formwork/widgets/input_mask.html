@@ -1,5 +1,5 @@
 <div class="input-mask"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_mask"{% endif %} x-data="formworkInputMask" data-mask="{{ widget.mask }}">
-  <input x-ref="hidden" type="hidden" name="{{ widget.name }}"{% if widget.attrs.id %} id="{{ widget.attrs.id }}"{% endif %} value="{{ widget.value|default:'' }}">
+  <input x-ref="hidden" type="hidden" name="{{ widget.name }}" value="{{ widget.value|default:'' }}">
   <div class="input-mask-overlay" x-ref="overlay" aria-hidden="true"></div>
-  <input x-ref="display" type="text" data-initial="{{ widget.value|default:'' }}" class="input-mask-display"{% for name, value in widget.attrs.items %}{% if name != "id" and value is not False %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %} @input="handleInput($event)" @click="handleClick($event)" autocomplete="off">
+  <input x-ref="display" type="text"{% if widget.attrs.id %} id="{{ widget.attrs.id }}"{% endif %} data-initial="{{ widget.value|default:'' }}" class="input-mask-display"{% for name, value in widget.attrs.items %}{% if name != "id" and value is not False %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %} @input="handleInput($event)" @click="handleClick($event)" autocomplete="off">
 </div>

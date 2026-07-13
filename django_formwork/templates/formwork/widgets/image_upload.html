@@ -12,7 +12,7 @@
     </div>
     <div x-show="preview" x-cloak class="image-upload-preview-area">
       <div class="image-upload-preview-wrapper">
-        <img :src="preview" class="image-upload-preview">
+        <img :src="preview" alt="Preview of the selected image" class="image-upload-preview">
         <button type="button" class="image-upload-remove" @click.stop="clear()" aria-label="Remove image">
           <i class="icon icon-x image-upload-remove-icon"></i>
         </button>
