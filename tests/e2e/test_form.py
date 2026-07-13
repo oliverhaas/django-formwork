@@ -55,12 +55,12 @@ class TestFormStructure:
 
     def test_submit_empty_shows_errors(self, basic_page):
         submit(basic_page)
-        tooltips = basic_page.locator("#basic-form .tooltip-error")
-        assert tooltips.count() >= 1
+        errors = basic_page.locator("#basic-form details.formwork-errors")
+        assert errors.count() >= 1
 
     def test_error_has_role_alert(self, basic_page):
         submit(basic_page)
-        alerts = basic_page.locator('#basic-form .tooltip-content[role="alert"]')
+        alerts = basic_page.locator('#basic-form [role="alert"]')
         assert alerts.count() >= 1
 
     def test_aria_invalid_set(self, basic_page):
@@ -256,7 +256,7 @@ class TestMorphInfrastructure:
     def test_second_morph_clears_errors(self, basic_page):
         """Fill required fields and re-submit, errors should disappear."""
         submit(basic_page)
-        assert basic_page.locator("#basic-form .tooltip-error").count() >= 1
+        assert basic_page.locator("#basic-form details.formwork-errors").count() >= 1
 
         # Fill all required fields on the basic form
         basic_page.locator('input[name="name"]').fill("Alice")

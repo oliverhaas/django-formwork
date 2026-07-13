@@ -21,15 +21,15 @@ class TestTextInput:
 
     def test_submit_empty_shows_error(self, basic_page):
         submit(basic_page)
-        tooltip = basic_page.locator("#id_name_tooltip")
-        assert tooltip.count() == 1
+        error = basic_page.locator("#id_name_error")
+        assert error.count() == 1
 
     def test_submit_valid_clears_error(self, basic_page):
         submit(basic_page)
-        assert basic_page.locator("#id_name_tooltip").count() == 1
+        assert basic_page.locator("#id_name_error").count() == 1
         basic_page.locator('input[name="name"]').fill("Valid text")
         submit(basic_page)
-        assert basic_page.locator("#id_name_tooltip").count() == 0
+        assert basic_page.locator("#id_name_error").count() == 0
 
     def test_morph_preserves_value(self, basic_page):
         inp = basic_page.locator('input[name="name"]')
