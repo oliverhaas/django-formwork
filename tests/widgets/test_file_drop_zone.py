@@ -17,6 +17,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from django import forms
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils.datastructures import MultiValueDict
 
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import FileDropZone
@@ -123,10 +125,37 @@ def test_file_drop_zone_value_from_datadict_missing_returns_none():
 
 
 @pytest.mark.unit
-def test_file_drop_zone_allow_multiple_selected():
-    """FileDropZone has allow_multiple_selected = True."""
+def test_file_drop_zone_single_file_by_default():
+    """Default FileDropZone is single-file and does not force a multiple attr."""
     widget = FileDropZone()
+    assert widget.allow_multiple_selected is False
+    assert "multiple" not in widget.attrs
+
+
+@pytest.mark.unit
+def test_file_drop_zone_multiple_attr_enables_multiple_selection():
+    """Passing multiple in attrs opts the widget into multi-file selection."""
+    widget = FileDropZone(attrs={"multiple": True})
     assert widget.allow_multiple_selected is True
+
+
+@pytest.mark.unit
+def test_file_drop_zone_value_from_datadict_multivaluedict_single_file():
+    """A single upload in a real MultiValueDict yields the file, not a list."""
+    # Regression: getlist semantics handed FileField a list, failing to_python.
+    widget = FileDropZone()
+    upload = SimpleUploadedFile("notes.txt", b"formwork")
+    result = widget.value_from_datadict({}, MultiValueDict({"upload": [upload]}), "upload")
+    assert result is upload
+
+
+@pytest.mark.unit
+def test_file_drop_zone_value_from_datadict_multiple_returns_list():
+    """With multiple in attrs, value_from_datadict returns all uploaded files."""
+    widget = FileDropZone(attrs={"multiple": True})
+    uploads = [SimpleUploadedFile("a.txt", b"a"), SimpleUploadedFile("b.txt", b"b")]
+    result = widget.value_from_datadict({}, MultiValueDict({"upload": uploads}), "upload")
+    assert result == uploads
 
 
 # ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
@@ -235,6 +264,14 @@ def test_file_drop_zone_error_element_role_alert():
 
 
 @pytest.mark.unit
+def test_file_drop_zone_no_multiple_attr_by_default():
+    """Default rendering does not mark the file input as multiple."""
+    soup = render_widget(FileDropZone(), name="file")
+    inp = soup.find("input", {"type": "file"})
+    assert not inp.has_attr("multiple")
+
+
+@pytest.mark.unit
 def test_file_drop_zone_multiple_attr_passthrough():
     """multiple attr on the widget is passed through to the file input."""
     widget = FileDropZone(attrs={"multiple": True})
@@ -326,6 +363,16 @@ def test_file_drop_zone_error_state_shows_tooltip(renderer):
     tooltip = soup.find(id="id_upload_tooltip")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
+
+
+@pytest.mark.integration
+def test_file_drop_zone_single_upload_form_is_valid():
+    """A real single-file upload through request.FILES semantics validates."""
+    # Regression: every single-file upload failed validation.
+    upload = SimpleUploadedFile("notes.txt", b"formwork")
+    form = FileDropZoneForm(data={}, files=MultiValueDict({"upload": [upload]}))
+    assert form.is_valid(), form.errors
+    assert form.cleaned_data["upload"].name == "notes.txt"
 
 
 @pytest.mark.integration

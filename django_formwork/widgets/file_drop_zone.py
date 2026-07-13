@@ -16,12 +16,18 @@ class FileDropZone(_DropZoneMixin, forms.FileInput):
     dragged files or click-to-browse.  Uses Alpine.js for drag state and
     file list display.
 
+    By default the widget accepts a single file, matching
+    ``forms.FileField``.  Passing ``multiple`` in ``attrs`` opts into
+    multi-file selection; the widget then submits a list of files, so it
+    must be paired with a list-aware field (see the Django docs topic
+    "Uploading multiple files"), not a plain ``FileField``.
+
     Usage::
 
         attachment = forms.FileField(widget=FileDropZone)
 
         # Multiple files with type and size restrictions:
-        docs = forms.FileField(
+        docs = MultipleFileField(
             widget=FileDropZone(
                 attrs={"multiple": True, "accept": ".pdf,.doc,.docx"},
                 max_size=10 * 1024 * 1024,  # 10 MB
@@ -30,7 +36,6 @@ class FileDropZone(_DropZoneMixin, forms.FileInput):
     """
 
     template_name = "formwork/widgets/drop_zone.html"
-    allow_multiple_selected = True
 
     class Media:
         js = (_ModuleScript("formwork/widgets/drop_zone.js"),)
@@ -41,5 +46,6 @@ class FileDropZone(_DropZoneMixin, forms.FileInput):
         *,
         max_size: int | None = None,
     ) -> None:
+        self.allow_multiple_selected = bool(attrs and attrs.get("multiple"))
         super().__init__(attrs)
         self.max_size = max_size
