@@ -104,6 +104,23 @@ def test_date_picker_alpine_x_data():
     assert wrapper["data-value"] == "2024-06-15"
 
 
+@pytest.mark.unit
+def test_date_picker_closes_via_click_outside():
+    """The wrapper uses Alpine's @click.outside, not the removed @click.away."""
+    html = DatePicker().render("due_date", None, attrs={"id": "id_due_date"})
+    assert '@click.outside="open = false"' in html
+    assert "@click.away" not in html
+
+
+@pytest.mark.unit
+def test_date_picker_month_nav_buttons_have_aria_labels():
+    """Prev/next month buttons carry aria-labels for assistive tech."""
+    soup = render_widget(DatePicker(), attrs={"id": "id_due_date"})
+    labels = [b.get("aria-label") for b in soup.find_all("button")]
+    assert "Previous month" in labels
+    assert "Next month" in labels
+
+
 # ─── Level 3: Form integration ───────────────────────────────────────────
 
 

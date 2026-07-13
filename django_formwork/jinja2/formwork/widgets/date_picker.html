@@ -1,4 +1,4 @@
-<div class="date-picker" :data-open="open"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datepicker"{% endif %} x-data="formworkDatePicker" data-value="{{ widget.value|default('', true) }}" @click.away="open = false">
+<div class="date-picker" :data-open="open"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datepicker"{% endif %} x-data="formworkDatePicker" data-value="{{ widget.value|default('', true) }}" @click.outside="open = false">
   <label class="date-picker-label">
     <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default("", true) }}"{% include "django/forms/widgets/attrs.html" %} @focus="open = true" @input="value = $el.value" autocomplete="off" class="grow">
     <button type="button" class="date-picker-toggle" @click.stop="open = !open" aria-label="Open calendar">
@@ -7,9 +7,9 @@
   </label>
   <div x-show="open" x-cloak class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 p-3 w-72 z-10 absolute">
     <div class="flex items-center justify-between mb-2">
-      <button type="button" @click.stop="prev()" class="btn btn-ghost btn-xs">&larr;</button>
+      <button type="button" @click.stop="prev()" class="btn btn-ghost btn-xs" aria-label="Previous month">&larr;</button>
       <span class="font-medium text-sm" x-text="monthName() + ' ' + year"></span>
-      <button type="button" @click.stop="next()" class="btn btn-ghost btn-xs">&rarr;</button>
+      <button type="button" @click.stop="next()" class="btn btn-ghost btn-xs" aria-label="Next month">&rarr;</button>
     </div>
     <div class="grid grid-cols-7 gap-0.5 text-center text-xs mb-1">
       <span class="text-base-content/50">Su</span><span class="text-base-content/50">Mo</span><span class="text-base-content/50">Tu</span><span class="text-base-content/50">We</span><span class="text-base-content/50">Th</span><span class="text-base-content/50">Fr</span><span class="text-base-content/50">Sa</span>
