@@ -57,6 +57,15 @@
     min-width: 0;
 }
 
+/* Floating labels (widgets with floating_label=True) carry the label text in
+   the .floating-label <span>, so the separate fieldset-legend the field
+   template renders is redundant.  Hide it whether the control sits directly in
+   the fieldset or inside the tooltip-error wrapper.  Unlayered so it beats
+   DaisyUI's layered .fieldset-legend. */
+:where(.fieldset, .tooltip):has(> .floating-label) > .fieldset-legend {
+    display: none;
+}
+
 /* ================================================================
    Inline disclosure (help text + inline errors) — layout overrides
    The collapsible help / inline-error row is a native <details>/<summary>.

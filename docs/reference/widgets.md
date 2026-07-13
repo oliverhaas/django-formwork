@@ -65,6 +65,42 @@ state and `-soft` flow through the same `--input-color` variable. Used on its ow
 
 ---
 
+## Floating labels
+
+**Widgets:** `TextInput`, `Select`, `Textarea`
+
+Pass `floating_label=True` to reuse a control's placeholder as a
+[DaisyUI floating label](https://daisyui.com/components/floating-label/): the
+placeholder text sits inside the control when empty and floats above it on
+focus/fill. The widget wraps the control in `<label class="floating-label">` with
+a `<span>` carrying the label text; that wrapping label plus span becomes the
+control's accessible name, so the redundant field legend is hidden via CSS.
+
+These three widgets are drop-in replacements for Django's own `forms.TextInput`,
+`forms.Select`, and `forms.Textarea`, so import them from `django_formwork.widgets`
+(they intentionally shadow the stock names). With `floating_label=False` (the
+default) they render identically to the stock widgets.
+
+```python
+from django_formwork.widgets import Select, TextInput, Textarea
+
+nickname = forms.CharField(
+    widget=TextInput(attrs={"placeholder": "Nickname"}, floating_label=True),
+)
+note = forms.CharField(
+    widget=Textarea(attrs={"placeholder": "Note"}, floating_label=True),
+)
+# For a <select>, the placeholder is used only as the floating label text
+# (it is not a valid <select> attribute, so it is stripped from the element).
+# Supply an empty first choice for the in-field blank state.
+role = forms.ChoiceField(
+    choices=[("", ""), ("admin", "Admin"), ("user", "User")],
+    widget=Select(attrs={"placeholder": "Role"}, floating_label=True),
+)
+```
+
+---
+
 ## Toggle
 
 **Parent class:** `forms.CheckboxInput`

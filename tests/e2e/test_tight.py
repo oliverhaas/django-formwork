@@ -48,3 +48,43 @@ class TestTightForm:
         tight_page.locator('input[name="pin"]').fill("1234")
         submit(tight_page)
         assert tight_page.locator("#tight-form .tooltip-error").count() == 0
+
+
+class TestTightFormFloatingLabels:
+    """DaisyUI floating labels on the tight form's optional showcase fields."""
+
+    # (fieldset id, placeholder text) for each floating widget: input, select, textarea.
+    FLOATING_FIELDS = (
+        ("id_nickname_field", "Nickname"),
+        ("id_role_field", "Role"),
+        ("id_note_field", "Note"),
+    )
+
+    def test_floating_labels_render(self, tight_page):
+        """Each floating field emits a DaisyUI <label class="floating-label"> wrapper."""
+        assert tight_page.locator("#tight-form .floating-label").count() == len(self.FLOATING_FIELDS)
+
+    def test_floating_label_span_carries_placeholder(self, tight_page):
+        """The floating <span> reuses the placeholder as its visible label text."""
+        for field_id, placeholder in self.FLOATING_FIELDS:
+            span = tight_page.locator(f"#{field_id} .floating-label > span")
+            assert span.count() == 1
+            assert span.inner_text().strip() == placeholder
+
+    def test_redundant_fieldset_legend_hidden(self, tight_page):
+        """The field template's own fieldset-legend is hidden so the label isn't duplicated."""
+        for field_id, _ in self.FLOATING_FIELDS:
+            legend = tight_page.locator(f"#{field_id} > .fieldset-legend")
+            assert legend.count() == 1
+            assert not legend.is_visible()
+
+    def test_floating_wraps_the_control(self, tight_page):
+        """The real control sits inside the floating-label wrapper (accessible name)."""
+        assert tight_page.locator("#tight-form .floating-label > input[name='nickname']").count() == 1
+        assert tight_page.locator("#tight-form .floating-label > select[name='role']").count() == 1
+        assert tight_page.locator("#tight-form .floating-label > textarea[name='note']").count() == 1
+
+    def test_select_has_no_placeholder_attr(self, tight_page):
+        """<select> has no placeholder attribute; the text lives only in the span."""
+        select = tight_page.locator("#tight-form select[name='role']")
+        assert select.get_attribute("placeholder") is None

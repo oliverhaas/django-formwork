@@ -23,6 +23,9 @@ from django_formwork.widgets import (
     Range,
     Rating,
     SearchSelect,
+    Select,
+    TextInput,
+    Textarea,
     Toggle,
     ValidatedTextarea,
 )
@@ -253,6 +256,22 @@ class TightForm(FormworkForm):
     )
     pin = forms.CharField(
         widget=forms.TextInput(attrs={"placeholder": "PIN", "inputmode": "numeric"}),
+    )
+    # Floating labels (DaisyUI): the placeholder doubles as a label that floats
+    # above the control on focus/fill.  Optional so they add no validation
+    # errors to the tooltip showcase above.
+    nickname = forms.CharField(
+        required=False,
+        widget=TextInput(attrs={"placeholder": "Nickname"}, floating_label=True),
+    )
+    role = forms.ChoiceField(
+        required=False,
+        choices=[("", ""), ("admin", "Admin"), ("user", "User")],
+        widget=Select(attrs={"placeholder": "Role"}, floating_label=True),
+    )
+    note = forms.CharField(
+        required=False,
+        widget=Textarea(attrs={"placeholder": "Note"}, floating_label=True),
     )
 
     def clean_username(self):
