@@ -81,6 +81,16 @@ class TestStandaloneElements:
             "el => getComputedStyle(el).color"
         )
 
+    def test_soft_select_border_snaps_on_focus(self, elements_page):
+        # Regression: the -soft border must brighten to the full colour on
+        # focus (like a plain control whose border snaps to --input-color),
+        # not stay its faint resting tint. Otherwise focus/open shows no border.
+        soft = self._card(elements_page).locator("select.select-soft.select-accent")
+        rest = soft.evaluate("el => getComputedStyle(el).borderColor")
+        soft.focus()
+        focused = soft.evaluate("el => getComputedStyle(el).borderColor")
+        assert focused != rest
+
     def test_soft_input_and_textarea_are_tinted(self, elements_page):
         card = self._card(elements_page)
         base_input = card.locator('input[type="text"]:not(.input-soft)')

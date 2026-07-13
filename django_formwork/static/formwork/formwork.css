@@ -722,6 +722,17 @@ textarea.textarea-soft {
     box-shadow: none;
 }
 
+/* The resting soft border is a faint tint. On focus, promote it to the full
+   soft colour so native controls get the same clear border feedback a plain
+   control gets (its border snaps to --input-color); the outline ring is
+   already coloured by the modifier. Dropdown summaries don't need this. Their
+   [open] rule below already repaints the border. */
+select.select-soft:focus,
+input.input-soft:focus,
+textarea.textarea-soft:focus {
+    border-color: var(--fw-soft);
+}
+
 
 /* ================================================================
    Bridge styles
