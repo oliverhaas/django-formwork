@@ -386,6 +386,15 @@ i.icon {
     @apply input w-full;
 }
 
+/* The inner text input keeps the UA default size=20 intrinsic width
+   (~200px) regardless of its value. field-sizing sizes it to its content
+   so intrinsic contexts (auto table columns) fit the date instead of
+   ballooning; w-full form layouts are unaffected since explicit widths
+   win over field-sizing. */
+.date-picker-label > input:not([type="hidden"]) {
+    field-sizing: content;
+}
+
 /* input-ghost passed via widget attrs lands on the inner input, but the
    border and fill sit on this wrapper; forward the ghost look, mirroring
    DaisyUI's .input-ghost (same idea as the aria-invalid forwarding). */
@@ -1147,8 +1156,14 @@ input.combobox-input[aria-invalid="true"] {
 
     /* Native selects: the browser already sizes them to their widest
        option, and that minimum cannot be capped from CSS, so they get a
-       fixed floor instead of a measured one. */
+       fixed floor instead of a measured one.
+       field-sizing makes the intrinsic min/max-content track the options
+       instead of UA defaults, so auto table columns neither crush the
+       closed label nor inflate. Explicit widths (the w-full stretch in
+       form layouts) still win wherever the container is definite;
+       browsers without field-sizing keep the old behavior. */
     select {
+        field-sizing: content;
         min-width: min(100%, var(--formwork-autowidth-min, 6rem));
     }
 }
