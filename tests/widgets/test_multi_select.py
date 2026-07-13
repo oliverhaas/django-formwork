@@ -520,7 +520,7 @@ def test_multi_select_summary_renders_selection_via_x_html():
     """The summary span uses x-html so mark_safe SVG icons render as markup."""
     widget = MultiSelect(choices=[("a", "A")])
     soup = render_widget(widget, name="test")
-    span = soup.find("summary").find("span")
+    span = soup.find("summary").find("span", attrs={"x-html": True})
     assert span.get("x-html") == "displayHtml || 'Select…'"
     assert "x-text" not in span.attrs
 
