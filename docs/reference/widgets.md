@@ -10,6 +10,61 @@ DaisyUI component-layer classes (`alert-error`, `btn`, etc.) appear directly in 
 
 ---
 
+## Color variants
+
+Every form-control widget accepts DaisyUI color modifiers through its `class` attr,
+and this works identically on the custom widgets that are not real `<select>`
+elements (`SearchSelect` and `MultiSelect` render a `<details>/<summary>`, `ComboBox`
+renders a text `<input>`). The modifiers are safelisted in `formwork.css`, so they
+compile even though the class is injected at render time and never appears in a
+template that Tailwind scans.
+
+**Which base does each widget use?** The color/soft class is keyed to the underlying
+DaisyUI base, not the widget name:
+
+| Base | Widgets | Example class |
+|---|---|---|
+| `select-*` | `SearchSelect`, `MultiSelect`, native `<select>` | `select-accent`, `select-soft` |
+| `input-*` | `ComboBox`, `DataList`, native text inputs | `input-accent`, `input-soft` |
+| `textarea-*` | `ValidatedTextarea`, native `<textarea>` | `textarea-accent`, `textarea-soft` |
+
+`ComboBox` is an `.input`, so it takes `input-accent` / `input-soft`, not the
+`select-` prefix, even though it behaves like a select.
+
+### Border color (DaisyUI built-in)
+
+The eight DaisyUI colors tint the control's border:
+
+```python
+from django_formwork.widgets import SearchSelect
+
+city = forms.ChoiceField(
+    widget=SearchSelect(attrs={"class": "select-accent"}),
+    choices=CITIES,
+)
+```
+
+### Soft fill (`-soft`)
+
+`formwork.css` adds a `-soft` variant (DaisyUI ships none for form controls) that
+colors the whole control: a light tinted background with colored text, mirroring
+DaisyUI's `btn-soft` / `alert-soft` look. It **composes** with the color modifiers:
+
+```python
+# Accent-tinted fill with accent text:
+widget=SearchSelect(attrs={"class": "select-soft select-accent"})
+
+# ComboBox uses the input base:
+widget=ComboBox(attrs={"class": "input-soft input-accent"})
+```
+
+`-soft` also follows the validation state automatically: an `aria-invalid` control
+(or an explicit `select-error`) renders a red-tinted fill, because both the error
+state and `-soft` flow through the same `--input-color` variable. Used on its own
+(no color modifier), `-soft` gives a readable neutral fill.
+
+---
+
 ## Toggle
 
 **Parent class:** `forms.CheckboxInput`

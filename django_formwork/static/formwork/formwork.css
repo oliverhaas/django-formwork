@@ -29,6 +29,13 @@
   themes: all;
 }
 
+/* Safelist DaisyUI's form-control color modifiers.  They are applied at render
+   time via widget attrs (e.g. SearchSelect(attrs={"class": "select-accent"})),
+   so Tailwind's static scan never sees the token and would otherwise purge them.
+   Shipping the safelist here means every app that imports formwork.css gets the
+   color modifiers (and the -soft variant below) working out of the box. */
+@source inline("{select,input,textarea}-{primary,secondary,accent,neutral,info,success,warning,error}");
+
 /* DaisyUI's .fieldset uses display:grid.  The UA default min-width:min-content
    on <fieldset> means grid items (inputs, labels) can push the fieldset wider
    than its container.  Override to 0 so fieldsets respect the form width.
@@ -691,6 +698,28 @@ details.multiselect > summary[aria-invalid="true"] {
 /* ComboBox: the text input trigger has aria-invalid. */
 input.combobox-input[aria-invalid="true"] {
     @apply input-error;
+}
+
+
+/* ================================================================
+   Soft color variant: select-soft / input-soft / textarea-soft
+   DaisyUI ships no -soft for form controls, so mirror its btn-soft
+   formula (tinted background, colored text, no shadow), keyed off
+   --input-color so it composes with the color modifiers above
+   (select-accent, input-error, and the aria-invalid error state).
+   `/ 1` normalizes DaisyUI's 20%-alpha default border color so the
+   colorless case (bare select-soft) stays readable.
+   ================================================================ */
+details.search-select > summary.select-soft,
+details.multiselect > summary.select-soft,
+select.select-soft,
+input.input-soft:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+textarea.textarea-soft {
+    --fw-soft: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
+    background-color: color-mix(in oklab, var(--fw-soft) 8%, var(--color-base-100));
+    color: var(--fw-soft);
+    border-color: color-mix(in oklab, var(--fw-soft) 10%, var(--color-base-100));
+    box-shadow: none;
 }
 
 

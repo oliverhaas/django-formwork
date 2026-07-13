@@ -94,3 +94,25 @@ class TestStaticFiles:
         assert result is not None
         content = Path(result).read_text()
         assert ".alert-soft" in content
+
+    def test_css_has_form_control_soft_variant(self):
+        result = find("formwork/formwork.css")
+        assert result is not None
+        content = Path(result).read_text()
+        # `-soft` fill variant for form controls (DaisyUI ships none for
+        # select/input/textarea), keyed off --input-color so it composes
+        # with the color modifiers and the aria-invalid error state.
+        for base in ("select-soft", "input-soft", "textarea-soft"):
+            assert base in content, f"Missing {base}"
+        assert "--fw-soft" in content
+
+    def test_css_safelists_form_control_colors(self):
+        result = find("formwork/formwork.css")
+        assert result is not None
+        content = Path(result).read_text()
+        # DaisyUI color modifiers are injected via widget attrs at render
+        # time, so Tailwind's static scan never sees the token. formwork.css
+        # safelists them with `@source inline(...)` so `select-accent`,
+        # `input-error`, etc. compile for every consumer out of the box.
+        assert "@source inline(" in content
+        assert "{select,input,textarea}-{primary,secondary,accent" in content
