@@ -239,6 +239,73 @@ fieldset.fieldset > .tooltip:has(> select + select + select) {
     grid-template-columns: subgrid;
 }
 
+
+/* ================================================================
+   Soft color variant: select-soft / input-soft / textarea-soft
+
+   DaisyUI ships no -soft for form controls, so this mirrors its
+   btn-soft formula: tint the control's own surface with the color at
+   8% (border at 10%), colored text, no shadow.  Two knobs, both lifted
+   straight from btn-soft:
+     * the hue is --input-color, the variable every DaisyUI form control
+       already shares (set by select-accent / input-error and the
+       aria-invalid state).  It is the analog of btn-soft's --btn-color,
+       and like btn-soft we inline it rather than wrapping it in a var.
+     * --select-soft-bg is the surface the hue is mixed into, the analog
+       of btn-soft's --btn-soft-bg.  It defaults to base-100 and can be
+       overridden to re-tint or re-theme the control.
+   `/ 1` normalizes --input-color's 20%-alpha bare default (base-content
+   at 20%) so the colorless case (plain select-soft) keeps readable text.
+   btn/badge skip this because --btn-color / --badge-color are opaque.
+
+   Unlayered on purpose: a single .select-soft class then beats the
+   higher-specificity base rules (details.search-select > summary, the
+   input:not([type=...]) chain) by cascade layer instead of by piling on
+   compound selectors, matching how DaisyUI writes .btn-soft. */
+.select-soft,
+.input-soft,
+.textarea-soft {
+    background-color: color-mix(in oklab, var(--input-color) 8%, var(--select-soft-bg, var(--color-base-100)));
+    color: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
+    border-color: color-mix(in oklab, var(--input-color) 10%, var(--select-soft-bg, var(--color-base-100)));
+    box-shadow: none;
+}
+
+/* Focus ring follows the hue, exactly like a plain select-accent or
+   select-error (DaisyUI drives its own focus outline off --input-color):
+   an accent-tinted control gets an accent ring, the error state a red
+   ring, and a colorless soft control falls back to base-content.  `/ 1`
+   keeps that bare-case ring opaque. */
+.select-soft:focus,
+.input-soft:focus,
+.textarea-soft:focus {
+    border-color: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
+    outline-color: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
+}
+
+/* Dropdown (options panel) fill.  Independent of the toggle: neutral
+   (base-100) by default so the panel does not inherit the control's soft
+   tint.  Override --select-soft-dropdown-bg on the widget root (the panel
+   is a sibling of the trigger, so it inherits from there) to tint the
+   panel, e.g. to match the toggle.  Scoped to soft controls so plain
+   widgets stay untouched.
+
+   MUST be unlayered too: the widget templates set bg-base-100 (a
+   .dropdown-content utility in @layer utilities) on the panel, which
+   @layer components would lose to.  Native <select> renders its options
+   via ::picker(select) where the customizable select is supported;
+   DaisyUI makes it inherit the control fill, so route it through the
+   same var. */
+details.dropdown.search-select:has(> summary.select-soft) > .dropdown-content,
+details.dropdown.multiselect:has(> summary.select-soft) > .dropdown-content,
+.dropdown.combobox:has(.combobox-input.input-soft) > .dropdown-content {
+    background-color: var(--select-soft-dropdown-bg, var(--color-base-100));
+}
+
+select.select-soft::picker(select) {
+    background-color: var(--select-soft-dropdown-bg, var(--color-base-100));
+}
+
 @layer components {
 
 /* Vertical spacing between consecutive field groups. */
@@ -710,46 +777,10 @@ input.combobox-input[aria-invalid="true"] {
 }
 
 
-/* ================================================================
-   Soft color variant: select-soft / input-soft / textarea-soft
-   DaisyUI ships no -soft for form controls, so mirror its btn-soft
-   formula (tinted background, colored text, no shadow), keyed off
-   --input-color so it composes with the color modifiers above
-   (select-accent, input-error, and the aria-invalid error state).
-   `/ 1` normalizes DaisyUI's 20%-alpha default border color so the
-   colorless case (bare select-soft) stays readable.
-   ================================================================ */
-details.search-select > summary.select-soft,
-details.multiselect > summary.select-soft,
-select.select-soft,
-input.input-soft:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
-textarea.textarea-soft {
-    --fw-soft: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
-    background-color: color-mix(in oklab, var(--fw-soft) 8%, var(--color-base-100));
-    color: var(--fw-soft);
-    border-color: color-mix(in oklab, var(--fw-soft) 10%, var(--color-base-100));
-    box-shadow: none;
-}
-
-/* Focus feedback. The soft fill keeps its colour, but the focus indicator
-   (border + outline ring) goes to high-contrast base-content so it stays
-   clearly visible whatever the tint. The soft colours (accent, info, warning)
-   are light, so a same-colour ring on a near-white control washes out; a plain
-   control avoids this because DaisyUI resets --input-color to base-content on
-   focus, which our colour safelist otherwise overrides. This matches a plain
-   control and the dropdown [open] state; the error state keeps its red. */
-select.select-soft:focus,
-input.input-soft:focus,
-textarea.textarea-soft:focus {
-    border-color: var(--color-base-content);
-    outline-color: var(--color-base-content);
-}
-select.select-soft[aria-invalid="true"]:focus,
-input.input-soft[aria-invalid="true"]:focus,
-textarea.textarea-soft[aria-invalid="true"]:focus {
-    border-color: var(--color-error);
-    outline-color: var(--color-error);
-}
+/* Soft color variant (select-soft / input-soft / textarea-soft) and its
+   dropdown-panel fill are defined unlayered near the top of this file, so a
+   single .select-soft class wins over the higher-specificity base rules
+   without compound selectors.  See "Soft color variant" there. */
 
 
 /* ================================================================

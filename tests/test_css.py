@@ -104,7 +104,7 @@ class TestStaticFiles:
         # with the color modifiers and the aria-invalid error state.
         for base in ("select-soft", "input-soft", "textarea-soft"):
             assert base in content, f"Missing {base}"
-        assert "--fw-soft" in content
+        assert "--select-soft-bg" in content
 
     def test_css_safelists_form_control_colors(self):
         result = find("formwork/formwork.css")
