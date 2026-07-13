@@ -119,7 +119,7 @@ class TaskForm(FormworkModelForm):
 
 
 class TaskQuickAddForm(forms.Form):
-    """One-line dashboard quick-add — title + priority."""
+    """One-line dashboard quick-add: title + priority."""
 
     title = forms.CharField(
         max_length=200,
@@ -155,7 +155,7 @@ class TaskFilterForm(forms.Form):
 
 
 class WizardProjectForm(FormworkForm):
-    """Step 1 — project basics."""
+    """Step 1: project basics."""
 
     project_name = forms.CharField(max_length=100, help_text="Pick something memorable.")
     project_description = forms.CharField(
@@ -166,7 +166,7 @@ class WizardProjectForm(FormworkForm):
 
 
 class WizardConfigForm(FormworkForm):
-    """Step 2 — configuration."""
+    """Step 2: configuration."""
 
     enable_notifications = forms.BooleanField(
         widget=Toggle,
@@ -192,7 +192,7 @@ class WizardConfigForm(FormworkForm):
 
 
 class WizardFirstTaskForm(FormworkForm):
-    """Step 3 — kick off with one task."""
+    """Step 3: kick off with one task."""
 
     first_task = forms.CharField(max_length=200, label="Title")
     first_task_priority = forms.ChoiceField(
