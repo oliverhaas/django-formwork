@@ -20,7 +20,7 @@ from .forms import (
 from .models import Profile, Tag, Task
 
 # Fields editable per-cell in list rows (_list_row.html); task_status() disables the rest.
-ROW_EDITABLE_FIELDS = {"status", "assignee", "due_date", "tags"}
+ROW_EDITABLE_FIELDS = {"status", "priority", "assignee", "due_date", "tags"}
 
 # ─── Dashboard ──────────────────────────────────────────────────────────
 

@@ -79,7 +79,7 @@ class TaskForm(FormworkModelForm):
             "attachment": FileDropZone(max_size=10 * 1024 * 1024),
         }
         help_texts = {
-            "priority": "Plain native select. Four static options don't need SearchSelect.",
+            "priority": "Native select tinted with the select-soft variant, coloured by the task's own severity.",
             "status": "Plain native select, same reasoning as priority.",
             "due_date": "DatePicker with a calendar dropdown.",
             "cover_image": "Shown as a thumbnail in the task list (ImageDropZone, ≤5 MB).",
@@ -99,6 +99,13 @@ class TaskForm(FormworkModelForm):
             for name, field in self.fields.items():
                 if name not in editable_fields:
                     field.disabled = True
+
+        # Colour the priority control with the select-soft variant, tinted by
+        # the task's own severity colour (reuses Task.PRIORITY_COLORS). Shows
+        # select-soft composing with the daisyUI colour modifiers: the whole
+        # control is filled, and it re-tints live when the value changes.
+        color = Task.PRIORITY_COLORS.get(self.instance.priority, "neutral")
+        self.fields["priority"].widget.attrs["class"] = f"select-soft select-{color}"
 
 
 class TaskQuickAddForm(forms.Form):

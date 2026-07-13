@@ -14,7 +14,14 @@
     </form>
   </td>
   <td>
-    <span class="badge badge-{{ task.priority_color }} badge-soft badge-sm">{{ task.get_priority_display }}</span>
+    <form hx-post="{% url 'task_status' task.pk %}"
+          hx-target="#task-row-{{ task.pk }}"
+          hx-swap="outerHTML"
+          hx-trigger="change delay:400ms">
+      {% csrf_token %}
+      <input type="hidden" name="field" value="priority">
+      {{ task.row_form.priority }}
+    </form>
   </td>
   <td class="text-sm">
     <form hx-post="{% url 'task_status' task.pk %}"
