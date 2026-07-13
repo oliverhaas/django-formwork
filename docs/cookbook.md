@@ -2,10 +2,10 @@
 
 This guide builds one ticket form up from a single field to a searchable,
 server-validated form that saves, takes attachments, and edits existing records
-without re-validating untouched fields. Each step adds one capability. The
-forms and views are from the runnable `examples/simple` app, so every snippet
-works as shown. See the [installation guide](getting-started/installation.md)
-for the one-time CSS and JavaScript setup.
+without re-validating untouched fields. Each step adds one capability, and
+every snippet is complete and works as shown. See the
+[installation guide](getting-started/installation.md) for the one-time CSS and
+JavaScript setup.
 
 ## Step 1: the form is the center
 
