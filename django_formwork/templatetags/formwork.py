@@ -1,6 +1,6 @@
 from django import template
 from django.templatetags.static import static
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 register = template.Library()
 
@@ -14,9 +14,7 @@ def formwork_css() -> str:
         {% load formwork %}
         {% formwork_css %}
     """
-    # SECURITY: safe. URL comes from Django's static file resolver, not user input.
-    url = static("formwork/formwork.css")
-    return mark_safe(f'<link rel="stylesheet" href="{url}">')  # noqa: S308
+    return format_html('<link rel="stylesheet" href="{}">', static("formwork/formwork.css"))
 
 
 @register.simple_tag
@@ -38,9 +36,7 @@ def formwork_js() -> str:
         {% load formwork %}
         {% formwork_js %}
     """
-    # SECURITY: safe. URL comes from Django's static file resolver, not user input.
-    url = static("formwork/formwork.js")
-    return mark_safe(f'<script type="module" src="{url}"></script>')  # noqa: S308
+    return format_html('<script type="module" src="{}"></script>', static("formwork/formwork.js"))
 
 
 @register.simple_tag
@@ -62,6 +58,4 @@ def formwork_core_js() -> str:
         {% formwork_core_js %}
         {{ form.media }}
     """
-    # SECURITY: safe. URL comes from Django's static file resolver, not user input.
-    url = static("formwork/formwork-core.js")
-    return mark_safe(f'<script type="module" src="{url}"></script>')  # noqa: S308
+    return format_html('<script type="module" src="{}"></script>', static("formwork/formwork-core.js"))
