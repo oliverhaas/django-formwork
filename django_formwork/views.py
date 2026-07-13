@@ -59,12 +59,14 @@ class FormworkSearchView(View):
     _NO_RESULTS_HTML = '<li><div role="status" class="alert alert-info alert-soft m-0.5">No results.</div></li>'
 
     #: Template for SearchSelect results (value + label, for select-style).
-    #: SECURITY: ``escapejs`` on values read back into Alpine expressions
-    #: (``:class``) and dataset attributes.  Alpine evaluates the
-    #: entity-decoded attribute, so HTML autoescaping alone does not defend.
+    #: SECURITY: ``escapejs`` only on values embedded in Alpine expressions
+    #: (``:class``), where Alpine evaluates the entity-decoded attribute as a
+    #: JS string literal.  ``data-*`` attributes get plain HTML autoescaping:
+    #: the JS reads them raw via ``dataset`` (no JS-string decoding), so
+    #: ``escapejs`` there would submit literal ``\\uXXXX`` text.
     SEARCH_SELECT_TEMPLATE = (
         """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value|escapejs }}" data-label="{{ item.label|escapejs }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}{% if item.selected_toggle_class %} data-selected-toggle-class="{{ item.selected_toggle_class }}"{% endif %}>
+<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value }}" data-label="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}{% if item.selected_toggle_class %} data-selected-toggle-class="{{ item.selected_toggle_class }}"{% endif %}>
   <span class="formwork-check shrink-0 opacity-0" :class="value === '{{ item.value|escapejs }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>{% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
 {% if not results %}"""
@@ -75,7 +77,7 @@ class FormworkSearchView(View):
     #: Template for ComboBox results (label only, for autocomplete-style)
     COMBO_BOX_TEMPLATE = (
         """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label|escapejs }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
+<li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
   {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
 {% if not results %}"""

@@ -102,15 +102,15 @@ class FormworkJinja2Renderer(Jinja2):
 
 
 def formwork_jinja2_environment(**options: Any) -> Any:  # noqa: ANN401
-    """Jinja2 environment factory that registers the `escapejs` filter.
-
-    Django's Jinja2 backend sets `autoescape=True` via the default options
-    dict it passes here, so `S701` (ruff check for insecure autoescape) is
-    irrelevant for our usage.
-    """
+    """Jinja2 environment factory that registers the ``escapejs`` and ``force_escape`` filters."""
     import jinja2
+    from django.template.defaultfilters import force_escape
     from django.utils.html import escapejs
 
-    env = jinja2.Environment(**options)  # noqa: S701
+    env = jinja2.Environment(**options)  # noqa: S701 (Django's Jinja2 backend passes autoescape=True)
     env.filters["escapejs"] = escapejs
+    # Django's force_escape, not Jinja2's |e/|forceescape: those honor
+    # __html__ and are no-ops on mark_safe()-wrapped icon markup, which
+    # must be HTML-escaped when embedded in data-icon attributes.
+    env.filters["force_escape"] = force_escape
     return env

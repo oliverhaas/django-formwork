@@ -777,6 +777,49 @@ def test_combo_box_grouped_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
     assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
+# ─── Level 4b: Escaping regressions (both engines) ───────────────────────
+
+
+@pytest.mark.integration
+def test_combo_box_data_suggestion_round_trips_raw(renderer):
+    """Regression: escapejs on data-suggestion displayed O'Brien & Sons as O\\u0027Brien \\u0026 Sons."""
+
+    class SupplierForm(FormworkForm):
+        supplier = forms.CharField(widget=ComboBox(suggestions=["O'Brien & Sons"]), required=False)
+
+    soup = render_form(SupplierForm(), renderer=renderer)
+    btn = soup.find("button", attrs={"data-suggestion": True})
+    assert btn["data-suggestion"] == "O'Brien & Sons"
+
+
+@pytest.mark.integration
+def test_combo_box_data_icon_escaped_under_both_engines(renderer):
+    """Regression: Jinja2's |e honors __html__, leaving mark_safe icon SVG raw inside data-icon."""
+    icon = '<img src="py.svg">'
+
+    class IconComboBoxForm(FormworkForm):
+        lang = forms.CharField(
+            widget=ComboBox(suggestions=["Python"], icons={"Python": mark_safe(icon)}),  # noqa: S308
+            required=False,
+        )
+
+    soup = render_form(IconComboBoxForm(), renderer=renderer)
+    btn = soup.find("button", attrs={"data-suggestion": "Python"})
+    assert btn["data-icon"] == icon
+
+
+@pytest.mark.integration
+def test_combo_box_multiple_formdata_listener_added_once_per_form(renderer):
+    """Regression: every innerHTML swap re-ran x-init and stacked formdata listeners on the form."""
+
+    class TagsForm(FormworkForm):
+        tags = forms.CharField(widget=ComboBox(suggestions=["a"], multiple=True), required=False)
+
+    soup = render_form(TagsForm(), renderer=renderer)
+    inp = soup.find("input", class_="combobox-input")
+    assert "formworkComboFormdata" in inp["x-init"]
+
+
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
 
 

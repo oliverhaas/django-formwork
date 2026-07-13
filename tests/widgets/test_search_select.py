@@ -21,6 +21,9 @@ Levels:
 
 from __future__ import annotations
 
+import json
+import re
+
 import pytest
 from django import forms
 from django.http import QueryDict
@@ -994,6 +997,57 @@ def test_search_select_selected_toggle_class_jinja2_dtl_parity(dtl_renderer, jin
     soup_dtl = render_form(PriorityForm({"priority": "high"}), renderer=dtl_renderer)
     soup_jinja2 = render_form(PriorityForm({"priority": "high"}), renderer=jinja2_renderer)
     assert_html_equivalent(soup_dtl, soup_jinja2)
+
+
+# ─── Level 4b: Escaping regressions (both engines) ───────────────────────
+
+
+class RoundTripSearchSelectForm(FormworkForm):
+    """Form whose choice value and label contain characters escapejs mangles."""
+
+    supplier = forms.ChoiceField(
+        choices=[("uuid-1234", "O'Brien & Sons")],
+        widget=SearchSelect,
+        required=False,
+    )
+
+
+@pytest.mark.integration
+def test_search_select_option_data_attrs_round_trip_raw(renderer):
+    """Regression: escapejs on data-value/data-label mangled values the JS reads raw via dataset."""
+    soup = render_form(RoundTripSearchSelectForm(), renderer=renderer)
+    btn = soup.find("button", attrs={"data-value": "uuid-1234"})
+    assert btn is not None
+    assert btn["data-label"] == "O'Brien & Sons"
+
+
+@pytest.mark.integration
+def test_search_select_checkmark_literal_decodes_to_data_value(renderer):
+    """The Alpine :class comparison literal decodes to the raw data-value string."""
+    soup = render_form(RoundTripSearchSelectForm(), renderer=renderer)
+    btn = soup.find("button", attrs={"data-value": "uuid-1234"})
+    check = btn.find("span", class_="formwork-check")
+    literal = re.search(r"value === '(.*)' &&", check[":class"]).group(1)
+    assert json.loads(f'"{literal}"') == btn["data-value"]
+
+
+@pytest.mark.integration
+def test_search_select_data_icon_escaped_under_both_engines(renderer):
+    """Regression: Jinja2's |e honors __html__, leaving mark_safe icon SVG raw inside data-icon."""
+    icon = '<img src="a.svg">'
+
+    class IconForm(FormworkForm):
+        lang = forms.ChoiceField(
+            choices=[("a", ChoiceLabel("Alpha", icon=mark_safe(icon)))],  # noqa: S308
+            widget=SearchSelect,
+            required=False,
+        )
+
+    soup = render_form(IconForm({"lang": "a"}), renderer=renderer)
+    details = soup.find("details", class_="search-select")
+    assert details["data-icon"] == icon
+    btn = soup.find("button", attrs={"data-value": "a"})
+    assert btn["data-icon"] == icon
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

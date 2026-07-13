@@ -1,5 +1,8 @@
 """Tests for FormworkSearchView and FormworkValidateView."""
 
+import json
+import re
+
 from bs4 import BeautifulSoup
 from django.test import RequestFactory
 from django.utils.safestring import mark_safe
@@ -586,12 +589,7 @@ class TestFormworkSearchViewErrorHandling:
 
 
 class TestSearchViewEscaping:
-    """Values interpolated into Alpine expression / dataset attributes are JS-escaped.
-
-    Alpine evaluates the entity-decoded attribute, so HTML autoescaping alone
-    does not defend against quotes in stored data (e.g. a user-editable
-    ``to_field_name`` or label).
-    """
+    """Alpine expressions are JS-escaped; dataset attributes rely on HTML autoescaping only."""
 
     def test_search_select_value_escaped_in_alpine_expression(self):
         request = factory.get("/search/", {"q": ""})
@@ -609,7 +607,7 @@ class TestSearchViewEscaping:
         content = HostileComboBoxView.as_view()(request).content.decode()
         assert "<script>" not in content
         soup = BeautifulSoup(content, "html.parser")
-        assert "\\u003C" in soup.find("button")["data-suggestion"]
+        assert soup.find("button")["data-suggestion"] == "</script><script>alert(1)</script>"
 
     def test_multiselect_value_escaped_in_alpine_handlers(self):
         request = factory.get("/search/", {"q": "", "name": "x"})
@@ -618,6 +616,46 @@ class TestSearchViewEscaping:
         cb = soup.find("input", {"type": "checkbox"})
         assert "'); alert(1); ('" not in cb["@change"]
         assert "\\u0027" in cb["@change"]
+
+
+class RoundTripSearchView(FormworkSearchView):
+    """Test subclass returning values escapejs would mangle in dataset attributes."""
+
+    def get_results(self, query, **kwargs):
+        return [{"value": "uuid-1234", "label": "O'Brien & Sons"}]
+
+
+class RoundTripComboBoxView(RoundTripSearchView):
+    widget_type = "combo_box"
+
+
+def test_search_select_data_attrs_round_trip_raw_value():
+    """Regression: escapejs on data-value made a picked uuid-1234 submit as uuid\\u002D1234."""
+    request = factory.get("/search/", {"q": ""})
+    response = RoundTripSearchView.as_view()(request)
+    soup = BeautifulSoup(response.content, "html.parser")
+    btn = soup.find("button")
+    assert btn["data-value"] == "uuid-1234"
+    assert btn["data-label"] == "O'Brien & Sons"
+
+
+def test_search_select_checkmark_literal_decodes_to_data_value():
+    """The Alpine :class comparison literal decodes to the raw data-value string."""
+    request = factory.get("/search/", {"q": ""})
+    response = RoundTripSearchView.as_view()(request)
+    soup = BeautifulSoup(response.content, "html.parser")
+    btn = soup.find("button")
+    check = btn.find("span", class_="formwork-check")
+    literal = re.search(r"value === '(.*)' &&", check[":class"]).group(1)
+    assert json.loads(f'"{literal}"') == btn["data-value"]
+
+
+def test_combo_box_data_suggestion_round_trips_raw_label():
+    """Regression: escapejs on data-suggestion displayed O'Brien & Sons as O\\u0027Brien \\u0026 Sons."""
+    request = factory.get("/search/", {"q": ""})
+    response = RoundTripComboBoxView.as_view()(request)
+    soup = BeautifulSoup(response.content, "html.parser")
+    assert soup.find("button")["data-suggestion"] == "O'Brien & Sons"
 
 
 # ---------------------------------------------------------------------------
