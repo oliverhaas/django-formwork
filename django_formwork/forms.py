@@ -201,7 +201,7 @@ class _AutoSearchMixin:
 class _ErrorDisplayFormMixin:
     """Choose how field errors render: DaisyUI tooltip or inline (help-text style).
 
-    ``error_display`` is ``"tooltip"`` (default) or ``"inline"``, set via
+    ``error_display`` is ``"inline"`` (default) or ``"tooltip"``, set via
     ``Meta.error_display`` or the matching ``__init__`` kwarg.  Read by
     ``formwork_field.html`` as ``field.form.error_display``.
     """
@@ -209,7 +209,7 @@ class _ErrorDisplayFormMixin:
     def __init__(self, *args: Any, error_display: str | None = None, **kwargs: Any) -> None:
         if error_display is None:
             meta = getattr(type(self), "Meta", None)
-            error_display = getattr(meta, "error_display", "tooltip")
+            error_display = getattr(meta, "error_display", "inline")
         self.error_display: str = error_display
         super().__init__(*args, **kwargs)
 
@@ -422,9 +422,9 @@ class FormworkForm(_ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, 
     Pass ``validate_dirty_only=True`` (or set ``Meta.validate_dirty_only = True``)
     to skip field validators on fields the user did not change.
 
-    Pass ``error_display="inline"`` (or set ``Meta.error_display = "inline"``) to
-    render field errors below the widget, help-text style, instead of the
-    default DaisyUI tooltip.
+    Field errors render inline (below the widget, help-text style) by default.
+    Pass ``error_display="tooltip"`` (or set ``Meta.error_display = "tooltip"``)
+    to render them in a DaisyUI tooltip instead.
     """
 
     default_renderer = FormworkRenderer
@@ -445,9 +445,9 @@ class FormworkModelForm(
     constraint checks are all skipped for fields the user did not change.
     Requires the bound model to inherit :class:`~django_formwork.FormworkModel`.
 
-    Pass ``error_display="inline"`` (or set ``Meta.error_display = "inline"``) to
-    render field errors below the widget, help-text style, instead of the
-    default DaisyUI tooltip.
+    Field errors render inline (below the widget, help-text style) by default.
+    Pass ``error_display="tooltip"`` (or set ``Meta.error_display = "tooltip"``)
+    to render them in a DaisyUI tooltip instead.
     """
 
     default_renderer = FormworkRenderer

@@ -739,7 +739,7 @@ def test_combo_box_error_state_aria_describedby(renderer):
 @pytest.mark.integration
 def test_combo_box_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
-    form = ComboBoxForm(data={})
+    form = ComboBoxForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_tag_tooltip")

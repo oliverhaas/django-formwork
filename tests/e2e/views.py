@@ -66,6 +66,7 @@ class BasicForm(FormworkModelForm):
     class Meta:
         model = BasicFormData
         fields = "__all__"
+        error_display = "tooltip"
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "Your name"}),
             "email": forms.EmailInput(attrs={"placeholder": "you@example.com"}),
@@ -115,6 +116,7 @@ class AutoSaveForm(FormworkModelForm):
     class Meta:
         model = AutoSaveFormData
         fields = "__all__"
+        error_display = "tooltip"
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "Your name"}),
             "email": forms.EmailInput(attrs={"placeholder": "you@example.com"}),
@@ -870,6 +872,9 @@ class NewWidgetsForm(FormworkForm):
 
 class ComplexForm(FormworkForm):
     """Cross-field validation with dropdowns, auto-validated on every change."""
+
+    class Meta:
+        error_display = "tooltip"
 
     password = forms.CharField(
         widget=PasswordReveal(attrs={"placeholder": "Password"}),

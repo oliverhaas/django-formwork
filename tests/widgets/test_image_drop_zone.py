@@ -309,7 +309,7 @@ def test_image_drop_zone_error_state_aria_invalid(renderer):
 @pytest.mark.integration
 def test_image_drop_zone_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip with error text."""
-    form = ImageDropZoneForm(data={})
+    form = ImageDropZoneForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_avatar_tooltip")

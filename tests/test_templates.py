@@ -115,7 +115,7 @@ class TestFieldOrdering:
         class F(FormworkForm):
             name = forms.CharField(help_text="Help")
 
-        form = F(data={"name": ""})
+        form = F(data={"name": ""}, error_display="tooltip")
         form.is_valid()
         soup = render_html(form)
         error_div = soup.find("div", class_="tooltip-content")
@@ -133,7 +133,7 @@ class TestErrorRendering:
         class F(FormworkForm):
             name = forms.CharField()
 
-        form = F(data={"name": ""})
+        form = F(data={"name": ""}, error_display="tooltip")
         form.is_valid()
         soup = render_html(form)
         error_div = soup.find("div", class_="tooltip-content")
@@ -144,7 +144,7 @@ class TestErrorRendering:
         class F(FormworkForm):
             name = forms.CharField()
 
-        form = F(data={"name": ""})
+        form = F(data={"name": ""}, error_display="tooltip")
         form.is_valid()
         soup = render_html(form)
         error_div = soup.find("div", class_="tooltip-content")
@@ -154,7 +154,7 @@ class TestErrorRendering:
         class F(FormworkForm):
             name = forms.CharField()
 
-        form = F(data={"name": ""})
+        form = F(data={"name": ""}, error_display="tooltip")
         form.is_valid()
         soup = render_html(form)
         wrapper = soup.find("div", class_="tooltip")
@@ -168,7 +168,7 @@ class TestErrorRendering:
         class F(FormworkForm):
             name = forms.CharField()
 
-        form = F(data={"name": "test"})
+        form = F(data={"name": "test"}, error_display="tooltip")
         form.is_valid()
         soup = render_html(form)
         wrapper = soup.find("div", class_="tooltip")
@@ -178,7 +178,7 @@ class TestErrorRendering:
         class F(FormworkForm):
             name = forms.CharField()
 
-        form = F(data={"name": "test"})
+        form = F(data={"name": "test"}, error_display="tooltip")
         form.is_valid()
         soup = render_html(form)
         error_div = soup.find("div", class_="tooltip-content")
@@ -188,7 +188,7 @@ class TestErrorRendering:
         class F(FormworkForm):
             email = forms.EmailField(min_length=20)
 
-        form = F(data={"email": "bad"})
+        form = F(data={"email": "bad"}, error_display="tooltip")
         form.is_valid()
         soup = render_html(form)
         error_div = soup.find("div", class_="tooltip-content")
@@ -291,15 +291,15 @@ class TestInlineErrorRendering:
         assert button is not None
         assert "x-show" in button.attrs
 
-    def test_tooltip_mode_still_default(self):
+    def test_inline_mode_is_default(self):
         class F(FormworkForm):
             name = forms.CharField()
 
         form = F(data={"name": ""})
         form.is_valid()
         soup = render_html(form)
-        assert soup.find("div", class_="tooltip") is not None
-        assert soup.find("p", attrs={"id": "id_name_error"}) is None
+        assert soup.find("div", class_="tooltip") is None
+        assert soup.find("p", attrs={"id": "id_name_error"}) is not None
 
 
 class TestNonFieldErrors:
@@ -492,7 +492,7 @@ class TestMorphingIds:
         class F(FormworkForm):
             name = forms.CharField()
 
-        form = F(data={"name": ""})
+        form = F(data={"name": ""}, error_display="tooltip")
         form.is_valid()
         soup = render_html(form)
         tooltip = soup.find("div", class_="tooltip")
@@ -502,7 +502,7 @@ class TestMorphingIds:
         class F(FormworkForm):
             name = forms.CharField()
 
-        form = F(data={"name": ""})
+        form = F(data={"name": ""}, error_display="tooltip")
         form.is_valid()
         soup = render_html(form)
         errors = soup.find("div", class_="tooltip-content")
@@ -530,7 +530,7 @@ class TestMorphingIds:
                 widget=forms.RadioSelect,
             )
 
-        form = F(data={})
+        form = F(data={}, error_display="tooltip")
         form.is_valid()
         soup = render_html(form)
         fieldset = soup.find("fieldset", class_="fieldset")

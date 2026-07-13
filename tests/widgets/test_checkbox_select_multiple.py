@@ -185,7 +185,7 @@ def test_checkbox_select_multiple_form_wraps_in_fieldset(renderer):
 @pytest.mark.integration
 def test_checkbox_select_multiple_error_state(renderer):
     """Bound required form with no selection adds aria-invalid to the widget."""
-    form = CheckboxSelectMultipleRequiredForm(data={})
+    form = CheckboxSelectMultipleRequiredForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     # The inner fieldset should carry aria-invalid when in error state

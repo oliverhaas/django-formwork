@@ -36,13 +36,13 @@ class MetaInlineModelForm(FormworkModelForm):
 
 
 class TestFormOnly:
-    def test_default_is_tooltip(self):
+    def test_default_is_inline(self):
         form = PlainForm()
-        assert form.error_display == "tooltip"
-
-    def test_kwarg_sets_inline(self):
-        form = PlainForm(error_display="inline")
         assert form.error_display == "inline"
+
+    def test_kwarg_sets_tooltip(self):
+        form = PlainForm(error_display="tooltip")
+        assert form.error_display == "tooltip"
 
     def test_meta_default_sets_inline(self):
         form = MetaInlineForm()
@@ -54,13 +54,13 @@ class TestFormOnly:
 
 
 class TestModelForm:
-    def test_default_is_tooltip(self):
+    def test_default_is_inline(self):
         form = PlainModelForm()
-        assert form.error_display == "tooltip"
-
-    def test_kwarg_sets_inline(self):
-        form = PlainModelForm(error_display="inline")
         assert form.error_display == "inline"
+
+    def test_kwarg_sets_tooltip(self):
+        form = PlainModelForm(error_display="tooltip")
+        assert form.error_display == "tooltip"
 
     def test_meta_default_sets_inline(self):
         form = MetaInlineModelForm()

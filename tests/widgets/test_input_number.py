@@ -145,7 +145,7 @@ def test_input_number_form_wraps_in_fieldset(renderer):
 @pytest.mark.integration
 def test_input_number_error_state(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
-    form = InputNumberForm(data={})
+    form = InputNumberForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_quantity_tooltip")

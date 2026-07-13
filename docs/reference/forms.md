@@ -45,21 +45,21 @@ examples.
 
 ## error_display
 
-Field errors render as a DaisyUI tooltip by default. That's compact, but easy
-to miss in a dense layout like a table row, and there's no room for the help
-text once an error appears. `error_display = "inline"` switches every field
-on the form to the same visual pattern already used for help text: a small
-icon below the widget, in error color, with the error message truncated to
-one line and a `[more]` toggle when it overflows. Set it on the Meta class or
-per instantiation:
+Field errors render inline by default: the same visual pattern already used
+for help text, a small icon below the widget, in error color, with the error
+message truncated to one line and a `[more]` toggle when it overflows.
+`error_display = "tooltip"` switches every field on the form to a DaisyUI
+tooltip instead, which is more compact but easy to miss in a dense layout
+like a table row, and leaves no room for the help text once an error
+appears. Set it on the Meta class or per instantiation:
 
 ```python
 class ContactForm(FormworkForm):
     class Meta:
-        error_display = "inline"
+        error_display = "tooltip"
 
 # or
-form = ContactForm(request.POST, error_display="inline")
+form = ContactForm(request.POST, error_display="tooltip")
 ```
 
 Collapsed, only the truncated error shows, and the help text (if any) is
@@ -68,10 +68,10 @@ the full error message and the help text together; `[less]` collapses both
 again. Errors and help text always share one expand/collapse state per
 field.
 
-Use `"tooltip"` (the default) for fields with breathing room, and `"inline"`
-where a hovering tooltip would be awkward: inline table-row editing, dense
+Use `"inline"` (the default) for inline table-row editing, dense
 multi-column layouts, or forms where the help text should stay reachable
-even while an error is showing.
+even while an error is showing, and `"tooltip"` for fields with breathing
+room where a compact tooltip is preferred.
 
 ## validate_dirty_only
 

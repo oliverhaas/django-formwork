@@ -283,7 +283,7 @@ def test_rating_form_wraps_in_fieldset(renderer):
 @pytest.mark.integration
 def test_rating_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the widget."""
-    form = RatingForm(data={})
+    form = RatingForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     # The rating div wrapper should carry the aria-invalid attribute
@@ -298,7 +298,7 @@ def test_rating_error_state_aria_invalid(renderer):
 @pytest.mark.integration
 def test_rating_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
-    form = RatingForm(data={})
+    form = RatingForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_rating_tooltip")

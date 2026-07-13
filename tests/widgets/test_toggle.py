@@ -165,7 +165,7 @@ def test_toggle_error_state_aria_invalid(renderer):
 @pytest.mark.integration
 def test_toggle_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
-    form = ToggleForm(data={})
+    form = ToggleForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_enabled_tooltip")

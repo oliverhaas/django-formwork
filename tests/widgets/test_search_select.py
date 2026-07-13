@@ -827,7 +827,7 @@ def test_search_select_form_error_state_aria_describedby(renderer):
 @pytest.mark.integration
 def test_search_select_form_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
-    form = SearchSelectForm(data={})
+    form = SearchSelectForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_city_tooltip")
