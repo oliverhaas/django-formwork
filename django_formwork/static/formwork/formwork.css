@@ -722,15 +722,24 @@ textarea.textarea-soft {
     box-shadow: none;
 }
 
-/* The resting soft border is a faint tint. On focus, promote it to the full
-   soft colour so native controls get the same clear border feedback a plain
-   control gets (its border snaps to --input-color); the outline ring is
-   already coloured by the modifier. Dropdown summaries don't need this. Their
-   [open] rule below already repaints the border. */
+/* Focus feedback. The soft fill keeps its colour, but the focus indicator
+   (border + outline ring) goes to high-contrast base-content so it stays
+   clearly visible whatever the tint. The soft colours (accent, info, warning)
+   are light, so a same-colour ring on a near-white control washes out; a plain
+   control avoids this because DaisyUI resets --input-color to base-content on
+   focus, which our colour safelist otherwise overrides. This matches a plain
+   control and the dropdown [open] state; the error state keeps its red. */
 select.select-soft:focus,
 input.input-soft:focus,
 textarea.textarea-soft:focus {
-    border-color: var(--fw-soft);
+    border-color: var(--color-base-content);
+    outline-color: var(--color-base-content);
+}
+select.select-soft[aria-invalid="true"]:focus,
+input.input-soft[aria-invalid="true"]:focus,
+textarea.textarea-soft[aria-invalid="true"]:focus {
+    border-color: var(--color-error);
+    outline-color: var(--color-error);
 }
 
 
