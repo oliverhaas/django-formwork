@@ -1,23 +1,4 @@
-"""SearchSelect widget tests: unit → integration → e2e → screenshot.
-
-Tests progress from simple (pure Python) to complex (browser visual
-regression).  Each level is marked so you can run fast-feedback subsets:
-
-    uv run pytest tests/widgets/test_search_select.py                   # everything
-    uv run pytest tests/widgets/test_search_select.py -m unit           # fast only
-    uv run pytest tests/widgets/test_search_select.py -m "not e2e"      # skip browser
-
-Levels:
-    1. unit        : widget object: instantiation, choices, search_url, show_search,
-                     get_context, value_from_datadict, edge cases
-    2. unit        : widget rendering: HTML structure, attributes, icons, htmx attrs
-    3. integration : form integration: fieldset, error state, prefix
-    4. integration : Jinja2/DTL parity
-    5. e2e         : user interaction: opening, selecting, search filtering
-    6. e2e         : error flow (no dedicated error page yet; see comment)
-    7. e2e         : morph resilience: dropdown state, selected value preserved
-    8. screenshot  : visual states: closed, open, selected
-"""
+"""SearchSelect tests, ordered unit, integration, e2e, screenshot; filter levels with -m."""
 
 from __future__ import annotations
 
@@ -889,7 +870,7 @@ def test_search_select_grouped_options_keep_icons_and_descriptions():
 
 @pytest.mark.integration
 def test_search_select_renders_via_form(renderer):
-    """SearchSelect renders correctly when used inside a FormworkForm."""
+    """A FormworkForm field renders the SearchSelect hidden value input."""
     form = SearchSelectForm()
     soup = render_form(form, renderer=renderer)
     hidden = soup.find("input", {"type": "hidden", "name": "city"})
@@ -1053,6 +1034,49 @@ def test_search_select_data_icon_escaped_under_both_engines(renderer):
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
 
 
+def _open_dropdown(page, index):
+    """Open the nth SearchSelect on the page like a summary click (open + toggle event)."""
+    page.evaluate(
+        """(i) => {
+            const dd = document.querySelectorAll('details.dropdown.search-select')[i];
+            dd.open = true;
+            dd.dispatchEvent(new Event('toggle'));
+        }""",
+        index,
+    )
+
+
+def _focus_search(page, index):
+    """Focus the nth SearchSelect's search input, firing its htmx focus trigger."""
+    page.evaluate(
+        """(i) => {
+            const search = document.querySelectorAll('details.dropdown.search-select')[i]
+                .querySelector('.dropdown-content input[type="text"]');
+            search.focus();
+            search.dispatchEvent(new Event('focus'));
+        }""",
+        index,
+    )
+
+
+def _type_search(page, index, text):
+    """Set the nth SearchSelect's search input value, firing its input handlers."""
+    page.evaluate(
+        """([i, text]) => {
+            const search = document.querySelectorAll('details.dropdown.search-select')[i]
+                .querySelector('.dropdown-content input[type="text"]');
+            search.value = text;
+            search.dispatchEvent(new Event('input', {bubbles: true}));
+        }""",
+        [index, text],
+    )
+
+
+def _search_response(page):
+    """Context manager waiting for a formwork search endpoint response."""
+    return page.expect_response(lambda r: "/__formwork__/search/" in r.url, timeout=10000)
+
+
 @pytest.mark.e2e
 def test_search_select_renders_on_page(search_select_page):
     """SearchSelect is visible on the /search-select/ page."""
@@ -1062,7 +1086,7 @@ def test_search_select_renders_on_page(search_select_page):
 
 @pytest.mark.e2e
 def test_search_select_open_close_dropdown(search_select_page):
-    """User can open the dropdown by clicking the summary trigger."""
+    """Clicking the summary trigger opens the dropdown; clicking again closes it."""
     sel = search_select_page.locator("details.dropdown.search-select").first
     summary = sel.locator("summary")
     summary.click()
@@ -1070,17 +1094,14 @@ def test_search_select_open_close_dropdown(search_select_page):
     assert sel.get_attribute("open") is not None
     summary.click()
     search_select_page.wait_for_timeout(200)
+    assert sel.get_attribute("open") is None
 
 
 @pytest.mark.e2e
 def test_search_select_no_search_input_with_few_options(search_select_page):
     """Search input is hidden when option count is below threshold."""
     sel = search_select_page.locator("details.dropdown.search-select").first
-    search_select_page.evaluate("""() => {
-        const dd = document.querySelector('details.dropdown.search-select');
-        dd.open = true;
-        dd.dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 0)
     search_select_page.wait_for_timeout(200)
     search_wrapper = sel.locator(".dropdown-content > div").first
     assert not search_wrapper.is_visible()
@@ -1091,11 +1112,7 @@ def test_search_select_pick_option_sets_value(search_select_page):
     """Clicking an option sets the hidden input value."""
     sel = search_select_page.locator("details.dropdown.search-select").first
     hidden = sel.locator('input[type="hidden"][name]')
-    search_select_page.evaluate("""() => {
-        const dd = document.querySelector('details.dropdown.search-select');
-        dd.open = true;
-        dd.dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 0)
     search_select_page.wait_for_timeout(200)
     sel.locator("button", has_text="London").click()
     search_select_page.wait_for_timeout(100)
@@ -1128,11 +1145,7 @@ def test_search_select_wrapper_has_id(search_select_page):
 def test_search_select_many_search_input_shown(search_select_page):
     """Search input is visible when option count is at or above threshold."""
     sel = search_select_page.locator("details.dropdown.search-select").nth(1)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[1].open = true;
-        dds[1].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 1)
     search_select_page.wait_for_timeout(200)
     search = sel.locator('.dropdown-content input[type="text"]')
     assert search.count() == 1
@@ -1142,11 +1155,7 @@ def test_search_select_many_search_input_shown(search_select_page):
 def test_search_select_many_filters_options(search_select_page):
     """Typing in the search input filters the visible options."""
     sel = search_select_page.locator("details.dropdown.search-select").nth(1)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[1].open = true;
-        dds[1].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 1)
     search_select_page.wait_for_timeout(200)
     search = sel.locator('.dropdown-content input[type="text"]')
     search.fill("Jap")
@@ -1160,11 +1169,7 @@ def test_search_select_many_pick_option_sets_value(search_select_page):
     """Picking an option from the many-options list sets the correct value."""
     sel = search_select_page.locator("details.dropdown.search-select").nth(1)
     hidden = sel.locator('input[type="hidden"][name]')
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[1].open = true;
-        dds[1].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 1)
     search_select_page.wait_for_timeout(200)
     sel.locator("button", has_text="Germany").click()
     search_select_page.wait_for_timeout(100)
@@ -1183,11 +1188,7 @@ def test_search_select_icons_pick_shows_label_in_summary(search_select_page):
     """After picking an icon-option, the label appears in the summary."""
     sel = search_select_page.locator("details.dropdown.search-select").nth(2)
     summary = sel.locator("summary")
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[2].open = true;
-        dds[2].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 2)
     search_select_page.wait_for_timeout(200)
     sel.locator("button", has_text="New York").click()
     search_select_page.wait_for_timeout(100)
@@ -1245,22 +1246,14 @@ def test_search_select_htmx_renders(search_select_page):
 @pytest.mark.e2e
 def test_search_select_htmx_open_loads_results(search_select_page):
     """Opening the htmx search dropdown loads results from the server."""
+    from playwright.sync_api import expect
+
     sel = search_select_page.locator("details.dropdown.search-select").nth(3)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[3].open = true;
-        dds[3].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 3)
     search_select_page.wait_for_timeout(200)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[3].querySelector('.dropdown-content input[type="text"]');
-        search.focus();
-        search.dispatchEvent(new Event('focus'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
-    buttons = sel.locator("ul button")
-    assert buttons.count() >= 1
+    with _search_response(search_select_page):
+        _focus_search(search_select_page, 3)
+    expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
 
 
 @pytest.mark.e2e
@@ -1269,26 +1262,12 @@ def test_search_select_htmx_filters_via_htmx(search_select_page):
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(3)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[3].open = true;
-        dds[3].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 3)
     search_select_page.wait_for_timeout(200)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[3].querySelector('.dropdown-content input[type="text"]');
-        search.focus();
-        search.dispatchEvent(new Event('focus'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
+    with _search_response(search_select_page):
+        _focus_search(search_select_page, 3)
     expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[3].querySelector('.dropdown-content input[type="text"]');
-        search.value = 'Tok';
-        search.dispatchEvent(new Event('input', {bubbles: true}));
-    }""")
+    _type_search(search_select_page, 3, "Tok")
     expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
     assert "Tokyo" in sel.locator("ul button").first.text_content()
 
@@ -1296,28 +1275,16 @@ def test_search_select_htmx_filters_via_htmx(search_select_page):
 @pytest.mark.e2e
 def test_search_select_htmx_pick_sets_value(search_select_page):
     """Clicking an htmx result button sets the hidden input value."""
+    from playwright.sync_api import expect
+
     sel = search_select_page.locator("details.dropdown.search-select").nth(3)
     hidden = sel.locator('input[type="hidden"][name]')
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[3].open = true;
-        dds[3].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 3)
     search_select_page.wait_for_timeout(200)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[3].querySelector('.dropdown-content input[type="text"]');
-        search.focus();
-        search.dispatchEvent(new Event('focus'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[3].querySelector('.dropdown-content input[type="text"]');
-        search.value = 'Lon';
-        search.dispatchEvent(new Event('input', {bubbles: true}));
-    }""")
-    search_select_page.wait_for_timeout(8000)
+    with _search_response(search_select_page):
+        _focus_search(search_select_page, 3)
+    _type_search(search_select_page, 3, "Lon")
+    expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
     sel.locator("ul button", has_text="London").click()
     search_select_page.wait_for_timeout(200)
     assert hidden.input_value() == "ldn"
@@ -1329,19 +1296,10 @@ def test_search_select_htmx_no_results_message(search_select_page):
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(3)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[3].open = true;
-        dds[3].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 3)
     search_select_page.wait_for_timeout(200)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[3].querySelector('.dropdown-content input[type="text"]');
-        search.focus();
-        search.dispatchEvent(new Event('focus'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
+    with _search_response(search_select_page):
+        _focus_search(search_select_page, 3)
     expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
@@ -1361,12 +1319,7 @@ def test_search_select_htmx_many_open_loads_all(search_select_page):
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(4)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[4].open = true;
-        dds[4].dispatchEvent(new Event('toggle'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
+    _open_dropdown(search_select_page, 4)
     buttons = sel.locator("ul button")
     expect(buttons).to_have_count(24, timeout=10000)
 
@@ -1377,12 +1330,7 @@ def test_search_select_htmx_many_search_input_shown_above_threshold(search_selec
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(4)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[4].open = true;
-        dds[4].dispatchEvent(new Event('toggle'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
+    _open_dropdown(search_select_page, 4)
     search_wrapper = sel.locator(".dropdown-content > div").first
     expect(search_wrapper).to_be_visible(timeout=10000)
 
@@ -1393,18 +1341,9 @@ def test_search_select_htmx_many_filters_via_htmx(search_select_page):
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(4)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[4].open = true;
-        dds[4].dispatchEvent(new Event('toggle'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[4].querySelector('.dropdown-content input[type="text"]');
-        search.value = 'Ber';
-        search.dispatchEvent(new Event('input', {bubbles: true}));
-    }""")
+    with _search_response(search_select_page):
+        _open_dropdown(search_select_page, 4)
+    _type_search(search_select_page, 4, "Ber")
     expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
     assert "Berlin" in sel.locator("ul button").first.text_content()
 
@@ -1422,12 +1361,7 @@ def test_search_select_htmx_icons_loads_results(search_select_page):
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(5)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[5].open = true;
-        dds[5].dispatchEvent(new Event('toggle'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
+    _open_dropdown(search_select_page, 5)
     buttons = sel.locator("ul button")
     expect(buttons).to_have_count(31, timeout=10000)
 
@@ -1438,12 +1372,7 @@ def test_search_select_htmx_icons_search_input_shown(search_select_page):
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(5)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[5].open = true;
-        dds[5].dispatchEvent(new Event('toggle'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
+    _open_dropdown(search_select_page, 5)
     search_wrapper = sel.locator(".dropdown-content > div").first
     expect(search_wrapper).to_be_visible(timeout=10000)
 
@@ -1451,14 +1380,12 @@ def test_search_select_htmx_icons_search_input_shown(search_select_page):
 @pytest.mark.e2e
 def test_search_select_htmx_icons_results_have_icons(search_select_page):
     """Htmx-icons: each option button has an icon span."""
+    from playwright.sync_api import expect
+
     sel = search_select_page.locator("details.dropdown.search-select").nth(5)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[5].open = true;
-        dds[5].dispatchEvent(new Event('toggle'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
+    _open_dropdown(search_select_page, 5)
     first_button = sel.locator("ul button").first
+    expect(first_button).to_be_visible(timeout=10000)
     icon_span = first_button.locator("span.shrink-0").first
     assert icon_span.text_content().strip() != ""
 
@@ -1466,15 +1393,12 @@ def test_search_select_htmx_icons_results_have_icons(search_select_page):
 @pytest.mark.e2e
 def test_search_select_htmx_icons_results_have_descriptions(search_select_page):
     """Htmx-icons: each option button has a description span."""
+    from playwright.sync_api import expect
+
     sel = search_select_page.locator("details.dropdown.search-select").nth(5)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[5].open = true;
-        dds[5].dispatchEvent(new Event('toggle'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
+    _open_dropdown(search_select_page, 5)
     descs = sel.locator("ul button span.text-xs")
-    assert descs.count() >= 1
+    expect(descs.first).to_be_visible(timeout=10000)
     assert descs.first.text_content().strip() != ""
 
 
@@ -1484,18 +1408,9 @@ def test_search_select_htmx_icons_filters(search_select_page):
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(5)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[5].open = true;
-        dds[5].dispatchEvent(new Event('toggle'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[5].querySelector('.dropdown-content input[type="text"]');
-        search.value = 'Jap';
-        search.dispatchEvent(new Event('input', {bubbles: true}));
-    }""")
+    with _search_response(search_select_page):
+        _open_dropdown(search_select_page, 5)
+    _type_search(search_select_page, 5, "Jap")
     expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
     assert "Japan" in sel.locator("ul button").first.text_content()
 
@@ -1505,12 +1420,8 @@ def test_search_select_htmx_icons_pick_sets_value(search_select_page):
     """Htmx-icons: picking an option sets the correct hidden input value."""
     sel = search_select_page.locator("details.dropdown.search-select").nth(5)
     hidden = sel.locator('input[type="hidden"][name]')
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[5].open = true;
-        dds[5].dispatchEvent(new Event('toggle'));
-    }""")
-    search_select_page.wait_for_timeout(8000)
+    with _search_response(search_select_page):
+        _open_dropdown(search_select_page, 5)
     sel.locator("ul button", has_text="France").click()
     search_select_page.wait_for_timeout(200)
     assert hidden.input_value() == "fr"
@@ -1525,11 +1436,7 @@ def test_search_select_htmx_icons_pick_sets_value(search_select_page):
 def test_search_select_grouped_shows_headers(search_select_page):
     """Open the grouped SearchSelect; all three group headers are visible."""
     sel = search_select_page.locator("details.dropdown.search-select").nth(6)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[6].open = true;
-        dds[6].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 6)
     search_select_page.wait_for_timeout(200)
 
     headers = sel.locator("li.menu-title")
@@ -1542,19 +1449,10 @@ def test_search_select_grouped_shows_headers(search_select_page):
 def test_search_select_grouped_search_hides_empty_groups(search_select_page):
     """Typing 'lon' hides Asia and Americas headers (no children match)."""
     sel = search_select_page.locator("details.dropdown.search-select").nth(6)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[6].open = true;
-        dds[6].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 6)
     search_select_page.wait_for_timeout(200)
 
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[6].querySelector('.dropdown-content input[type="text"]');
-        search.value = 'lon';
-        search.dispatchEvent(new Event('input', {bubbles: true}));
-    }""")
+    _type_search(search_select_page, 6, "lon")
     search_select_page.wait_for_timeout(200)
 
     visible_headers = [h.inner_text().strip() for h in sel.locator("li.menu-title").all() if h.is_visible()]
@@ -1723,11 +1621,8 @@ def test_search_select_keyboard_close_clears_highlight(search_select_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# The /search-select/ page marks all fields as required=False, so no
-# validation errors are triggered on empty submit.  A dedicated page with
-# a required SearchSelect would be needed for a proper error-flow test.
-# Skipped until that page exists; tracked as part of the broader error-
-# state test work.
+# Gap: /search-select/ has only required=False fields, so an e2e error-flow
+# test needs a page with a required SearchSelect, which does not exist yet.
 
 
 # ─── Level 6b: E2e, server-side search loading + failure UX ─────────────
@@ -1758,11 +1653,7 @@ def test_search_select_options_refresh_on_first_focus(search_select_page):
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(3)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[3].open = true;
-        dds[3].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 3)
     expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
 
 
@@ -1773,18 +1664,9 @@ def test_search_select_failing_search_shows_error_alert(search_select_page):
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.search-select").nth(7)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[7].open = true;
-        dds[7].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 7)
     search_select_page.wait_for_timeout(200)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        const search = dds[7].querySelector('.dropdown-content input[type="text"]');
-        search.focus();
-        search.dispatchEvent(new Event('focus'));
-    }""")
+    _focus_search(search_select_page, 7)
     alert = sel.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
     assert "Search failed" in alert.text_content()
@@ -1800,11 +1682,7 @@ def test_search_select_search_input_works_after_error(search_select_page):
     sel = search_select_page.locator("details.dropdown.search-select").nth(7)
     requests: list[str] = []
     search_select_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
-    search_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.search-select');
-        dds[7].open = true;
-        dds[7].dispatchEvent(new Event('toggle'));
-    }""")
+    _open_dropdown(search_select_page, 7)
     alert = sel.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
     initial_count = len(requests)
@@ -1911,9 +1789,6 @@ def test_search_select_toggle_class_survives_noop_morph(search_select_page):
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────
-#
-# Scaffolding only: PNG artifacts land in test-results/ for manual review.
-# True baseline comparison requires a visual-regression plugin (see #26).
 
 
 @pytest.mark.screenshot
