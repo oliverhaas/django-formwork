@@ -28,17 +28,34 @@ def pytest_collection_modifyitems(config, items):
 
 
 def submit(page):
-    """Submit the form via htmx morph and wait for completion."""
-    page.evaluate("document.querySelector('form[hx-post]').noValidate = true")
+    """Submit the form via htmx morph and wait for the swap to complete."""
+    # htmx 4 fires after:swap on the source element (the form) once all
+    # main and OOB swaps are done; flag it so wait_for_function is race-free.
+    page.evaluate(
+        """() => {
+            const form = document.querySelector('form[hx-post]');
+            form.noValidate = true;
+            window.__fwSubmitDone = false;
+            form.addEventListener('htmx:after:swap', () => { window.__fwSubmitDone = true; }, {once: true});
+        }""",
+    )
     page.locator("form[hx-post] button[type='submit']").click()
-    page.wait_for_timeout(500)
+    page.wait_for_function("window.__fwSubmitDone === true")
 
 
 def _navigate(page, live_server, path):
     """Navigate to a page and wait for Alpine + htmx init."""
     page.goto(f"{live_server.url}{path}")
     page.wait_for_load_state("domcontentloaded")
-    page.wait_for_timeout(300)  # Alpine.js init
+    # Alpine 3 stamps _x_dataStack on every x-data root during start(),
+    # so its presence on the first root means the whole tree is initialized.
+    page.wait_for_function(
+        """() => {
+            if (!window.htmx || !window.Alpine) return false;
+            const root = document.querySelector('[x-data]');
+            return root === null || root._x_dataStack !== undefined;
+        }""",
+    )
     return page
 
 

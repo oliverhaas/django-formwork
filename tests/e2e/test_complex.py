@@ -20,15 +20,12 @@ def _pick_search_select(page, value, label):
     details = page.locator("details.search-select")
     # Open the dropdown via JS (summary::before overlay blocks clicks)
     page.evaluate("document.querySelector('details.search-select').open = true")
-    page.wait_for_timeout(300)
-    # Focus the search input to trigger htmx search
+    # Focus the search input to trigger the htmx options load
     search = details.locator("input[type='text']")
     search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
-    page.wait_for_timeout(800)  # wait for htmx debounce + response
-    # Click the matching option button
-    btn = details.locator(f'button[data-value="{value}"]')
-    btn.click()
-    page.wait_for_timeout(200)
+    # click() auto-waits for the option button from the htmx response
+    details.locator(f'button[data-value="{value}"]').click()
+    expect(details.locator("summary")).to_contain_text(label)
 
 
 def _fill_base_fields_silently(page):
@@ -173,11 +170,9 @@ class TestComplexFormMorphResilience:
     def test_search_select_value_survives_morph(self, complex_page):
         """SearchSelect selected value persists through morph."""
         _pick_search_select(complex_page, "us", "United States")
-        # Verify selection is visible
         summary = complex_page.locator("details.search-select summary")
         expect(summary).to_contain_text("United States", timeout=2000)
         submit(complex_page)
-        # Verify selection persisted
         hidden = complex_page.locator('input[name="country"]')
         assert hidden.input_value() == "us"
         summary = complex_page.locator("details.search-select summary")
@@ -187,7 +182,6 @@ class TestComplexFormMorphResilience:
         """MultiSelect selected values persist through morph."""
         _toggle_multiselect_option(complex_page, "py", "Python")
         submit(complex_page)
-        # Verify hidden inputs still present
         hidden = complex_page.locator('input[type="hidden"][name="languages"]')
         values = [hidden.nth(i).input_value() for i in range(hidden.count())]
         assert "py" in values
@@ -197,21 +191,18 @@ class TestComplexFormMorphResilience:
         inp = complex_page.locator('input[name="password"]')
         inp.fill("secret")
         complex_page.locator("label.password-reveal button").first.click()
-        complex_page.wait_for_timeout(200)
-        assert (
-            complex_page.evaluate(
-                "document.querySelector('input[name=\"password\"]').type",
-            )
-            == "text"
-        )
+        expect(inp).to_have_attribute("type", "text")
         submit(complex_page)
-        # Reveal state preserved (x-data not overwritten)
+        # Reveal state preserved (x-data not overwritten).  The morph drops
+        # the Alpine-applied type attribute, so check the Alpine state and
+        # the effective input type (attribute-less inputs render as text).
         assert (
             complex_page.evaluate(
-                "document.querySelector('input[name=\"password\"]').type",
+                "Alpine.$data(document.querySelector('label.password-reveal')).show",
             )
-            == "text"
+            is True
         )
+        assert inp.evaluate("el => el.type") == "text"
 
     def test_search_select_dropdown_state_survives_morph(self, complex_page):
         """Open SearchSelect dropdown stays open through morph."""
@@ -224,10 +215,12 @@ class TestComplexFormMorphResilience:
             """(() => {
             const form = document.querySelector('form[hx-post]');
             form.noValidate = true;
+            window.__fwSubmitDone = false;
+            form.addEventListener('htmx:after:swap', () => { window.__fwSubmitDone = true; }, {once: true});
             document.querySelector('button[type=\"submit\"]').click();
         })()""",
         )
-        page.wait_for_timeout(500)
+        page.wait_for_function("window.__fwSubmitDone === true")
         # htmx 4 morph (with formwork's morphIgnore) preserves open attribute on <details>
         assert page.evaluate("document.querySelector('details.search-select').open")
 
@@ -236,11 +229,10 @@ class TestComplexFormMorphResilience:
         page = complex_page
         # Pick a country via SearchSelect (triggers change)
         _pick_search_select(page, "us", "United States")
-        # Wait for auto-validate debounce (1500ms input + processing)
-        page.wait_for_timeout(2500)
-        # Cross-field error: country without languages
+        # Cross-field error: country without languages.  The timeout covers
+        # the 1500ms auto-validate debounce plus the round trip.
         errors = page.locator("#id_languages_error")
-        expect(errors).to_have_count(1, timeout=3000)
+        expect(errors).to_have_count(1, timeout=5000)
         assert "language" in errors.text_content().lower()
 
 

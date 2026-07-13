@@ -1595,7 +1595,6 @@ def basic_view(request: HttpRequest) -> HttpResponse:
         template = engine.from_string(page_tmpl)
         return HttpResponse(template.render(ctx, request))
 
-    # GET
     form = BasicForm(instance=obj) if obj else BasicForm()
     ctx = {"form": form, "saved": obj is not None}
     if is_htmx:
@@ -1637,7 +1636,6 @@ def autosave_view(request: HttpRequest) -> HttpResponse:
         template = engine.from_string(form_tmpl if is_htmx else page_tmpl)
         return HttpResponse(template.render(ctx, request))
 
-    # GET
     form = AutoSaveForm(instance=obj) if obj else AutoSaveForm()
     ctx = {"form": form, "saved": obj is not None}
     template = engine.from_string(card_tmpl if is_htmx else page_tmpl)

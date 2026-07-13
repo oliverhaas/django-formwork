@@ -4,16 +4,24 @@
 class TestValidatedTextareaInline:
     """Inline htmx validation adds and removes the error state as the text changes."""
 
-    def _trigger_validation(self, page):
-        """Dispatch input event to trigger htmx debounced validation."""
-        page.locator("textarea").dispatch_event("input", {"bubbles": True})
-        page.wait_for_timeout(1000)  # debounce 500ms + network + settle
+    def _fill_and_validate(self, page, text):
+        """Fill the textarea and wait for the debounced htmx validation swap."""
+        # Register the flag before fill() fires the input event so the
+        # after:swap from the 500ms-debounced request cannot be missed.
+        page.evaluate(
+            """() => {
+                window.__fwValidated = false;
+                document.querySelector('textarea')
+                    .addEventListener('htmx:after:swap', () => { window.__fwValidated = true; }, {once: true});
+            }""",
+        )
+        page.locator("textarea").fill(text)
+        page.wait_for_function("window.__fwValidated === true")
 
     def test_normal_text_no_error_state(self, textarea_page):
         """Typing valid text shows no error border or tooltip."""
         textarea = textarea_page.locator("textarea")
-        textarea.fill("hello world")
-        self._trigger_validation(textarea_page)
+        self._fill_and_validate(textarea_page, "hello world")
 
         aria = textarea.get_attribute("aria-invalid")
         assert aria != "true"
@@ -29,9 +37,7 @@ class TestValidatedTextareaInline:
 
     def test_error_text_shows_error_state(self, textarea_page):
         """Typing 'spam' shows red border and error tooltip."""
-        textarea = textarea_page.locator("textarea")
-        textarea.fill("spam")
-        self._trigger_validation(textarea_page)
+        self._fill_and_validate(textarea_page, "spam")
 
         # The .formwork-errors div has a <p> error message
         has_error_p = textarea_page.evaluate(
@@ -47,11 +53,8 @@ class TestValidatedTextareaInline:
         specifically (not :not(:empty)) so the empty wrapper doesn't
         falsely trigger the error state.
         """
-        textarea = textarea_page.locator("textarea")
-
         # First type "spam" to trigger error
-        textarea.fill("spam")
-        self._trigger_validation(textarea_page)
+        self._fill_and_validate(textarea_page, "spam")
 
         has_error = textarea_page.evaluate(
             """() => !!document.querySelector('.formwork-errors p')""",
@@ -59,8 +62,7 @@ class TestValidatedTextareaInline:
         assert has_error, "Error state should appear for 'spam'"
 
         # Now clear and type valid text
-        textarea.fill("hello world")
-        self._trigger_validation(textarea_page)
+        self._fill_and_validate(textarea_page, "hello world")
 
         # Verify error is cleared from the user's perspective:
         # 1. No <p> error messages
