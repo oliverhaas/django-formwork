@@ -19,7 +19,7 @@ from .forms import (
 )
 from .models import Profile, Tag, Task
 
-# Fields editable per-cell in list rows (_list_row.html); task_status() disables the rest.
+# Fields editable per-cell in list rows (the task-row partial); task_status() disables the rest.
 ROW_EDITABLE_FIELDS = {"status", "priority", "assignee", "due_date", "tags"}
 
 # ─── Dashboard ──────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ def task_list(request):
         t.row_form = TaskForm(instance=t, editable_fields=ROW_EDITABLE_FIELDS, row=True, auto_id=f"id_row_{t.pk}_%s")
 
     if request.headers.get("HX-Request") == "true":
-        return render(request, "tasks/_list_rows.html", {"tasks": tasks})
+        return render(request, "tasks/list.html#task-rows", {"tasks": tasks})
     return render(request, "tasks/list.html", {"tasks": tasks, "filter_form": form})
 
 
@@ -146,7 +146,7 @@ def task_status(request, pk):
     if save_form.is_valid():
         save_form.save()
     task.row_form = TaskForm(instance=task, editable_fields=ROW_EDITABLE_FIELDS, row=True, auto_id=f"id_row_{task.pk}_%s")
-    return render(request, "tasks/_list_row.html", {"task": task})
+    return render(request, "tasks/list.html#task-row", {"task": task})
 
 
 # ─── Wizard ─────────────────────────────────────────────────────────────

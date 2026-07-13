@@ -84,7 +84,43 @@
 
     <aside class="drawer-side z-30">
       <label for="nav-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-      {% include "_sidebar.html" %}
+      <nav class="bg-base-100 w-68 min-h-full px-4 py-6 flex flex-col gap-1 border-r border-base-300">
+        <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-3 py-3 mb-4">
+          <span class="grid place-items-center size-10 rounded-xl bg-primary text-primary-content">
+            <i class="icon icon-square-check-big size-6"></i>
+          </span>
+          <span>
+            <span class="block font-bold leading-tight">Taskwork</span>
+            <span class="block text-xs text-base-content/50 leading-tight">django-formwork demo</span>
+          </span>
+        </a>
+
+        <p class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 px-3 mt-2">Workspace</p>
+        <a href="{% url 'dashboard' %}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'dashboard' %}bg-primary/10 text-primary font-semibold{% endif %}">
+          <i class="icon icon-layout-dashboard size-5"></i> Dashboard
+        </a>
+        <a href="{% url 'task_list' %}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'tasks' %}bg-primary/10 text-primary font-semibold{% endif %}">
+          <i class="icon icon-list-checks size-5"></i> Tasks
+        </a>
+        <a href="{% url 'wizard' %}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'wizard' %}bg-primary/10 text-primary font-semibold{% endif %}">
+          <i class="icon icon-wand-sparkles size-5"></i> New project
+        </a>
+
+        <p class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 px-3 mt-6">Account</p>
+        <a href="{% url 'settings' %}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'settings' %}bg-primary/10 text-primary font-semibold{% endif %}">
+          <i class="icon icon-settings size-5"></i> Settings
+        </a>
+
+        <div class="mt-auto pt-6 px-3 text-xs text-base-content/50">
+          <a href="https://github.com/oliverhaas/django-formwork" target="_blank" rel="noopener" class="link link-hover flex items-center gap-2">
+            <i class="icon icon-github size-5"></i> GitHub
+          </a>
+        </div>
+      </nav>
     </aside>
   </div>
 </body>

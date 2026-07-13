@@ -41,9 +41,90 @@
             <th class="w-12"></th>
           </tr>
         </thead>
-        {% include "tasks/_list_rows.html" %}
+        {% partialdef task-rows inline %}
+        <tbody id="task-rows">
+        {% for task in tasks %}{% partial task-row %}{% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-12 text-base-content/50">
+              <i class="icon icon-inbox size-10 mx-auto mb-2 opacity-40 block"></i>
+              No tasks match the current filter.
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+        {% endpartialdef %}
       </table>
     </div>
   </div>
 </div>
+
+{% partialdef task-row %}
+<tr id="task-row-{{ task.pk }}">
+  <td class="max-w-xs">
+    <a href="{% url 'task_edit' task.pk %}" class="font-medium hover:underline">{{ task.title }}</a>
+    {% if task.description %}<p class="text-xs text-base-content/50 truncate">{{ task.description }}</p>{% endif %}
+  </td>
+  <td>
+    <form hx-post="{% url 'task_status' task.pk %}"
+          hx-target="#task-row-{{ task.pk }}"
+          hx-swap="outerMorph"
+          hx-trigger="change delay:400ms">
+      {% csrf_token %}
+      <input type="hidden" name="field" value="status">
+      {{ task.row_form.status }}
+    </form>
+  </td>
+  <td>
+    <form hx-post="{% url 'task_status' task.pk %}"
+          hx-target="#task-row-{{ task.pk }}"
+          hx-swap="outerMorph"
+          hx-trigger="change delay:400ms">
+      {% csrf_token %}
+      <input type="hidden" name="field" value="priority">
+      {{ task.row_form.priority }}
+    </form>
+  </td>
+  <td class="text-sm">
+    <form hx-post="{% url 'task_status' task.pk %}"
+          hx-target="#task-row-{{ task.pk }}"
+          hx-swap="outerMorph"
+          hx-trigger="change delay:400ms">
+      {% csrf_token %}
+      <input type="hidden" name="field" value="assignee">
+      {{ task.row_form.assignee }}
+    </form>
+  </td>
+  <td>
+    <form hx-post="{% url 'task_status' task.pk %}"
+          hx-target="#task-row-{{ task.pk }}"
+          hx-swap="outerMorph"
+          hx-trigger="change delay:400ms">
+      {% csrf_token %}
+      <input type="hidden" name="field" value="tags">
+      {{ task.row_form.tags }}
+    </form>
+  </td>
+  <td class="text-sm whitespace-nowrap">
+    <form hx-post="{% url 'task_status' task.pk %}"
+          hx-target="#task-row-{{ task.pk }}"
+          hx-swap="outerMorph"
+          hx-trigger="change delay:400ms">
+      {% csrf_token %}
+      <input type="hidden" name="field" value="due_date">
+      {{ task.row_form.due_date }}
+    </form>
+  </td>
+  <td>
+    <div class="dropdown dropdown-end">
+      <button tabindex="0" class="btn btn-ghost btn-xs" aria-label="actions">
+        <i class="icon icon-ellipsis-vertical size-4"></i>
+      </button>
+      <ul tabindex="0" class="dropdown-content menu menu-sm bg-base-100 rounded-box shadow-lg border border-base-300 w-36 p-1 z-10">
+        <li><a href="{% url 'task_edit' task.pk %}"><i class="icon icon-pencil size-4"></i> Edit</a></li>
+        <li><a href="{% url 'task_delete' task.pk %}" class="text-error"><i class="icon icon-trash-2 size-4"></i> Delete</a></li>
+      </ul>
+    </div>
+  </td>
+</tr>
+{% endpartialdef %}
 {% endblock %}
