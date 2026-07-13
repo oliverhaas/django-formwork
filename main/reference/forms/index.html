@@ -1022,7 +1022,10 @@ validation without <code>sync_to_async</code> wrappers.</p>
 </span></code></pre></div>
 <p><code>asave(commit=True)</code> mirrors <code>ModelForm.save()</code>: it awaits the instance's
 <code>asave()</code> and then saves many-to-many relations. With <code>commit=False</code> it
-returns the unsaved instance and exposes <code>save_m2m</code> as an async callable.</p>
+returns the unsaved instance and exposes <code>asave_m2m</code> as an async callable;
+call <code>await form.asave_m2m()</code> after saving the instance. Calling the sync
+<code>save_m2m</code> hook on a form saved with <code>asave(commit=False)</code> raises
+<code>RuntimeError</code> so the mistake cannot silently skip M2M data.</p>
 <p>Set <code>FORMWORK_FORCE_ASYNC = True</code> in settings to make the sync entry points
 (<code>is_valid()</code>, <code>full_clean()</code>, <code>save()</code>) raise <code>RuntimeError</code>. Use it to keep
 accidental sync calls out of an async codebase.</p>
