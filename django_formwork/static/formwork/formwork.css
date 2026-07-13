@@ -319,19 +319,33 @@ option::checkmark {
 }
 
 /* Selected-option checkmark (custom widgets and native picker): the
-   Lucide "check" as a currentColor mask.  Font checkmark glyphs render
-   too faint (U+2713) or with emoji presentation on some platforms
-   (U+2714); the mask keeps one even-stroke shape everywhere.  Drawn on
-   ::before so the 1em box is unaffected by the span's own padding. */
+   DaisyUI checkbox tick, a rotated currentColor square cut by clip-path.
+   Font checkmark glyphs render too faint (U+2713) or with emoji
+   presentation on some platforms (U+2714); this reuses the exact shape
+   of .checkbox:checked, so dropdown selection and checkboxes share one
+   visual language.  Drawn on ::before so the 1em box is unaffected by
+   the span's own padding.  The forced-colors/print fallback mirrors
+   DaisyUI's: backgrounds are stripped there, so fall back to a glyph. */
 .formwork-check::before,
 option::checkmark {
     content: "";
     display: block;
     width: 1em;
     height: 1em;
+    rotate: 45deg;
     background-color: currentColor;
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+    clip-path: polygon(20% 100%, 20% 80%, 50% 80%, 50% 0%, 70% 0%, 70% 100%);
+}
+
+@media (forced-colors: active), print {
+    .formwork-check::before,
+    option::checkmark {
+        content: "\2714\FE0E";
+        rotate: 0deg;
+        background-color: transparent;
+        clip-path: none;
+        line-height: 1;
+    }
 }
 
 @layer components {
