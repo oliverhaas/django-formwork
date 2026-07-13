@@ -7,9 +7,12 @@ from typing import Any
 from django import forms
 
 
-class FloatingLabelMixin:
+class FloatingLabelMixin(forms.Widget):
     """Render a control inside DaisyUI's floating-label wrapper, reusing the placeholder as the label."""
 
+    # Subclasses forms.Widget so template_name/get_context resolve through the
+    # widget MRO; django-stubs types template_name differently on Widget vs its
+    # subclasses, so a bare mixin cannot re-declare it without a conflict.
     floating_wrapper_template = "formwork/widgets/floating_label.html"
 
     def __init__(self, *args: Any, floating_label: bool = False, **kwargs: Any) -> None:
@@ -21,8 +24,8 @@ class FloatingLabelMixin:
             self._inner_template_name = self.template_name
             self.template_name = self.floating_wrapper_template
 
-    def get_context(self, name: str, value: Any, attrs: dict[str, Any] | None) -> dict[str, Any]:
-        context = super().get_context(name, value, attrs)  # type: ignore[misc]
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
         if self.floating_label:
             widget = context["widget"]
             widget["inner_template_name"] = self._inner_template_name
@@ -41,7 +44,7 @@ class Textarea(FloatingLabelMixin, forms.Textarea):
 class Select(FloatingLabelMixin, forms.Select):
     """``forms.Select`` with an optional DaisyUI floating label (placeholder used only as label text)."""
 
-    def get_context(self, name: str, value: Any, attrs: dict[str, Any] | None) -> dict[str, Any]:
+    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         if self.floating_label:
             context["widget"]["attrs"].pop("placeholder", None)
