@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 from django import forms
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from e2e.models import BasicFormData, DirtyTrackedData
+from e2e.models import BasicFormData, DirtyTrackedData, DirtyUniquePair
 
 from django_formwork.forms import FormworkForm, FormworkModelForm
 
@@ -371,3 +371,78 @@ class TestAsyncDirtyOnlyForeignKey:
         await sync_to_async(obj.refresh_from_db)()
         assert obj.note == "changed"
         assert obj.region_id is not None
+
+
+# ---------------------------------------------------------------------------
+# fields_dirty() and compound uniqueness checks
+# ---------------------------------------------------------------------------
+
+
+class DirtyPairForm(FormworkModelForm):
+    class Meta:
+        model = DirtyUniquePair
+        fields = ["region", "slug"]
+        validate_dirty_only = True
+
+
+def _seed_pair(region, slug):
+    obj = DirtyUniquePair(region=region, slug=slug)
+    obj.save()
+    return DirtyUniquePair.objects.get(pk=obj.pk)
+
+
+def test_fields_dirty_detects_changed_foreign_key():
+    """A changed FK is dirty under both its field name and its attname."""
+    # Regression: fields_dirty() called get_dirty_fields() without
+    # check_relationship=True, so FK changes were invisible.
+    from e2e.models import Region
+
+    obj = _seed_with_region()
+    obj = DirtyTrackedData.objects.get(pk=obj.pk)
+    other = Region.objects.create(name="South")
+    obj.region = other
+    assert obj.fields_dirty("region") is True
+    assert obj.fields_dirty("region_id") is True
+    assert obj.fields_dirty("name") is False
+
+
+def test_changed_fk_compound_unique_collision_is_form_error():
+    """Changing only the FK member of a (region, slug) unique pair errors on the form."""
+    # Regression: the changed FK was never dirty, landed in the validation
+    # exclusions, and the collision hit the DB as IntegrityError.
+    from e2e.models import Region
+
+    north = Region.objects.create(name="North")
+    south = Region.objects.create(name="South")
+    obj = _seed_pair(north, "alpha")
+    _seed_pair(south, "alpha")
+    form = DirtyPairForm(data={"region": str(south.pk), "slug": "alpha"}, instance=obj)
+    assert form.is_valid() is False
+    assert "__all__" in form.errors
+
+
+def test_changed_slug_compound_unique_collision_is_form_error():
+    """Changing only slug still runs the (region, slug) unique check."""
+    # Regression: the unchanged member was excluded and Django dropped the
+    # whole compound check, so the collision surfaced as IntegrityError.
+    from e2e.models import Region
+
+    north = Region.objects.create(name="North")
+    obj = _seed_pair(north, "alpha")
+    _seed_pair(north, "beta")
+    form = DirtyPairForm(data={"region": str(north.pk), "slug": "beta"}, instance=obj)
+    assert form.is_valid() is False
+    assert "__all__" in form.errors
+
+
+def test_changed_slug_without_collision_stays_valid():
+    """A non-colliding single-member edit of a unique pair saves normally."""
+    from e2e.models import Region
+
+    north = Region.objects.create(name="North")
+    obj = _seed_pair(north, "alpha")
+    form = DirtyPairForm(data={"region": str(north.pk), "slug": "gamma"}, instance=obj)
+    assert form.is_valid() is True
+    form.save()
+    obj.refresh_from_db()
+    assert obj.slug == "gamma"

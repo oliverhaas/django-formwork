@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.db.models import UniqueConstraint
 from django.forms import Form, ModelChoiceField, ModelForm, ModelMultipleChoiceField
 from django.forms.models import InlineForeignKeyField, ModelFormMetaclass, construct_instance
 
@@ -312,14 +313,42 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
             raise ImproperlyConfigured(msg)
 
     def _get_validation_exclusions(self) -> set[str]:
+        """Django's exclusions plus every unchanged field.
+
+        Unchanged members of a compound uniqueness check that a dirty field
+        participates in are kept validatable: Django drops such a check
+        entirely when any member is excluded, and the collision would then
+        surface as a database IntegrityError instead of a form error.
+        """
         exclude: set[str] = super()._get_validation_exclusions()  # type: ignore[misc]
         if not self._validate_dirty_only or self.instance._state.adding:  # noqa: SLF001
             return exclude
-        dirty = set(self.instance.get_dirty_fields())
+        dirty = set(self.instance.get_dirty_fields(check_relationship=True))
+        keep = self._compound_check_members(dirty)
         for f in self.instance._meta.fields:  # noqa: SLF001
-            if not f.primary_key and f.name not in dirty:
+            if not f.primary_key and f.name not in dirty and f.name not in keep:
                 exclude.add(f.name)
         return exclude
+
+    def _compound_check_members(self, dirty: set[str]) -> set[str]:
+        """Fields sharing a multi-field uniqueness check with a dirty field."""
+        opts = self.instance._meta  # noqa: SLF001
+        groups: list[tuple[str, ...]] = [tuple(group) for group in opts.unique_together]
+        groups += [
+            tuple(constraint.fields)
+            for constraint in opts.constraints
+            if isinstance(constraint, UniqueConstraint) and len(constraint.fields) > 1
+        ]
+        for f in opts.fields:
+            for date_kind in ("unique_for_date", "unique_for_month", "unique_for_year"):
+                paired = getattr(f, date_kind, None)
+                if paired:
+                    groups.append((f.name, paired))
+        members: set[str] = set()
+        for group in groups:
+            if len(group) > 1 and dirty.intersection(group):
+                members.update(group)
+        return members
 
     def _dirty_construct_exclude(self) -> set[str]:
         """Fields ``construct_instance()`` should leave at their stored value.
@@ -446,6 +475,9 @@ class FormworkModelForm(
     With ``Meta.validate_dirty_only = True`` (or the matching ``__init__``
     kwarg), field validation, model field validation, unique checks and
     constraint checks are all skipped for fields the user did not change.
+    Exception: an unchanged field that shares a multi-field uniqueness check
+    (``unique_together``, multi-field ``UniqueConstraint``, ``unique_for_*``)
+    with a changed field stays validated, so the compound check still runs.
     Requires the bound model to inherit :class:`~django_formwork.FormworkModel`.
 
     Field errors render inline (below the widget, help-text style) by default.

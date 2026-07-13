@@ -292,3 +292,19 @@ class DirtyTrackedData(FormworkModel):
         # when one of the referenced fields was actually changed.
         if self.fields_dirty("name", "email") and self.name == self.email:
             raise ValidationError({"name": "Name must differ from email."})
+
+
+class DirtyUniquePair(FormworkModel):
+    """Dirty-tracked ``(region, slug)`` unique pair for ``validate_dirty_only`` tests."""
+
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name="dirty_pairs")
+    slug = models.CharField(max_length=50)
+
+    class Meta:
+        app_label = "e2e"
+        constraints = [
+            models.UniqueConstraint(fields=["region", "slug"], name="uq_dirty_unique_pair"),
+        ]
+
+    def __str__(self):
+        return self.slug or f"DirtyUniquePair #{self.pk}"

@@ -29,9 +29,13 @@ class FormworkModel(DirtyFieldsMixin, models.Model):
     def fields_dirty(self, *names: str) -> bool:
         """True if any of ``names`` changed since the instance was loaded.
 
-        New instances (``_state.adding=True``) always return ``True`` so
-        ``model.clean()`` cross-field rules fire fully on create.
+        ForeignKey changes are detected too; a relation can be named by its
+        field name (``author``) or its attname (``author_id``).  New instances
+        (``_state.adding=True``) always return ``True`` so ``model.clean()``
+        cross-field rules fire fully on create.
         """
         if self._state.adding:
             return True
-        return bool(set(names) & set(self.get_dirty_fields()))
+        dirty = set(self.get_dirty_fields(check_relationship=True))
+        dirty |= {f.attname for f in self._meta.concrete_fields if f.name in dirty}
+        return bool(set(names) & dirty)
