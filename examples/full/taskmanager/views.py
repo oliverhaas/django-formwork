@@ -92,7 +92,7 @@ def task_list(request):
 
     tasks = list(tasks)
     for t in tasks:
-        t.row_form = TaskForm(instance=t, editable_fields=ROW_EDITABLE_FIELDS, auto_id=f"id_row_{t.pk}_%s")
+        t.row_form = TaskForm(instance=t, editable_fields=ROW_EDITABLE_FIELDS, row=True, auto_id=f"id_row_{t.pk}_%s")
 
     if request.headers.get("HX-Request") == "true":
         return render(request, "tasks/_list_rows.html", {"tasks": tasks})
@@ -145,7 +145,7 @@ def task_status(request, pk):
     save_form = TaskForm(request.POST, instance=task, editable_fields=editable, auto_id=f"id_row_{task.pk}_%s")
     if save_form.is_valid():
         save_form.save()
-    task.row_form = TaskForm(instance=task, editable_fields=ROW_EDITABLE_FIELDS, auto_id=f"id_row_{task.pk}_%s")
+    task.row_form = TaskForm(instance=task, editable_fields=ROW_EDITABLE_FIELDS, row=True, auto_id=f"id_row_{task.pk}_%s")
     return render(request, "tasks/_list_row.html", {"task": task})
 
 

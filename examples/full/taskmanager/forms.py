@@ -103,19 +103,34 @@ class TaskForm(FormworkModelForm):
             "attachment": "Any single file (FileDropZone, ≤10 MB).",
         }
 
-    def __init__(self, *args, editable_fields=None, **kwargs):
+    # Ghost variants keep inline table cells text-like; min-w-fit stops the
+    # table from squeezing the native status select below its widest option.
+    ROW_WIDGET_CLASSES = {
+        "status": "select-ghost min-w-fit",
+        "assignee": "select-ghost",
+        "tags": "select-ghost",
+        "due_date": "input-ghost",
+    }
+
+    def __init__(self, *args, editable_fields=None, row=False, **kwargs):
         """``editable_fields``: iterable of field names left editable; every
         other field is marked ``disabled`` so its cleaned value always comes
         from the bound instance rather than POST data, regardless of what
         (if anything) was submitted for it. Lets the same form back a
         row's single-field inline edit (htmx) and the full edit page
         without risking clobbering fields the row doesn't render.
+
+        ``row``: style widgets for inline table cells (ghost variants).
         """
         super().__init__(*args, **kwargs)
         if editable_fields is not None:
             for name, field in self.fields.items():
                 if name not in editable_fields:
                     field.disabled = True
+        if row:
+            for name, css in self.ROW_WIDGET_CLASSES.items():
+                attrs = self.fields[name].widget.attrs
+                attrs["class"] = f"{attrs['class']} {css}".strip() if attrs.get("class") else css
 
 
 class TaskQuickAddForm(forms.Form):

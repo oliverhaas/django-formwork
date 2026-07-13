@@ -60,9 +60,7 @@ class Task(models.Model):
         DONE = "done", "Done"
 
     # Status badges sit on a "lifecycle" ramp (neutral → primary → accent → success).
-    # Priority badges sit on a "severity" ramp (info → secondary → warning → error).
-    # No two cells in either column share a colour with the other axis, so a
-    # row's status and priority badges always read as visually distinct.
+    # Priority badges sit on a "severity" ramp (info → primary → warning → error).
     STATUS_COLORS: dict[str, str] = {
         Status.TODO: "neutral",
         Status.IN_PROGRESS: "primary",
@@ -71,7 +69,7 @@ class Task(models.Model):
     }
     PRIORITY_COLORS: dict[str, str] = {
         Priority.LOW: "info",
-        Priority.MEDIUM: "secondary",
+        Priority.MEDIUM: "primary",
         Priority.HIGH: "warning",
         Priority.CRITICAL: "error",
     }
