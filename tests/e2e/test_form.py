@@ -108,14 +108,12 @@ class TestHelpTextToggle:
         disclosure = "#id_message_disclosure"
         basic_page.set_viewport_size({"width": 1280, "height": 720})
         basic_page.wait_for_function(
-            "() => !document.querySelector('#id_message_disclosure')"
-            ".hasAttribute('data-expandable')",
+            "() => !document.querySelector('#id_message_disclosure').hasAttribute('data-expandable')",
         )
         # Narrow past the point where the multi-word help fits one line.
         basic_page.set_viewport_size({"width": 400, "height": 720})
         basic_page.wait_for_function(
-            "() => document.querySelector('#id_message_disclosure')"
-            ".hasAttribute('data-expandable')",
+            "() => document.querySelector('#id_message_disclosure').hasAttribute('data-expandable')",
         )
         assert _after_content(basic_page, f"{disclosure} > summary") == '"[more]"'
         # Truncated to one line, not wrapped to two.

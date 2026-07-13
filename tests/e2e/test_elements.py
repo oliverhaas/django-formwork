@@ -64,9 +64,7 @@ class TestStandaloneElements:
         card = self._card(elements_page)
         base = card.locator("select:not(.select-soft)")
         soft = card.locator("select.select-soft.select-accent")
-        assert soft.evaluate("el => getComputedStyle(el).color") != base.evaluate(
-            "el => getComputedStyle(el).color"
-        )
+        assert soft.evaluate("el => getComputedStyle(el).color") != base.evaluate("el => getComputedStyle(el).color")
         assert soft.evaluate("el => getComputedStyle(el).backgroundColor") != base.evaluate(
             "el => getComputedStyle(el).backgroundColor"
         )
@@ -77,9 +75,7 @@ class TestStandaloneElements:
         card = self._card(elements_page)
         accent = card.locator("select.select-soft.select-accent")
         error = card.locator("select.select-soft.select-error")
-        assert accent.evaluate("el => getComputedStyle(el).color") != error.evaluate(
-            "el => getComputedStyle(el).color"
-        )
+        assert accent.evaluate("el => getComputedStyle(el).color") != error.evaluate("el => getComputedStyle(el).color")
 
     def test_soft_select_border_snaps_on_focus(self, elements_page):
         # Regression: the -soft border must brighten to the full colour on
