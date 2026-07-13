@@ -4,10 +4,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from django import forms
-
-from django_formwork.forms import FormworkForm
-from django_formwork.widgets import MultiSelect, Range, Rating, Toggle
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -25,90 +21,6 @@ def pytest_addoption(parser):
         default=False,
         help="Regenerate screenshot baselines instead of comparing.",
     )
-
-
-class SimpleForm(forms.Form):
-    name = forms.CharField(help_text="Your full name")
-    email = forms.EmailField()
-    message = forms.CharField(widget=forms.Textarea)
-
-
-class AllWidgetsForm(FormworkForm):
-    text = forms.CharField()
-    email = forms.EmailField()
-    url = forms.URLField()
-    number = forms.IntegerField()
-    password = forms.CharField(widget=forms.PasswordInput)
-    textarea = forms.CharField(widget=forms.Textarea)
-    checkbox = forms.BooleanField(required=False)
-    select = forms.ChoiceField(choices=[("a", "A"), ("b", "B")])
-    radio = forms.ChoiceField(
-        choices=[("x", "X"), ("y", "Y")],
-        widget=forms.RadioSelect,
-    )
-    multi_checkbox = forms.MultipleChoiceField(
-        choices=[("1", "One"), ("2", "Two")],
-        widget=forms.CheckboxSelectMultiple,
-    )
-    date = forms.DateField()
-    file = forms.FileField(required=False)
-    hidden = forms.CharField(widget=forms.HiddenInput)
-    color = forms.CharField(widget=forms.ColorInput, required=False)
-    phone = forms.CharField(widget=forms.TelInput, required=False)
-    search = forms.CharField(widget=forms.SearchInput, required=False)
-    select_multiple = forms.MultipleChoiceField(
-        choices=[("a", "A"), ("b", "B")],
-        widget=forms.SelectMultiple,
-        required=False,
-    )
-    multi_select_dropdown = forms.MultipleChoiceField(
-        choices=[("a", "A"), ("b", "B")],
-        widget=MultiSelect,
-        required=False,
-    )
-
-
-class CustomWidgetsForm(FormworkForm):
-    toggle = forms.BooleanField(widget=Toggle, required=False)
-    volume = forms.IntegerField(widget=Range(attrs={"min": "0", "max": "100"}))
-    rating = forms.TypedChoiceField(
-        choices=Rating.make_choices(5),
-        coerce=int,
-        widget=Rating,
-    )
-
-
-class SimpleFormworkForm(FormworkForm):
-    name = forms.CharField(help_text="Your full name")
-    email = forms.EmailField()
-    message = forms.CharField(widget=forms.Textarea)
-
-
-@pytest.fixture
-def simple_form():
-    return SimpleForm()
-
-
-@pytest.fixture
-def all_widgets_form():
-    return AllWidgetsForm()
-
-
-@pytest.fixture
-def custom_widgets_form():
-    return CustomWidgetsForm()
-
-
-@pytest.fixture
-def simple_formwork_form():
-    return SimpleFormworkForm()
-
-
-@pytest.fixture
-def bound_form_with_errors():
-    form = SimpleFormworkForm(data={"name": "", "email": "bad", "message": ""})
-    form.is_valid()
-    return form
 
 
 # ─── Screenshot comparison (shared by tests/widgets and tests/e2e) ────────
