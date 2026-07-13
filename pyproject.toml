@@ -69,7 +69,10 @@ packages = ["django_formwork"]
 # formwork-dist.css is a build artifact (compiled from formwork.css via Tailwind).
 # It is excluded from sdist by listing only source directories; users building
 # from source should run the Tailwind build step themselves.
-include = ["django_formwork", "LICENSE", "README.md"]
+# Patterns are anchored with a leading slash: unanchored patterns match at any
+# depth (gitignore semantics) and once leaked a nested worktree copy of the
+# package into the sdist.
+include = ["/django_formwork", "/LICENSE", "/README.md"]
 
 [tool.ruff]
 target-version = "py314"
