@@ -47,7 +47,7 @@ def cookbook_step3(request):
         form = TicketValidatedForm(request.POST)
         form.is_valid()  # render any errors; the happy path arrives in step 4
         if request.headers.get("HX-Request") == "true":
-            return render(request, "cookbook/_ticket_form.html", {"form": form, "action": "ck-step3"})
+            return render(request, "cookbook/ticket_form.html#ticket-form", {"form": form, "action": "ck-step3"})
         return render(request, "cookbook/step3.html", {"form": form})
     return render(request, "cookbook/step3.html", {"form": TicketValidatedForm()})
 
@@ -63,7 +63,7 @@ def cookbook_step4(request):
                 return HttpResponse(headers={"HX-Redirect": url})
             return redirect(url)
         if request.headers.get("HX-Request") == "true":
-            return render(request, "cookbook/_ticket_form.html", {"form": form, "action": "ck-step4"})
+            return render(request, "cookbook/ticket_form.html#ticket-form", {"form": form, "action": "ck-step4"})
         return render(request, "cookbook/step4.html", {"form": form})
     return render(request, "cookbook/step4.html", {"form": TicketCreateForm()})
 
@@ -79,7 +79,7 @@ def cookbook_step5(request):
                 return HttpResponse(headers={"HX-Redirect": url})
             return redirect(url)
         if request.headers.get("HX-Request") == "true":
-            return render(request, "cookbook/_ticket_form.html", {"form": form, "action": "ck-step5"})
+            return render(request, "cookbook/ticket_form.html#ticket-form", {"form": form, "action": "ck-step5"})
         return render(request, "cookbook/step5.html", {"form": form})
     return render(request, "cookbook/step5.html", {"form": TicketUploadForm()})
 
@@ -98,6 +98,6 @@ def cookbook_step6(request):
         if form.is_valid():
             form.save()
         if request.headers.get("HX-Request") == "true":
-            return render(request, "cookbook/_ticket_form.html", {"form": form, "action": "ck-step6"})
+            return render(request, "cookbook/ticket_form.html#ticket-form", {"form": form, "action": "ck-step6"})
         return render(request, "cookbook/step6.html", {"form": form})
     return render(request, "cookbook/step6.html", {"form": TicketEditForm(instance=ticket)})

@@ -12,7 +12,7 @@
 {% block content %}
 <div class="card bg-base-100 border border-base-300 max-w-2xl mx-auto">
   <div class="card-body p-6 lg:p-8 space-y-6">
-    {% include "wizard/_steps.html" %}
+    {% include "wizard/steps.html#wizard-steps" %}
 
     <div class="space-y-5">
       {% for section_title, rows in review_data %}
