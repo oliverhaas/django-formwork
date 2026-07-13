@@ -277,6 +277,7 @@ fieldset.fieldset > .tooltip:has(> select + select + select) {
    ring, and a colorless soft control falls back to base-content.  `/ 1`
    keeps that bare-case ring opaque. */
 .select-soft:focus,
+.select-soft:open,
 .input-soft:focus,
 .textarea-soft:focus {
     border-color: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
