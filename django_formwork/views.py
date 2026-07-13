@@ -67,7 +67,7 @@ class FormworkSearchView(View):
     SEARCH_SELECT_TEMPLATE = (
         """{% for item in results %}
 <li role="option"><button type="button" class="flex w-full items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value }}" data-label="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}{% if item.selected_toggle_class %} data-selected-toggle-class="{{ item.selected_toggle_class }}"{% endif %}>
-  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span><span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" :class="value === '{{ item.value|escapejs }}' && 'opacity-100'" aria-hidden="true">&#x2713;</span>
+  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span><span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" :class="value === '{{ item.value|escapejs }}' && 'opacity-100'" aria-hidden="true"></span>
 </button></li>{% endfor %}
 {% if not results %}"""
         + _NO_RESULTS_HTML
@@ -94,7 +94,7 @@ class FormworkSearchView(View):
 <li><label class="flex items-center gap-2 px-3 py-1.5 rounded-btn cursor-pointer hover:bg-base-200" data-value="{{ item.value|escapejs }}">
   <input type="checkbox" value="{{ item.value }}" class="multiselect hidden" x-init="$el.checked = selected.has('{{ item.value|escapejs }}')" @change="toggle('{{ item.value|escapejs }}', '{{ item.label|escapejs }}', '{{ item.icon|escapejs }}')">
   {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="select-none">{{ item.label }}</span>
-  <span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" aria-hidden="true">&#x2713;</span>
+  <span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" aria-hidden="true"></span>
 </label></li>{% endfor %}
 {% if not results %}"""
         + _NO_RESULTS_HTML
