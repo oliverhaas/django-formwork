@@ -19,10 +19,23 @@ document.addEventListener("alpine:init", () => {
       const el = this.$el;
       this.showSearch = el.dataset.showSearch === "true";
       const sync = () => {
-        this.value = el.dataset.value || "";
-        this.label = el.dataset.label || "";
-        this.icon = el.dataset.icon || "";
-        this.selectedToggleClass = el.dataset.selectedToggleClass || "";
+        const nextValue = el.dataset.value || "";
+        const nextLabel = el.dataset.label || "";
+        // A server re-render (e.g. after a morph) can't always resolve the
+        // display metadata for the current value: an async SearchSelect backed
+        // by a plain CharField knows only the submitted key, not its label,
+        // icon, or toggle class, so it emits empty data-label/-icon/
+        // -selected-toggle-class. Treat empties as "no info", not "clear it",
+        // so a value the client already labelled (e.g. "us" to "United
+        // States") keeps its display through the morph. When the value itself
+        // changes, adopt the server's metadata (even empty) so a server-driven
+        // change or clear still wins.
+        if (nextValue !== this.value || nextLabel) {
+          this.label = nextLabel;
+          this.icon = el.dataset.icon || "";
+          this.selectedToggleClass = el.dataset.selectedToggleClass || "";
+        }
+        this.value = nextValue;
         this._v++;
       };
       sync();
