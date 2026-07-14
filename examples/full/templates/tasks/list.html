@@ -28,10 +28,12 @@
       {{ filter_form }}
     </form>
 
-    {# overflow-x-auto clips absolutely-positioned dropdowns and, because
-       overflow-y computes to auto alongside it, lets an open dropdown grow a
-       scrollbar on the table itself. Only scroll where the table can actually
-       overflow (narrow screens); let it breathe on large ones. #}
+    {% comment %}
+      overflow-x-auto clips absolutely-positioned dropdowns and, because
+      overflow-y computes to auto alongside it, lets an open dropdown grow a
+      scrollbar on the table itself. Only scroll where the table can actually
+      overflow (narrow screens); let it breathe on large ones.
+    {% endcomment %}
     <div class="overflow-x-auto lg:overflow-visible">
       <table class="table table-hover">
         <thead>
