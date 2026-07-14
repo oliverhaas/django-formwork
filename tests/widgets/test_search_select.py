@@ -1865,8 +1865,8 @@ def test_search_select_screenshot_selected_toggle_class(search_select_page, asse
     """Visual snapshot: priority SearchSelect trigger recolored by the picked option."""
     search_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.search-select');
-        // Top-layer panels track their trigger, so it must be on screen
-        // before options can be clicked (a user would scroll to it too).
+        // The top-layer panel tracks its trigger; Playwright can't scroll
+        // a fixed element into view, so the trigger must be visible first.
         dds[8].scrollIntoView({block: 'center'});
         dds[8].open = true;
         dds[8].dispatchEvent(new Event('toggle'));

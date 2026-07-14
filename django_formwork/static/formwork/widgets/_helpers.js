@@ -6,18 +6,11 @@ export const visibleOptions = (component, selector) =>
     .filter((b) => b.offsetParent !== null);
 
 // --- Top-layer dropdown panels -----------------------------------------
-// The .dropdown-content panel is promoted to popover="manual" so it
-// renders in the browser top layer and escapes overflow/clip ancestors
-// (scrollable tables, cards).  Support tiers:
-//   1. Popover + CSS anchor positioning: formwork.css pins the panel to
-//      the widget root and flips it when out of room (position-try).
-//   2. Popover only (Firefox): positionPanel() mirrors that CSS with
-//      inline fixed coordinates, flipping above when out of room below.
-//   3. No Popover API: the attribute is never added and the panel keeps
-//      its absolutely-positioned behavior.
-// The open/close state machines (details toggle, Alpine `open`) stay the
-// source of truth; popover="manual" opts out of light dismiss so the
-// existing outside-click handling keeps working.
+// popover="manual" (not "auto"): the details toggle / Alpine `open` state
+// stays the source of truth, so light dismiss must not close the popover
+// behind its back.  Placement is CSS anchor positioning where supported,
+// positionPanel() otherwise; with no Popover API the panel stays
+// absolutely positioned.
 
 const supportsPopover =
   typeof HTMLElement !== "undefined" && "showPopover" in HTMLElement.prototype;
@@ -26,9 +19,8 @@ const supportsAnchor =
 
 let anchorSeq = 0;
 
-// Called from init(): returns the panel with the popover attribute set,
-// or null when the Popover API is unavailable.  Anchor names must be
-// unique per instance, so they are assigned here rather than in CSS.
+// Anchor names must be unique per instance, so they are inline styles
+// rather than a stylesheet rule.
 export const panelPopover = (root) => {
   const panel = root.querySelector(":scope > .dropdown-content");
   if (!panel || !supportsPopover) return null;
@@ -71,8 +63,7 @@ export const openPanel = (component) => {
     component._reposition = reposition;
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
-    // Re-place when the panel's size settles or changes (Alpine x-show
-    // flushing after showPopover, htmx swapping in search results).
+    // The panel can resize while open (htmx swaps in search results).
     component._resizeObserver = new ResizeObserver(reposition);
     component._resizeObserver.observe(panel);
   }
