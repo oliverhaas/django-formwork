@@ -811,17 +811,20 @@ input[type="hidden"] {
     @apply hidden;
 }
 
-/* Dropdown widgets (MultiSelect, SearchSelect):
-   match DaisyUI select focus styling when open — pins the border
-   color so it doesn't revert to gray when clicking inside. */
+/* Dropdown widgets (MultiSelect, SearchSelect): match DaisyUI select
+   focus styling when open, pinning the ring so it doesn't revert to gray
+   when clicking inside.  Drive the color off --input-color so any color
+   variant carries through.  A plain or soft variant (.select-accent,
+   .select-error, and so on) tints the ring to its hue, and aria-invalid
+   tints it red via the summary[aria-invalid] to .select-error rule below.
+   The `/ 1` forces the colorless default (base-content at 20% alpha)
+   opaque, exactly like the .select-soft:open ring above, so a variantless
+   open trigger still gets a solid base-content ring. */
 details.search-select[open] > summary,
 details.multiselect[open] > summary {
-    @apply border-base-content outline-2 outline-offset-2 outline-base-content;
-}
-
-details.search-select[open] > summary[aria-invalid="true"],
-details.multiselect[open] > summary[aria-invalid="true"] {
-    @apply border-error outline-error;
+    border-color: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
+    outline: 2px solid oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
+    outline-offset: 2px;
 }
 
 /* SearchSelect / MultiSelect / ComboBox keyboard navigation: highlight focused option. */
