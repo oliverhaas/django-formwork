@@ -109,6 +109,7 @@ def assert_screenshot(pytestconfig: pytest.Config, request: pytest.FixtureReques
             # need their attribute removed to rejoin normal flow.
             locator.evaluate(
                 "el => el.querySelectorAll('.dropdown-content[popover]').forEach(p => {"
+                " p._formworkPopoverObserver?.disconnect();"
                 " if (p.matches(':popover-open')) p.hidePopover();"
                 " p.removeAttribute('popover'); })"
             )

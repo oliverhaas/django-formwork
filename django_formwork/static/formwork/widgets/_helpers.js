@@ -19,17 +19,49 @@ const supportsAnchor =
 
 let anchorSeq = 0;
 
+// Panels whose widget currently holds them open; lets the morph-recovery
+// observer below re-show a panel without a handle on the Alpine component.
+const openPanels = new WeakSet();
+const repositioners = new WeakMap();
+
 // Anchor names must be unique per instance, so they are inline styles
 // rather than a stylesheet rule.
 export const panelPopover = (root) => {
   const panel = root.querySelector(":scope > .dropdown-content");
   if (!panel || !supportsPopover) return null;
-  panel.setAttribute("popover", "manual");
-  if (supportsAnchor && !root.style.anchorName) {
-    const name = `--formwork-anchor-${++anchorSeq}`;
-    root.style.anchorName = name;
-    panel.style.positionAnchor = name;
-  }
+  const apply = () => {
+    panel.setAttribute("popover", "manual");
+    if (supportsAnchor) {
+      if (!root.style.anchorName) root.style.anchorName = `--formwork-anchor-${++anchorSeq}`;
+      panel.style.positionAnchor = root.style.anchorName;
+    }
+  };
+  apply();
+  // Morph swaps (htmx 4) sync attributes back to the server HTML, which
+  // carries none of this plumbing: the popover attribute and inline anchor
+  // styles get stripped, force-hiding an open panel out of the top layer.
+  // Re-assert them; the observer runs before the next paint, so an open
+  // panel never renders unanchored.
+  const observer = new MutationObserver(() => {
+    const intact =
+      panel.getAttribute("popover") === "manual" &&
+      (!supportsAnchor || (root.style.anchorName && panel.style.positionAnchor));
+    if (intact) return;
+    apply();
+    if (openPanels.has(panel) && !panel.matches(":popover-open")) {
+      try {
+        panel.showPopover();
+      } catch {
+        return;
+      }
+      repositioners.get(panel)?.();
+    }
+  });
+  observer.observe(root, { attributes: true, attributeFilter: ["style"] });
+  observer.observe(panel, { attributes: true, attributeFilter: ["style", "popover"] });
+  // Deliberate teardowns (the screenshot harness flattens panels into normal
+  // flow) must disconnect this first or the re-assert fights them.
+  panel._formworkPopoverObserver = observer;
   return panel;
 };
 
@@ -57,10 +89,12 @@ export const openPanel = (component) => {
   } catch {
     return;
   }
+  openPanels.add(panel);
   if (!supportsAnchor) {
     const reposition = () => positionPanel(component.$root, panel);
     reposition();
     component._reposition = reposition;
+    repositioners.set(panel, reposition);
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
     // The panel can resize while open (htmx swaps in search results).
@@ -72,6 +106,8 @@ export const openPanel = (component) => {
 export const closePanel = (component) => {
   const panel = component._panel;
   if (!panel) return;
+  openPanels.delete(panel);
+  repositioners.delete(panel);
   if (component._reposition) {
     window.removeEventListener("scroll", component._reposition, true);
     window.removeEventListener("resize", component._reposition);

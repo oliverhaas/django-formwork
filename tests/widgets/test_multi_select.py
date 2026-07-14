@@ -1061,6 +1061,39 @@ def test_multi_select_wrapper_has_id_e2e(multi_select_page):
     assert "_multiselect" in wrapper_id
 
 
+@pytest.mark.e2e
+def test_multi_select_popover_survives_morph_attribute_strip(multi_select_page):
+    """Morph swaps (htmx 4) sync attributes back to the server HTML, which
+    carries no popover attribute or inline anchor styles; the widget must
+    re-assert them and keep an open panel in the top layer."""
+    from playwright.sync_api import expect
+
+    multi = multi_select_page.locator("details.dropdown.multiselect").first
+    panel = multi.locator(".dropdown-content")
+    multi.locator("summary").click()
+    expect(panel).to_have_attribute("popover", "manual")
+
+    # Strip the client-added plumbing exactly like a morph: one batch of
+    # attribute mutations restoring the server-rendered state.
+    multi_select_page.evaluate("""() => {
+        const root = document.querySelector('details.dropdown.multiselect');
+        const panel = root.querySelector(':scope > .dropdown-content');
+        panel.removeAttribute('popover');
+        root.removeAttribute('style');
+        panel.removeAttribute('style');
+    }""")
+
+    expect(panel).to_have_attribute("popover", "manual")
+    assert multi_select_page.evaluate("""() => {
+        const root = document.querySelector('details.dropdown.multiselect');
+        const panel = root.querySelector(':scope > .dropdown-content');
+        const anchored = !CSS.supports('anchor-name: --a') ||
+            (root.style.anchorName !== '' &&
+             panel.style.positionAnchor === root.style.anchorName);
+        return panel.matches(':popover-open') && anchored;
+    }""")
+
+
 # ─── Level 5b: E2e, grouped MultiSelect ─────────────────────────────────
 #
 # cities_grouped is the 4th MultiSelect on the page (nth(3)).
