@@ -84,6 +84,24 @@ def test_row_edit_cannot_clobber_readonly_fields(client, db):
     assert task.status == Task.Status.DONE  # editable column, saved
 
 
+def test_add_task_appends_a_draft_row(client, db):
+    before = Task.objects.count()
+    response = client.post(reverse("task_add"), headers={"HX-Request": "true"})
+    assert response.status_code == 200
+    assert Task.objects.count() == before + 1
+    assert b"<tbody" in response.content
+
+
+def test_inline_delete_removes_the_task(client, db):
+    task = Task.objects.create(title="Delete me")
+    response = client.post(
+        reverse("task_delete", kwargs={"pk": task.pk}),
+        headers={"HX-Request": "true"},
+    )
+    assert response.status_code == 200
+    assert not Task.objects.filter(pk=task.pk).exists()
+
+
 def test_deleting_a_member_keeps_the_task(client, db):
     member = _member()
     task = Task.objects.create(title="Orphan me", assignee=member)

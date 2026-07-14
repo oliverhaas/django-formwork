@@ -135,13 +135,26 @@ def task_edit(request, pk):
     return render(request, "tasks/form.html", {"form": form, "title": task.title, "task": task})
 
 
+def task_add(request):
+    """Insert a draft task and return its row, for the list's inline "Add task"."""
+    if request.method != "POST":
+        return redirect("task_list")
+    task = Task.objects.create(title="New task")
+    formset = TaskRowFormSet(
+        queryset=Task.objects.filter(pk=task.pk),
+        form_kwargs={"editable_fields": ROW_EDITABLE_FIELDS, "row": True},
+        prefix=f"add-{task.pk}",
+    )
+    return render(request, "tasks/list.html#task-row", {"form": formset.forms[0]})
+
+
 def task_delete(request, pk):
-    """Delete a task."""
+    """Delete a task. Inline htmx delete removes the row in place; otherwise confirm then redirect."""
     task = get_object_or_404(Task, pk=pk)
     if request.method == "POST":
         task.delete()
         if request.headers.get("HX-Request") == "true":
-            return HttpResponse(status=200, headers={"HX-Redirect": "/tasks/"})
+            return HttpResponse(status=200)
         return redirect("task_list")
     return render(request, "tasks/confirm_delete.html", {"task": task})
 

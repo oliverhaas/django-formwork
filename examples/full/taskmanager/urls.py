@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("tasks/", views.task_list, name="task_list"),
     path("tasks/new/", views.task_create, name="task_create"),
+    path("tasks/add/", views.task_add, name="task_add"),
     path("tasks/<int:pk>/edit/", views.task_edit, name="task_edit"),
     path("tasks/<int:pk>/delete/", views.task_delete, name="task_delete"),
     path("tasks/row/", views.TaskRowSave.as_view(), name="task_row_save"),
