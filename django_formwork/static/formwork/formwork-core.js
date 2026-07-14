@@ -21,7 +21,7 @@
  */
 
 // --- Disable native validation on forms with formwork error tooltips ---
-// Previously an inline <script> in the form template; moved here for CSP.
+// Lives here rather than an inline <script> so no script-src exception is needed.
 const disableNativeValidation = () => {
   for (const form of document.querySelectorAll("form")) {
     if (form.querySelector(".formwork-errors")) {

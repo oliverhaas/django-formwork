@@ -29,11 +29,9 @@
   themes: all;
 }
 
-/* Safelist DaisyUI's form-control color modifiers.  They are applied at render
-   time via widget attrs (e.g. SearchSelect(attrs={"class": "select-accent"})),
-   so Tailwind's static scan never sees the token and would otherwise purge them.
-   Shipping the safelist here means every app that imports formwork.css gets the
-   color modifiers (and the -soft variant below) working out of the box. */
+/* Safelist DaisyUI's form-control color modifiers: applied at render time via
+   widget attrs (e.g. SearchSelect(attrs={"class": "select-accent"})), so
+   Tailwind's static scan never sees them and would otherwise purge them. */
 @source inline("{select,input,textarea}-{primary,secondary,accent,neutral,info,success,warning,error}");
 
 /* DaisyUI's .fieldset uses display:grid.  The UA default min-width:min-content
@@ -94,17 +92,10 @@ details.formwork-disclosure:not([data-expandable]) > summary {
     cursor: default;
 }
 
-/* Disclosure spans every column in multi-column fieldsets (checkbox pairs,
-   date+time, triple-select), like the help-text .label rows it replaces.
-   Safe in single-column fieldsets: grid-template-columns is 1fr, so 1 / -1
-   resolves to the sole column.
-   min-width: 0 is load-bearing: .fieldset is grid-template-columns: 1fr
-   (= minmax(auto, 1fr)), and the `auto` minimum equals the grid item's
-   min-content.  A nowrap summary can't wrap, so its min-content is the full
-   text width, which would force the track — and the whole form — wider than
-   its container and defeat truncation.  min-width: 0 drops the item's
-   automatic minimum to 0 so the 1fr track can shrink and the summary's
-   flex-1/min-w-0 text ellipsizes. */
+/* Disclosure spans every column in multi-column fieldsets, like the help-text
+   .label rows it replaces (1 / -1 resolves to the sole column when single).
+   min-width: 0 lets the 1fr track shrink below the nowrap summary's min-content
+   so its text ellipsizes instead of forcing the whole form wider. */
 fieldset.fieldset > details.formwork-disclosure {
     grid-column: 1 / -1;
     min-width: 0;
@@ -243,25 +234,16 @@ fieldset.fieldset > .tooltip:has(> select + select + select) {
 /* ================================================================
    Soft color variant: select-soft / input-soft / textarea-soft
 
-   DaisyUI ships no -soft for form controls, so this mirrors its
-   btn-soft formula: tint the control's own surface with the color at
-   8% (border at 10%), colored text, no shadow.  Two knobs, both lifted
-   straight from btn-soft:
-     * the hue is --input-color, the variable every DaisyUI form control
-       already shares (set by select-accent / input-error and the
-       aria-invalid state).  It is the analog of btn-soft's --btn-color,
-       and like btn-soft we inline it rather than wrapping it in a var.
-     * --select-soft-bg is the surface the hue is mixed into, the analog
-       of btn-soft's --btn-soft-bg.  It defaults to base-100 and can be
-       overridden to re-tint or re-theme the control.
-   `/ 1` normalizes --input-color's 20%-alpha bare default (base-content
-   at 20%) so the colorless case (plain select-soft) keeps readable text.
-   btn/badge skip this because --btn-color / --badge-color are opaque.
+   DaisyUI ships no -soft for form controls, so this mirrors its btn-soft
+   formula: the control's surface tinted with --input-color at 8% (border
+   10%), colored text, no shadow.  --input-color is the hue every DaisyUI
+   form control shares (select-accent, input-error, aria-invalid).
+   --select-soft-bg is the surface it mixes into (base-100, overridable).
+   `/ 1` forces --input-color's 20%-alpha bare default opaque so the
+   colorless plain select-soft keeps readable text.
 
-   Unlayered on purpose: a single .select-soft class then beats the
-   higher-specificity base rules (details.search-select > summary, the
-   input:not([type=...]) chain) by cascade layer instead of by piling on
-   compound selectors, matching how DaisyUI writes .btn-soft. */
+   Unlayered so a single .select-soft class beats the higher-specificity
+   base rules by cascade layer, matching how DaisyUI writes .btn-soft. */
 .select-soft,
 .input-soft,
 .textarea-soft {
@@ -271,11 +253,8 @@ fieldset.fieldset > .tooltip:has(> select + select + select) {
     box-shadow: none;
 }
 
-/* Focus ring follows the hue, exactly like a plain select-accent or
-   select-error (DaisyUI drives its own focus outline off --input-color):
-   an accent-tinted control gets an accent ring, the error state a red
-   ring, and a colorless soft control falls back to base-content.  `/ 1`
-   keeps that bare-case ring opaque. */
+/* Focus ring follows --input-color (accent, error, or base-content fallback),
+   like DaisyUI's own focus outline; `/ 1` keeps the colorless case opaque. */
 .select-soft:focus,
 .select-soft:open,
 .input-soft:focus,
@@ -284,19 +263,11 @@ fieldset.fieldset > .tooltip:has(> select + select + select) {
     outline-color: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
 }
 
-/* Dropdown (options panel) fill.  Independent of the toggle: neutral
-   (base-100) by default so the panel does not inherit the control's soft
-   tint.  Override --select-soft-dropdown-bg on the widget root (the panel
-   is a sibling of the trigger, so it inherits from there) to tint the
-   panel, e.g. to match the toggle.  Scoped to soft controls so plain
-   widgets stay untouched.
-
-   MUST be unlayered too: the widget templates set bg-base-100 (a
-   .dropdown-content utility in @layer utilities) on the panel, which
-   @layer components would lose to.  Native <select> renders its options
-   via ::picker(select) where the customizable select is supported;
-   DaisyUI makes it inherit the control fill, so route it through the
-   same var. */
+/* Dropdown panel fill: base-100 by default so the panel doesn't inherit the
+   toggle's soft tint; override --select-soft-dropdown-bg on the widget root.
+   MUST be unlayered: the templates set bg-base-100 (@layer utilities) on the
+   panel, which @layer components would lose to.  The ::picker(select) rule
+   routes the same var to the native customizable select. */
 details.dropdown.search-select:has(> summary.select-soft) > .dropdown-content,
 details.dropdown.multiselect:has(> summary.select-soft) > .dropdown-content,
 .dropdown.combobox:has(.combobox-input.input-soft) > .dropdown-content {
@@ -307,15 +278,11 @@ select.select-soft::picker(select) {
     background-color: var(--select-soft-dropdown-bg, var(--color-base-100));
 }
 
-/* Native customizable select: trailing checkmark, matching the custom
-   dropdown widgets (SearchSelect/MultiSelect/ComboBox).  Options are
-   flex rows in base appearance, so order + auto margin pushes the
-   checkmark to the trailing edge; the option's column-gap guarantees a
-   gap from the label even when the selected option defines the picker
-   width.  The gap must not be padding on the checkmark itself: the
-   clip-path percentages below resolve against the checkmark's border
-   box (preflight's border-box reset does not cover ::checkmark), so
-   padding would stretch the tick across the widened box. */
+/* Native customizable select: trailing checkmark matching the custom widgets.
+   Options are flex rows in base appearance, so order + auto margin trail the
+   checkmark.  The gap is option column-gap, not checkmark padding: the
+   clip-path percentages resolve against the checkmark's border box (no
+   border-box reset on ::checkmark), so padding would distort the tick. */
 option {
     column-gap: 0.75rem;
 }
@@ -811,15 +778,9 @@ input[type="hidden"] {
     @apply hidden;
 }
 
-/* Dropdown widgets (MultiSelect, SearchSelect): match DaisyUI select
-   focus styling when open, pinning the ring so it doesn't revert to gray
-   when clicking inside.  Drive the color off --input-color so any color
-   variant carries through.  A plain or soft variant (.select-accent,
-   .select-error, and so on) tints the ring to its hue, and aria-invalid
-   tints it red via the summary[aria-invalid] to .select-error rule below.
-   The `/ 1` forces the colorless default (base-content at 20% alpha)
-   opaque, exactly like the .select-soft:open ring above, so a variantless
-   open trigger still gets a solid base-content ring. */
+/* Dropdown triggers: pin DaisyUI's select focus ring while open so it doesn't
+   revert to gray on inside clicks.  Driven off --input-color so color variants
+   and aria-invalid carry through; `/ 1` forces the colorless default opaque. */
 details.search-select[open] > summary,
 details.multiselect[open] > summary {
     border-color: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
@@ -880,8 +841,8 @@ details.dropdown.search-select > .dropdown-content {
     @apply absolute z-1;
 }
 
-/* MultiSelect: checkmark visibility rule moved outside @layer components
-   (see after closing brace) so it beats the opacity-0 utility in HTML. */
+/* MultiSelect checkmark visibility rule is unlayered (after the closing brace)
+   so it beats the opacity-0 utility in HTML. */
 
 
 /* ================================================================
@@ -1241,29 +1202,20 @@ input.combobox-input[aria-invalid="true"] {
         max-width: 100%;
     }
 
-    /* Native selects: the browser already sizes them to their widest
-       option, and that minimum cannot be capped from CSS, so they get a
-       fixed floor instead of a measured one.
-       field-sizing makes the intrinsic min/max-content track the options
-       instead of UA defaults, so auto table columns neither crush the
-       closed label nor inflate. Explicit widths (the w-full stretch in
-       form layouts) still win wherever the container is definite;
-       browsers without field-sizing keep the old behavior. */
+    /* Native selects size to their widest option (uncappable from CSS), so
+       they get a fixed floor, not a measured one.  field-sizing makes
+       intrinsic sizing track the options so auto table columns fit; explicit
+       widths still win, and browsers without it keep UA behavior. */
     select {
         field-sizing: content;
         min-width: min(100%, var(--formwork-autowidth-min, 6rem));
     }
 }
 
-/* Autowidth plumbing. Dropdown options live in an out-of-flow panel that
-   intrinsic sizing cannot see, so each trigger carries a hidden copy of
-   its option labels and fit-content on the root measures that copy. The
-   visible label overlays the copy and stays out of the measurement:
-   width is fixed at render time, and async results or long picked values
-   ellipsize instead of resizing the trigger. Unlayered: a layered
-   variant would lose to the unlayered defaults in this file. The copy
-   must be a block box: on an inline box height and overflow are ignored,
-   so its display:block children would stack up as full extra lines. */
+/* Autowidth plumbing. Dropdown options live in an out-of-flow panel intrinsic
+   sizing can't see, so each trigger carries a hidden copy of its option labels
+   for fit-content to measure; the visible label overlays it and ellipsizes.
+   The copy must be a block box, or its block children stack as extra lines. */
 .formwork-autowidth-stack {
     position: relative;
     display: block;
@@ -1308,21 +1260,13 @@ input.combobox-input[aria-invalid="true"] {
 /* ================================================================
    iconx ↔ btn-icon / alert-icon bridge
 
-   iconx's mono-base rule turns any element carrying an `.icon-*` class
-   into the icon itself: it sets `background-color: currentColor` plus
-   `mask-image: url(...)`, `mask-size`, `mask-repeat`, `mask-position`
-   and `mask-mode`.  That's exactly what we want for a bare span or
-   `<i>` icon, but on a button or alert it nukes the background colour
-   and masks the entire element away.
-
-   When a `.btn-icon`, `.btn-icon-end` or `.alert-icon` is in play we
-   instead want the glyph on the ::before / ::after pseudo, so:
-     1. undo every iconx-mono-base property on the host element, and
-     2. mirror iconx's mask URL into `--icon-url`, which the pseudo
-        reads via `var(--icon-url)`.
-
-   Only icons actually used with btn-icon / alert-icon need the
-   `--icon-url` mapping; standalone icons keep iconx's default. */
+   iconx's mono-base rule turns any `.icon-*` element into the icon itself
+   (background-color: currentColor + mask-image etc.).  Right for a bare
+   span/<i>, but on a button or alert it nukes the background and masks the
+   whole element away.  For btn-icon / btn-icon-end / alert-icon the glyph
+   goes on the ::before/::after pseudo instead, so undo iconx's mono-base
+   properties on the host and mirror its mask URL into --icon-url.
+   Only icons used with btn-icon / alert-icon need the mapping. */
 .btn-icon, .btn-icon-end, .alert-icon {
     background-color: revert-layer;
     mask-image: none;
