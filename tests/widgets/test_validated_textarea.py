@@ -60,22 +60,6 @@ def test_get_context_validate_url_none():
 
 
 @pytest.mark.unit
-def test_get_context_aria_invalid():
-    """get_context exposes aria_invalid from widget attrs."""
-    widget = ValidatedTextarea(validate_url="/validate/")
-    ctx = widget.get_context("content", "", {"id": "id_content", "aria-invalid": "true"})
-    assert ctx["widget"]["aria_invalid"] == "true"
-
-
-@pytest.mark.unit
-def test_get_context_aria_invalid_absent():
-    """get_context exposes aria_invalid=None when not in attrs."""
-    widget = ValidatedTextarea(validate_url="/validate/")
-    ctx = widget.get_context("content", "", {"id": "id_content"})
-    assert ctx["widget"]["aria_invalid"] is None
-
-
-@pytest.mark.unit
 def test_value_from_datadict_returns_string():
     """value_from_datadict returns the submitted string value."""
     widget = ValidatedTextarea()

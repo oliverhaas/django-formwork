@@ -57,7 +57,9 @@ class FormworkRenderer(DjangoTemplates):
                     Path(_fr.__file__).parent / "templates",
                 ],
                 "NAME": "djangoformwork",
-                "OPTIONS": {},
+                # Lets widget templates ``{% load formwork %}`` even when the
+                # app is absent from INSTALLED_APPS.
+                "OPTIONS": {"libraries": {"formwork": "django_formwork.templatetags.formwork"}},
             },
         )
 

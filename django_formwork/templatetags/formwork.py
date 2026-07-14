@@ -59,3 +59,16 @@ def formwork_core_js() -> str:
         {{ form.media }}
     """
     return format_html('<script type="module" src="{}"></script>', static("formwork/formwork-core.js"))
+
+
+@register.filter
+def attr(attrs: dict, key: str) -> str:
+    """Look up a widget attr by its literal (possibly hyphenated) key.
+
+    DTL cannot traverse hyphenated keys via dot syntax
+    (``widget.attrs.aria-invalid`` is a syntax error) and has no
+    subscript form, so this filter bridges the gap for keys like
+    ``aria-invalid`` / ``aria-describedby`` that Django writes onto a
+    widget's attrs.  Jinja2 templates use native subscription instead.
+    """
+    return attrs.get(key, "")

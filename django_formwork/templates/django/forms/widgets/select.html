@@ -1,0 +1,12 @@
+{% comment %}
+Shadow of Django's native select widget template.  When the field is a
+multiple select (and not explicitly opted out with the select-native
+class), render formwork's client-side MultiSelect partial instead of a
+native <select multiple>.  Single selects and opted-out multis fall
+through to Django's stock markup, copied below because we cannot include
+the very template we are shadowing.
+{% endcomment %}{% if widget.attrs.multiple and 'select-native' not in widget.attrs.class|default:'' %}{% include "formwork/widgets/multi_select.html" %}{% else %}<select name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>{% for group_name, group_choices, group_index in widget.optgroups %}{% if group_name %}
+  <optgroup label="{{ group_name }}">{% endif %}{% for option in group_choices %}
+  {% include option.template_name with widget=option %}{% endfor %}{% if group_name %}
+  </optgroup>{% endif %}{% endfor %}
+</select>{% endif %}

@@ -1,0 +1,9 @@
+{# Shadow of Django's native select widget template.  See the DTL twin for
+   the rationale; behaviour is identical.  The native branch below is copied
+   from Django's stock markup because we cannot include the template we are
+   shadowing. #}
+{% if widget.attrs.multiple and 'select-native' not in (widget.attrs.class or '') %}{% include "formwork/widgets/multi_select.html" %}{% else %}<select name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>{% for group_name, group_choices, group_index in widget.optgroups %}{% if group_name %}
+  <optgroup label="{{ group_name }}">{% endif %}{% for widget in group_choices %}
+  {% include widget.template_name %}{% endfor %}{% if group_name %}
+  </optgroup>{% endif %}{% endfor %}
+</select>{% endif %}

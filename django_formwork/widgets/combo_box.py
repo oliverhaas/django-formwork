@@ -103,8 +103,6 @@ class ComboBox(forms.TextInput):
         flat_suggestions = [item for _g, items in groups for item in items]
         context["widget"]["suggestion_groups"] = groups
         context["widget"]["multiple"] = self.multiple
-        context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
-        context["widget"]["aria_describedby"] = context["widget"]["attrs"].get("aria-describedby")
         # Resolve search URL from the registry. No registration → client-side only.
         search_url: str | None = None
         if self._registry_key:

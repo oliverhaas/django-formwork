@@ -96,8 +96,6 @@ class MultiSelect(forms.SelectMultiple):
             context["widget"]["show_search"] = registry_total >= self.search_threshold
         else:
             context["widget"]["show_search"] = total >= self.search_threshold or bool(search_url)
-        context["widget"]["aria_invalid"] = context["widget"]["attrs"].get("aria-invalid")
-        context["widget"]["aria_describedby"] = context["widget"]["attrs"].get("aria-describedby")
         context["widget"]["search_url"] = search_url
         context["widget"]["initial_options"] = initial_options if search_url else []
         # Read icon from ChoiceLabel.
