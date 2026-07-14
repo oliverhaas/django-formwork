@@ -332,6 +332,19 @@ option::checkmark {
     }
 }
 
+/* Keep a fake-select trigger's placeholder muted while it's focused/open.
+   DaisyUI's .select-ghost sets a full-strength color on :focus/:focus-within
+   (in @layer utilities), so this MUST be unlayered to win. */
+details.multiselect > summary.formwork-placeholder:focus,
+details.multiselect > summary.formwork-placeholder:focus-within,
+details.multiselect[open] > summary.formwork-placeholder,
+details.search-select > summary.formwork-placeholder:focus,
+details.search-select > summary.formwork-placeholder:focus-within,
+details.search-select[open] > summary.formwork-placeholder {
+    color: rgba(0, 0, 0, 0.5); /* fallback for browsers without color-mix() */
+    color: color-mix(in oklab, currentColor 50%, transparent);
+}
+
 @layer components {
 
 /* Vertical spacing between consecutive field groups. */
