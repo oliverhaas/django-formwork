@@ -508,6 +508,65 @@ def test_multi_select_summary_renders_selection_via_x_html():
 
 
 @pytest.mark.unit
+def test_multi_select_summary_static_placeholder_class_tracks_selection():
+    """The placeholder class is server-rendered only while nothing is selected."""
+    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    soup = render_widget(widget, name="test")
+    assert "formwork-placeholder" in soup.find("summary")["class"]
+    soup = render_widget(widget, name="test", value=["a"])
+    assert "formwork-placeholder" not in soup.find("summary")["class"]
+
+
+@pytest.mark.unit
+def test_multi_select_summary_server_renders_selected_labels():
+    """Selected labels appear in the summary at first paint, before Alpine."""
+    widget = MultiSelect(choices=[("a", "Alpha"), ("b", "Beta"), ("c", "Gamma")])
+    soup = render_widget(widget, name="test", value=["a", "b"])
+    span = soup.find("summary").find("span", attrs={"x-html": True})
+    assert span.get_text(strip=True) == "Alpha, Beta"
+
+
+@pytest.mark.unit
+def test_multi_select_summary_server_renders_icon_markup():
+    """Icons of selected options are server-rendered as markup in the summary."""
+    widget = MultiSelect(
+        choices=[("a", ChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>"))), ("b", "Beta")],
+    )
+    soup = render_widget(widget, name="test", value=["a"])
+    span = soup.find("summary").find("span", attrs={"x-html": True})
+    assert span.find("svg") is not None
+
+
+@pytest.mark.unit
+def test_multi_select_summary_server_escapes_label_text():
+    """HTML in labels is escaped in the server-rendered summary."""
+    widget = MultiSelect(choices=[("a", "<b>Bold</b>")])
+    soup = render_widget(widget, name="test", value=["a"])
+    span = soup.find("summary").find("span", attrs={"x-html": True})
+    assert span.find("b") is None
+    assert span.get_text(strip=True) == "<b>Bold</b>"
+
+
+@pytest.mark.unit
+def test_multi_select_summary_server_renders_count_above_cutoff():
+    """More than three selections collapse to 'N selected' server-side too."""
+    choices = [(str(i), f"Option {i}") for i in range(5)]
+    widget = MultiSelect(choices=choices)
+    soup = render_widget(widget, name="test", value=["0", "1", "2", "3"])
+    span = soup.find("summary").find("span", attrs={"x-html": True})
+    assert span.get_text(strip=True) == "4 selected"
+
+
+@pytest.mark.unit
+def test_multi_select_summary_server_renders_selection_in_search_mode():
+    """htmx-mode widgets derive the summary from the initial selected pairs."""
+    widget = make_server_widget(MultiSelect, choices=[("a", "Alpha"), ("b", "Beta")])
+    soup = render_widget(widget, name="test", value=["b"], attrs={"id": "id_test"})
+    span = soup.find("summary").find("span", attrs={"x-html": True})
+    assert span.get_text(strip=True) == "Beta"
+
+
+@pytest.mark.unit
 def test_multi_select_aria_invalid_on_summary():
     """aria-invalid='true' is forwarded to the <summary> trigger."""
     widget = MultiSelect(choices=[("a", "A")])

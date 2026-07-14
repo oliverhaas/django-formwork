@@ -6,11 +6,16 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from django import forms
+from django.utils.html import conditional_escape, format_html, format_html_join
 
 from ._base import _NOT_SET, _ModuleScript, _resolve_initial_results
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+
+# Above this many picks the summary collapses to "N selected"; keep in
+# sync with the same cutoff in multi_select.js displayHtml.
+_SUMMARY_MAX_LABELS = 3
 
 
 class MultiSelect(forms.SelectMultiple):
@@ -112,4 +117,27 @@ class MultiSelect(forms.SelectMultiple):
                 if str(option["value"]) in selected_values
             ]
             context["widget"]["initial_selected_json"] = json.dumps(initial_selected)
+            selected_pairs = [(label, icon) for _value, (label, icon) in initial_selected]
+        else:
+            # Client mode reads checked boxes, so mirror the option "selected" flag.
+            selected_pairs = [
+                (str(option["label"]), option["icon"])
+                for _group, options, _index in context["widget"]["optgroups"]
+                for option in options
+                if option.get("selected")
+            ]
+        # Server-rendered twin of the JS displayHtml getter, for first paint.
+        display_html: str = ""
+        if len(selected_pairs) > _SUMMARY_MAX_LABELS:
+            display_html = f"{len(selected_pairs)} selected"
+        elif selected_pairs:
+            display_html = format_html_join(
+                ", ",
+                "{}",
+                (
+                    (format_html("{} {}", icon, label) if icon else conditional_escape(label),)
+                    for label, icon in selected_pairs
+                ),
+            )
+        context["widget"]["selected_display_html"] = display_html
         return context
