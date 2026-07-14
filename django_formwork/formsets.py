@@ -60,6 +60,7 @@ from django.forms.models import (
 
 from django_formwork.forms import FormworkModelForm
 from django_formwork.renderers import FormworkRenderer
+from django_formwork.tables import TableRenderMixin
 
 if TYPE_CHECKING:
     from datetime import date as date_type
@@ -561,7 +562,7 @@ class _BatchedUniquenessMixin:
                 errors.setdefault(field, []).append(instance.date_error_message(lookup_type, field, unique_for))
 
 
-class FormworkBaseModelFormSet(_BatchedUniquenessMixin, BaseModelFormSet):
+class FormworkBaseModelFormSet(TableRenderMixin, _BatchedUniquenessMixin, BaseModelFormSet):
     """Model formset with batched uniqueness validation.
 
     Behaves exactly like Django's ``BaseModelFormSet`` but issues one
@@ -597,7 +598,7 @@ def formwork_modelformset_factory(
     )
 
 
-class FormworkBaseInlineFormSet(_BatchedUniquenessMixin, BaseInlineFormSet):
+class FormworkBaseInlineFormSet(TableRenderMixin, _BatchedUniquenessMixin, BaseInlineFormSet):
     """Inline formset with batched uniqueness validation.
 
     The same batching as :class:`FormworkBaseModelFormSet`, including the

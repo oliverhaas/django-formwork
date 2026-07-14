@@ -6,7 +6,11 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.utils import timezone
+from django.views import View
+
+from django_formwork import FormworkRowSaveMixin, formwork_modelformset_factory
 
 from .forms import (
     SettingsForm,
@@ -19,8 +23,12 @@ from .forms import (
 )
 from .models import Profile, Tag, Task
 
-# Fields editable per-cell in list rows (the task-row partial); task_status() disables the rest.
+# Columns the list rows let you edit inline; every other TaskForm field is
+# disabled per row so a row POST can only touch these.
 ROW_EDITABLE_FIELDS = {"status", "priority", "assignee", "due_date", "tags"}
+
+# One TaskForm per row, rendered as an autosaving table (form.as_row / row_hidden).
+TaskRowFormSet = formwork_modelformset_factory(Task, form=TaskForm, extra=0)
 
 # ─── Dashboard ──────────────────────────────────────────────────────────
 
@@ -90,13 +98,14 @@ def task_list(request):
         if priority:
             tasks = tasks.filter(priority=priority)
 
-    tasks = list(tasks)
-    for t in tasks:
-        t.row_form = TaskForm(instance=t, editable_fields=ROW_EDITABLE_FIELDS, row=True, auto_id=f"id_row_{t.pk}_%s")
+    formset = TaskRowFormSet(
+        queryset=tasks.order_by("-updated_at"),
+        form_kwargs={"editable_fields": ROW_EDITABLE_FIELDS, "row": True},
+    )
 
     if request.headers.get("HX-Request") == "true":
-        return render(request, "tasks/list.html#task-rows", {"tasks": tasks})
-    return render(request, "tasks/list.html", {"tasks": tasks, "filter_form": form})
+        return render(request, "tasks/list.html#task-rows", {"formset": formset})
+    return render(request, "tasks/list.html", {"formset": formset, "filter_form": form})
 
 
 def task_create(request):
@@ -137,16 +146,17 @@ def task_delete(request, pk):
     return render(request, "tasks/confirm_delete.html", {"task": task})
 
 
-def task_status(request, pk):
-    """Inline row edit via htmx: saves only the field named by the posted "field" marker."""
-    task = get_object_or_404(Task, pk=pk)
-    field = request.POST.get("field")
-    editable = [field] if field in ROW_EDITABLE_FIELDS else []
-    save_form = TaskForm(request.POST, instance=task, editable_fields=editable, auto_id=f"id_row_{task.pk}_%s")
-    if save_form.is_valid():
-        save_form.save()
-    task.row_form = TaskForm(instance=task, editable_fields=ROW_EDITABLE_FIELDS, row=True, auto_id=f"id_row_{task.pk}_%s")
-    return render(request, "tasks/list.html#task-row", {"task": task})
+class TaskRowSave(FormworkRowSaveMixin, View):
+    """Inline row edit via htmx: save the changed row and morph it back."""
+
+    form_class = TaskForm
+    http_method_names = ["post"]
+
+    def get_form_kwargs(self):
+        return {"editable_fields": ROW_EDITABLE_FIELDS, "row": True}
+
+    def render_row(self, request, form):
+        return render_to_string("tasks/list.html#task-row", {"form": form}, request)
 
 
 # ─── Wizard ─────────────────────────────────────────────────────────────

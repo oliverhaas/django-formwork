@@ -1,0 +1,6 @@
+<tbody{% if row_id %} id="{{ row_id }}"{% endif %}{% if save_url %} hx-post="{{ save_url }}" hx-trigger="change delay:400ms" hx-target="this" hx-swap="outerMorph" hx-include="closest tbody"{% endif %}>
+  <tr>
+    {% for cell in cells %}<td>{% if forloop.first %}{% if save_url %}<input type="hidden" name="{{ prefix_input_name }}" value="{{ form.prefix }}">{% endif %}{% for hidden in hidden_fields %}{{ hidden }}{% endfor %}{% endif %}{% if cell.editable %}{{ cell.bound_field }}{% if cell.bound_field.errors %}<span class="text-error text-xs mt-1 block" role="alert">{{ cell.bound_field.errors|join:" " }}</span>{% endif %}{% else %}<span class="text-sm">{{ cell.display }}</span>{% endif %}</td>{% endfor %}
+  </tr>
+  {% if form.non_field_errors %}<tr><td colspan="{{ cells|length }}"><div role="alert" class="alert alert-error alert-soft">{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div></td></tr>{% endif %}
+</tbody>

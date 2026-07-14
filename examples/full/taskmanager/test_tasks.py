@@ -32,12 +32,25 @@ def test_task_create_assigns_a_member(client, db):
     assert task.assignee == member
 
 
+def _row_post(task, **changes):
+    """A per-row autosave payload: the row's editable fields, plus overrides."""
+    data = {
+        "id": str(task.pk),
+        "_formwork_prefix": "",
+        "status": task.status,
+        "priority": task.priority,
+        "assignee": task.assignee_id or "",
+    }
+    data.update(changes)
+    return data
+
+
 def test_row_edit_reassigns_via_htmx(client, db):
     member = _member()
     task = Task.objects.create(title="Reassign me")
     response = client.post(
-        reverse("task_status", kwargs={"pk": task.pk}),
-        {"field": "assignee", "assignee": member.pk},
+        reverse("task_row_save"),
+        _row_post(task, assignee=member.pk),
         headers={"HX-Request": "true"},
     )
     assert response.status_code == 200
@@ -49,8 +62,8 @@ def test_row_edit_can_unassign(client, db):
     member = _member()
     task = Task.objects.create(title="Unassign me", assignee=member)
     response = client.post(
-        reverse("task_status", kwargs={"pk": task.pk}),
-        {"field": "assignee", "assignee": ""},
+        reverse("task_row_save"),
+        _row_post(task, assignee=""),
         headers={"HX-Request": "true"},
     )
     assert response.status_code == 200
@@ -58,18 +71,17 @@ def test_row_edit_can_unassign(client, db):
     assert task.assignee is None
 
 
-def test_row_edit_ignores_fields_outside_the_marker(client, db):
-    """Only the field named by the posted "field" marker may change."""
-    member = _member()
-    task = Task.objects.create(title="Keep my status", status=Task.Status.REVIEW)
+def test_row_edit_cannot_clobber_readonly_fields(client, db):
+    """A row POST may change editable columns; a disabled column (title) is ignored."""
+    task = Task.objects.create(title="Keep my title", status=Task.Status.REVIEW)
     client.post(
-        reverse("task_status", kwargs={"pk": task.pk}),
-        {"field": "assignee", "assignee": member.pk, "status": Task.Status.DONE},
+        reverse("task_row_save"),
+        _row_post(task, title="HACKED", status=Task.Status.DONE),
         headers={"HX-Request": "true"},
     )
     task.refresh_from_db()
-    assert task.assignee == member
-    assert task.status == Task.Status.REVIEW
+    assert task.title == "Keep my title"  # disabled column, untouched by POST
+    assert task.status == Task.Status.DONE  # editable column, saved
 
 
 def test_deleting_a_member_keeps_the_task(client, db):

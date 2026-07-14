@@ -37,6 +37,7 @@ if TYPE_CHECKING:
         FormworkRenderer,
         formwork_jinja2_environment,
     )
+    from django_formwork.tables import FormworkRowSaveMixin
     from django_formwork.views import (
         FormworkAutoSearchView,
         FormworkSearchView,
@@ -61,6 +62,7 @@ _EXPORTS = {
     "FormworkModelFormMetaclass": "django_formwork.forms",
     "FormworkModelMultipleChoiceField": "django_formwork.fields",
     "FormworkRenderer": "django_formwork.renderers",
+    "FormworkRowSaveMixin": "django_formwork.tables",
     "FormworkSearchView": "django_formwork.views",
     "FormworkValidateView": "django_formwork.views",
     "formwork_inlineformset_factory": "django_formwork.formsets",
@@ -85,6 +87,7 @@ __all__ = [
     "FormworkModelFormMetaclass",
     "FormworkModelMultipleChoiceField",
     "FormworkRenderer",
+    "FormworkRowSaveMixin",
     "FormworkSearchView",
     "FormworkValidateView",
     "__version__",

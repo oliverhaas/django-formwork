@@ -31,6 +31,7 @@ from django.forms.models import InlineForeignKeyField, ModelFormMetaclass, const
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
 from django_formwork.fields import FormworkModelChoiceField, FormworkModelMultipleChoiceField
 from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
+from django_formwork.tables import RowRenderMixin
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -466,7 +467,7 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
                 await self.avalidate_constraints()
 
 
-class FormworkForm(_ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
+class FormworkForm(RowRenderMixin, _ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
     """Form base class with DaisyUI styling and async support.
 
     Usage::
@@ -500,6 +501,7 @@ class FormworkForm(_ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, 
 
 
 class FormworkModelForm(
+    RowRenderMixin,
     _ErrorDisplayFormMixin,
     _DirtyOnlyModelFormMixin,
     AsyncModelFormMixin,
@@ -525,7 +527,9 @@ class FormworkModelForm(
     default_renderer = FormworkRenderer
 
 
-class FormworkJinja2Form(_ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
+class FormworkJinja2Form(
+    RowRenderMixin, _ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form
+):
     """Form base class with DaisyUI styling (Jinja2 renderer) and async support.
 
     Use this when your project uses Jinja2 templates.  Equivalent to
@@ -537,6 +541,7 @@ class FormworkJinja2Form(_ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormM
 
 
 class FormworkJinja2ModelForm(
+    RowRenderMixin,
     _ErrorDisplayFormMixin,
     _DirtyOnlyModelFormMixin,
     AsyncModelFormMixin,

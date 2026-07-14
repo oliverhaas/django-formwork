@@ -4,7 +4,7 @@
 {% block title %}Tasks{% endblock %}
 {% block page_title %}Tasks{% endblock %}
 {% block page_subtitle %}
-  <p class="text-xs text-base-content/50">{{ tasks|length }} task{{ tasks|length|pluralize }} · filter to narrow down</p>
+  <p class="text-xs text-base-content/50">{{ formset.forms|length }} task{{ formset.forms|length|pluralize }} · edit a row inline, it saves itself</p>
 {% endblock %}
 {% block topbar_actions %}
   <a href="{% url 'wizard' %}" class="btn btn-ghost btn-sm gap-2">
@@ -29,7 +29,8 @@
     </form>
 
     <div class="overflow-x-auto lg:overflow-visible">
-      <table class="table table-hover">
+      {% partialdef task-rows inline %}
+      <table id="task-rows" class="table table-hover">
         <thead>
           <tr class="text-xs uppercase tracking-wider text-base-content/50">
             <th>Task</th>
@@ -41,90 +42,53 @@
             <th class="w-12"></th>
           </tr>
         </thead>
-        {% partialdef task-rows inline %}
-        <tbody id="task-rows">
-        {% for task in tasks %}{% partial task-row %}{% empty %}
+        {% for form in formset %}{% partial task-row %}{% empty %}
+        <tbody>
           <tr>
             <td colspan="7" class="text-center py-12 text-base-content/50">
               <i class="icon icon-inbox size-10 mx-auto mb-2 opacity-40 block"></i>
               No tasks match the current filter.
             </td>
           </tr>
-        {% endfor %}
         </tbody>
-        {% endpartialdef %}
+        {% endfor %}
       </table>
+      {% endpartialdef %}
     </div>
   </div>
 </div>
 
 {% partialdef task-row %}
-<tr id="task-row-{{ task.pk }}">
-  <td class="max-w-xs">
-    <a href="{% url 'task_edit' task.pk %}" class="font-medium hover:underline">{{ task.title }}</a>
-    {% if task.description %}<p class="text-xs text-base-content/50 truncate">{{ task.description }}</p>{% endif %}
-  </td>
-  <td>
-    <form hx-post="{% url 'task_status' task.pk %}"
-          hx-target="#task-row-{{ task.pk }}"
-          hx-swap="outerMorph"
-          hx-trigger="change delay:400ms">
-      {% csrf_token %}
-      <input type="hidden" name="field" value="status">
-      {{ task.row_form.status }}
-    </form>
-  </td>
-  <td>
-    <form hx-post="{% url 'task_status' task.pk %}"
-          hx-target="#task-row-{{ task.pk }}"
-          hx-swap="outerMorph"
-          hx-trigger="change delay:400ms">
-      {% csrf_token %}
-      <input type="hidden" name="field" value="priority">
-      {{ task.row_form.priority }}
-    </form>
-  </td>
-  <td class="text-sm">
-    <form hx-post="{% url 'task_status' task.pk %}"
-          hx-target="#task-row-{{ task.pk }}"
-          hx-swap="outerMorph"
-          hx-trigger="change delay:400ms">
-      {% csrf_token %}
-      <input type="hidden" name="field" value="assignee">
-      {{ task.row_form.assignee }}
-    </form>
-  </td>
-  <td>
-    <form hx-post="{% url 'task_status' task.pk %}"
-          hx-target="#task-row-{{ task.pk }}"
-          hx-swap="outerMorph"
-          hx-trigger="change delay:400ms">
-      {% csrf_token %}
-      <input type="hidden" name="field" value="tags">
-      {{ task.row_form.tags }}
-    </form>
-  </td>
-  <td class="text-sm whitespace-nowrap">
-    <form hx-post="{% url 'task_status' task.pk %}"
-          hx-target="#task-row-{{ task.pk }}"
-          hx-swap="outerMorph"
-          hx-trigger="change delay:400ms">
-      {% csrf_token %}
-      <input type="hidden" name="field" value="due_date">
-      {{ task.row_form.due_date }}
-    </form>
-  </td>
-  <td>
-    <div class="dropdown dropdown-end">
-      <button tabindex="0" class="btn btn-ghost btn-xs" aria-label="actions">
-        <i class="icon icon-ellipsis-vertical size-4"></i>
-      </button>
-      <ul tabindex="0" class="dropdown-content menu menu-sm bg-base-100 rounded-box shadow-lg border border-base-300 w-36 p-1 z-10">
-        <li><a href="{% url 'task_edit' task.pk %}"><i class="icon icon-pencil size-4"></i> Edit</a></li>
-        <li><a href="{% url 'task_delete' task.pk %}" class="text-error"><i class="icon icon-trash-2 size-4"></i> Delete</a></li>
-      </ul>
-    </div>
-  </td>
-</tr>
+{# One row = one <tbody> = one form. Any cell changing autosaves the whole row. #}
+<tbody id="{{ form.row_id }}"
+       hx-post="{% url 'task_row_save' %}"
+       hx-trigger="change delay:400ms"
+       hx-target="this"
+       hx-swap="outerMorph"
+       hx-include="closest tbody">
+  <tr>
+    <td class="max-w-xs">
+      {{ form.row_hidden }}
+      <a href="{% url 'task_edit' form.instance.pk %}" class="font-medium hover:underline">{{ form.instance.title }}</a>
+      {% if form.instance.description %}<p class="text-xs text-base-content/50 truncate">{{ form.instance.description }}</p>{% endif %}
+    </td>
+    <td>{{ form.status }}</td>
+    <td>{{ form.priority }}</td>
+    <td class="text-sm">{{ form.assignee }}</td>
+    <td>{{ form.tags }}</td>
+    <td class="text-sm whitespace-nowrap">{{ form.due_date }}</td>
+    <td>
+      <div class="dropdown dropdown-end">
+        <button tabindex="0" class="btn btn-ghost btn-xs" aria-label="actions">
+          <i class="icon icon-ellipsis-vertical size-4"></i>
+        </button>
+        <ul tabindex="0" class="dropdown-content menu menu-sm bg-base-100 rounded-box shadow-lg border border-base-300 w-36 p-1 z-10">
+          <li><a href="{% url 'task_edit' form.instance.pk %}"><i class="icon icon-pencil size-4"></i> Edit</a></li>
+          <li><a href="{% url 'task_delete' form.instance.pk %}" class="text-error"><i class="icon icon-trash-2 size-4"></i> Delete</a></li>
+        </ul>
+      </div>
+    </td>
+  </tr>
+</tbody>
 {% endpartialdef %}
 {% endblock %}
