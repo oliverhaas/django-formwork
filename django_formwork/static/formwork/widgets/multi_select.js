@@ -6,7 +6,7 @@
 //     every option and so checkbox state in the DOM is unreliable.
 //   - client-only: scans `input:checked` directly from the DOM.
 
-import { clearHighlight, keyboardNav, visibleOptions } from "./_helpers.js";
+import { clearHighlight, closePanel, keyboardNav, openPanel, panelPopover, visibleOptions } from "./_helpers.js";
 
 // Labels are interpolated into the summary via x-html (so trusted icon
 // markup like inline SVGs renders); escape them to keep label text inert.
@@ -25,6 +25,7 @@ document.addEventListener("alpine:init", () => {
     init() {
       const el = this.$el;
       this.hasSearchUrl = el.dataset.hasSearchUrl === "true";
+      this._panel = panelPopover(el);
       if (this.hasSearchUrl) {
         const sync = () => {
           this.selected = new Map(JSON.parse(el.dataset.initialSelected || "[]"));
@@ -45,9 +46,11 @@ document.addEventListener("alpine:init", () => {
     onToggle() {
       const el = this.$el;
       if (el.open) {
+        openPanel(this);
         const s = this.$refs.search;
         if (s) setTimeout(() => s.focus(), 0);
       } else {
+        closePanel(this);
         clearHighlight(this);
       }
     },

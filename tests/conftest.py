@@ -105,6 +105,13 @@ def assert_screenshot(pytestconfig: pytest.Config, request: pytest.FixtureReques
         if capture_dropdown:
             # Absolute-positioned dropdowns overflow the locator's box; static keeps them inside it.
             no_anim += " .dropdown-content { position: static !important; }"
+            # Top-layer panels (popover) don't respond to the position
+            # override; demote them back into normal flow first.
+            locator.evaluate(
+                "el => el.querySelectorAll('.dropdown-content[popover]').forEach(p => {"
+                " if (p.matches(':popover-open')) p.hidePopover();"
+                " p.removeAttribute('popover'); })"
+            )
         if padding:
             locator.evaluate(f"el => el.style.padding = '{padding}px'")
         actual_bytes = locator.screenshot(
