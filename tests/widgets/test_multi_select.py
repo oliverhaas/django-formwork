@@ -1053,6 +1053,90 @@ def test_multi_select_htmx_select_creates_hidden_inputs(multi_select_page):
 
 
 @pytest.mark.e2e
+def test_multi_select_htmx_stale_echo_keeps_local_state(multi_select_page):
+    """A server echo older than the latest toggles (a morph updating
+    data-initial-selected while a newer selection is pending) must not clobber
+    the client state: checkboxes and hidden inputs keep tracking the Map so
+    the next submit still carries the full selection.  Once the echo confirms
+    the client state, later server-driven changes are accepted again."""
+    multi = multi_select_page.locator("details.dropdown.multiselect").nth(2)
+    multi.locator("summary").click()
+    multi_select_page.wait_for_timeout(200)
+    multi_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const search = dds[2].querySelector('input[type="text"]');
+        htmx.ajax('GET', search.getAttribute('hx-get') + '?q=&type=multi_select&name=languages_htmx', {
+            target: search.getAttribute('hx-target'),
+            swap: 'innerHTML',
+        });
+    }""")
+    from playwright.sync_api import expect
+
+    expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=10000)
+    values = multi_select_page.evaluate("""() => {
+        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const cbs = dds[2].querySelectorAll('input[type="checkbox"]');
+        [cbs[0], cbs[1]].forEach(cb => {
+            cb.checked = true;
+            cb.dispatchEvent(new Event('change', {bubbles: true}));
+        });
+        return [cbs[0].value, cbs[1].value];
+    }""")
+    multi_select_page.wait_for_timeout(100)
+
+    state = """() => {
+        const dd = document.querySelectorAll('details.dropdown.multiselect')[2];
+        const data = Alpine.$data(dd);
+        return {
+            map: [...data.selected.keys()].sort(),
+            hidden: [...dd.querySelectorAll('input[type="hidden"][name="languages_htmx"]')].map(i => i.value).sort(),
+            checked: [...dd.querySelectorAll('input[type="checkbox"]')].filter(b => b.checked).map(b => b.value).sort(),
+        };
+    }"""
+    both = sorted(values)
+    assert multi_select_page.evaluate(state)["map"] == both
+
+    # Stale echo: the server confirms only the first toggle.
+    multi_select_page.evaluate(
+        """(v) => {
+            const dd = document.querySelectorAll('details.dropdown.multiselect')[2];
+            dd.dataset.initialSelected = JSON.stringify([[v, ['Stale', '']]]);
+        }""",
+        values[0],
+    )
+    multi_select_page.wait_for_timeout(100)
+    result = multi_select_page.evaluate(state)
+    assert result["map"] == both, "stale echo clobbered pending local selections"
+    assert result["hidden"] == both
+    assert result["checked"] == both
+
+    # Confirming echo (matches local state): accepted, dirty flag cleared.
+    multi_select_page.evaluate(
+        """(vs) => {
+            const dd = document.querySelectorAll('details.dropdown.multiselect')[2];
+            dd.dataset.initialSelected = JSON.stringify(vs.map(v => [v, ['Confirmed', '']]));
+        }""",
+        values,
+    )
+    multi_select_page.wait_for_timeout(100)
+
+    # A genuine server-driven change is now accepted, and the checkboxes
+    # follow the Map (x-effect), so the visual state matches what submits.
+    multi_select_page.evaluate(
+        """(v) => {
+            const dd = document.querySelectorAll('details.dropdown.multiselect')[2];
+            dd.dataset.initialSelected = JSON.stringify([[v, ['Server', '']]]);
+        }""",
+        values[0],
+    )
+    multi_select_page.wait_for_timeout(100)
+    result = multi_select_page.evaluate(state)
+    assert result["map"] == [values[0]]
+    assert result["hidden"] == [values[0]]
+    assert result["checked"] == [values[0]]
+
+
+@pytest.mark.e2e
 def test_multi_select_wrapper_has_id_e2e(multi_select_page):
     """The <details> wrapper has an id containing '_multiselect'."""
     multi = multi_select_page.locator("details.dropdown.multiselect").first

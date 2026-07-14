@@ -12,7 +12,7 @@
     </div>{% endif %}
     <ul x-ref="options"{% if widget.search_url %} id="{{ widget.attrs.id }}_options"{% endif %} role="listbox"{% if widget.search_url %} x-show="!hasError"{% endif %} @change="_v++" class="max-h-60 overflow-y-auto p-1">
       {% if widget.search_url %}{% for option in widget.initial_options %}<li><label class="flex items-center gap-1.5 px-2 py-1.5 rounded-btn cursor-pointer hover:bg-base-200" data-value="{{ option.value|escapejs }}">
-        <input type="checkbox" value="{{ option.value }}" class="multiselect hidden" x-init="$el.checked = selected.has('{{ option.value|escapejs }}')" @change="toggle('{{ option.value|escapejs }}', '{{ option.label|escapejs }}', '{{ option.icon|escapejs }}')">
+        <input type="checkbox" value="{{ option.value }}" class="multiselect hidden" x-effect="$el.checked = selected.has('{{ option.value|escapejs }}')" @change="toggle('{{ option.value|escapejs }}', '{{ option.label|escapejs }}', '{{ option.icon|escapejs }}')">
         {% if option.icon %}<span class="shrink-0">{{ option.icon }}</span>{% endif %}<span class="select-none">{{ option.label }}</span>
         <span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" aria-hidden="true"></span>
       </label></li>{% endfor %}{% if not widget.initial_options %}<li><div role="status" class="alert alert-info alert-soft m-0.5">No results.</div></li>{% endif %}{% else %}{% for group, options, index in widget.optgroups %}{% if group %}<li class="menu-title"{% if widget.show_search %} x-show="!search || [{% for option in options %}'{{ option.label|escapejs }}'{% if not loop.last %},{% endif %}{% endfor %}].some(l => l.toLowerCase().includes(search.toLowerCase()))"{% endif %}>{{ group }}</li>{% endif %}{% for option in options %}

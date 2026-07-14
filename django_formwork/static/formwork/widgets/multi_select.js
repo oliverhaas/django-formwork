@@ -16,6 +16,7 @@ const escapeHtml = (s) =>
 document.addEventListener("alpine:init", () => {
   Alpine.data("formworkMultiSelect", () => ({
     _v: 0,
+    _dirty: false,
     search: "",
     hasError: false,
     highlightedEl: null,
@@ -34,7 +35,18 @@ document.addEventListener("alpine:init", () => {
       el.querySelector("summary")?.classList.remove("formwork-placeholder");
       if (this.hasSearchUrl) {
         const sync = () => {
-          this.selected = new Map(JSON.parse(el.dataset.initialSelected || "[]"));
+          const server = new Map(JSON.parse(el.dataset.initialSelected || "[]"));
+          if (this.selected) {
+            const confirmed =
+              server.size === this.selected.size && [...server.keys()].every((k) => this.selected.has(k));
+            if (confirmed) this._dirty = false;
+            // A stale echo (the response to an older submit, landing after
+            // further toggles) must not clobber the newer local state: the
+            // last toggle's change event already armed a fresh submit that
+            // carries the full current selection.
+            else if (this._dirty) return;
+          }
+          this.selected = server;
         };
         sync();
         // htmx 4 morphs swapped-in content in place rather than replacing the
@@ -64,6 +76,7 @@ document.addEventListener("alpine:init", () => {
     toggle(value, label, icon) {
       if (this.selected.has(value)) this.selected.delete(value);
       else this.selected.set(value, [label, icon || ""]);
+      this._dirty = true;
       this._v++;
       this.$nextTick(() => this.$root.dispatchEvent(new Event("change", { bubbles: true })));
     },

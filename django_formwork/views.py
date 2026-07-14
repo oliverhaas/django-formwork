@@ -92,7 +92,7 @@ class FormworkSearchView(View):
     MULTI_SELECT_TEMPLATE = (
         """{% for item in results %}
 <li><label class="flex items-center gap-1.5 px-2 py-1.5 rounded-btn cursor-pointer hover:bg-base-200" data-value="{{ item.value|escapejs }}">
-  <input type="checkbox" value="{{ item.value }}" class="multiselect hidden" x-init="$el.checked = selected.has('{{ item.value|escapejs }}')" @change="toggle('{{ item.value|escapejs }}', '{{ item.label|escapejs }}', '{{ item.icon|escapejs }}')">
+  <input type="checkbox" value="{{ item.value }}" class="multiselect hidden" x-effect="$el.checked = selected.has('{{ item.value|escapejs }}')" @change="toggle('{{ item.value|escapejs }}', '{{ item.label|escapejs }}', '{{ item.icon|escapejs }}')">
   {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="select-none">{{ item.label }}</span>
   <span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" aria-hidden="true"></span>
 </label></li>{% endfor %}

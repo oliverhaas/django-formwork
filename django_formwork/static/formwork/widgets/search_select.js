@@ -6,6 +6,7 @@ import { clearHighlight, closePanel, keyboardNav, openPanel, panelPopover, visib
 document.addEventListener("alpine:init", () => {
   Alpine.data("formworkSearchSelect", () => ({
     _v: 0,
+    _dirty: false,
     search: "",
     showSearch: false,
     value: "",
@@ -34,6 +35,11 @@ document.addEventListener("alpine:init", () => {
       const sync = () => {
         const nextValue = el.dataset.value || "";
         const nextLabel = el.dataset.label || "";
+        // A stale echo (the response to an older submit, landing after a
+        // newer pick) must not clobber the newer value: that pick's change
+        // event already armed a fresh submit.
+        if (nextValue === this.value) this._dirty = false;
+        else if (this._dirty) return;
         // A server re-render (e.g. after a morph) can't always resolve the
         // display metadata for the current value: an async SearchSelect backed
         // by a plain CharField knows only the submitted key, not its label,
@@ -117,6 +123,7 @@ document.addEventListener("alpine:init", () => {
         );
     },
     pick(val, lbl, ic, selectedToggleClass) {
+      this._dirty = true;
       this.value = val;
       this.label = lbl;
       this.icon = ic || "";
@@ -128,6 +135,7 @@ document.addEventListener("alpine:init", () => {
       this._notify();
     },
     clear() {
+      this._dirty = true;
       this.value = "";
       this.label = "";
       this.icon = "";

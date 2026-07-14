@@ -157,13 +157,13 @@ class TestFormworkSearchViewMultiSelect:
         cb = soup.find("input", {"type": "checkbox"})
         assert not cb.has_attr("name")
 
-    def test_alpine_x_init_on_checkboxes(self):
+    def test_alpine_x_effect_on_checkboxes(self):
         request = factory.get("/search/", {"q": "", "name": "lang"})
         response = CityMultiSelectView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         cb = soup.find("input", {"type": "checkbox"})
-        assert cb.has_attr("x-init")
-        assert "selected.has" in cb["x-init"]
+        assert cb.has_attr("x-effect")
+        assert "selected.has" in cb["x-effect"]
 
     def test_alpine_change_handler_on_checkboxes(self):
         request = factory.get("/search/", {"q": "", "name": "lang"})
