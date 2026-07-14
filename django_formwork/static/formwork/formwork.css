@@ -310,12 +310,19 @@ select.select-soft::picker(select) {
 /* Native customizable select: trailing checkmark, matching the custom
    dropdown widgets (SearchSelect/MultiSelect/ComboBox).  Options are
    flex rows in base appearance, so order + auto margin pushes the
-   checkmark to the trailing edge; the padding guarantees a gap from the
-   label even when the selected option defines the picker width. */
+   checkmark to the trailing edge; the option's column-gap guarantees a
+   gap from the label even when the selected option defines the picker
+   width.  The gap must not be padding on the checkmark itself: the
+   clip-path percentages below resolve against the checkmark's border
+   box (preflight's border-box reset does not cover ::checkmark), so
+   padding would stretch the tick across the widened box. */
+option {
+    column-gap: 0.75rem;
+}
+
 option::checkmark {
     order: 1;
     margin-inline-start: auto;
-    padding-inline-start: 0.75rem;
 }
 
 /* Selected-option checkmark (custom widgets and native picker): the

@@ -26,6 +26,12 @@ document.addEventListener("alpine:init", () => {
       const el = this.$el;
       this.hasSearchUrl = el.dataset.hasSearchUrl === "true";
       this._panel = panelPopover(el);
+      // The template server-renders the placeholder class on the summary so
+      // it is styled at first paint, before Alpine loads. Strip it here, in
+      // the same synchronous pass in which the :class binding re-applies it:
+      // Alpine only ever removes classes it added itself, so a static copy
+      // would go stale on the first pick.
+      el.querySelector("summary")?.classList.remove("formwork-placeholder");
       if (this.hasSearchUrl) {
         const sync = () => {
           this.selected = new Map(JSON.parse(el.dataset.initialSelected || "[]"));

@@ -22,6 +22,15 @@ def _is_expandable(page, selector):
     )
 
 
+def _wait_expandable(page, selector):
+    """Wait for measureDisclosures to mark the <details> expandable: it runs one
+    animation frame after the htmx settle, so it can land after submit() returns."""
+    page.wait_for_function(
+        "(sel) => document.querySelector(sel).hasAttribute('data-expandable')",
+        arg=selector,
+    )
+
+
 def _is_open(page, selector):
     return page.evaluate("(sel) => document.querySelector(sel).open", selector)
 
@@ -180,6 +189,7 @@ class TestInlineErrorToggle:
         submit(inline_errors_page)
         disclosure = "#id_name_disclosure"
         summary = inline_errors_page.locator(f"{disclosure} > summary")
+        _wait_expandable(inline_errors_page, disclosure)
         assert _after_content(inline_errors_page, f"{disclosure} > summary") == '"[more]"'
 
         summary.click()
@@ -192,6 +202,7 @@ class TestInlineErrorToggle:
         submit(inline_errors_page)
         disclosure = "#id_name_disclosure"
         summary = inline_errors_page.locator(f"{disclosure} > summary")
+        _wait_expandable(inline_errors_page, disclosure)
         summary.click()
         summary.click()
         assert _after_content(inline_errors_page, f"{disclosure} > summary") == '"[more]"'
