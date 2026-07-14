@@ -282,9 +282,19 @@ select.select-soft::picker(select) {
    Options are flex rows in base appearance, so order + auto margin trail the
    checkmark.  The gap is option column-gap, not checkmark padding: the
    clip-path percentages resolve against the checkmark's border box (no
-   border-box reset on ::checkmark), so padding would distort the tick. */
+   border-box reset on ::checkmark), so padding would distort the tick.
+   Padding aligns option content with the toggle label: picker and toggle
+   share the same border width, so 0.25rem panel inset + 0.5rem option
+   padding equals the toggle's 0.75rem padding-inline-start.  Fixed values
+   (not DaisyUI's size-scaled --option-px) because the toggle padding is
+   fixed too; this also mirrors the custom widgets' p-1 panel + px-2 rows. */
+select::picker(select) {
+    padding-inline: 0.25rem;
+}
+
 option {
     column-gap: 0.75rem;
+    padding-inline: 0.5rem;
 }
 
 option::checkmark {
@@ -1376,10 +1386,10 @@ label:has(> input.hidden:checked) > .formwork-check {
 }
 
 /* Grouped dropdowns: indent options so they sit visually under the optgroup
-   header.  Unlayered + !important so it beats Tailwind's px-3 utility, which
+   header.  Unlayered + !important so it beats Tailwind's px-2 utility, which
    lives in @layer utilities (higher precedence than unlayered styles). */
 details.search-select ul:has(li.menu-title) li:not(.menu-title) > button,
 details.multiselect ul:has(li.menu-title) li:not(.menu-title) > label,
 .dropdown.combobox ul:has(li.menu-title) li:not(.menu-title) > button {
-    padding-left: 1.5rem !important;
+    padding-left: 1.25rem !important;
 }
