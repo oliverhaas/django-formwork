@@ -1,7 +1,7 @@
 // Alpine.data component for the formwork SearchSelect widget.
 // Loaded as an ES module via Media.js or imported by formwork.js.
 
-import { clearHighlight, keyboardNav, visibleOptions } from "./_helpers.js";
+import { clearHighlight, closePanel, keyboardNav, openPanel, panelPopover, visibleOptions } from "./_helpers.js";
 
 document.addEventListener("alpine:init", () => {
   Alpine.data("formworkSearchSelect", () => ({
@@ -18,6 +18,7 @@ document.addEventListener("alpine:init", () => {
     init() {
       const el = this.$el;
       this.showSearch = el.dataset.showSearch === "true";
+      this._panel = panelPopover(el);
       // The template server-renders the initial display classes on the
       // summary so they are styled at first paint, before Alpine loads.
       // Strip them here, in the same synchronous pass in which the :class
@@ -65,6 +66,7 @@ document.addEventListener("alpine:init", () => {
     onToggle() {
       const el = this.$el;
       if (el.open) {
+        openPanel(this);
         const s = this.$refs.search;
         if (el.dataset.hasSearchUrl === "true" && !el.dataset.loaded) {
           el.dataset.loaded = "1";
@@ -72,6 +74,7 @@ document.addEventListener("alpine:init", () => {
         }
         if (this.showSearch) setTimeout(() => s?.focus(), 0);
       } else {
+        closePanel(this);
         clearHighlight(this);
       }
     },

@@ -1126,6 +1126,58 @@ fieldset.formwork-dirty label.password-reveal {
 
 
 /* ================================================================
+   Top-layer dropdown panels (Popover API)
+   The widget JS promotes each panel to popover="manual" so it renders in
+   the browser top layer and escapes overflow/clip ancestors (scrollable
+   tables, cards).  Placement:
+     - With CSS anchor positioning, the @supports block pins the panel to
+       its widget root (per-instance anchor names are assigned inline by
+       the JS) and flips it when there is no room (position-try).
+     - Without it (Firefox), the JS positions the fixed panel itself and
+       sets top/left/min-width/margin inline, flipping manually.
+     - Without the Popover API at all, the attribute is never added and
+       the absolute-positioning rules in @layer components apply
+       unchanged.
+
+   MUST be unlayered: DaisyUI's .dropdown .dropdown-content sets
+   position:absolute in its own layer, which outranks @layer components.
+   position:fixed has to win or the top-layer panel resolves its inset
+   against the document instead of the viewport (a scrolled page then
+   shows it detached from its trigger; that is also why the Chromium
+   anchor path alone is not proof this rule applies).
+
+   min-width/margin must be reset too: for a fixed-position panel the
+   min-width:100% from the panel sizing rule would resolve against the
+   viewport, and the mt-1 utility's one-sided gap would not follow a
+   flip.
+   ================================================================ */
+
+details.dropdown.multiselect > .dropdown-content[popover],
+details.dropdown.search-select > .dropdown-content[popover],
+.dropdown.combobox > .dropdown-content[popover] {
+    position: fixed;
+    min-width: 0;
+    margin: 0;
+}
+
+@supports (anchor-name: --a) {
+    details.dropdown.multiselect > .dropdown-content[popover],
+    details.dropdown.search-select > .dropdown-content[popover],
+    .dropdown.combobox > .dropdown-content[popover] {
+        position-area: block-end span-inline-end;
+        position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+        /* Hide the panel when its trigger is scrolled out of view instead
+           of leaving it floating detached in the top layer. */
+        position-visibility: anchors-visible;
+        /* Symmetric block margins keep the same gap whichever side the
+           panel flips to. */
+        margin: 0.25rem 0;
+        min-width: anchor-size(width);
+    }
+}
+
+
+/* ================================================================
    Error states
    Django adds aria-invalid="true" on widgets with validation errors.
 

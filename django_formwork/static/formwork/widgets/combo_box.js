@@ -3,7 +3,7 @@
 // after the last comma is what's being typed.  iconMap is hydrated from
 // data-icons and grows as the user picks icon-bearing suggestions.
 
-import { clearHighlight, keyboardNav, visibleOptions } from "./_helpers.js";
+import { clearHighlight, closePanel, keyboardNav, openPanel, panelPopover, visibleOptions } from "./_helpers.js";
 
 document.addEventListener("alpine:init", () => {
   Alpine.data("formworkComboBox", () => ({
@@ -18,6 +18,8 @@ document.addEventListener("alpine:init", () => {
     init() {
       const el = this.$el;
       this.multiple = el.dataset.multiple === "true";
+      this._panel = panelPopover(el);
+      this.$watch("open", (open) => (open ? openPanel(this) : closePanel(this)));
       try {
         this.iconMap = JSON.parse(el.dataset.icons || "{}");
       } catch {
