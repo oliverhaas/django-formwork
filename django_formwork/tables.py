@@ -27,6 +27,8 @@ class RowRenderMixin:
 
     if TYPE_CHECKING:
         prefix: str | None
+        instance: Any
+        add_prefix: Any
         render: Any
         get_context: Any
         visible_fields: Any
@@ -37,21 +39,28 @@ class RowRenderMixin:
 
     @property
     def row_hidden(self) -> str:
-        """Prefix + hidden (pk) inputs, for hand-authored autosave rows."""
+        """Prefix + hidden inputs for hand-authored autosave rows.
+
+        Emits the pk explicitly, not via the formset's ``id`` field, so a row re-rendered from a
+        standalone form (as the save view does) still round-trips its pk.
+        """
         from django.utils.html import format_html
         from django.utils.safestring import mark_safe
 
-        prefix_input = format_html(
-            '<input type="hidden" name="{}" value="{}">', PREFIX_INPUT_NAME, self.prefix or ""
-        )
-        hidden = "".join(str(bf) for bf in self.hidden_fields())
-        return mark_safe(prefix_input + hidden)  # noqa: S308 (both parts are escaped / widget-safe)
+        parts: list[str] = [format_html('<input type="hidden" name="{}" value="{}">', PREFIX_INPUT_NAME, self.prefix or "")]
+        instance = getattr(self, "instance", None)
+        pk_name = None
+        if instance is not None:
+            pk_name = instance._meta.pk.name  # noqa: SLF001
+            pk = "" if instance.pk is None else instance.pk
+            parts.append(format_html('<input type="hidden" name="{}" value="{}">', self.add_prefix(pk_name), pk))
+        parts.extend(str(bf) for bf in self.hidden_fields() if bf.name != pk_name)
+        return mark_safe("".join(parts))  # noqa: S308 (parts are escaped / widget-safe)
 
     def get_row_context(self, save_url: str | None = None) -> dict[str, Any]:
         context = self.get_context()
         context["save_url"] = self.save_url if save_url is None else save_url
         context["row_id"] = self.row_id
-        context["prefix_input_name"] = PREFIX_INPUT_NAME
         context["cells"] = list(self.row_cells())
         return context
 
@@ -118,8 +127,9 @@ class FormworkRowSaveMixin:
 
     def get_object(self, request: HttpRequest, prefix: str | None) -> Any:  # noqa: ANN401
         model = self.form_class._meta.model  # noqa: SLF001
-        pk_name = f"{prefix}-id" if prefix else "id"
-        return model._default_manager.get(pk=request.POST[pk_name])  # noqa: SLF001
+        pk_name = model._meta.pk.name  # noqa: SLF001
+        field = f"{prefix}-{pk_name}" if prefix else pk_name
+        return model._default_manager.get(pk=request.POST[field])  # noqa: SLF001
 
     def get_form_kwargs(self) -> dict[str, Any]:
         """Extra kwargs for the row form (e.g. ``editable_fields`` to guard read-only columns)."""

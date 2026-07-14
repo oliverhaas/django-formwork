@@ -73,3 +73,20 @@ def test_row_save_updates_only_editable_fields():
     assert obj.label == "alpha"
     assert b"<tbody" in response.content
     assert b"Z" in response.content
+
+
+def test_row_save_rerenders_pk_so_the_next_edit_finds_it():
+    # A prefixed (formset) row saved once must re-render its pk, or the next autosave 404s / KeyErrors.
+    obj = UniqueCode.objects.create(code="A", label="alpha")
+
+    class SaveView(FormworkRowSaveMixin):
+        form_class = CodeRowForm
+
+    request = RequestFactory().post(
+        "/save/",
+        {"form-0-code": "Z", "form-0-id": str(obj.pk), PREFIX_INPUT_NAME: "form-0"},
+    )
+    response = SaveView().post(request)
+
+    assert b'name="form-0-id"' in response.content
+    assert f'value="{obj.pk}"'.encode() in response.content
