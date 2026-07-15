@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.db.models import Count, Q
-from django.http import HttpResponse
+from django.http import HttpResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -21,7 +21,7 @@ from .forms import (
     WizardFirstTaskForm,
     WizardProjectForm,
 )
-from .models import Profile, Tag, Task
+from .models import Profile, Task
 
 # Columns the list rows let you edit inline; every other TaskForm field is
 # disabled per row so a row POST can only touch these.
@@ -188,7 +188,10 @@ def wizard(request):
     if request.method == "POST" and step < len(WIZARD_FORMS):
         form = WIZARD_FORMS[step](request.POST)
         if form.is_valid():
-            data[str(step)] = form.cleaned_data
+            submitted = request.POST.copy()
+            submitted.pop("csrfmiddlewaretoken", None)
+            submitted.pop("step", None)
+            data[str(step)] = submitted.urlencode()
             request.session["wizard_data"] = data
             return redirect(f"{request.path}?step={step + 1}")
         return render(request, "wizard/page.html", _wizard_ctx(step, form, data))
@@ -196,9 +199,7 @@ def wizard(request):
     if step == len(WIZARD_FORMS):  # Review page
         return render(request, "wizard/review.html", _wizard_ctx(step, None, data))
 
-    initial = data.get(str(step), {})
-    form = WIZARD_FORMS[step](initial=initial)
-    return render(request, "wizard/page.html", _wizard_ctx(step, form, data))
+    return render(request, "wizard/page.html", _wizard_ctx(step, _wizard_form(step, data), data))
 
 
 def wizard_confirm(request):
@@ -206,8 +207,8 @@ def wizard_confirm(request):
     if request.method != "POST":
         return redirect("wizard")
     data = request.session.get("wizard_data", {})
-    project = data.get("0", {})
-    first = data.get("2", {})
+    project = _wizard_cleaned(0, data)
+    first = _wizard_cleaned(2, data)
 
     task = Task.objects.create(
         title=first.get("first_task", "Untitled"),
@@ -223,6 +224,19 @@ def wizard_confirm(request):
     return redirect("task_edit", pk=task.pk)
 
 
+def _wizard_form(step, data):
+    """Rebuild a step's form from the raw submitted data stored in the session."""
+    stored = data.get(str(step))
+    if stored is None:
+        return WIZARD_FORMS[step]()
+    return WIZARD_FORMS[step](QueryDict(stored))
+
+
+def _wizard_cleaned(step, data):
+    form = _wizard_form(step, data)
+    return form.cleaned_data if form.is_bound and form.is_valid() else {}
+
+
 def _wizard_ctx(step, form, data):
     total = len(WIZARD_FORMS) + 1  # forms + review
     return {
@@ -234,21 +248,15 @@ def _wizard_ctx(step, form, data):
         "total_steps": total,
         "is_review": step == len(WIZARD_FORMS),
         "has_prev": step > 0,
-        "wizard_data": data,
         "review_data": _wizard_summary(data) if step == len(WIZARD_FORMS) else None,
     }
 
 
 def _wizard_summary(data):
-    project = data.get("0", {})
-    config = data.get("1", {})
-    first = data.get("2", {})
-    tags = first.get("first_task_tags") or []
-    if hasattr(tags, "all"):
-        tags_list = list(tags)
-    else:
-        tags_list = [Tag.objects.filter(pk=t).first() for t in tags]
-    tags_list = [t for t in tags_list if t]
+    project = _wizard_cleaned(0, data)
+    config = _wizard_cleaned(1, data)
+    first = _wizard_cleaned(2, data)
+    tags_list = list(first.get("first_task_tags") or [])
     return [
         (
             "Project",
