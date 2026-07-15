@@ -1144,6 +1144,51 @@ def test_search_select_open_close_dropdown(search_select_page):
     assert sel.get_attribute("open") is None
 
 
+def _click_summary(page, index):
+    """Fire a genuine summary click whose event target is the summary, so
+    @click.outside on the other dropdowns sees a real outside click.  A
+    positional click can be blocked by an open panel overlapping a stacked
+    neighbour, which is irrelevant to the open/close logic under test."""
+    page.locator("details.dropdown.search-select").nth(index).locator("summary").evaluate("el => el.click()")
+    page.wait_for_timeout(150)
+
+
+@pytest.mark.e2e
+def test_search_select_opening_another_closes_the_open_one(search_select_page):
+    """Only one dropdown stays open at a time: opening a second closes the
+    first, in both directions (regression: manual popovers used to leave both
+    open)."""
+    selects = search_select_page.locator("details.dropdown.search-select")
+    _click_summary(search_select_page, 0)
+    _click_summary(search_select_page, 1)
+    assert selects.nth(0).get_attribute("open") is None
+    assert selects.nth(1).get_attribute("open") is not None
+
+    search_select_page.mouse.click(2, 2)
+    search_select_page.wait_for_timeout(150)
+    _click_summary(search_select_page, 1)
+    _click_summary(search_select_page, 0)
+    assert selects.nth(0).get_attribute("open") is not None
+    assert selects.nth(1).get_attribute("open") is None
+
+
+@pytest.mark.e2e
+def test_search_select_click_outside_closes(search_select_page):
+    """A click anywhere outside the dropdown closes it; a click inside its
+    panel leaves it open."""
+    sel = search_select_page.locator("details.dropdown.search-select").nth(1)
+    _click_summary(search_select_page, 1)
+    assert sel.get_attribute("open") is not None
+
+    sel.locator(".dropdown-content").evaluate("el => el.click()")
+    search_select_page.wait_for_timeout(150)
+    assert sel.get_attribute("open") is not None
+
+    search_select_page.mouse.click(2, 2)
+    search_select_page.wait_for_timeout(150)
+    assert sel.get_attribute("open") is None
+
+
 @pytest.mark.e2e
 def test_search_select_no_search_input_with_few_options(search_select_page):
     """Search input is hidden when option count is below threshold."""
@@ -1792,8 +1837,9 @@ def test_search_select_morph_preserves_dropdown_open(search_select_page):
     """)
     search_select_page.wait_for_timeout(200)
     search_select_page.evaluate("""
-        document.querySelector('form[hx-post]').noValidate = true;
-        document.querySelector('form[hx-post] button[type="submit"]').click();
+        const form = document.querySelector('form[hx-post]');
+        form.noValidate = true;
+        form.requestSubmit();
     """)
     search_select_page.wait_for_timeout(500)
     sel = search_select_page.locator("details.dropdown.search-select").first

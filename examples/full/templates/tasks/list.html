@@ -28,7 +28,7 @@
       {{ filter_form }}
     </form>
 
-    <div class="overflow-x-auto lg:overflow-visible">
+    <div class="overflow-x-auto">
       {% partialdef task-rows inline %}
       <table id="task-rows" class="table table-hover">
         <thead>
@@ -86,11 +86,16 @@
     <td>{{ form.tags }}</td>
     <td class="text-sm whitespace-nowrap">{{ form.due_date }}</td>
     <td>
-      <div class="dropdown dropdown-end">
-        <button tabindex="0" class="btn btn-ghost btn-xs" aria-label="actions">
+      {# <details> + popover=manual + anchor positioning: same top-layer mechanism as the formwork widgets, so the menu escapes the scroll container. #}
+      <details class="dropdown task-actions" x-data
+               @toggle="$refs.menu.togglePopover($el.open)"
+               style="anchor-name: --task-actions-{{ form.instance.pk }}">
+        <summary class="btn btn-ghost btn-xs list-none" aria-label="actions">
           <i class="icon icon-ellipsis-vertical size-4"></i>
-        </button>
-        <ul tabindex="0" class="dropdown-content menu menu-sm bg-base-100 rounded-box shadow-lg border border-base-300 w-36 p-1 z-10">
+        </summary>
+        <ul x-ref="menu" popover="manual"
+            class="dropdown-content menu menu-sm bg-base-100 rounded-box shadow-lg border border-base-300 w-36 p-1"
+            style="position-anchor: --task-actions-{{ form.instance.pk }}">
           <li><a href="{% url 'task_edit' form.instance.pk %}"><i class="icon icon-pencil size-4"></i> Edit</a></li>
           <li>
             <button type="button" class="text-error"
@@ -102,7 +107,7 @@
             </button>
           </li>
         </ul>
-      </div>
+      </details>
     </td>
   </tr>
 </tbody>

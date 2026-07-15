@@ -1581,8 +1581,9 @@ def test_multi_select_morph_preserves_dropdown_open(multi_select_page):
     """)
     multi_select_page.wait_for_timeout(200)
     multi_select_page.evaluate("""
-        document.querySelector('form[hx-post]').noValidate = true;
-        document.querySelector('form[hx-post] button[type="submit"]').click();
+        const form = document.querySelector('form[hx-post]');
+        form.noValidate = true;
+        form.requestSubmit();
     """)
     multi_select_page.wait_for_timeout(500)
     multi = multi_select_page.locator("details.dropdown.multiselect").first

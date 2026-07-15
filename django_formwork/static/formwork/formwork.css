@@ -1152,6 +1152,9 @@ details.dropdown.search-select > .dropdown-content[popover],
     .dropdown.combobox > .dropdown-content[popover] {
         position-area: block-end span-inline-end;
         position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+        /* Open toward whichever side has the most room (like a native
+           <select>), not just when the default below-position overflows. */
+        position-try-order: most-block-size;
         position-visibility: anchors-visible;
         /* Symmetric so the gap survives a flip. */
         margin: 0.25rem 0;

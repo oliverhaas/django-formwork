@@ -74,7 +74,10 @@ const positionPanel = (root, panel) => {
   const pw = panel.offsetWidth;
   const ph = panel.offsetHeight;
   const below = window.innerHeight - box.bottom - GAP;
-  const flip = ph > below && box.top - GAP > below;
+  const above = box.top - GAP;
+  // Open toward whichever side has the most room (like a native <select>),
+  // not just when the panel would overflow below.
+  const flip = above > below;
   panel.style.top = flip
     ? `${Math.max(EDGE, box.top - GAP - ph)}px`
     : `${box.bottom + GAP}px`;
@@ -117,6 +120,22 @@ export const closePanel = (component) => {
   component._resizeObserver = null;
   if (panel.matches(":popover-open")) panel.hidePopover();
 };
+
+// Close any open <details> dropdown when a real click lands outside it, so a
+// click anywhere else on the page (including another dropdown's trigger)
+// dismisses it. Native <details> has no such behaviour, and the panels use
+// popover="manual" so the browser's light dismiss stays off. One shared
+// listener rather than a per-widget @click.outside: this module loads once
+// (ES-module dedup), and setting `open = false` fires each widget's @toggle,
+// which tears the panel down. A genuine click only, never a morph, so it
+// cannot close a panel behind the widget's back the way light dismiss would.
+if (typeof document !== "undefined") {
+  document.addEventListener("click", (e) => {
+    for (const details of document.querySelectorAll("details.dropdown[open]")) {
+      if (!details.contains(e.target)) details.open = false;
+    }
+  });
+}
 
 export const clearHighlight = (component) => {
   if (component.highlightedEl) {
