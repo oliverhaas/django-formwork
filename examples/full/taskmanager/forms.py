@@ -54,7 +54,7 @@ class TaskForm(FormworkModelForm):
         empty_label="Unassigned",
         widget=SearchSelect(search_fields=["name", "email"], search_decorator=None),
         icon_from_instance=lambda member: format_html(
-            "<span class='badge badge-neutral badge-sm w-8'>{}</span>", member.initials
+            "<span class='badge badge-ghost badge-sm w-8'>{}</span>", member.initials
         ),
         description_from_instance=lambda member: member.email,
         help_text="SearchSelect over the Member model: server-side search, initials badge, email line.",

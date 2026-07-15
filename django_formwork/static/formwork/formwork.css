@@ -801,16 +801,6 @@ input[type="hidden"] {
     @apply hidden;
 }
 
-/* Dropdown triggers: pin DaisyUI's select focus ring while open so it doesn't
-   revert to gray on inside clicks.  Driven off --input-color so color variants
-   and aria-invalid carry through; `/ 1` forces the colorless default opaque. */
-details.search-select[open] > summary,
-details.multiselect[open] > summary {
-    border-color: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
-    outline: 2px solid oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
-    outline-offset: 2px;
-}
-
 /* SearchSelect / MultiSelect / ComboBox keyboard navigation: highlight focused option. */
 details.search-select [data-value].highlighted,
 details.multiselect [data-value].highlighted,
@@ -1107,6 +1097,31 @@ fieldset.formwork-dirty label.password-reveal {
 }
 
 } /* @layer components */
+
+
+/* Dropdown triggers: pin DaisyUI's select focus ring while open so it doesn't
+   revert to gray on inside clicks.  Driven off --input-color so color variants
+   and aria-invalid carry through; `/ 1` forces the colorless default opaque.
+   MUST be unlayered: a mousedown inside the panel moves focus off the summary,
+   dropping the unlayered :focus rules (.select-soft:focus, DaisyUI's), and a
+   layered pin loses border-color to the unlayered .select-soft tint. */
+details.search-select[open] > summary,
+details.multiselect[open] > summary {
+    border-color: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
+    outline: 2px solid oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
+    outline-offset: 2px;
+}
+
+/* Option rows: mirror DaisyUI's native option:active press feedback (invert
+   to neutral).  MUST be unlayered: mousedown implies hover, and the rows'
+   hover:bg-base-200 utility would beat a layered background-color. */
+details.search-select [data-value]:active,
+details.multiselect [data-value]:active,
+.dropdown.combobox [data-suggestion]:active {
+    background-color: var(--color-neutral);
+    color: var(--color-neutral-content);
+    box-shadow: 0 2px calc(var(--depth) * 3px) -2px var(--color-neutral);
+}
 
 
 /* ================================================================

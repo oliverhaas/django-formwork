@@ -66,8 +66,8 @@ class FormworkSearchView(View):
     #: ``escapejs`` there would submit literal ``\\uXXXX`` text.
     SEARCH_SELECT_TEMPLATE = (
         """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-1.5 px-2 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value }}" data-label="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}{% if item.selected_toggle_class %} data-selected-toggle-class="{{ item.selected_toggle_class }}"{% endif %}>
-  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span><span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" :class="value === '{{ item.value|escapejs }}' && 'opacity-100'" aria-hidden="true"></span>
+<li role="option"><button type="button" class="flex w-full items-center gap-1.5 px-2 py-1.5 rounded-field cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value }}" data-label="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}{% if item.selected_toggle_class %} data-selected-toggle-class="{{ item.selected_toggle_class }}"{% endif %}>
+  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-current/50">{{ item.description }}</span>{% endif %}</span><span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" :class="value === '{{ item.value|escapejs }}' && 'opacity-100'" aria-hidden="true"></span>
 </button></li>{% endfor %}
 {% if not results %}"""
         + _NO_RESULTS_HTML
@@ -77,8 +77,8 @@ class FormworkSearchView(View):
     #: Template for ComboBox results (label only, for autocomplete-style)
     COMBO_BOX_TEMPLATE = (
         """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-1.5 px-2 py-1.5 rounded-btn cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
-  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-base-content/50">{{ item.description }}</span>{% endif %}</span>
+<li role="option"><button type="button" class="flex w-full items-center gap-1.5 px-2 py-1.5 rounded-field cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
+  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-current/50">{{ item.description }}</span>{% endif %}</span>
 </button></li>{% endfor %}
 {% if not results %}"""
         + _NO_RESULTS_HTML
@@ -91,7 +91,7 @@ class FormworkSearchView(View):
     #: the parent ``x-data`` scope (the widget wrapper).
     MULTI_SELECT_TEMPLATE = (
         """{% for item in results %}
-<li><label class="flex items-center gap-1.5 px-2 py-1.5 rounded-btn cursor-pointer hover:bg-base-200" data-value="{{ item.value|escapejs }}">
+<li><label class="flex items-center gap-1.5 px-2 py-1.5 rounded-field cursor-pointer hover:bg-base-200" data-value="{{ item.value|escapejs }}">
   <input type="checkbox" value="{{ item.value }}" class="multiselect hidden" x-effect="$el.checked = selected.has('{{ item.value|escapejs }}')" @change="toggle('{{ item.value|escapejs }}', '{{ item.label|escapejs }}', '{{ item.icon|escapejs }}')">
   {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="select-none">{{ item.label }}</span>
   <span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" aria-hidden="true"></span>
