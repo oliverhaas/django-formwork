@@ -84,12 +84,28 @@ def test_row_edit_cannot_clobber_readonly_fields(client, db):
     assert task.status == Task.Status.DONE  # editable column, saved
 
 
+def test_list_rows_are_keyed_by_task_pk(client, db):
+    """Rows carry a pk-based identity (id + prefix), not a positional formset
+    index, so htmx morph tracks each row across re-renders instead of swapping
+    content between slots."""
+    a = Task.objects.create(title="First")
+    b = Task.objects.create(title="Second")
+    content = client.get(reverse("task_list")).content.decode()
+    for task in (a, b):
+        assert f'id="formwork-row-task-{task.pk}"' in content
+        assert f'value="task-{task.pk}"' in content  # round-tripped _formwork_prefix
+    assert 'id="formwork-row-form-0"' not in content  # no positional ids
+
+
 def test_add_task_appends_a_draft_row(client, db):
     before = Task.objects.count()
     response = client.post(reverse("task_add"), headers={"HX-Request": "true"})
     assert response.status_code == 200
     assert Task.objects.count() == before + 1
     assert b"<tbody" in response.content
+    task = Task.objects.latest("id")
+    content = response.content.decode()
+    assert f'id="formwork-row-task-{task.pk}"' in content  # same pk scheme as the list
 
 
 def test_inline_delete_removes_the_task(client, db):

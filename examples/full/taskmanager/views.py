@@ -30,6 +30,15 @@ ROW_EDITABLE_FIELDS = {"status", "priority", "assignee", "due_date", "tags"}
 # One TaskForm per row, rendered as an autosaving table (form.as_row / row_hidden).
 TaskRowFormSet = formwork_modelformset_factory(Task, form=TaskForm, extra=0)
 
+
+def _key_rows_by_pk(formset):
+    """Prefix each row form with its task pk (``task-<pk>``) instead of the
+    formset's positional index, so htmx morph tracks rows by identity across
+    filter/add/reorder re-renders rather than swapping content between slots."""
+    for form in formset.forms:
+        form.prefix = f"task-{form.instance.pk}"
+
+
 # ─── Dashboard ──────────────────────────────────────────────────────────
 
 
@@ -99,9 +108,10 @@ def task_list(request):
             tasks = tasks.filter(priority=priority)
 
     formset = TaskRowFormSet(
-        queryset=tasks.order_by("-updated_at"),
+        queryset=tasks,
         form_kwargs={"editable_fields": ROW_EDITABLE_FIELDS, "row": True},
     )
+    _key_rows_by_pk(formset)
 
     if request.headers.get("HX-Request") == "true":
         return render(request, "tasks/list.html#task-rows", {"formset": formset})
@@ -143,8 +153,8 @@ def task_add(request):
     formset = TaskRowFormSet(
         queryset=Task.objects.filter(pk=task.pk),
         form_kwargs={"editable_fields": ROW_EDITABLE_FIELDS, "row": True},
-        prefix=f"add-{task.pk}",
     )
+    _key_rows_by_pk(formset)
     return render(request, "tasks/list.html#task-row", {"form": formset.forms[0]})
 
 
