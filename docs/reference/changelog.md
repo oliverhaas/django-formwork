@@ -22,6 +22,13 @@
 
 ### Added
 
+- **Editable tables.** `as_row()` renders a `FormworkForm`/`FormworkModelForm` as a
+  table `<tbody>`, and `as_rows()` renders a formset as one editable `<table>`. Pair
+  them with the new `FormworkRowSaveMixin` view mixin for per-row htmx autosave: each
+  row posts only its own changes (keyed on the posted pk) and re-renders in place.
+- **Native `<select multiple>` auto-upgrades to `MultiSelect`.** A plain
+  `forms.SelectMultiple` rendered through the formwork renderer now gets the styled
+  MultiSelect dropdown, mirroring how a single `<select>` maps to the styled control.
 - **`error_display` Meta option for field error rendering.** `FormworkForm`,
   `FormworkModelForm`, and their Jinja2 equivalents accept
   `error_display = "inline"` (default), which renders errors below the widget
@@ -129,6 +136,16 @@
 
 ### Fixed
 
+- **Dropdowns close on any click outside.** `SearchSelect` and `MultiSelect` dismiss
+  when a click lands anywhere outside the open panel, including another dropdown's
+  trigger. Previously the top-layer popover stayed open, so opening a second dropdown
+  left both showing.
+- **Dropdown placeholder stays muted on focus.** The `MultiSelect` / `SearchSelect`
+  "Select…" placeholder no longer brightens to body-text color when the trigger is
+  focused.
+- **Dropdown option rows invert on press, and the closed trigger keeps its border.**
+  Pressing an option now gives active-state feedback, and the trigger retains its
+  border while the panel is open.
 - **Dropdown widgets no longer drop Django's `aria-describedby`.** `SearchSelect` and
   `MultiSelect` render it on the `<summary>` trigger and `ComboBox` on the combobox input
   (both template engines), so assistive tech now hears the help text and error message that

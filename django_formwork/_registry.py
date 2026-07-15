@@ -86,5 +86,10 @@ def get_registration(key: str) -> SearchRegistration | None:
 
 
 def get_registry() -> dict[str, SearchRegistration]:
-    """Return the full registry (for debugging / introspection)."""
-    return _registry
+    """Return a copy of the full registry (for debugging / introspection)."""
+    return dict(_registry)
+
+
+def clear_registry() -> None:
+    """Empty the registry (test helper; auto-registration repopulates it)."""
+    _registry.clear()

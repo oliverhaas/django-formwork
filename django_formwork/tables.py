@@ -47,7 +47,9 @@ class RowRenderMixin:
         from django.utils.html import format_html
         from django.utils.safestring import mark_safe
 
-        parts: list[str] = [format_html('<input type="hidden" name="{}" value="{}">', PREFIX_INPUT_NAME, self.prefix or "")]
+        parts: list[str] = [
+            format_html('<input type="hidden" name="{}" value="{}">', PREFIX_INPUT_NAME, self.prefix or "")
+        ]
         instance = getattr(self, "instance", None)
         pk_name = None
         if instance is not None:
@@ -126,10 +128,19 @@ class FormworkRowSaveMixin:
         return request.POST.get(PREFIX_INPUT_NAME) or None
 
     def get_object(self, request: HttpRequest, prefix: str | None) -> Any:  # noqa: ANN401
+        from django.http import Http404
+
         model = self.form_class._meta.model  # noqa: SLF001
         pk_name = model._meta.pk.name  # noqa: SLF001
         field = f"{prefix}-{pk_name}" if prefix else pk_name
-        return model._default_manager.get(pk=request.POST[field])  # noqa: SLF001
+        pk = request.POST.get(field)
+        if pk is None:
+            raise Http404("Row primary key missing from the request")
+        try:
+            return model._default_manager.get(pk=pk)  # noqa: SLF001
+        except model.DoesNotExist as exc:
+            # Row deleted between render and autosave: a clean 404 beats a 500.
+            raise Http404("Row no longer exists") from exc
 
     def get_form_kwargs(self) -> dict[str, Any]:
         """Extra kwargs for the row form (e.g. ``editable_fields`` to guard read-only columns)."""

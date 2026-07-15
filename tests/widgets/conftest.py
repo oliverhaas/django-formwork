@@ -179,10 +179,10 @@ def assert_html_equivalent(a: Tag, b: Tag) -> None:
 def _clean_widget_registry():
     """Drop any registry entries created by ``attach_server_search`` so tests
     don't leak state across the module."""
-    from django_formwork._registry import get_registry
+    from django_formwork._registry import clear_registry
 
     yield
-    get_registry().clear()
+    clear_registry()
 
 
 @pytest.fixture(params=["dtl", "jinja2"], ids=["dtl", "jinja2"])

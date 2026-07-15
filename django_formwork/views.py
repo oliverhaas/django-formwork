@@ -113,13 +113,17 @@ class FormworkSearchView(View):
         """Return a compiled template for the given widget type, using cache."""
         if cls._engine is None:
             cls._engine = Engine()
-        if cls._compiled_templates is None:
-            cls._compiled_templates = {
+        # cls.__dict__, not inherited: a subclass overriding a *_TEMPLATE must
+        # compile its own copy, not serve the base's cached dict.
+        compiled = cls.__dict__.get("_compiled_templates")
+        if compiled is None:
+            compiled = {
                 "search_select": cls._engine.from_string(cls.SEARCH_SELECT_TEMPLATE),
                 "combo_box": cls._engine.from_string(cls.COMBO_BOX_TEMPLATE),
                 "multi_select": cls._engine.from_string(cls.MULTI_SELECT_TEMPLATE),
             }
-        return cls._compiled_templates[widget_type]
+            cls._compiled_templates = compiled
+        return compiled[widget_type]
 
     def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:  # noqa: ARG002
         """Return search results for the given query.
@@ -139,12 +143,11 @@ class FormworkSearchView(View):
         """
         return []
 
-    #: Maximum query length (bytes). Longer queries are truncated.
+    #: Maximum query length (characters). Longer queries are truncated.
     MAX_QUERY_LENGTH = 200
 
     def get(self, request: HttpRequest) -> HttpResponse:
         query = request.GET.get("q", "").strip()[: self.MAX_QUERY_LENGTH]
-        field_name = request.GET.get("name", "")
 
         # SECURITY: the widget type comes from the server side only (the
         # registration for auto-registered endpoints, or the subclass
@@ -153,7 +156,7 @@ class FormworkSearchView(View):
         # never intended.
         results = self.get_results(query, request=request)
         template = self._get_template(self.widget_type)
-        html = template.render(Context({"results": results, "field_name": field_name}))
+        html = template.render(Context({"results": results}))
         return HttpResponse(html.strip())
 
 

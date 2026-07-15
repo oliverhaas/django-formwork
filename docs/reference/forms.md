@@ -150,6 +150,13 @@ Set `FORMWORK_FORCE_ASYNC = True` in settings to make the sync entry points
 (`is_valid()`, `full_clean()`, `save()`) raise `RuntimeError`. Use it to keep
 accidental sync calls out of an async codebase.
 
+This matters because the failure is otherwise silent: a form with an async
+`clean_<field>()` or `clean()` validated through the *sync* `is_valid()` stores
+the un-awaited coroutine in `cleaned_data` instead of running the check, so
+validation is skipped. Enable `FORMWORK_FORCE_ASYNC` in any project that defines
+async validators and touches forms from sync code (including templates that read
+`form.errors`) so the mistake fails loudly.
+
 ## FormworkModel
 
 `FormworkModel` is an abstract model base that mixes in

@@ -7,6 +7,7 @@ from django.test import RequestFactory
 
 from django_formwork._registry import (
     SearchRegistration,
+    clear_registry,
     get_registration,
     get_registry,
     make_choices_key,
@@ -18,9 +19,9 @@ from django_formwork._registry import (
 @pytest.fixture(autouse=True)
 def _clean_registry():
     """Clear the registry before and after each test."""
-    get_registry().clear()
+    clear_registry()
     yield
-    get_registry().clear()
+    clear_registry()
 
 
 # ---------------------------------------------------------------------------

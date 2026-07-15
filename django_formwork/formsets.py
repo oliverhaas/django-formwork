@@ -213,7 +213,12 @@ class _BatchedUniquenessMixin:
             else:
                 errors = {}
                 self._collect_unique_errors(form, unique_by_form[form], taken, errors)
-            self._collect_date_errors(form, date_by_form[form], taken_dates, errors)
+            if taken_dates is None:
+                # Same batched-query fallback as above, for date checks.
+                for key, msgs in form.instance._perform_date_checks(date_by_form[form]).items():  # noqa: SLF001
+                    errors.setdefault(key, []).extend(msgs)
+            else:
+                self._collect_date_errors(form, date_by_form[form], taken_dates, errors)
             if errors:
                 form._update_errors(ValidationError(errors))  # noqa: SLF001
 
@@ -365,6 +370,8 @@ class _BatchedUniquenessMixin:
             sql, sql_params = self._build_check_query(condition, against, using).get_compiler(using=using).as_sql()
             fragments.append(f"({sql})")
             params.extend(sql_params)
+        # FROM-less SELECT: valid on PostgreSQL/SQLite, not Oracle. The caller
+        # catches the DatabaseError and falls back to per-form validation.
         select = "SELECT " + ", ".join(f"{fragment} AS c{i}" for i, fragment in enumerate(fragments))
         # Match Q.check: isolate the read in a savepoint when already inside a
         # transaction, so a backend error rolls back cleanly.
@@ -463,9 +470,7 @@ class _BatchedUniquenessMixin:
                     for row in queryset.values_list(*fields, "pk"):
                         existing[tuple(row[:-1])].add(row[-1])
             except DatabaseError:
-                # One OR-of-all-forms statement can fail where stock's per-form
-                # lookups succeed (e.g. backend parameter limits on a very large
-                # formset); fall back to Django's per-form path rather than 500.
+                # One big OR can exceed backend parameter limits; signal fallback.
                 return None
             taken[key] = existing
         return taken
@@ -502,7 +507,7 @@ class _BatchedUniquenessMixin:
         self,
         forms: list[Any],
         date_by_form: dict[Any, list[DateCheck]],
-    ) -> dict[tuple[int, str, str, str], dict[tuple[Any, ...], set[Any]]]:
+    ) -> dict[tuple[int, str, str, str], dict[tuple[Any, ...], set[Any]]] | None:
         wanted: dict[tuple[int, str, str, str], DateCheck] = {}
         rows_wanted: dict[tuple[int, str, str, str], list[tuple[Any, date_type]]] = defaultdict(list)
         for form in forms:
@@ -531,12 +536,18 @@ class _BatchedUniquenessMixin:
                 else:
                     query |= Q(**{field: field_value, f"{unique_for}__{lookup_type}": getattr(date, lookup_type)})
             existing: dict[tuple[Any, ...], set[Any]] = defaultdict(set)
-            for field_value, date, pk in model_class._default_manager.filter(query).values_list(  # noqa: SLF001
-                field,
-                unique_for,
-                "pk",
-            ):
-                existing[self._date_key(lookup_type, field_value, date)].add(pk)
+            queryset = model_class._default_manager.filter(query)  # noqa: SLF001
+            # Savepoint-isolate the read, as the sibling prefetch paths do.
+            atomic = (
+                transaction.atomic(using=queryset.db) if connections[queryset.db].in_atomic_block else nullcontext()
+            )
+            try:
+                with atomic:
+                    for field_value, date, pk in queryset.values_list(field, unique_for, "pk"):
+                        existing[self._date_key(lookup_type, field_value, date)].add(pk)
+            except DatabaseError:
+                # One big OR can exceed backend parameter limits; signal fallback.
+                return None
             taken[key] = existing
         return taken
 

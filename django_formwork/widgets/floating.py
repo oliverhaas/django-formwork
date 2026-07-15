@@ -17,11 +17,11 @@ class FloatingLabelMixin(forms.Widget):
 
     def __init__(self, *args: Any, floating_label: bool = False, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        # Capture the real widget template unconditionally so get_context never
+        # trips over a missing attribute if floating_label is toggled on later.
+        self._inner_template_name = self.template_name
         self.floating_label = floating_label
         if floating_label:
-            # Remember the real widget template so the wrapper can include it,
-            # then point rendering at the wrapper.
-            self._inner_template_name = self.template_name
             self.template_name = self.floating_wrapper_template
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:

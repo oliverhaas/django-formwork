@@ -22,8 +22,18 @@ def _normalize_suggestions(
     """
     if not suggestions:
         return []
+    # Grouped when the first entry is a (group, items) pair; otherwise flat.
     if isinstance(suggestions[0], (tuple, list)):
-        return [(str(g), [str(s) for s in items]) for item in suggestions for g, items in [item]]
+        groups: list[tuple[str, list[str]]] = []
+        for item in suggestions:
+            if isinstance(item, (tuple, list)) and len(item) == 2:  # noqa: PLR2004
+                group, items = item
+                groups.append((str(group), [str(s) for s in items]))
+            else:
+                # A stray non-pair among groups degrades to an ungrouped item
+                # rather than raising on the tuple unpack.
+                groups.append(("", [str(item)]))
+        return groups
     return [("", [str(s) for s in suggestions])]
 
 
