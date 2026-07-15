@@ -1029,6 +1029,12 @@ call <code>await form.asave_m2m()</code> after saving the instance. Calling the 
 <p>Set <code>FORMWORK_FORCE_ASYNC = True</code> in settings to make the sync entry points
 (<code>is_valid()</code>, <code>full_clean()</code>, <code>save()</code>) raise <code>RuntimeError</code>. Use it to keep
 accidental sync calls out of an async codebase.</p>
+<p>This matters because the failure is otherwise silent: a form with an async
+<code>clean_&lt;field&gt;()</code> or <code>clean()</code> validated through the <em>sync</em> <code>is_valid()</code> stores
+the un-awaited coroutine in <code>cleaned_data</code> instead of running the check, so
+validation is skipped. Enable <code>FORMWORK_FORCE_ASYNC</code> in any project that defines
+async validators and touches forms from sync code (including templates that read
+<code>form.errors</code>) so the mistake fails loudly.</p>
 <h2 id="formworkmodel">FormworkModel<a class="headerlink" href="#formworkmodel" title="Permanent link">&para;</a></h2>
 <p><code>FormworkModel</code> is an abstract model base that mixes in
 <code>filthyfields.DirtyFieldsMixin</code>, providing the <code>get_dirty_fields()</code> that

@@ -1092,6 +1092,13 @@
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
+<li><strong>Editable tables.</strong> <code>as_row()</code> renders a <code>FormworkForm</code>/<code>FormworkModelForm</code> as a
+  table <code>&lt;tbody&gt;</code>, and <code>as_rows()</code> renders a formset as one editable <code>&lt;table&gt;</code>. Pair
+  them with the new <code>FormworkRowSaveMixin</code> view mixin for per-row htmx autosave: each
+  row posts only its own changes (keyed on the posted pk) and re-renders in place.</li>
+<li><strong>Native <code>&lt;select multiple&gt;</code> auto-upgrades to <code>MultiSelect</code>.</strong> A plain
+  <code>forms.SelectMultiple</code> rendered through the formwork renderer now gets the styled
+  MultiSelect dropdown, mirroring how a single <code>&lt;select&gt;</code> maps to the styled control.</li>
 <li><strong><code>error_display</code> Meta option for field error rendering.</strong> <code>FormworkForm</code>,
   <code>FormworkModelForm</code>, and their Jinja2 equivalents accept
   <code>error_display = "inline"</code> (default), which renders errors below the widget
@@ -1199,6 +1206,16 @@
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
+<li><strong>Dropdowns close on any click outside.</strong> <code>SearchSelect</code> and <code>MultiSelect</code> dismiss
+  when a click lands anywhere outside the open panel, including another dropdown's
+  trigger. Previously the top-layer popover stayed open, so opening a second dropdown
+  left both showing.</li>
+<li><strong>Dropdown placeholder stays muted on focus.</strong> The <code>MultiSelect</code> / <code>SearchSelect</code>
+  "Select…" placeholder no longer brightens to body-text color when the trigger is
+  focused.</li>
+<li><strong>Dropdown option rows invert on press, and the closed trigger keeps its border.</strong>
+  Pressing an option now gives active-state feedback, and the trigger retains its
+  border while the panel is open.</li>
 <li><strong>Dropdown widgets no longer drop Django's <code>aria-describedby</code>.</strong> <code>SearchSelect</code> and
   <code>MultiSelect</code> render it on the <code>&lt;summary&gt;</code> trigger and <code>ComboBox</code> on the combobox input
   (both template engines), so assistive tech now hears the help text and error message that
