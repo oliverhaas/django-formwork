@@ -210,14 +210,16 @@ class TestComplexFormMorphResilience:
         page.evaluate("document.querySelector('details.search-select').open = true")
         page.wait_for_timeout(300)
         assert page.evaluate("document.querySelector('details.search-select').open")
-        # Submit via JS: open dropdown's summary::before overlay blocks clicks
+        # Submit via requestSubmit(), not a click: an outside click now triggers
+        # the global light-dismiss and closes the dropdown, which would mask the
+        # morph-survival check.  A submit event reaches htmx without a click.
         page.evaluate(
             """(() => {
             const form = document.querySelector('form[hx-post]');
             form.noValidate = true;
             window.__fwSubmitDone = false;
             form.addEventListener('htmx:after:swap', () => { window.__fwSubmitDone = true; }, {once: true});
-            document.querySelector('button[type=\"submit\"]').click();
+            form.requestSubmit();
         })()""",
         )
         page.wait_for_function("window.__fwSubmitDone === true")
