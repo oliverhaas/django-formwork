@@ -378,16 +378,6 @@ i.icon {
     height: 1em;
 }
 
-/* Injected icons in dropdown triggers and option rows (SearchSelect,
-   MultiSelect, ComboBox): user-supplied icon HTML has no call site to carry
-   a size utility, so it falls back to the bare 1em and reads too small
-   against the option text. Pin an explicit size instead. These widgets have
-   no built-in .icon/svg of their own, so the scope only ever matches the
-   injected icons. */
-:is(.search-select, .multiselect, .combobox) :is(.icon, svg) {
-    @apply size-5;
-}
-
 /* ================================================================
    Button icons (btn-icon / btn-icon-end)
 
