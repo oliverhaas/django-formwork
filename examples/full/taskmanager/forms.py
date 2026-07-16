@@ -17,6 +17,7 @@ from django_formwork.widgets import (
     Range,
     Rating,
     SearchSelect,
+    Select,
     Toggle,
     ValidatedTextarea,
 )
@@ -154,14 +155,16 @@ class TaskFilterForm(forms.Form):
         label="",
     )
     status = forms.ChoiceField(
-        choices=[("", "All statuses"), *Task.Status.choices],
+        choices=[("", "All"), *Task.Status.choices],
         required=False,
         label="",
+        widget=Select(floating_label=True, attrs={"class": "select w-full", "placeholder": "Status"}),
     )
     priority = forms.ChoiceField(
-        choices=[("", "All priorities"), *Task.Priority.choices],
+        choices=[("", "All"), *Task.Priority.choices],
         required=False,
         label="",
+        widget=Select(floating_label=True, attrs={"class": "select w-full", "placeholder": "Priority"}),
     )
 
 

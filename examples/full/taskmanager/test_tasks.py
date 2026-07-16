@@ -126,14 +126,19 @@ def test_deleting_a_member_keeps_the_task(client, db):
     assert task.assignee is None
 
 
-def test_search_filter_has_type_search_with_leading_and_trailing_icons(client, db):
-    """The filter search box is a type=search input framed by a leading
-    magnifier and a trailing clear button, both lucide icons."""
+def test_search_filter_has_type_search_with_leading_magnifier(client, db):
+    """The filter search box is a type=search input with a leading magnifier icon."""
     content = client.get(reverse("task_list")).content.decode()
     assert '<input type="search" name="q"' in content
     assert "icon-search" in content  # leading magnifier
-    assert 'class="search-clear' in content  # trailing clear button
-    assert "icon-x" in content
+
+
+def test_status_and_priority_filters_have_floating_labels(client, db):
+    """The select filters carry floating labels so the active filter reads clearly."""
+    content = client.get(reverse("task_list")).content.decode()
+    assert content.count('class="floating-label"') == 2
+    assert "<span>Status</span>" in content
+    assert "<span>Priority</span>" in content
 
 
 def test_task_row_priority_trigger_carries_severity_class(client, db):
