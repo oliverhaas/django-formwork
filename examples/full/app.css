@@ -59,6 +59,18 @@
   mask: url("/static/icons/custom/github.svg") center / contain no-repeat;
 }
 
+/* Border-style variants for selects (DaisyUI ships none). Combined with a
+   `select-{color}` on a SearchSelect's closed trigger via selected_toggle_class,
+   they read lighter than a solid colored border. The status field uses
+   `select-dashed select-{color}`. Unlayered so they beat DaisyUI's `.select`
+   border-style; only the style changes, the color class still sets the hue. */
+.select-dashed {
+  border-style: dashed;
+}
+.select-dotted {
+  border-style: dotted;
+}
+
 /* Always reserve the scrollbar gutter so page width doesn't jump between
    short (no scrollbar) and tall (scrollbar) views. DaisyUI only reserves it
    once the page already scrolls (scroll-timeline toggling --page-has-scroll),

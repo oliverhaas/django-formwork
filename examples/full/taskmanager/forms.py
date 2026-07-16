@@ -25,6 +25,14 @@ from django_formwork.widgets import (
 from .models import Member, Profile, Tag, Task
 from .widgets import PhoneInput
 
+# Lifecycle ramp minus neutral, which reads as an unstyled border on a select.
+STATUS_SELECT_COLORS: dict[str, str] = {
+    Task.Status.TODO: "info",
+    Task.Status.IN_PROGRESS: "primary",
+    Task.Status.REVIEW: "accent",
+    Task.Status.DONE: "success",
+}
+
 
 class TaskForm(FormworkModelForm):
     """CRUD form for a task. Demonstrates SearchSelect (static choices with
@@ -55,15 +63,15 @@ class TaskForm(FormworkModelForm):
                 value,
                 ChoiceLabel(
                     label,
-                    selected_toggle_class=f"select-{Task.STATUS_COLORS[value]}",
+                    selected_toggle_class=f"select-{STATUS_SELECT_COLORS[value]}",
                 ),
             )
             for value, label in Task.Status.choices
         ],
         initial=Task.Status.TODO,
         widget=SearchSelect,
-        help_text="Same trick as priority, but a solid select-{color} border on the lifecycle ramp "
-        "instead of a soft fill: the closed trigger recolors on pick without a round-trip.",
+        help_text="Same trick as priority, but a select-{color} border instead of a soft fill: "
+        "solid here on the edit page, dotted in the inline list rows, recoloring on pick.",
     )
 
     assignee = FormworkModelChoiceField(
@@ -120,9 +128,9 @@ class TaskForm(FormworkModelForm):
             "attachment": "Any single file (FileDropZone, ≤10 MB).",
         }
 
-    # Ghost variants keep inline table cells text-like. Status stays a full
-    # SearchSelect so its per-option select-{color} border shows in the row.
+    # Inline cells: ghost variants stay text-like; status gets a dotted border.
     ROW_WIDGET_CLASSES = {
+        "status": "select-dotted",
         "assignee": "select-ghost",
         "tags": "select-ghost",
         "due_date": "input-ghost",
