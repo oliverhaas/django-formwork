@@ -62,3 +62,11 @@
   background-color: currentColor;
   mask: url("/static/icons/custom/github.svg") center / contain no-repeat;
 }
+
+/* Always reserve the scrollbar gutter so page width doesn't jump between
+   short (no scrollbar) and tall (scrollbar) views. DaisyUI only reserves it
+   once the page already scrolls (scroll-timeline toggling --page-has-scroll),
+   which is the jump itself; force it unconditionally. */
+:root {
+  scrollbar-gutter: stable;
+}
