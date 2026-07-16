@@ -150,7 +150,7 @@ class TaskFilterForm(forms.Form):
 
     q = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={"placeholder": "Search…"}),
+        widget=forms.SearchInput(attrs={"placeholder": "Search…"}),
         label="",
     )
     status = forms.ChoiceField(

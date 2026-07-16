@@ -126,6 +126,16 @@ def test_deleting_a_member_keeps_the_task(client, db):
     assert task.assignee is None
 
 
+def test_search_filter_has_type_search_with_leading_and_trailing_icons(client, db):
+    """The filter search box is a type=search input framed by a leading
+    magnifier and a trailing clear button, both lucide icons."""
+    content = client.get(reverse("task_list")).content.decode()
+    assert '<input type="search" name="q"' in content
+    assert "icon-search" in content  # leading magnifier
+    assert 'class="search-clear' in content  # trailing clear button
+    assert "icon-x" in content
+
+
 def test_task_row_priority_trigger_carries_severity_class(client, db):
     """The priority SearchSelect seeds its trigger class from the saved severity."""
     Task.objects.create(title="Recolor me", priority=Task.Priority.HIGH)

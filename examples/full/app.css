@@ -40,6 +40,16 @@
   }
 }
 
+/* Search filter: our trailing clear button replaces the native (WebKit-only,
+ * unstyleable) one and shows only while the field has text. The placeholder is
+ * always set, so :placeholder-shown means empty. */
+.input > input[type="search"]::-webkit-search-cancel-button {
+  appearance: none;
+}
+.input:has(> input[type="search"]:placeholder-shown) .search-clear {
+  display: none;
+}
+
 /* Custom example-only icon, glued onto the iconx mask-image pipeline so
  * the same `<i class="icon icon-github size-5">` markup works everywhere.
  * The `.icon` base + `[class*="icon-"]` shared rule already in

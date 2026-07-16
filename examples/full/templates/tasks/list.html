@@ -25,7 +25,17 @@
           hx-swap="outerMorph"
           hx-push-url="true"
           class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-end p-4 border-b border-base-300">
-      {{ filter_form }}
+      <label class="input w-full" x-data>
+        <i class="icon icon-search size-4 opacity-50"></i>
+        {{ filter_form.q }}
+        <button type="button" class="search-clear cursor-pointer opacity-60 hover:opacity-100"
+                aria-label="Clear search"
+                @click="const i = $el.closest('label').querySelector('input[type=search]'); i.value = ''; i.dispatchEvent(new Event('input', {bubbles: true})); i.focus()">
+          <i class="icon icon-x size-4"></i>
+        </button>
+      </label>
+      <fieldset class="fieldset">{{ filter_form.status }}</fieldset>
+      <fieldset class="fieldset">{{ filter_form.priority }}</fieldset>
     </form>
 
     <div class="overflow-x-auto">
