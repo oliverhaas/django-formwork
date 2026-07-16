@@ -49,6 +49,23 @@ class TaskForm(FormworkModelForm):
         "select-soft tinted by severity, recoloring on pick without a round-trip.",
     )
 
+    status = forms.ChoiceField(
+        choices=[
+            (
+                value,
+                ChoiceLabel(
+                    label,
+                    selected_toggle_class=f"select-{Task.STATUS_COLORS[value]}",
+                ),
+            )
+            for value, label in Task.Status.choices
+        ],
+        initial=Task.Status.TODO,
+        widget=SearchSelect,
+        help_text="Same trick as priority, but a solid select-{color} border on the lifecycle ramp "
+        "instead of a soft fill: the closed trigger recolors on pick without a round-trip.",
+    )
+
     assignee = FormworkModelChoiceField(
         queryset=Member.objects.all(),
         required=False,
@@ -98,15 +115,14 @@ class TaskForm(FormworkModelForm):
             "attachment": FileDropZone(max_size=10 * 1024 * 1024),
         }
         help_texts = {
-            "status": "Plain native select (a four-option lifecycle doesn't need a fancy widget).",
             "due_date": "DatePicker with a calendar dropdown.",
             "cover_image": "Shown as a thumbnail in the task list (ImageDropZone, ≤5 MB).",
             "attachment": "Any single file (FileDropZone, ≤10 MB).",
         }
 
-    # Ghost variants keep inline table cells text-like.
+    # Ghost variants keep inline table cells text-like. Status stays a full
+    # SearchSelect so its per-option select-{color} border shows in the row.
     ROW_WIDGET_CLASSES = {
-        "status": "select-ghost",
         "assignee": "select-ghost",
         "tags": "select-ghost",
         "due_date": "input-ghost",
