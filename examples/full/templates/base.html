@@ -38,6 +38,11 @@
           </span>
         </a>
 
+        <a href="{% url 'wizard' %}"
+           class="btn btn-primary btn-block justify-start gap-3 mb-3 {% if nav_section == 'wizard' %}btn-active{% endif %}">
+          <i class="icon icon-wand-sparkles size-5"></i> New project
+        </a>
+
         <p class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 px-3 mt-2">Workspace</p>
         <a href="{% url 'dashboard' %}"
            class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'dashboard' %}bg-primary/10 text-primary font-semibold{% endif %}">
@@ -46,10 +51,6 @@
         <a href="{% url 'task_list' %}"
            class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'tasks' %}bg-primary/10 text-primary font-semibold{% endif %}">
           <i class="icon icon-list-checks size-5"></i> Tasks
-        </a>
-        <a href="{% url 'wizard' %}"
-           class="flex items-center gap-3 px-3 py-2 rounded-lg border border-dashed border-primary hover:bg-base-200 {% if nav_section == 'wizard' %}bg-primary/10 text-primary font-semibold{% endif %}">
-          <i class="icon icon-wand-sparkles size-5"></i> New project
         </a>
 
         <p class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 px-3 mt-6">Account</p>
