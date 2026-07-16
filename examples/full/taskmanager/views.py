@@ -14,21 +14,19 @@ from django_formwork import FormworkRowSaveMixin, formwork_modelformset_factory
 
 from .forms import (
     SettingsForm,
+    TaskEditForm,
     TaskFilterForm,
-    TaskForm,
     TaskQuickAddForm,
+    TaskRowForm,
     WizardConfigForm,
     WizardFirstTaskForm,
     WizardProjectForm,
 )
 from .models import Profile, Task
 
-# Columns the list rows let you edit inline; every other TaskForm field is
-# disabled per row so a row POST can only touch these.
-ROW_EDITABLE_FIELDS = {"status", "priority", "assignee", "due_date", "tags"}
-
-# One TaskForm per row, rendered as an autosaving table (form.as_row / row_hidden).
-TaskRowFormSet = formwork_modelformset_factory(Task, form=TaskForm, extra=0)
+# One TaskRowForm per row, rendered as an autosaving table (form.as_row / row_hidden).
+# The form carries only the inline-editable columns, so a row POST can't touch the rest.
+TaskRowFormSet = formwork_modelformset_factory(Task, form=TaskRowForm, extra=0)
 
 
 def _key_rows_by_pk(formset):
@@ -107,10 +105,7 @@ def task_list(request):
         if priority:
             tasks = tasks.filter(priority=priority)
 
-    formset = TaskRowFormSet(
-        queryset=tasks,
-        form_kwargs={"editable_fields": ROW_EDITABLE_FIELDS, "row": True},
-    )
+    formset = TaskRowFormSet(queryset=tasks)
     _key_rows_by_pk(formset)
 
     if request.headers.get("HX-Request") == "true":
@@ -121,13 +116,13 @@ def task_list(request):
 def task_create(request):
     """Create a new task."""
     if request.method == "POST":
-        form = TaskForm(request.POST, request.FILES)
+        form = TaskEditForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
             messages.success(request, "Task created.")
             return redirect("task_list")
     else:
-        form = TaskForm()
+        form = TaskEditForm()
     return render(request, "tasks/form.html", {"form": form, "title": "New task", "task": None})
 
 
@@ -135,13 +130,13 @@ def task_edit(request, pk):
     """Edit an existing task."""
     task = get_object_or_404(Task, pk=pk)
     if request.method == "POST":
-        form = TaskForm(request.POST, request.FILES, instance=task)
+        form = TaskEditForm(request.POST, request.FILES, instance=task)
         if form.is_valid():
             form.save()
             messages.success(request, "Task updated.")
             return redirect("task_list")
     else:
-        form = TaskForm(instance=task)
+        form = TaskEditForm(instance=task)
     return render(request, "tasks/form.html", {"form": form, "title": task.title, "task": task})
 
 
@@ -150,10 +145,7 @@ def task_add(request):
     if request.method != "POST":
         return redirect("task_list")
     task = Task.objects.create(title="New task")
-    formset = TaskRowFormSet(
-        queryset=Task.objects.filter(pk=task.pk),
-        form_kwargs={"editable_fields": ROW_EDITABLE_FIELDS, "row": True},
-    )
+    formset = TaskRowFormSet(queryset=Task.objects.filter(pk=task.pk))
     _key_rows_by_pk(formset)
     return render(request, "tasks/list.html#task-row", {"form": formset.forms[0]})
 
@@ -172,11 +164,8 @@ def task_delete(request, pk):
 class TaskRowSave(FormworkRowSaveMixin, View):
     """Inline row edit via htmx: save the changed row and morph it back."""
 
-    form_class = TaskForm
+    form_class = TaskRowForm
     http_method_names = ["post"]
-
-    def get_form_kwargs(self):
-        return {"editable_fields": ROW_EDITABLE_FIELDS, "row": True}
 
     def render_row(self, request, form):
         return render_to_string("tasks/list.html#task-row", {"form": form}, request)

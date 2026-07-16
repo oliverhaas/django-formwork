@@ -33,47 +33,39 @@ STATUS_SELECT_COLORS: dict[str, str] = {
     Task.Status.DONE: "success",
 }
 
+# Per-option trigger classes shared by the edit and row forms: the closed
+# SearchSelect adopts the selected option's class (priority tinted soft by
+# severity, status a solid select-{color} border on the lifecycle ramp).
+PRIORITY_CHOICES = [
+    (value, ChoiceLabel(label, selected_toggle_class=f"select-soft select-{Task.PRIORITY_COLORS[value]}"))
+    for value, label in Task.Priority.choices
+]
+STATUS_CHOICES = [
+    (value, ChoiceLabel(label, selected_toggle_class=f"select-{STATUS_SELECT_COLORS[value]}"))
+    for value, label in Task.Status.choices
+]
 
-class TaskForm(FormworkModelForm):
-    """CRUD form for a task. Demonstrates SearchSelect (static choices with
-    selected_toggle_class, and model-backed auto-wired server search) +
-    MultiSelect + DatePicker + ImageDropZone + FileDropZone + Rating.
+
+class TaskEditForm(FormworkModelForm):
+    """Full create/edit page: every task field, solid select-{color} status
+    border. Showcases SearchSelect + MultiSelect + DatePicker + drop zones +
+    Rating.
     """
 
     priority = forms.ChoiceField(
-        choices=[
-            (
-                value,
-                ChoiceLabel(
-                    label,
-                    selected_toggle_class=f"select-soft select-{Task.PRIORITY_COLORS[value]}",
-                ),
-            )
-            for value, label in Task.Priority.choices
-        ],
+        choices=PRIORITY_CHOICES,
         initial=Task.Priority.MEDIUM,
         widget=SearchSelect,
         help_text="SearchSelect whose closed trigger adopts each option's selected_toggle_class: "
         "select-soft tinted by severity, recoloring on pick without a round-trip.",
     )
-
     status = forms.ChoiceField(
-        choices=[
-            (
-                value,
-                ChoiceLabel(
-                    label,
-                    selected_toggle_class=f"select-{STATUS_SELECT_COLORS[value]}",
-                ),
-            )
-            for value, label in Task.Status.choices
-        ],
+        choices=STATUS_CHOICES,
         initial=Task.Status.TODO,
         widget=SearchSelect,
         help_text="Same trick as priority, but a select-{color} border instead of a soft fill: "
         "solid here on the edit page, dotted in the inline list rows, recoloring on pick.",
     )
-
     assignee = FormworkModelChoiceField(
         queryset=Member.objects.all(),
         required=False,
@@ -85,14 +77,12 @@ class TaskForm(FormworkModelForm):
         description_from_instance=lambda member: member.email,
         help_text="SearchSelect over the Member model: server-side search, initials badge, email line.",
     )
-
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
         widget=MultiSelect(search_fields=["name"], search_decorator=None),
         help_text="MultiSelect with server-side search over tag names.",
     )
-
     rating = forms.TypedChoiceField(
         choices=Rating.make_choices(5),
         coerce=int,
@@ -128,33 +118,47 @@ class TaskForm(FormworkModelForm):
             "attachment": "Any single file (FileDropZone, ≤10 MB).",
         }
 
-    # Inline cells: ghost variants stay text-like; status gets a dotted border.
-    ROW_WIDGET_CLASSES = {
-        "status": "select-dotted",
-        "assignee": "select-ghost",
-        "tags": "select-ghost",
-        "due_date": "input-ghost",
-    }
 
-    def __init__(self, *args, editable_fields=None, row=False, **kwargs):
-        """``editable_fields``: iterable of field names left editable; every
-        other field is marked ``disabled`` so its cleaned value always comes
-        from the bound instance rather than POST data, regardless of what
-        (if anything) was submitted for it. Lets the same form back a
-        row's single-field inline edit (htmx) and the full edit page
-        without risking clobbering fields the row doesn't render.
+class TaskRowForm(FormworkModelForm):
+    """Inline autosaving list row: only the lifecycle columns, with widgets
+    styled for table cells (ghost inputs, dotted status border). Fields the row
+    doesn't render aren't on the form, so a row save can't touch them.
+    """
 
-        ``row``: style widgets for inline table cells (ghost variants).
-        """
-        super().__init__(*args, **kwargs)
-        if editable_fields is not None:
-            for name, field in self.fields.items():
-                if name not in editable_fields:
-                    field.disabled = True
-        if row:
-            for name, css in self.ROW_WIDGET_CLASSES.items():
-                attrs = self.fields[name].widget.attrs
-                attrs["class"] = f"{attrs['class']} {css}".strip() if attrs.get("class") else css
+    priority = forms.ChoiceField(
+        choices=PRIORITY_CHOICES,
+        initial=Task.Priority.MEDIUM,
+        widget=SearchSelect,
+    )
+    status = forms.ChoiceField(
+        choices=STATUS_CHOICES,
+        initial=Task.Status.TODO,
+        widget=SearchSelect(attrs={"class": "select-dotted"}),
+    )
+    assignee = FormworkModelChoiceField(
+        queryset=Member.objects.all(),
+        required=False,
+        empty_label="Unassigned",
+        widget=SearchSelect(
+            search_fields=["name", "email"], search_decorator=None, attrs={"class": "select-ghost"}
+        ),
+        icon_from_instance=lambda member: format_html(
+            "<span class='badge badge-ghost badge-sm w-8'>{}</span>", member.initials
+        ),
+        description_from_instance=lambda member: member.email,
+    )
+    tags = forms.ModelMultipleChoiceField(
+        queryset=Tag.objects.all(),
+        required=False,
+        widget=MultiSelect(
+            search_fields=["name"], search_decorator=None, attrs={"class": "select-ghost"}
+        ),
+    )
+
+    class Meta:
+        model = Task
+        fields = ["status", "priority", "assignee", "tags", "due_date"]
+        widgets = {"due_date": DatePicker(attrs={"class": "input-ghost"})}
 
 
 class TaskQuickAddForm(forms.Form):
