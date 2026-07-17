@@ -71,10 +71,10 @@ class TaskEditForm(FormworkModelForm):
         required=False,
         empty_label="Unassigned",
         widget=SearchSelect(search_fields=["name", "email"], search_decorator=None),
-        icon_from_instance=lambda member: format_html(
-            "<span class='badge badge-ghost badge-sm w-8'>{}</span>", member.initials
+        icon_from_instance=lambda instance: format_html(
+            "<span class='badge badge-ghost badge-sm w-8'>{}</span>", instance.initials
         ),
-        description_from_instance=lambda member: member.email,
+        description_from_instance=lambda instance: instance.email,
         help_text="SearchSelect over the Member model: server-side search, initials badge, email line.",
     )
     tags = forms.ModelMultipleChoiceField(
@@ -142,10 +142,10 @@ class TaskRowForm(FormworkModelForm):
         widget=SearchSelect(
             search_fields=["name", "email"], search_decorator=None, attrs={"class": "select-ghost"}
         ),
-        icon_from_instance=lambda member: format_html(
-            "<span class='badge badge-ghost badge-sm w-8'>{}</span>", member.initials
+        icon_from_instance=lambda instance: format_html(
+            "<span class='badge badge-ghost badge-sm w-8'>{}</span>", instance.initials
         ),
-        description_from_instance=lambda member: member.email,
+        description_from_instance=lambda instance: instance.email,
     )
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
