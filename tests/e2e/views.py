@@ -200,7 +200,7 @@ class SimpleForm(FormworkForm):
     )
     browser = forms.CharField(
         widget=DataList(
-            datalist=["Chrome", "Firefox", "Safari", "Edge", "Opera"],
+            suggestions=["Chrome", "Firefox", "Safari", "Edge", "Opera"],
             attrs={"placeholder": "Type or pick"},
         ),
         required=False,

@@ -4,7 +4,7 @@ from django import forms
 
 # A short dial-code list for the demo. A real project would source this from a
 # phone library rather than hand-maintaining flags and codes.
-PHONE_PREFIXES = [
+DIAL_CODES = [
     ("+1", "🇺🇸 +1"),
     ("+44", "🇬🇧 +44"),
     ("+49", "🇩🇪 +49"),
@@ -29,9 +29,9 @@ class PhoneInput(forms.MultiWidget):
 
     template_name = "taskmanager/widgets/phone_input.html"
 
-    def __init__(self, attrs=None, *, default_code="+1"):
-        self.default_code = default_code
-        self.prefix_choices = PHONE_PREFIXES
+    def __init__(self, attrs=None, *, default_dial_code="+1"):
+        self.default_dial_code = default_dial_code
+        self.dial_code_choices = DIAL_CODES
         super().__init__(
             widgets=[
                 forms.HiddenInput(),
@@ -44,17 +44,17 @@ class PhoneInput(forms.MultiWidget):
 
     def get_context(self, name, value, attrs):
         context = super().get_context(name, value, attrs)
-        context["widget"]["prefix_choices"] = self.prefix_choices
+        context["widget"]["dial_code_choices"] = self.dial_code_choices
         return context
 
     def decompress(self, value):
         if not value:
-            return [self.default_code, ""]
-        prefix, sep, number = value.partition(" ")
-        return [prefix, number] if sep else [self.default_code, prefix]
+            return [self.default_dial_code, ""]
+        head, sep, tail = value.partition(" ")
+        return [head, tail] if sep else [self.default_dial_code, head]
 
     def value_from_datadict(self, data, files, name):
         values = super().value_from_datadict(data, files, name)
-        prefix = values[0] or ""
+        dial_code = values[0] or ""
         number = values[1] or ""
-        return f"{prefix} {number}".strip() if number else ""
+        return f"{dial_code} {number}".strip() if number else ""

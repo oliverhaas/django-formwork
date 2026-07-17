@@ -71,7 +71,7 @@ class Command(BaseCommand):
         now = timezone.now()
         created = 0
         for title, status, priority, assignee, tag_keys, due_offset in seed_tasks:
-            t = Task.objects.create(
+            task = Task.objects.create(
                 title=title,
                 description=f"Auto-generated example task. Owner: {assignee or 'unassigned'}.",
                 status=status,
@@ -80,7 +80,7 @@ class Command(BaseCommand):
                 due_date=(now + timedelta(days=due_offset)).date() if due_offset is not None else None,
                 rating=random.choice([None, 3, 4, 4, 5]) if status == Task.Status.DONE else None,  # noqa: S311
             )
-            t.tags.set([tags[n] for n in tag_keys])
+            task.tags.set([tags[n] for n in tag_keys])
             created += 1
 
         self.stdout.write(self.style.SUCCESS(f"Seeded {created} tasks, {len(tags)} tags, {len(members)} members."))

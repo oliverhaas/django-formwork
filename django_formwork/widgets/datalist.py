@@ -20,20 +20,20 @@ class DataList(forms.TextInput):
     Usage::
 
         browser = forms.CharField(
-            widget=DataList(datalist=["Chrome", "Firefox", "Safari"]),
+            widget=DataList(suggestions=["Chrome", "Firefox", "Safari"]),
         )
     """
 
     template_name = "formwork/widgets/datalist.html"
 
-    def __init__(self, attrs: dict[str, Any] | None = None, *, datalist: list[str] | None = None) -> None:
+    def __init__(self, attrs: dict[str, Any] | None = None, *, suggestions: list[str] | None = None) -> None:
         super().__init__(attrs)
-        self.datalist = datalist or []
+        self.suggestions = suggestions or []
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         widget_id = context["widget"]["attrs"].get("id")
         if widget_id:
             context["widget"]["attrs"]["list"] = f"{widget_id}_list"
-        context["widget"]["datalist"] = self.datalist
+        context["widget"]["suggestions"] = self.suggestions
         return context

@@ -2,7 +2,7 @@
   open: false,
   value: '{{ prefix.value|default:'' }}',
   label: '',
-  choices: [{% for val, lbl in widget.prefix_choices %}['{{ val|escapejs }}','{{ lbl|escapejs }}']{% if not forloop.last %},{% endif %}{% endfor %}],
+  choices: [{% for val, lbl in widget.dial_code_choices %}['{{ val|escapejs }}','{{ lbl|escapejs }}']{% if not forloop.last %},{% endif %}{% endfor %}],
   init() {
     const match = this.choices.find(c => c[0] === this.value);
     this.label = match ? match[1] : this.value;

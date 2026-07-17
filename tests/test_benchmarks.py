@@ -65,7 +65,7 @@ class LargeForm(FormworkForm):
         help_text="Tags",
     )
     browser = forms.CharField(
-        widget=DataList(datalist=["Chrome", "Firefox", "Safari"]),
+        widget=DataList(suggestions=["Chrome", "Firefox", "Safari"]),
         required=False,
         help_text="Browser",
     )
@@ -111,7 +111,7 @@ class LargeJinja2Form(FormworkJinja2Form):
         help_text="Tags",
     )
     browser = forms.CharField(
-        widget=DataList(datalist=["Chrome", "Firefox", "Safari"]),
+        widget=DataList(suggestions=["Chrome", "Firefox", "Safari"]),
         required=False,
         help_text="Browser",
     )

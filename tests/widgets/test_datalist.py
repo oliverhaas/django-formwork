@@ -14,7 +14,7 @@ class DataListForm(FormworkForm):
     """Form fixture for DataList integration tests."""
 
     browser = forms.CharField(
-        widget=DataList(datalist=["Chrome", "Firefox", "Safari"]),
+        widget=DataList(suggestions=["Chrome", "Firefox", "Safari"]),
         required=True,
     )
 
@@ -25,21 +25,21 @@ class DataListForm(FormworkForm):
 @pytest.mark.unit
 def test_datalist_instantiation_stores_list():
     """DataList stores the datalist parameter."""
-    widget = DataList(datalist=["A", "B", "C"])
-    assert widget.datalist == ["A", "B", "C"]
+    widget = DataList(suggestions=["A", "B", "C"])
+    assert widget.suggestions == ["A", "B", "C"]
 
 
 @pytest.mark.unit
 def test_datalist_instantiation_default_empty():
     """DataList with no arguments has an empty datalist."""
     widget = DataList()
-    assert widget.datalist == []
+    assert widget.suggestions == []
 
 
 @pytest.mark.unit
 def test_datalist_get_context_sets_list_attr():
     """get_context() sets the list attribute when an id is present."""
-    widget = DataList(datalist=["X"])
+    widget = DataList(suggestions=["X"])
     ctx = widget.get_context("browser", None, {"id": "id_browser"})
     assert ctx["widget"]["attrs"]["list"] == "id_browser_list"
 
@@ -47,7 +47,7 @@ def test_datalist_get_context_sets_list_attr():
 @pytest.mark.unit
 def test_datalist_get_context_no_list_without_id():
     """get_context() does not set list attr when no id is provided."""
-    widget = DataList(datalist=["X"])
+    widget = DataList(suggestions=["X"])
     ctx = widget.get_context("browser", None, {})
     assert "list" not in ctx["widget"]["attrs"]
 
@@ -55,9 +55,9 @@ def test_datalist_get_context_no_list_without_id():
 @pytest.mark.unit
 def test_datalist_get_context_stores_datalist():
     """get_context() exposes the datalist on the widget context."""
-    widget = DataList(datalist=["Chrome", "Firefox"])
+    widget = DataList(suggestions=["Chrome", "Firefox"])
     ctx = widget.get_context("browser", None, {"id": "id_browser"})
-    assert ctx["widget"]["datalist"] == ["Chrome", "Firefox"]
+    assert ctx["widget"]["suggestions"] == ["Chrome", "Firefox"]
 
 
 @pytest.mark.unit
@@ -65,13 +65,13 @@ def test_datalist_get_context_empty_datalist():
     """Empty datalist is preserved in context."""
     widget = DataList()
     ctx = widget.get_context("browser", None, {"id": "id_browser"})
-    assert ctx["widget"]["datalist"] == []
+    assert ctx["widget"]["suggestions"] == []
 
 
 @pytest.mark.unit
 def test_datalist_value_from_datadict_returns_text():
     """Submitted text value is returned as-is."""
-    widget = DataList(datalist=["Chrome"])
+    widget = DataList(suggestions=["Chrome"])
     data = QueryDict("browser=Firefox")
     result = widget.value_from_datadict(data, {}, "browser")
     assert result == "Firefox"
@@ -80,7 +80,7 @@ def test_datalist_value_from_datadict_returns_text():
 @pytest.mark.unit
 def test_datalist_value_from_datadict_missing_key():
     """Missing key in QueryDict returns None."""
-    widget = DataList(datalist=["Chrome"])
+    widget = DataList(suggestions=["Chrome"])
     data = QueryDict("")
     result = widget.value_from_datadict(data, {}, "browser")
     assert result is None
@@ -92,7 +92,7 @@ def test_datalist_value_from_datadict_missing_key():
 @pytest.mark.unit
 def test_datalist_renders_text_input():
     """DataList renders an <input type='text'>."""
-    soup = render_widget(DataList(datalist=["A"]), name="browser", attrs={"id": "id_browser"})
+    soup = render_widget(DataList(suggestions=["A"]), name="browser", attrs={"id": "id_browser"})
     inp = soup.find("input")
     assert inp is not None
     assert inp.get("type") == "text"
@@ -101,7 +101,7 @@ def test_datalist_renders_text_input():
 @pytest.mark.unit
 def test_datalist_renders_list_attribute():
     """Rendered input has list attribute pointing to the datalist id."""
-    soup = render_widget(DataList(datalist=["A"]), name="browser", attrs={"id": "id_browser"})
+    soup = render_widget(DataList(suggestions=["A"]), name="browser", attrs={"id": "id_browser"})
     inp = soup.find("input")
     assert inp["list"] == "id_browser_list"
 
@@ -109,7 +109,7 @@ def test_datalist_renders_list_attribute():
 @pytest.mark.unit
 def test_datalist_renders_datalist_element():
     """A <datalist> element with the correct id is rendered."""
-    soup = render_widget(DataList(datalist=["A"]), name="browser", attrs={"id": "id_browser"})
+    soup = render_widget(DataList(suggestions=["A"]), name="browser", attrs={"id": "id_browser"})
     datalist = soup.find("datalist")
     assert datalist is not None
     assert datalist["id"] == "id_browser_list"
@@ -119,7 +119,7 @@ def test_datalist_renders_datalist_element():
 def test_datalist_renders_options():
     """Each entry in datalist appears as an <option> element."""
     soup = render_widget(
-        DataList(datalist=["Chrome", "Firefox", "Safari"]),
+        DataList(suggestions=["Chrome", "Firefox", "Safari"]),
         name="browser",
         attrs={"id": "id_browser"},
     )
@@ -132,7 +132,7 @@ def test_datalist_renders_options():
 @pytest.mark.unit
 def test_datalist_no_datalist_element_without_id():
     """Without an id, no <datalist> element and no list attr is rendered."""
-    soup = render_widget(DataList(datalist=["A"]), name="browser")
+    soup = render_widget(DataList(suggestions=["A"]), name="browser")
     datalist = soup.find("datalist")
     assert datalist is None
     inp = soup.find("input")
@@ -151,7 +151,7 @@ def test_datalist_renders_empty_options():
 def test_datalist_preserves_value():
     """Rendered input reflects the provided value."""
     soup = render_widget(
-        DataList(datalist=["A"]),
+        DataList(suggestions=["A"]),
         name="browser",
         value="hello",
         attrs={"id": "id_browser"},
@@ -163,7 +163,7 @@ def test_datalist_preserves_value():
 @pytest.mark.unit
 def test_datalist_preserves_placeholder():
     """Placeholder attr from widget attrs is passed through to the input."""
-    widget = DataList(datalist=["A"], attrs={"placeholder": "Pick one"})
+    widget = DataList(suggestions=["A"], attrs={"placeholder": "Pick one"})
     soup = render_widget(widget, name="browser", attrs={"id": "id_browser"})
     inp = soup.find("input")
     assert inp["placeholder"] == "Pick one"
