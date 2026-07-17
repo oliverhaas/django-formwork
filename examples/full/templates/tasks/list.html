@@ -24,15 +24,8 @@
           hx-target="#task-rows"
           hx-swap="outerMorph"
           hx-push-url="true"
-          class="grid grid-cols-1 md:grid-cols-[1fr_11rem_11rem] gap-3 items-end p-4 border-b border-base-300">
-      <fieldset class="fieldset">
-        <label class="input w-full gap-1.5">
-          <i class="icon icon-search text-base shrink-0 opacity-50"></i>
-          {{ filter_form.q }}
-        </label>
-      </fieldset>
-      <fieldset class="fieldset">{{ filter_form.status }}</fieldset>
-      <fieldset class="fieldset">{{ filter_form.priority }}</fieldset>
+          class="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3 items-end p-4 border-b border-base-300">
+      {{ filter.form }}
     </form>
 
     <div class="overflow-x-auto">
@@ -83,7 +76,7 @@
        hx-include="closest tbody">
   <tr>
     <td class="max-w-xs">
-      {{ form.row_hidden }}
+      {{ form.row_hidden_inputs }}
       <a href="{% url 'task_edit' form.instance.pk %}" class="font-medium hover:underline">{{ form.instance.title }}</a>
       {% if form.instance.description %}<p class="text-xs text-base-content/50 truncate">{{ form.instance.description }}</p>{% endif %}
     </td>

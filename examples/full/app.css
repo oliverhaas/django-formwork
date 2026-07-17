@@ -44,7 +44,7 @@
 }
 
 /* Search filter: drop the native (WebKit-only, unstyleable) clear affordance;
- * the leading magnifier is the only search chrome. */
+ * SearchInput renders the control nested inside its `.input` magnifier wrapper. */
 .input > input[type="search"]::-webkit-search-cancel-button {
   appearance: none;
 }

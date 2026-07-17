@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django_iconx",
+    "django_filters",
     "django_formwork",
     "taskmanager",
 ]

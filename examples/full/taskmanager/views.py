@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.http import HttpResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -12,10 +12,10 @@ from django.views import View
 
 from django_formwork import FormworkRowSaveMixin, formwork_modelformset_factory
 
+from .filters import TaskFilter
 from .forms import (
     SettingsForm,
     TaskEditForm,
-    TaskFilterForm,
     TaskQuickAddForm,
     TaskRowForm,
     WizardConfigForm,
@@ -24,7 +24,7 @@ from .forms import (
 )
 from .models import Profile, Task
 
-# One TaskRowForm per row, rendered as an autosaving table (form.as_row / row_hidden).
+# One TaskRowForm per row, rendered as an autosaving table (form.as_row / row_hidden_inputs).
 # The form carries only the inline-editable columns, so a row POST can't touch the rest.
 TaskRowFormSet = formwork_modelformset_factory(Task, form=TaskRowForm, extra=0)
 
@@ -91,26 +91,13 @@ def dashboard(request):
 
 def task_list(request):
     """List tasks with htmx search/filter."""
-    form = TaskFilterForm(request.GET)
-    tasks = Task.objects.prefetch_related("tags", "assignee")
-
-    if form.is_valid():
-        q = form.cleaned_data.get("q")
-        status = form.cleaned_data.get("status")
-        priority = form.cleaned_data.get("priority")
-        if q:
-            tasks = tasks.filter(Q(title__icontains=q) | Q(tags__name__icontains=q)).distinct()
-        if status:
-            tasks = tasks.filter(status=status)
-        if priority:
-            tasks = tasks.filter(priority=priority)
-
-    formset = TaskRowFormSet(queryset=tasks)
+    task_filter = TaskFilter(request.GET, queryset=Task.objects.prefetch_related("tags", "assignee"))
+    formset = TaskRowFormSet(queryset=task_filter.qs)
     _key_rows_by_pk(formset)
 
     if request.headers.get("HX-Request") == "true":
         return render(request, "tasks/list.html#task-rows", {"formset": formset})
-    return render(request, "tasks/list.html", {"formset": formset, "filter_form": form})
+    return render(request, "tasks/list.html", {"formset": formset, "filter": task_filter})
 
 
 def task_create(request):
@@ -207,16 +194,16 @@ def wizard_confirm(request):
         return redirect("wizard")
     data = request.session.get("wizard_data", {})
     project = _wizard_cleaned(0, data)
-    first = _wizard_cleaned(2, data)
+    first_task_data = _wizard_cleaned(2, data)
 
     task = Task.objects.create(
-        title=first.get("first_task", "Untitled"),
-        priority=first.get("first_task_priority", Task.Priority.MEDIUM),
+        title=first_task_data.get("first_task", "Untitled"),
+        priority=first_task_data.get("first_task_priority", Task.Priority.MEDIUM),
         description=f"Project: {project.get('project_name', 'Unnamed')}",
-        due_date=first.get("first_task_due"),
+        due_date=first_task_data.get("first_task_due"),
     )
-    if first.get("first_task_tags"):
-        task.tags.set(first["first_task_tags"])
+    if first_task_data.get("first_task_tags"):
+        task.tags.set(first_task_data["first_task_tags"])
 
     request.session.pop("wizard_data", None)
     messages.success(request, f"Project '{project.get('project_name')}' created.")
@@ -254,8 +241,8 @@ def _wizard_ctx(step, form, data):
 def _wizard_summary(data):
     project = _wizard_cleaned(0, data)
     config = _wizard_cleaned(1, data)
-    first = _wizard_cleaned(2, data)
-    tags_list = list(first.get("first_task_tags") or [])
+    first_task_data = _wizard_cleaned(2, data)
+    tags_list = list(first_task_data.get("first_task_tags") or [])
     return [
         (
             "Project",
@@ -275,9 +262,9 @@ def _wizard_summary(data):
         (
             "First task",
             [
-                ("Title", first.get("first_task", "")),
-                ("Priority", (first.get("first_task_priority") or "").title()),
-                ("Due", first.get("first_task_due") or "—"),
+                ("Title", first_task_data.get("first_task", "")),
+                ("Priority", (first_task_data.get("first_task_priority") or "").title()),
+                ("Due", first_task_data.get("first_task_due") or "—"),
                 ("Tags", ", ".join(t.name for t in tags_list) or "—"),
             ],
         ),

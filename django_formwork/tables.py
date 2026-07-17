@@ -38,7 +38,7 @@ class RowRenderMixin:
         return self.render(self.template_name_row, self.get_row_context(save_url))
 
     @property
-    def row_hidden(self) -> str:
+    def row_hidden_inputs(self) -> str:
         """Prefix + hidden inputs for hand-authored autosave rows.
 
         Emits the pk explicitly, not via the formset's ``id`` field, so a row re-rendered from a

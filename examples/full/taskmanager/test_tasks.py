@@ -126,11 +126,12 @@ def test_deleting_a_member_keeps_the_task(client, db):
     assert task.assignee is None
 
 
-def test_search_filter_has_type_search_with_leading_magnifier(client, db):
-    """The filter search box is a type=search input with a leading magnifier icon."""
+def test_search_filter_is_type_search_with_magnifier(client, db):
+    """The filter search box is a type=search input named q (django-filter field),
+    wrapped by SearchInput's leading magnifier."""
     content = client.get(reverse("task_list")).content.decode()
     assert '<input type="search" name="q"' in content
-    assert "icon-search" in content  # leading magnifier
+    assert "icon-search" in content  # framework-rendered leading magnifier
 
 
 def test_status_and_priority_filters_have_floating_labels(client, db):
@@ -139,6 +140,15 @@ def test_status_and_priority_filters_have_floating_labels(client, db):
     assert content.count('class="floating-label"') == 2
     assert "<span>Status</span>" in content
     assert "<span>Priority</span>" in content
+
+
+def test_filter_narrows_the_task_list(client, db):
+    """django-filter's ?status= narrows the queryset the list renders."""
+    Task.objects.create(title="Done thing", status=Task.Status.DONE)
+    Task.objects.create(title="Todo thing", status=Task.Status.TODO)
+    content = client.get(reverse("task_list"), {"status": Task.Status.DONE}).content.decode()
+    assert "Done thing" in content
+    assert "Todo thing" not in content
 
 
 def test_task_row_priority_trigger_carries_severity_class(client, db):
