@@ -28,6 +28,13 @@ best of both MPA and SPA. Built 100% on htmx 4, DaisyUI 5, and Tailwind 4.
    partly in widget templates, whichever is DaisyUI-, Django-, and Tailwind-idiomatic
    for that piece. (Maybe: non-breaking DaisyUI extensions, e.g. finer border-radius
    variables.)
+   - **Never override Django's built-in widget templates.** Widget rendering resolves
+     through the project's `FORM_RENDERER`, so shadowing `django/forms/widgets/*.html`
+     leaks into Django admin and every third-party app, swapping markup out from under
+     the JS those widgets rely on (see "the admin stays untouched" below). Built-in
+     widgets are improved with **global CSS only**. Widget templates are exclusively for
+     formwork's own widgets, which a developer opts into by setting the widget (point 4).
+     Never an automatic swap of a built-in.
 
 4. **More widgets with modern functionality.** Real `forms.Widget` subclasses built on
    htmx + Alpine: server-side search selects, multi-select, date picker, drop zones,
