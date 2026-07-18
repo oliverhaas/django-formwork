@@ -19,14 +19,21 @@ class FileDropZone(_DropZoneMixin, forms.FileInput):
     By default the widget accepts a single file, matching
     ``forms.FileField``.  Passing ``multiple`` in ``attrs`` opts into
     multi-file selection; the widget then submits a list of files, so it
-    must be paired with a list-aware field (see the Django docs topic
-    "Uploading multiple files"), not a plain ``FileField``.
+    must be paired with a list-aware field, not a plain ``FileField``.
+    Django does not ship such a field; define one following the docs topic
+    "Uploading multiple files".
+
+    ``accept`` and ``max_size`` are client-side hints only: ``accept`` filters
+    the browse dialog and ``max_size`` drives a pre-upload size check in the
+    widget's JavaScript.  Neither validates the upload on the server; keep the
+    real checks in the field or form ``clean``.
 
     Usage::
 
         attachment = forms.FileField(widget=FileDropZone)
 
-        # Multiple files with type and size restrictions:
+        # Multiple files, with client-side accept/size hints.  MultipleFileField
+        # is the list-aware field from the Django docs topic above.
         docs = MultipleFileField(
             widget=FileDropZone(
                 attrs={"multiple": True, "accept": ".pdf,.doc,.docx"},

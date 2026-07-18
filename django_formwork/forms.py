@@ -265,6 +265,17 @@ class _DirtyOnlyFormMixin:
     machinery behind ``Form.changed_data``) and carry the bound field's
     ``initial`` value through to ``cleaned_data``.  ``clean_<name>`` methods
     are skipped for those fields too.
+
+    One consequence to know about: for an unchanged field, ``cleaned_data``
+    holds ``BoundField.initial`` rather than the field's cleaned Python value.
+    For a relational field on a model form that difference shows: ``initial``
+    is the raw pk (from ``model_to_dict``), whereas a normal clean would put
+    the related instance there.  This does not affect saving.  The model-form
+    mixin excludes unchanged fields from ``construct_instance`` (see
+    ``_dirty_construct_exclude``), so the stored relation is left untouched
+    and the pk never reaches the FK descriptor.  It only matters if your own
+    code reads ``cleaned_data[<relation>]`` for a field the user left alone;
+    expect a pk there, not an instance.
     """
 
     if TYPE_CHECKING:

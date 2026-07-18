@@ -67,6 +67,16 @@ class CityForm(FormworkForm):
     )
 ```
 
+!!! note "`__icontains` does not use a plain index"
+    The generated `field__icontains=query` filter runs as `LIKE '%query%'`. The
+    leading wildcard rules out an ordinary B-tree index, so on a large table the
+    database falls back to a sequential scan. For small lookup tables this is
+    fine. For big ones, add a backend-specific index (on PostgreSQL, a `GIN`
+    trigram index via `django.contrib.postgres`), or switch that field to a
+    choices-backed `search_choices_<fieldname>` method and run whatever query
+    your backend can serve efficiently (full-text search, a search service, and
+    so on).
+
 **Choices-backed**: The form defines a `search_choices_<fieldname>(query, request)` static method. It receives the search query and the request, and returns a list of dicts or `(value, label)` tuples. Declare it `@staticmethod`: the endpoint calls it without the form instance, and formwork raises `ImproperlyConfigured` at form init for an instance method:
 
 ```python
