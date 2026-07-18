@@ -128,6 +128,7 @@ class FormworkRowSaveMixin:
         return request.POST.get(PREFIX_INPUT_NAME) or None
 
     def get_object(self, request: HttpRequest, prefix: str | None) -> Any:  # noqa: ANN401
+        from django.core.exceptions import ValidationError
         from django.http import Http404
 
         model = self.form_class._meta.model  # noqa: SLF001
@@ -141,6 +142,10 @@ class FormworkRowSaveMixin:
         except model.DoesNotExist as exc:
             # Row deleted between render and autosave: a clean 404 beats a 500.
             raise Http404("Row no longer exists") from exc
+        except (ValueError, ValidationError) as exc:
+            # A malformed pk (wrong type for the key field) is a bad request,
+            # not a server error; 404 it like a missing row.
+            raise Http404("Row primary key is malformed") from exc
 
     def get_form_kwargs(self) -> dict[str, Any]:
         """Extra kwargs for the row form (e.g. ``editable_fields`` to guard read-only columns)."""

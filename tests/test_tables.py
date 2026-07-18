@@ -75,6 +75,20 @@ def test_row_save_updates_only_editable_fields():
     assert b"Z" in response.content
 
 
+def test_row_save_malformed_pk_raises_404_not_500():
+    from django.http import Http404
+
+    class SaveView(FormworkRowSaveMixin):
+        form_class = CodeRowForm
+
+    request = RequestFactory().post(
+        "/save/",
+        {"code": "Z", "id": "not-a-number", PREFIX_INPUT_NAME: ""},
+    )
+    with pytest.raises(Http404):
+        SaveView().post(request)
+
+
 def test_row_save_rerenders_pk_so_the_next_edit_finds_it():
     # A prefixed (formset) row saved once must re-render its pk, or the next autosave 404s / KeyErrors.
     obj = UniqueCode.objects.create(code="A", label="alpha")
