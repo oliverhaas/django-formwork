@@ -6,7 +6,7 @@ import pytest
 from django import forms
 from django.core.exceptions import ValidationError
 from django.test import override_settings
-from e2e.models import BasicFormData, DirtyTrackedData
+from e2e.models import BasicFormData, City, DirtyTrackedData, Region
 
 from django_formwork.forms import FormworkForm, FormworkModelForm
 
@@ -95,6 +95,22 @@ class ConstraintModelForm(FormworkModelForm):
     class Meta:
         model = DirtyTrackedData
         fields = ["name", "email"]
+
+
+class CityModelForm(FormworkModelForm):
+    """Model form with a ForeignKey field (region -> ModelChoiceField)."""
+
+    class Meta:
+        model = City
+        fields = ["name", "region"]
+
+
+class DirtyRegionModelForm(FormworkModelForm):
+    """Dirty-trackable model form whose FK (region) can be changed in isolation."""
+
+    class Meta:
+        model = DirtyTrackedData
+        fields = ["name", "email", "region"]
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +270,30 @@ class TestAsyncConstraintValidation:
         assert await form.ais_valid() is True
         instance = await form.asave()
         assert instance.pk is not None
+
+
+@pytest.mark.asyncio(loop_scope="class")
+class TestAsyncModelFormRelational:
+    """A relational field's clean() hits the ORM; the async path must not run it
+    synchronously inside the event loop (SynchronousOnlyOperation)."""
+
+    async def test_fk_field_validates(self):
+        region = await Region.objects.acreate(name="North")
+        form = CityModelForm(data={"name": "Springfield", "region": str(region.pk)})
+        assert await form.ais_valid() is True, form.errors
+        assert form.cleaned_data["region"] == region
+
+    async def test_dirty_only_changed_fk_validates(self):
+        north = await Region.objects.acreate(name="North")
+        south = await Region.objects.acreate(name="South")
+        instance = await DirtyTrackedData.objects.acreate(name="Alice", email="a@b.com", region=north)
+        form = DirtyRegionModelForm(
+            data={"name": "Alice", "email": "a@b.com", "region": str(south.pk)},
+            instance=instance,
+            validate_dirty_only=True,
+        )
+        assert await form.ais_valid() is True, form.errors
+        assert form.cleaned_data["region"] == south
 
 
 # ---------------------------------------------------------------------------

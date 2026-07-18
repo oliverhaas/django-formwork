@@ -306,7 +306,9 @@ class _DirtyOnlyFormMixin:
                 self.cleaned_data[name] = bf.initial
                 continue
             try:
-                self.cleaned_data[name] = field._clean_bound_field(bf)  # noqa: SLF001
+                # A field's clean() may hit the ORM (e.g. ModelChoiceField
+                # resolving a FK), so run it off the event loop.
+                self.cleaned_data[name] = await sync_to_async(field._clean_bound_field)(bf)  # noqa: SLF001
                 method = getattr(self, f"clean_{name}", None)
                 if method is not None:
                     if inspect.iscoroutinefunction(method):
