@@ -115,8 +115,6 @@ class _AutoSearchMixin:
         self._auto_register_search()
 
     def _auto_register_search(self) -> None:
-        from django.core.exceptions import ImproperlyConfigured
-
         from django_formwork._registry import (
             SearchRegistration,
             make_choices_key,
