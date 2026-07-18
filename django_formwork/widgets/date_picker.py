@@ -2,11 +2,25 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from django import forms
 
 from ._base import _ModuleScript
+
+#: strftime code -> human placeholder token, for turning a date format into a
+#: hint like ``DD/MM/YYYY``.  Unmapped codes are left as-is.
+_PLACEHOLDER_TOKENS = {
+    "Y": "YYYY",
+    "y": "YY",
+    "m": "MM",
+    "d": "DD",
+    "B": "Month",
+    "b": "Mon",
+    "A": "Weekday",
+    "a": "Day",
+}
 
 
 class DatePicker(forms.DateInput):
@@ -27,10 +41,13 @@ class DatePicker(forms.DateInput):
         js = (_ModuleScript("formwork/widgets/date_picker.js"),)
 
     def __init__(self, attrs: dict[str, Any] | None = None, *, format: str | None = None) -> None:  # noqa: A002
-        defaults: dict[str, Any] = {"placeholder": "YYYY-MM-DD"}
+        resolved_format = format or "%Y-%m-%d"
+        # Turn the strftime format into a human placeholder (%d/%m/%Y -> DD/MM/YYYY).
+        placeholder = re.sub(r"%(.)", lambda m: _PLACEHOLDER_TOKENS.get(m[1], m[0]), resolved_format)
+        defaults: dict[str, Any] = {"placeholder": placeholder}
         if attrs:
             defaults.update(attrs)
-        super().__init__(attrs=defaults, format=format or "%Y-%m-%d")
+        super().__init__(attrs=defaults, format=resolved_format)
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         # The template hardcodes class="grow"; rendering attrs.class too

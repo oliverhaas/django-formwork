@@ -54,6 +54,20 @@ def test_date_picker_custom_format_round_trips():
 
 
 @pytest.mark.unit
+def test_date_picker_placeholder_follows_format():
+    """A custom format derives a matching human placeholder."""
+    widget = DatePicker(format="%d/%m/%Y")
+    assert widget.attrs.get("placeholder") == "DD/MM/YYYY"
+
+
+@pytest.mark.unit
+def test_date_picker_explicit_placeholder_beats_derived_format():
+    """An explicit placeholder still wins over the format-derived default."""
+    widget = DatePicker(attrs={"placeholder": "Pick a date"}, format="%d/%m/%Y")
+    assert widget.attrs.get("placeholder") == "Pick a date"
+
+
+@pytest.mark.unit
 def test_date_picker_input_type():
     """DatePicker uses input_type='text', not 'date'."""
     widget = DatePicker()
