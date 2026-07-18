@@ -71,7 +71,8 @@ class TaskEditForm(FormworkModelForm):
         empty_label="Unassigned",
         widget=SearchSelect(search_fields=["name", "email"], search_decorator=None),
         icon_from_instance=lambda instance: format_html(
-            "<span class='badge badge-ghost badge-sm w-8'>{}</span>", instance.initials
+            "<span class='badge badge-ghost badge-sm w-8'>{}</span>",
+            instance.initials,
         ),
         description_from_instance=lambda instance: instance.email,
         help_text="SearchSelect over the Member model: server-side search, initials badge, email line.",
@@ -139,10 +140,13 @@ class TaskRowForm(FormworkModelForm):
         required=False,
         empty_label="Unassigned",
         widget=SearchSelect(
-            search_fields=["name", "email"], search_decorator=None, attrs={"class": "select-ghost"}
+            search_fields=["name", "email"],
+            search_decorator=None,
+            attrs={"class": "select-ghost"},
         ),
         icon_from_instance=lambda instance: format_html(
-            "<span class='badge badge-ghost badge-sm w-8'>{}</span>", instance.initials
+            "<span class='badge badge-ghost badge-sm w-8'>{}</span>",
+            instance.initials,
         ),
         description_from_instance=lambda instance: instance.email,
     )
@@ -150,7 +154,9 @@ class TaskRowForm(FormworkModelForm):
         queryset=Tag.objects.all(),
         required=False,
         widget=MultiSelect(
-            search_fields=["name"], search_decorator=None, attrs={"class": "select-ghost"}
+            search_fields=["name"],
+            search_decorator=None,
+            attrs={"class": "select-ghost"},
         ),
     )
 

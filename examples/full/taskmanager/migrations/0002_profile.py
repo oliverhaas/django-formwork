@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                             django.core.validators.RegexValidator(
                                 "^\\+\\d{1,4} [\\d ()/-]{3,20}$",
                                 "Enter a dial code and number, e.g. '+49 171 1234567'.",
-                            )
+                            ),
                         ],
                     ),
                 ),

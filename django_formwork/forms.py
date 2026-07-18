@@ -539,7 +539,12 @@ class FormworkModelForm(
 
 
 class FormworkJinja2Form(
-    RowRenderMixin, _ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form
+    RowRenderMixin,
+    _ErrorDisplayFormMixin,
+    _DirtyOnlyFormMixin,
+    AsyncFormMixin,
+    _AutoSearchMixin,
+    Form,
 ):
     """Form base class with DaisyUI styling (Jinja2 renderer) and async support.
 

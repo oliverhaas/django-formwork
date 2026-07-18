@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('taskmanager', '0003_member_task_assignee_fk'),
+        ("taskmanager", "0003_member_task_assignee_fk"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='task',
-            options={'ordering': ['-id']},
+            name="task",
+            options={"ordering": ["-id"]},
         ),
     ]

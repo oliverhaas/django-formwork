@@ -66,7 +66,7 @@ class TestStandaloneElements:
         soft = card.locator("select.select-soft.select-accent")
         assert soft.evaluate("el => getComputedStyle(el).color") != base.evaluate("el => getComputedStyle(el).color")
         assert soft.evaluate("el => getComputedStyle(el).backgroundColor") != base.evaluate(
-            "el => getComputedStyle(el).backgroundColor"
+            "el => getComputedStyle(el).backgroundColor",
         )
 
     def test_soft_variant_composes_with_colour_modifier(self, elements_page):
@@ -93,8 +93,8 @@ class TestStandaloneElements:
         soft_input = card.locator("input.input-soft")
         soft_textarea = card.locator("textarea.textarea-soft")
         assert soft_input.evaluate("el => getComputedStyle(el).color") != base_input.evaluate(
-            "el => getComputedStyle(el).color"
+            "el => getComputedStyle(el).color",
         )
         assert soft_textarea.evaluate("el => getComputedStyle(el).color") != base_input.evaluate(
-            "el => getComputedStyle(el).color"
+            "el => getComputedStyle(el).color",
         )

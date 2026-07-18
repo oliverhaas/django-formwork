@@ -7,14 +7,11 @@ dependencies = [
   "Django>=6.0,<7",
   "django-filter>=25",
   "django-formwork",
-  "pillow>=11",      # ImageField (cover_image, avatar) needs it
+  "pillow>=11",        # ImageField (cover_image, avatar) needs it
 ]
 
 [dependency-groups]
-dev = [
-  "pytest>=9,<10",
-  "pytest-django>=4.12,<5",
-]
+dev = ["pytest>=9,<10", "pytest-django>=4.12,<5"]
 
 [tool.uv.sources]
 django-formwork = { path = "../..", editable = true }

@@ -48,7 +48,7 @@ class RowRenderMixin:
         from django.utils.safestring import mark_safe
 
         parts: list[str] = [
-            format_html('<input type="hidden" name="{}" value="{}">', PREFIX_INPUT_NAME, self.prefix or "")
+            format_html('<input type="hidden" name="{}" value="{}">', PREFIX_INPUT_NAME, self.prefix or ""),
         ]
         instance = getattr(self, "instance", None)
         pk_name = None
