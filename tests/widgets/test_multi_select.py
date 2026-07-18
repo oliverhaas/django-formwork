@@ -840,6 +840,22 @@ def test_multi_select_renders_via_form(renderer):
 
 
 @pytest.mark.integration
+def test_multi_select_option_data_value_round_trips_raw_value(renderer):
+    """Regression: escapejs on the option data-value mangled a hyphenated value (both engines)."""
+
+    class HyphenForm(FormworkForm):
+        tags = forms.MultipleChoiceField(
+            choices=[("uuid-1234", "Ticket")],
+            widget=MultiSelect(choices=[("uuid-1234", "Ticket")]),
+        )
+
+    soup = render_form(HyphenForm(), renderer=renderer)
+    label = soup.find("label", attrs={"data-value": True})
+    assert label is not None
+    assert label["data-value"] == "uuid-1234"
+
+
+@pytest.mark.integration
 def test_multi_select_form_wraps_in_fieldset(renderer):
     """Field template wraps the MultiSelect in a fieldset with a stable id."""
     form = MultiSelectForm()

@@ -653,6 +653,19 @@ def test_combo_box_data_suggestion_round_trips_raw_label():
     assert soup.find("button")["data-suggestion"] == "O'Brien & Sons"
 
 
+class RoundTripMultiSelectView(RoundTripSearchView):
+    widget_type = "multi_select"
+
+
+def test_multi_select_data_value_round_trips_raw_value():
+    """Regression: escapejs on the option's data-value made uuid-1234 render as uuid\\u002D1234."""
+    request = factory.get("/search/", {"q": "", "name": "x"})
+    response = RoundTripMultiSelectView.as_view()(request)
+    soup = BeautifulSoup(response.content, "html.parser")
+    label = soup.find("label", attrs={"data-value": True})
+    assert label["data-value"] == "uuid-1234"
+
+
 # ---------------------------------------------------------------------------
 # FormworkValidateView hardening (SECURITY)
 # ---------------------------------------------------------------------------
