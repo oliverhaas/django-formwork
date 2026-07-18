@@ -7,8 +7,13 @@ without needing to extend :class:`~django_formwork.forms.FormworkForm`.
 For projects using Jinja2, use
 ``FORM_RENDERER = "django_formwork.FormworkJinja2Renderer"`` instead.
 
-Django admin is unaffected because admin templates render fields
-individually: they never call ``{{ form }}`` or ``as_field_group()``.
+Admin forms keep their own layout: they render fields individually and
+never call ``{{ form }}`` or ``as_field_group()``, so the form and
+field-group wrappers do not apply there. Widget template overrides work
+differently. Admin widgets render through the global ``FORM_RENDERER``, so
+any widget template this renderer shadows (see ``DIRS`` below) also applies
+in admin. Formwork keeps that surface deliberately small; see the
+widget-shadowing note in ``VISION.md``.
 """
 
 from __future__ import annotations

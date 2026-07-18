@@ -35,6 +35,14 @@ best of both MPA and SPA. Built 100% on htmx 4, DaisyUI 5, and Tailwind 4.
      widgets are improved with **global CSS only**. Widget templates are exclusively for
      formwork's own widgets, which a developer opts into by setting the widget (point 4).
      Never an automatic swap of a built-in.
+   - **The one deliberate exception is `SearchInput`.** `django/forms/widgets/search.html`
+     is shadowed to wrap the control in a DaisyUI `.input` with a leading magnifier. It
+     earns the exception only because it clears every bar the rule guards against: the
+     widget carries no JavaScript, the shadow keeps the `<input>` (name, value, attrs)
+     structurally intact, and the addition is purely a presentational search affordance.
+     A magnifier next to a search box is what "styled by default" should mean, and CSS
+     alone cannot inject the icon element. Any future shadow of a built-in must clear the
+     same bar; when in doubt, use global CSS.
 
 4. **More widgets with modern functionality.** Real `forms.Widget` subclasses built on
    htmx + Alpine: server-side search selects, multi-select, date picker, drop zones,
