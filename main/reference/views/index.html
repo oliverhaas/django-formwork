@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1185,6 +1185,17 @@
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="n">widget</span><span class="o">=</span><span class="n">SearchSelect</span><span class="p">(</span><span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;country__name&quot;</span><span class="p">]),</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="p">)</span>
 </span></code></pre></div>
+<div class="admonition note">
+<p class="admonition-title"><code>__icontains</code> does not use a plain index</p>
+<p>The generated <code>field__icontains=query</code> filter runs as <code>LIKE '%query%'</code>. The
+leading wildcard rules out an ordinary B-tree index, so on a large table the
+database falls back to a sequential scan. For small lookup tables this is
+fine. For big ones, add a backend-specific index (on PostgreSQL, a <code>GIN</code>
+trigram index via <code>django.contrib.postgres</code>), or switch that field to a
+choices-backed <code>search_choices_&lt;fieldname&gt;</code> method and run whatever query
+your backend can serve efficiently (full-text search, a search service, and
+so on).</p>
+</div>
 <p><strong>Choices-backed</strong>: The form defines a <code>search_choices_&lt;fieldname&gt;(query, request)</code> static method. It receives the search query and the request, and returns a list of dicts or <code>(value, label)</code> tuples. Declare it <code>@staticmethod</code>: the endpoint calls it without the form instance, and formwork raises <code>ImproperlyConfigured</code> at form init for an instance method:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">SearchSelect</span>
@@ -1364,7 +1375,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.sections", "navigation.expand", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
