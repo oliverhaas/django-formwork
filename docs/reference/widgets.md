@@ -101,6 +101,36 @@ role = forms.ChoiceField(
 
 ---
 
+## SearchInput
+
+**Parent class:** `forms.SearchInput`
+
+DaisyUI-styled search box: wraps the native search input in `<label class="input">`
+with a leading magnifier icon. A drop-in for `forms.SearchInput` that you opt into by
+setting the widget. Formwork does not restyle Django's built-in search widget, so the
+admin and third-party forms keep their stock rendering (see [Architecture](../architecture.md)).
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `attrs` | `dict \| None` | `None` | HTML attributes for the `<input>` element |
+
+### Usage
+
+```python
+from django_formwork.widgets import SearchInput
+
+q = forms.CharField(
+    required=False,
+    widget=SearchInput(attrs={"placeholder": "Search…"}),
+)
+```
+
+No JavaScript dependencies.
+
+---
+
 ## Toggle
 
 **Parent class:** `forms.CheckboxInput`

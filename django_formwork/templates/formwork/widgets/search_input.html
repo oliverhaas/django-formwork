@@ -1,0 +1,6 @@
+{% comment %}
+Wraps the search control in DaisyUI's `.input` container with a leading
+magnifier, so the formwork SearchInput carries the search affordance with no
+per-template markup. The nested <input> is styled borderless by `.input`; the
+value/attrs markup mirrors Django's stock input.html.
+{% endcomment %}<label class="input w-full"><i class="icon icon-search shrink-0 opacity-50" aria-hidden="true"></i><input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}></label>

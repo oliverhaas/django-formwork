@@ -7,13 +7,12 @@ without needing to extend :class:`~django_formwork.forms.FormworkForm`.
 For projects using Jinja2, use
 ``FORM_RENDERER = "django_formwork.FormworkJinja2Renderer"`` instead.
 
-Admin forms keep their own layout: they render fields individually and
-never call ``{{ form }}`` or ``as_field_group()``, so the form and
-field-group wrappers do not apply there. Widget template overrides work
-differently. Admin widgets render through the global ``FORM_RENDERER``, so
-any widget template this renderer shadows (see ``DIRS`` below) also applies
-in admin. Formwork keeps that surface deliberately small; see the
-widget-shadowing note in ``VISION.md``.
+Admin forms are unaffected: they render fields individually and never call
+``{{ form }}`` or ``as_field_group()``, so the form and field-group wrappers
+do not apply there. Formwork also shadows no built-in widget templates, which
+would otherwise reach admin and third-party forms through the global
+``FORM_RENDERER``; built-in widgets keep their stock rendering. Formwork's own
+widgets are opt-in (see ``VISION.md``).
 """
 
 from __future__ import annotations
@@ -40,9 +39,9 @@ class FormworkRenderer(DjangoTemplates):
     Overrides both ``form_template_name`` (used by ``{{ form }}``) and
     ``field_template_name`` (used by ``{{ field.as_field_group }}``).
 
-    Adds formwork's template directory to DIRS so our widget template
-    overrides (e.g. clearable_file_input.html) take precedence over
-    Django's built-in versions.
+    Adds formwork's template directory to DIRS so the form and field-group
+    templates and formwork's own widget templates (``formwork/widgets/*.html``)
+    resolve. No built-in widget template is shadowed.
     """
 
     form_template_name = "django/forms/formwork.html"

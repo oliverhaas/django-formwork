@@ -18,6 +18,7 @@ from django_formwork.widgets.otp_input import OTPInput
 from django_formwork.widgets.password_reveal import PasswordReveal
 from django_formwork.widgets.range import Range
 from django_formwork.widgets.rating import Rating
+from django_formwork.widgets.search_input import SearchInput
 from django_formwork.widgets.search_select import SearchSelect
 from django_formwork.widgets.toggle import Toggle
 from django_formwork.widgets.validated_textarea import ValidatedTextarea
@@ -35,6 +36,7 @@ __all__ = [
     "PasswordReveal",
     "Range",
     "Rating",
+    "SearchInput",
     "SearchSelect",
     "Select",
     "TextInput",

@@ -11,7 +11,9 @@ Django forms render at three levels:
 Django admin only renders at the widget level. This means:
 
 1. Overriding form or field level rendering is admin-safe.
-2. Widget template overrides must be admin-compatible.
+2. Formwork never overrides a built-in widget template: it would reach admin
+   and third-party forms. Built-ins are styled by CSS only; formwork's own
+   widgets are opt-in.
 3. CSS is independent: admin and frontend load separate stylesheets.
 4. CSS styles all form elements globally: standalone inputs get
    DaisyUI styling without needing `{{ form }}`.

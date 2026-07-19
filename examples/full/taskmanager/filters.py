@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import django_filters as filters
-from django import forms
 from django.db.models import Q
 
-from django_formwork.widgets import Select
+from django_formwork.widgets import SearchInput, Select
 
 from .models import Task
 
@@ -15,7 +14,7 @@ class TaskFilter(filters.FilterSet):
     q = filters.CharFilter(
         method="search",
         label="",
-        widget=forms.SearchInput(attrs={"placeholder": "Search…"}),
+        widget=SearchInput(attrs={"placeholder": "Search…"}),
     )
     status = filters.ChoiceFilter(
         choices=Task.Status.choices,

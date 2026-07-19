@@ -1,7 +1,0 @@
-{% comment %}
-Shadow of Django's native search input.  Renders the control inside DaisyUI's
-`.input` container with a leading magnifier, so every SearchInput carries the
-search affordance with no per-template markup.  The nested <input> is styled
-borderless by `.input`; the value/attrs markup is copied from Django's stock
-input.html because we cannot include the template we are shadowing.
-{% endcomment %}<label class="input w-full"><i class="icon icon-search shrink-0 opacity-50" aria-hidden="true"></i><input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}></label>
