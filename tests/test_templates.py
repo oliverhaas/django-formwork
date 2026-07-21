@@ -221,9 +221,12 @@ class TestInlineErrorRendering:
         error = soup.find(id="id_name_error")
         assert error is not None
         assert error["role"] == "alert"
-        # text-error colors the whole summary (icon + text), not just the span.
+        # text-error stays off the summary so its [more]/[less] ::after keeps
+        # the muted .label color.
+        row = error.find_parent("span", class_="formwork-disclosure-row")
+        assert "text-error" in row.get("class", [])
         summary = error.find_parent("summary")
-        assert "text-error" in summary.get("class", [])
+        assert "text-error" not in summary.get("class", [])
 
     def test_error_row_has_leading_icon(self):
         class F(FormworkForm):
@@ -267,7 +270,7 @@ class TestInlineErrorRendering:
         for message in form.errors["email"]:
             assert message in error.get_text()
 
-    def test_help_text_present_in_details_body_when_collapsed(self):
+    def test_help_text_row_inside_summary_when_collapsed(self):
         class F(FormworkForm):
             name = forms.CharField(help_text="Enter your name")
 
@@ -277,10 +280,10 @@ class TestInlineErrorRendering:
         helptext = soup.find(id="id_name_helptext")
         assert helptext is not None
         assert "Enter your name" in helptext.get_text()
-        # Help lives in the <details> body. The server renders the disclosure
-        # collapsed (no `open`), so native <details> hides the body on first
-        # paint while keeping it in the DOM for aria-describedby. No Alpine and
-        # no sr-only class means the htmx morph has nothing to clobber.
+        # Help lives inside the <summary> so the [less] ::after can follow it
+        # at the bottom and stay clickable; CSS hides the row while closed but
+        # keeps it in the DOM for aria-describedby and htmx morphs.
+        assert helptext.find_parent("summary") is not None
         details = helptext.find_parent("details")
         assert details is not None
         assert not details.has_attr("open")
@@ -299,7 +302,7 @@ class TestInlineErrorRendering:
         # measureDisclosures sets client-side only when the summary overflows;
         # the server renders neither a button nor a body.
         assert disclosure.find("button") is None
-        assert disclosure.find("p", class_="formwork-disclosure-body") is None
+        assert disclosure.find(class_="formwork-disclosure-body") is None
 
     def test_inline_mode_is_default(self):
         class F(FormworkForm):

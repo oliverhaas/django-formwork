@@ -144,8 +144,8 @@ document.addEventListener("htmx:after:swap", initAllDirtyForms);
 // The help/error collapsible is a native <details class="formwork-disclosure">.
 // CSS cannot tell whether the summary text overflows one line, so this small
 // vanilla pass marks each disclosure `data-expandable` when there is something
-// to reveal: a body (help text shown under an inline error) or summary text
-// that overflows while closed.  Only then does the [more]/[less] affordance
+// to reveal: a help row (shown under an inline error once open) or summary
+// text that overflows while closed.  Only then does the [more]/[less] affordance
 // appear and the summary act as a toggle; otherwise the summary stays a plain,
 // non-focusable one-line label.
 //
@@ -169,10 +169,10 @@ const measureDisclosures = (target) => {
     const summary = d.querySelector(":scope > summary");
     if (!summary) continue;
 
-    const hasBody = !!d.querySelector(":scope > .formwork-disclosure-body");
+    const hasBody = !!d.querySelector(":scope > summary > .formwork-disclosure-body");
     let expandable;
     if (hasBody || d.open) {
-      // A body always hides revealable content; an already-open row was
+      // A help row always hides revealable content; an already-open row was
       // expandable when it was opened (and its text is wrapped now, so it
       // can no longer be measured for overflow).
       expandable = true;

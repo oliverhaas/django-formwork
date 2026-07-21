@@ -164,14 +164,15 @@ class TestHelpTextToggle:
         disclosure = "#id_agree_disclosure"
         basic_page.locator(f"{disclosure} > summary").click()
 
-        icon_box = basic_page.locator(f"{disclosure} > summary > i").bounding_box()
+        icon_box = basic_page.locator(f"{disclosure} > summary > .formwork-disclosure-row > i").bounding_box()
         summary_box = basic_page.locator(f"{disclosure} > summary").bounding_box()
         assert abs(icon_box["y"] - summary_box["y"]) <= 4
 
 
 class TestInlineErrorToggle:
-    """Meta.error_display = "inline": the error renders in the summary (red, with
-    a circle-x icon); help text moves into the <details> body, revealed with [more]."""
+    """Meta.error_display = "inline": the error renders as a red row in the summary
+    (circle-x icon); the help text is a second summary row, hidden while closed and
+    revealed with [more]."""
 
     def test_no_tooltip_wrapper(self, inline_errors_page):
         submit(inline_errors_page)
@@ -182,7 +183,7 @@ class TestInlineErrorToggle:
         error = inline_errors_page.locator("#id_name_error")
         helptext = inline_errors_page.locator("#id_name_helptext")
         expect(error).to_be_visible()
-        # Help text is the <details> body, hidden while the disclosure is closed.
+        # Help text is a summary row that CSS hides while the disclosure is closed.
         expect(helptext).not_to_be_visible()
 
     def test_click_more_reveals_error_and_help_text_together(self, inline_errors_page):
@@ -207,6 +208,49 @@ class TestInlineErrorToggle:
         summary.click()
         assert _after_content(inline_errors_page, f"{disclosure} > summary") == '"[more]"'
         expect(inline_errors_page.locator("#id_name_helptext")).not_to_be_visible()
+
+    def test_affordance_color_stays_muted_on_error(self, inline_errors_page):
+        """The [more]/[less] ::after inherits the summary's muted .label color;
+        text-error sits on the error row, so the affordance never turns red."""
+        submit(inline_errors_page)
+        disclosure = "#id_name_disclosure"
+        _wait_expandable(inline_errors_page, disclosure)
+        after_color, summary_color, error_color = inline_errors_page.evaluate(
+            """(sel) => {
+                const summary = document.querySelector(`${sel} > summary`);
+                const error = document.querySelector('#id_name_error');
+                return [
+                    getComputedStyle(summary, '::after').color,
+                    getComputedStyle(summary).color,
+                    getComputedStyle(error).color,
+                ];
+            }""",
+            disclosure,
+        )
+        assert after_color == summary_color
+        assert after_color != error_color
+
+    def test_less_affordance_at_bottom_when_open(self, inline_errors_page):
+        """Open: the help row sits under the error row inside the summary, and
+        the [less] affordance shares the disclosure's last row (bottom right)
+        instead of floating next to the error text."""
+        submit(inline_errors_page)
+        disclosure = "#id_name_disclosure"
+        summary = inline_errors_page.locator(f"{disclosure} > summary")
+        _wait_expandable(inline_errors_page, disclosure)
+        summary.click()
+
+        helptext = inline_errors_page.locator("#id_name_helptext")
+        expect(helptext).to_be_visible()
+        error_box = inline_errors_page.locator("#id_name_error").bounding_box()
+        help_box = helptext.bounding_box()
+        summary_box = summary.bounding_box()
+        assert error_box["y"] + error_box["height"] <= help_box["y"] + 1
+        # Pseudo-element geometry is unmeasurable; the summary bottom lining
+        # up with the help row proves [less] shares the disclosure's last row.
+        summary_bottom = summary_box["y"] + summary_box["height"]
+        help_bottom = help_box["y"] + help_box["height"]
+        assert abs(summary_bottom - help_bottom) <= 4
 
     def test_native_first_real_click_shows_inline_error(self, inline_errors_page):
         # No noValidate cheat: the real native-first click path. "Alice" is
