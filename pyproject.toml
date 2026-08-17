@@ -38,20 +38,20 @@ Changelog = "https://oliverhaas.github.io/django-formwork/reference/changelog/"
 [dependency-groups]
 dev = [
   "beautifulsoup4==4.15.0",
-  "django-stubs==6.0.8",
+  "django-stubs==6.1.0",
   "jinja2==3.1.6",
   "mypy==2.3.0",
-  "numpy>=2.5.1",
+  "numpy>=2.5.2",
   "pillow>=12.3.0",
-  "pre-commit==4.6.1",
+  "pre-commit==4.6.2",
   "pytest-asyncio==1.4.0",
   "pytest-cov==7.1.0",
-  "pytest-django==4.13.0",
-  "pytest-playwright==0.8.0",
+  "pytest-django==4.14.0",
+  "pytest-playwright==0.9.0",
   "pytest-xdist==3.8.0",
   "pytest==9.1.1",
-  "ruff==0.16.1",
-  "ty==0.0.69",
+  "ruff==0.16.3",
+  "ty==0.0.71",
 ]
 docs = ["mkdocs==1.6.1", "mkdocs-material==9.7.7", "mike==2.2.0"]
 
