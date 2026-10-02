@@ -58,6 +58,7 @@ class ContactForm(FormworkForm):
     class Meta:
         error_display = "tooltip"
 
+
 # or
 form = ContactForm(request.POST, error_display="tooltip")
 ```
@@ -86,6 +87,7 @@ class TicketEditForm(FormworkModelForm):
         model = Ticket
         fields = ["title", "priority", "description"]
         validate_dirty_only = True
+
 
 # or
 form = TicketEditForm(request.POST, instance=ticket, validate_dirty_only=True)

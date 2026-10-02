@@ -66,7 +66,7 @@ def _resolve_initial_results(registry_key: str | None) -> tuple[int | None, list
             return _initial_from_queryset(reg)
         if reg.search_func is not None:
             return _initial_from_search_func(reg)
-    except Exception:  # noqa: BLE001 (initial render must never crash)
+    except Exception:
         logger.warning("Failed to resolve initial results for registry key %r", registry_key, exc_info=True)
         return None, []
     return None, []

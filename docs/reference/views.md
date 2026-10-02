@@ -60,6 +60,7 @@ Registration happens automatically when a `FormworkForm` or `FormworkModelForm` 
 from django_formwork import FormworkForm
 from django_formwork.widgets import SearchSelect
 
+
 class CityForm(FormworkForm):
     city = forms.ModelChoiceField(
         queryset=City.objects.all(),
@@ -83,15 +84,13 @@ class CityForm(FormworkForm):
 from django_formwork import FormworkForm
 from django_formwork.widgets import SearchSelect
 
+
 class TagForm(FormworkForm):
     tags = forms.ChoiceField(widget=SearchSelect)
 
     @staticmethod
     def search_choices_tags(query, request):
-        return [
-            {"value": t.slug, "label": t.name}
-            for t in Tag.objects.filter(name__icontains=query)[:20]
-        ]
+        return [{"value": t.slug, "label": t.name} for t in Tag.objects.filter(name__icontains=query)[:20]]
 ```
 
 !!! warning "The registry is per-process"
@@ -148,15 +147,18 @@ Base view for server-side textarea validation. It handles POST requests, calls `
 # views.py
 from django_formwork import FormworkValidateView
 
+
 class SpellCheckView(FormworkValidateView):
     def get_errors(self, text: str, **kwargs) -> list[dict]:
         errors = []
         for match in find_misspellings(text):
-            errors.append({
-                "message": f"Misspelled: {match.word}",
-                "start": match.start,
-                "end": match.end,
-            })
+            errors.append(
+                {
+                    "message": f"Misspelled: {match.word}",
+                    "start": match.start,
+                    "end": match.end,
+                }
+            )
         return errors
 ```
 
@@ -193,6 +195,7 @@ Like the search side's `search_decorator`, the view exposes a `validate_decorato
 
 ```python
 from django.contrib.auth.decorators import login_required
+
 
 class SpellCheckView(FormworkValidateView):
     validate_decorator = login_required

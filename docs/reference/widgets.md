@@ -52,10 +52,10 @@ DaisyUI's `btn-soft` / `alert-soft` look. It **composes** with the color modifie
 
 ```python
 # Accent-tinted fill with accent text:
-widget=SearchSelect(attrs={"class": "select-soft select-accent"})
+widget = SearchSelect(attrs={"class": "select-soft select-accent"})
 
 # ComboBox uses the input base:
-widget=ComboBox(attrs={"class": "input-soft input-accent"})
+widget = ComboBox(attrs={"class": "input-soft input-accent"})
 ```
 
 `-soft` also follows the validation state automatically: an `aria-invalid` control
@@ -265,6 +265,7 @@ languages = forms.MultipleChoiceField(
     widget=MultiSelect,
 )
 
+
 # Auto-registered server-side search (model queryset):
 class TagForm(FormworkForm):
     tags = forms.ModelMultipleChoiceField(
@@ -274,6 +275,7 @@ class TagForm(FormworkForm):
             search_decorator=login_required,
         ),
     )
+
 
 # Auto-registered server-side search (custom callback):
 class LangForm(FormworkForm):
@@ -336,6 +338,7 @@ priority = forms.ChoiceField(
     widget=SearchSelect,
 )
 
+
 # Auto-registered server-side search (model queryset):
 class CityForm(FormworkForm):
     city = forms.ModelChoiceField(
@@ -393,6 +396,7 @@ tags = forms.CharField(
         multiple=True,
     ),
 )
+
 
 # Auto-registered server-side suggestions:
 class TagForm(FormworkForm):
@@ -639,19 +643,19 @@ for your layout.
 from django.contrib.auth.decorators import login_required, permission_required
 
 # Require login:
-widget=SearchSelect(
+widget = SearchSelect(
     search_fields=["name"],
     search_decorator=login_required,
 )
 
 # Require a specific permission:
-widget=SearchSelect(
+widget = SearchSelect(
     search_fields=["name"],
     search_decorator=permission_required("myapp.view_city"),
 )
 
 # Public endpoint (explicit opt-in):
-widget=SearchSelect(
+widget = SearchSelect(
     search_fields=["name"],
     search_decorator=None,
 )

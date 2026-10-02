@@ -8,6 +8,7 @@ With `FORM_RENDERER` set, any Django form renders with DaisyUI styling:
 # forms.py
 from django import forms
 
+
 class ContactForm(forms.Form):
     name = forms.CharField()
     email = forms.EmailField()
@@ -37,9 +38,11 @@ If you don't want to set `FORM_RENDERER` globally, use the form base classes:
 ```python
 from django_formwork import FormworkForm, FormworkModelForm
 
+
 class ContactForm(FormworkForm):
     name = forms.CharField()
     email = forms.EmailField()
+
 
 class ProfileForm(FormworkModelForm):
     class Meta:
@@ -51,10 +54,19 @@ class ProfileForm(FormworkModelForm):
 
 ```python
 from django_formwork.widgets import (
-    Toggle, Range, Rating, PasswordReveal,
-    SearchSelect, MultiSelect, ComboBox, DataList,
-    FileDropZone, ImageDropZone, ValidatedTextarea,
+    Toggle,
+    Range,
+    Rating,
+    PasswordReveal,
+    SearchSelect,
+    MultiSelect,
+    ComboBox,
+    DataList,
+    FileDropZone,
+    ImageDropZone,
+    ValidatedTextarea,
 )
+
 
 class ExampleForm(forms.Form):
     # Toggle switch instead of checkbox
@@ -65,7 +77,9 @@ class ExampleForm(forms.Form):
 
     # Star rating
     rating = forms.TypedChoiceField(
-        choices=Rating.make_choices(5), coerce=int, widget=Rating,
+        choices=Rating.make_choices(5),
+        coerce=int,
+        widget=Rating,
     )
 
     # Password with show/hide toggle
@@ -108,15 +122,18 @@ class ExampleForm(forms.Form):
 # views.py
 from django_formwork import FormworkValidateView
 
+
 class SpellCheckView(FormworkValidateView):
     def get_errors(self, text: str, **kwargs) -> list[dict]:
         errors = []
         for match in find_misspellings(text):
-            errors.append({
-                "message": f"Misspelled: {match.word}",
-                "start": match.start,
-                "end": match.end,
-            })
+            errors.append(
+                {
+                    "message": f"Misspelled: {match.word}",
+                    "start": match.start,
+                    "end": match.end,
+                }
+            )
         return errors
 ```
 
@@ -150,6 +167,7 @@ from django.contrib.auth.decorators import login_required
 from django_formwork import FormworkForm
 from django_formwork.widgets import SearchSelect
 
+
 class CityForm(FormworkForm):
     city = forms.ModelChoiceField(
         queryset=City.objects.all(),
@@ -168,10 +186,7 @@ class TagForm(FormworkForm):
 
     @staticmethod
     def search_choices_tags(query, request):
-        return [
-            {"value": t.slug, "label": t.name}
-            for t in Tag.objects.filter(name__icontains=query)[:20]
-        ]
+        return [{"value": t.slug, "label": t.name} for t in Tag.objects.filter(name__icontains=query)[:20]]
 ```
 
 `search_decorator` is required whenever auto-registration is active. It protects the generated endpoint; pass `None` explicitly for a public endpoint. The [views reference](../reference/views.md) covers the decorator and the `FormworkSearchView` base class for hand-written endpoints.
