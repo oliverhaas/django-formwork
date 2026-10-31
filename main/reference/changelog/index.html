@@ -1139,6 +1139,11 @@
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li><strong>Targets the stable htmx 4.0.0 release.</strong> The installation guide, the full example, and
+  the e2e harness load <code>htmx.org@4.0.0</code> (was <code>4.0.0-beta3</code>). If you load htmx yourself,
+  bump your pin; formwork's templates and <code>formwork-core.js</code> need no changes. npm still
+  tags htmx 2 as <code>latest</code>, so pin <code>@4.0.0</code> explicitly instead of loading an unversioned
+  <code>htmx.org</code> URL.</li>
 <li><strong><code>DatePicker</code>, <code>OTPInput</code>, and <code>InputMask</code> now bind to shipped Alpine.data components</strong>
   (<code>formworkDatePicker</code>, <code>formworkOtpInput</code>, <code>formworkInputMask</code> in
   <code>formwork/widgets/date_picker.js</code>, <code>otp_input.js</code>, and <code>input_mask.js</code>) instead of inlining
