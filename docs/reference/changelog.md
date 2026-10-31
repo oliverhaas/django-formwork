@@ -69,6 +69,11 @@
 
 ### Changed
 
+- **Targets the stable htmx 4.0.0 release.** The installation guide, the full example, and
+  the e2e harness load `htmx.org@4.0.0` (was `4.0.0-beta3`). If you load htmx yourself,
+  bump your pin; formwork's templates and `formwork-core.js` need no changes. npm still
+  tags htmx 2 as `latest`, so pin `@4.0.0` explicitly instead of loading an unversioned
+  `htmx.org` URL.
 - **`DatePicker`, `OTPInput`, and `InputMask` now bind to shipped Alpine.data components**
   (`formworkDatePicker`, `formworkOtpInput`, `formworkInputMask` in
   `formwork/widgets/date_picker.js`, `otp_input.js`, and `input_mask.js`) instead of inlining

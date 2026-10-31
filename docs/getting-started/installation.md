@@ -120,7 +120,7 @@ Formwork requires **DaisyUI 5.x**. DaisyUI 4 and earlier use a different compone
 The dynamic widgets (server-side search, password reveal, combo boxes, validated textarea) depend on htmx 4 and Alpine.js. Load them yourself and then include the JS tag:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/htmx.org@4.0.0-beta3"></script>
+<script src="https://cdn.jsdelivr.net/npm/htmx.org@4.0.0"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3"></script>
 {% load formwork %}
 {% formwork_js %}
