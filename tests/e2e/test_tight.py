@@ -79,7 +79,7 @@ class TestTightFormFloatingLabels:
             assert not legend.is_visible()
 
     def test_select_label_floats_while_empty(self, tight_page):
-        """The trigger always shows a value or "Select...", so the label never sits on it."""
+        """The trigger always shows a value or "Select…", so the label never sits on it."""
         span = tight_page.locator("#id_role_field .floating-label > span")
         assert span.evaluate("el => getComputedStyle(el).opacity") == "1"
         assert span.evaluate("el => getComputedStyle(el).scale") == "0.75"
