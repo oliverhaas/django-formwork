@@ -178,9 +178,6 @@ class TestComplexFormMorphResilience:
         expect(checked).to_have_count(1)
         assert checked.input_value() == "py"
 
-    @pytest.mark.xfail(
-        strict=True, reason="a morph drops the :type binding until pages load htmx's alpine-compat (step 7)"
-    )
     def test_password_reveal_state_survives_morph(self, complex_page):
         """PasswordInput show/hide state persists through morph."""
         inp = complex_page.locator('input[name="password"]')

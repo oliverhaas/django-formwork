@@ -131,7 +131,6 @@ def test_password_input_morph_clears_value(simple_page):
 
 
 @pytest.mark.e2e
-@pytest.mark.xfail(strict=True, reason="a morph drops the :type binding until pages load htmx's alpine-compat (step 7)")
 def test_password_input_morph_preserves_reveal_state(simple_page):
     """Show/hide toggle state persists through an htmx form morph."""
     from playwright.sync_api import expect
