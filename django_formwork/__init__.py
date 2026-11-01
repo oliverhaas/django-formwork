@@ -14,12 +14,9 @@ except PackageNotFoundError:
 if TYPE_CHECKING:
     from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
     from django_formwork.boundfield import FormworkBoundField
-    from django_formwork.fields import (
-        FormworkModelChoiceField,
-        FormworkModelMultipleChoiceField,
-    )
     from django_formwork.forms import (
         FormworkForm,
+        FormworkFormMetaclass,
         FormworkModelForm,
         FormworkModelFormMetaclass,
     )
@@ -33,7 +30,6 @@ if TYPE_CHECKING:
     from django_formwork.renderers import FormworkRenderer
     from django_formwork.tables import FormworkRowSaveMixin
     from django_formwork.views import (
-        FormworkAutoSearchView,
         FormworkSearchView,
         FormworkValidateView,
     )
@@ -44,16 +40,14 @@ _EXPORTS = {
     "AsyncFormMixin": "django_formwork.async_forms",
     "AsyncModelFormMixin": "django_formwork.async_forms",
     "ChoiceLabel": "django_formwork.widgets.select",
-    "FormworkAutoSearchView": "django_formwork.views",
     "FormworkBaseInlineFormSet": "django_formwork.formsets",
     "FormworkBaseModelFormSet": "django_formwork.formsets",
     "FormworkBoundField": "django_formwork.boundfield",
     "FormworkForm": "django_formwork.forms",
+    "FormworkFormMetaclass": "django_formwork.forms",
     "FormworkModel": "django_formwork.models",
-    "FormworkModelChoiceField": "django_formwork.fields",
     "FormworkModelForm": "django_formwork.forms",
     "FormworkModelFormMetaclass": "django_formwork.forms",
-    "FormworkModelMultipleChoiceField": "django_formwork.fields",
     "FormworkRenderer": "django_formwork.renderers",
     "FormworkRowSaveMixin": "django_formwork.tables",
     "FormworkSearchView": "django_formwork.views",
@@ -66,16 +60,14 @@ __all__ = [
     "AsyncFormMixin",
     "AsyncModelFormMixin",
     "ChoiceLabel",
-    "FormworkAutoSearchView",
     "FormworkBaseInlineFormSet",
     "FormworkBaseModelFormSet",
     "FormworkBoundField",
     "FormworkForm",
+    "FormworkFormMetaclass",
     "FormworkModel",
-    "FormworkModelChoiceField",
     "FormworkModelForm",
     "FormworkModelFormMetaclass",
-    "FormworkModelMultipleChoiceField",
     "FormworkRenderer",
     "FormworkRowSaveMixin",
     "FormworkSearchView",

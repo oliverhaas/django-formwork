@@ -1,10 +1,11 @@
 """Views for e2e testing. widget showcase with one page per topic."""
 
 from django import forms
+from django.db.models import QuerySet
 from django.forms.models import construct_instance
 from django.http import HttpRequest, HttpResponse
 from django.template import engines
-from e2e.models import AutoSaveFormData, BasicFormData, City, Region
+from e2e.models import AutoSaveFormData, BasicFormData, City, Region, SearchOption
 
 from django_formwork import ChoiceLabel
 from django_formwork.forms import FormworkForm, FormworkModelForm
@@ -487,15 +488,119 @@ _COUNTRY_DESCRIPTIONS = {
     "us": "North America",
 }
 
-E2E_COUNTRIES_SEARCH = [
-    {
-        "value": code,
-        "label": name,
-        "icon": flag,
-        "description": _COUNTRY_DESCRIPTIONS.get(code, ""),
-    }
-    for code, flag, name in _COUNTRIES
+_CITIES = [
+    ("nyc", "New York"),
+    ("ldn", "London"),
+    ("tyo", "Tokyo"),
+    ("par", "Paris"),
+    ("syd", "Sydney"),
+    ("ber", "Berlin"),
+    ("rom", "Rome"),
+    ("mad", "Madrid"),
+    ("ams", "Amsterdam"),
+    ("vie", "Vienna"),
+    ("prg", "Prague"),
+    ("lis", "Lisbon"),
+    ("dub", "Dublin"),
+    ("cop", "Copenhagen"),
+    ("sto", "Stockholm"),
+    ("hel", "Helsinki"),
+    ("war", "Warsaw"),
+    ("bud", "Budapest"),
+    ("ath", "Athens"),
+    ("ist", "Istanbul"),
+    ("bkk", "Bangkok"),
+    ("sin", "Singapore"),
+    ("hkg", "Hong Kong"),
+    ("sel", "Seoul"),
 ]
+
+_LANGUAGES = [
+    ("py", "Python", "\U0001f40d"),
+    ("js", "JavaScript", "\U0001f7e8"),
+    ("go", "Go", "\U0001f439"),
+    ("rs", "Rust", "\U0001f980"),
+    ("ts", "TypeScript", "\U0001f535"),
+    ("rb", "Ruby", "\U0001f48e"),
+    ("java", "Java", ""),
+    ("kt", "Kotlin", ""),
+    ("swift", "Swift", ""),
+    ("c", "C", ""),
+    ("cpp", "C++", ""),
+    ("cs", "C#", ""),
+    ("php", "PHP", ""),
+    ("pl", "Perl", ""),
+    ("hs", "Haskell", ""),
+    ("ex", "Elixir", ""),
+    ("erl", "Erlang", ""),
+    ("scala", "Scala", ""),
+    ("clj", "Clojure", ""),
+    ("lua", "Lua", ""),
+    ("r", "R", ""),
+    ("jl", "Julia", ""),
+    ("dart", "Dart", ""),
+    ("ml", "OCaml", ""),
+    ("zig", "Zig", ""),
+]
+
+
+def _ensure_search_options():
+    """Seed the rows the server-searched selects offer, once per database."""
+    if SearchOption.objects.exists():
+        return
+    rows = [SearchOption(kind="city", code=code, name=name) for code, name in _CITIES[:4]]
+    rows += [SearchOption(kind="city_many", code=code, name=name) for code, name in _CITIES]
+    rows += [
+        SearchOption(kind="country", code=code, name=name, icon=flag, description=_COUNTRY_DESCRIPTIONS[code])
+        for code, flag, name in _COUNTRIES
+    ]
+    rows += [SearchOption(kind="language", code=code, name=name, icon=icon) for code, name, icon in _LANGUAGES]
+    SearchOption.objects.bulk_create(rows)
+
+
+def _cities(request):
+    return SearchOption.objects.filter(kind="city")
+
+
+def _cities_many(request):
+    return SearchOption.objects.filter(kind="city_many")
+
+
+def _countries(request):
+    return SearchOption.objects.filter(kind="country")
+
+
+def _languages(request):
+    return SearchOption.objects.filter(kind="language")
+
+
+def _failing_search(request):
+    """Raise to exercise the failure UX (htmx 500 → alert)."""
+    raise RuntimeError("Simulated upstream failure")
+
+
+def _option_label(obj):
+    return ChoiceLabel(obj.name, icon=obj.icon, description=obj.description)
+
+
+class OptionChoiceField(forms.ModelChoiceField):
+    """Picks one ``SearchOption`` of a kind by its code."""
+
+    def __init__(self, kind, **kwargs):
+        super().__init__(queryset=SearchOption.objects.filter(kind=kind), to_field_name="code", **kwargs)
+
+    def label_from_instance(self, obj):
+        return _option_label(obj)
+
+
+class OptionMultipleChoiceField(forms.ModelMultipleChoiceField):
+    """Picks ``SearchOption`` rows of a kind by their codes."""
+
+    def __init__(self, kind, **kwargs):
+        super().__init__(queryset=SearchOption.objects.filter(kind=kind), to_field_name="code", **kwargs)
+
+    def label_from_instance(self, obj):
+        return _option_label(obj)
 
 
 class SelectForm(FormworkForm):
@@ -532,18 +637,21 @@ class SelectForm(FormworkForm):
         required=False,
         label="City (icons + descriptions)",
     )
-    city_htmx = forms.ChoiceField(
-        widget=Select(search_decorator=None),
+    city_htmx = OptionChoiceField(
+        "city",
+        widget=Select(search_fields=["name"], search_queryset=_cities, search_decorator=None),
         required=False,
-        label="City (server search, few, no search input)",
+        label="City (server search, fits one page, filters in the browser)",
     )
-    city_htmx_many = forms.ChoiceField(
-        widget=Select(search_decorator=None),
+    city_htmx_many = OptionChoiceField(
+        "city_many",
+        widget=Select(search_fields=["name"], search_queryset=_cities_many, search_decorator=None),
         required=False,
-        label="City (server search, many, auto search input)",
+        label="City (server search, one page plus Load more)",
     )
-    country_htmx_icons = forms.ChoiceField(
-        widget=Select(search_decorator=None),
+    country_htmx_icons = OptionChoiceField(
+        "country",
+        widget=Select(search_fields=["name"], search_queryset=_countries, search_decorator=None),
         required=False,
         label="Country (server search, icons + descriptions)",
     )
@@ -590,8 +698,9 @@ class SelectForm(FormworkForm):
             "auto-hide when search filters out their children."
         ),
     )
-    city_failing = forms.ChoiceField(
-        widget=Select(search_decorator=None),
+    city_failing = OptionChoiceField(
+        "city_many",
+        widget=Select(search_fields=["name"], search_queryset=_failing_search, search_decorator=None),
         required=False,
         label="City (server search, always fails)",
         help_text="Endpoint always raises, exercises the error UX.",
@@ -614,21 +723,9 @@ class SelectForm(FormworkForm):
         help_text="Selecting an option applies its class to the closed select box.",
     )
 
-    @staticmethod
-    def search_choices_city_htmx(query, request=None):
-        return _filter_search(query, E2E_CITIES)
-
-    @staticmethod
-    def search_choices_city_htmx_many(query, request=None):
-        return _filter_search(query, E2E_CITIES_MANY)
-
-    @staticmethod
-    def search_choices_country_htmx_icons(query, request=None):
-        return _filter_search(query, E2E_COUNTRIES_SEARCH)
-
-    @staticmethod
-    def search_choices_city_failing(query, request=None):
-        _raise_failure()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _ensure_search_options()
 
 
 class SelectMultipleForm(FormworkForm):
@@ -651,8 +748,9 @@ class SelectMultipleForm(FormworkForm):
         required=False,
         label="Countries (icons, auto-search)",
     )
-    languages_htmx = forms.MultipleChoiceField(
-        widget=SelectMultiple(search_decorator=None),
+    languages_htmx = OptionMultipleChoiceField(
+        "language",
+        widget=SelectMultiple(search_fields=["name"], search_queryset=_languages, search_decorator=None),
         required=False,
         label="Languages (server-side search)",
     )
@@ -688,20 +786,17 @@ class SelectMultipleForm(FormworkForm):
         label="Cities by region (grouped)",
         help_text="Grouped SelectMultiple, optgroup headers, keyboard nav, Enter toggles without closing.",
     )
-    languages_failing = forms.MultipleChoiceField(
-        widget=SelectMultiple(search_decorator=None),
+    languages_failing = OptionMultipleChoiceField(
+        "language",
+        widget=SelectMultiple(search_fields=["name"], search_queryset=_failing_search, search_decorator=None),
         required=False,
         label="Languages (server search, always fails)",
         help_text="Endpoint always raises, exercises the error UX.",
     )
 
-    @staticmethod
-    def search_choices_languages_htmx(query, request=None):
-        return _filter_search(query, E2E_LANGUAGES)
-
-    @staticmethod
-    def search_choices_languages_failing(query, request=None):
-        _raise_failure()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _ensure_search_options()
 
 
 _LANGUAGE_ICONS = [
@@ -749,6 +844,8 @@ class ComboBoxForm(FormworkForm):
     )
     language_htmx = forms.CharField(
         widget=ComboBox(
+            search_fields=["name"],
+            search_queryset=_languages,
             search_decorator=None,
             attrs={"placeholder": "Server-side search"},
         ),
@@ -757,7 +854,10 @@ class ComboBoxForm(FormworkForm):
     )
     language_htmx_icons = forms.CharField(
         widget=ComboBox(
+            search_fields=["name"],
+            search_queryset=_languages,
             search_decorator=None,
+            label_from_instance=_option_label,
             attrs={"placeholder": "Server search with icons"},
         ),
         required=False,
@@ -801,6 +901,8 @@ class ComboBoxForm(FormworkForm):
     )
     language_failing = forms.CharField(
         widget=ComboBox(
+            search_fields=["name"],
+            search_queryset=_failing_search,
             search_decorator=None,
             attrs={"placeholder": "Server search (always fails)"},
         ),
@@ -809,17 +911,9 @@ class ComboBoxForm(FormworkForm):
         help_text="Endpoint always raises, exercises the error UX.",
     )
 
-    @staticmethod
-    def search_choices_language_htmx(query, request=None):
-        return _filter_search(query, E2E_LANGUAGES)
-
-    @staticmethod
-    def search_choices_language_htmx_icons(query, request=None):
-        return _filter_search(query, E2E_LANGUAGES_ICONS)
-
-    @staticmethod
-    def search_choices_language_failing(query, request=None):
-        _raise_failure()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _ensure_search_options()
 
 
 class UploadsForm(FormworkForm):
@@ -921,8 +1015,15 @@ class ComplexForm(FormworkForm):
     confirm_password = forms.CharField(
         widget=PasswordReveal(attrs={"placeholder": "Confirm password"}),
     )
-    country = forms.CharField(
-        widget=Select(search_decorator=None),
+    country = forms.ChoiceField(
+        choices=[
+            ("", ""),
+            *(
+                (code, ChoiceLabel(name, icon=flag, description=_COUNTRY_DESCRIPTIONS[code]))
+                for code, flag, name in _COUNTRIES
+            ),
+        ],
+        widget=Select(),
         required=False,
         label="Country",
     )
@@ -935,18 +1036,10 @@ class ComplexForm(FormworkForm):
             ("ts", "TypeScript"),
             ("rb", "Ruby"),
         ],
-        widget=SelectMultiple(search_decorator=None),
+        widget=SelectMultiple(),
         required=False,
         label="Languages",
     )
-
-    @staticmethod
-    def search_choices_country(query, request=None):
-        return _filter_search(query, E2E_COUNTRIES_SEARCH)
-
-    @staticmethod
-    def search_choices_languages(query, request=None):
-        return _filter_search(query, E2E_LANGUAGES)
 
     start_date = forms.DateField(
         widget=forms.DateInput(attrs={"type": "date"}),
@@ -991,79 +1084,6 @@ class ComplexForm(FormworkForm):
         if country and not languages:
             self.add_error("languages", "Select at least one language when a country is chosen.")
         return cleaned
-
-
-# ---------------------------------------------------------------------------
-# Server-side search and validation endpoints
-# ---------------------------------------------------------------------------
-
-E2E_CITIES = [
-    {"value": "nyc", "label": "New York"},
-    {"value": "ldn", "label": "London"},
-    {"value": "tyo", "label": "Tokyo"},
-    {"value": "par", "label": "Paris"},
-]
-
-E2E_CITIES_MANY = [
-    {"value": "nyc", "label": "New York"},
-    {"value": "ldn", "label": "London"},
-    {"value": "tyo", "label": "Tokyo"},
-    {"value": "par", "label": "Paris"},
-    {"value": "syd", "label": "Sydney"},
-    {"value": "ber", "label": "Berlin"},
-    {"value": "rom", "label": "Rome"},
-    {"value": "mad", "label": "Madrid"},
-    {"value": "ams", "label": "Amsterdam"},
-    {"value": "vie", "label": "Vienna"},
-    {"value": "prg", "label": "Prague"},
-    {"value": "lis", "label": "Lisbon"},
-    {"value": "dub", "label": "Dublin"},
-    {"value": "cop", "label": "Copenhagen"},
-    {"value": "sto", "label": "Stockholm"},
-    {"value": "hel", "label": "Helsinki"},
-    {"value": "war", "label": "Warsaw"},
-    {"value": "bud", "label": "Budapest"},
-    {"value": "ath", "label": "Athens"},
-    {"value": "ist", "label": "Istanbul"},
-    {"value": "bkk", "label": "Bangkok"},
-    {"value": "sin", "label": "Singapore"},
-    {"value": "hkg", "label": "Hong Kong"},
-    {"value": "sel", "label": "Seoul"},
-]
-
-E2E_LANGUAGES = [
-    {"value": "py", "label": "Python"},
-    {"value": "js", "label": "JavaScript"},
-    {"value": "go", "label": "Go"},
-    {"value": "rs", "label": "Rust"},
-    {"value": "ts", "label": "TypeScript"},
-    {"value": "rb", "label": "Ruby"},
-]
-
-E2E_LANGUAGES_ICONS = [
-    {"label": "Python", "icon": "\U0001f40d"},
-    {"label": "JavaScript", "icon": "\U0001f7e8"},
-    {"label": "Go", "icon": "\U0001f439"},
-    {"label": "Rust", "icon": "\U0001f980"},
-    {"label": "TypeScript", "icon": "\U0001f535"},
-    {"label": "Ruby", "icon": "\U0001f48e"},
-]
-
-
-def _filter_search(query, results):
-    """Filter ``results`` by case-insensitive substring match on ``label``.
-
-    Throttle in DevTools (Network panel → "Slow 3G" or custom) if you want
-    to observe the loading skeleton in a manual demo.
-    """
-    if not query:
-        return results
-    return [r for r in results if query.lower() in r["label"].lower()]
-
-
-def _raise_failure():
-    """Raise to exercise the failure UX (htmx 500 → alert)."""
-    raise RuntimeError("Simulated upstream failure")
 
 
 class E2EBioValidateView(FormworkValidateView):
@@ -1260,6 +1280,10 @@ def _to_session(cleaned_data):
             result[key] = val.name if hasattr(val, "name") else "[file]"
         elif hasattr(val, "isoformat"):
             result[key] = val.isoformat()
+        elif isinstance(val, SearchOption):
+            result[key] = val.code
+        elif isinstance(val, QuerySet):
+            result[key] = [obj.code for obj in val]
         elif isinstance(val, (str, int, float, bool, list, type(None))):
             result[key] = val
         else:

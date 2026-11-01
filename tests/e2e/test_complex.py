@@ -175,9 +175,9 @@ class TestComplexFormMorphResilience:
         """SelectMultiple selected values persist through morph."""
         _toggle_multiselect_option(complex_page, "py")
         submit(complex_page)
-        hidden = complex_page.locator('input[type="hidden"][name="languages"]')
-        values = [hidden.nth(i).input_value() for i in range(hidden.count())]
-        assert "py" in values
+        checked = complex_page.locator('input[type="checkbox"][name="languages"]:checked')
+        expect(checked).to_have_count(1)
+        assert checked.input_value() == "py"
 
     def test_password_reveal_state_survives_morph(self, complex_page):
         """PasswordReveal show/hide state persists through morph."""

@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING, Any, Concatenate
 
 from django import forms
 from django.core.exceptions import ImproperlyConfigured
-from django.urls import reverse
 
-from ._base import _ModuleScript, _resolve_initial_results
+from django_formwork.search import check_search_params, search_url
+
+from ._base import _ModuleScript
 from .select import _UNSET_DECORATOR, label_extras
 
 if TYPE_CHECKING:
@@ -48,6 +49,7 @@ class ComboBox(forms.TextInput):
         search_fields: Sequence[str] | None = None,
         search_queryset: Callable[Concatenate[HttpRequest, ...], QuerySet[Any]] | None = None,
         search_decorator: Callable[..., Any] | _UnsetDecorator | None = _UNSET_DECORATOR,
+        search_ranked: bool = False,
         label_from_instance: Callable[[Model], object] | None = None,
     ) -> None:
         if search_key is not None and search_fields:
@@ -58,12 +60,13 @@ class ComboBox(forms.TextInput):
         self.show_spinner = show_spinner
         self.search_key = search_key
         self.search_params = dict(search_params or {})
+        if search_key is not None:
+            check_search_params(search_key, self.search_params)
         self.search_fields: tuple[str, ...] = tuple(search_fields) if search_fields else ()
         self.search_queryset = search_queryset
         self.search_decorator = search_decorator
+        self.search_ranked = search_ranked
         self.label_from_instance = label_from_instance
-        # Set by FormworkForm when it registers a search for this widget.
-        self._registry_key: str | None = None
 
     def _options(self) -> list[dict[str, Any]]:
         """The suggestions as option rows; a pick fills the input with the label."""
@@ -83,14 +86,15 @@ class ComboBox(forms.TextInput):
         widget["options"] = self._options()
         widget["multiple"] = self.multiple
         widget["show_spinner"] = self.show_spinner
-        widget["search_url"] = None
+        # A server search fills the list on first focus.
+        widget["search_url"] = (
+            search_url(self.search_key, self.search_params, widget=self.search_variant)
+            if self.search_key is not None
+            else None
+        )
         widget["truncated"] = False
         widget["shown"] = None
         widget["more_url"] = None
-        if self._registry_key is not None:
-            _total, rows = _resolve_initial_results(self._registry_key)
-            widget["options"] = [{**row, "label_html": "", "group": ""} for row in rows]
-            widget["search_url"] = reverse("formwork:search", kwargs={"key": self._registry_key})
         # The closed input shows a picked suggestion's icon beside its text.
         icons = {option["label"]: str(option["icon"]) for option in widget["options"] if option["icon"]}
         widget["icons_json"] = json.dumps(icons)

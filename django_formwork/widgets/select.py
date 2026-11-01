@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal
+from urllib.parse import urlencode
 
 from django import forms
-from django.core.exceptions import ImproperlyConfigured
-from django.urls import reverse
+from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.forms.models import ModelChoiceIterator
+from django.utils.choices import flatten_choices
 
-from ._base import _ModuleScript, _resolve_initial_results
+from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search_url
+
+from ._base import _ModuleScript
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
+    from collections.abc import Callable, Iterator, Mapping, Sequence
 
     from django.db.models import QuerySet
     from django.http import HttpRequest
@@ -118,6 +122,7 @@ class SearchableSelectMixin(_SelectBase):
         search_fields: Sequence[str] | None = None,
         search_queryset: Callable[Concatenate[HttpRequest, ...], QuerySet[Any]] | None = None,
         search_decorator: Callable[..., Any] | _UnsetDecorator | None = _UNSET_DECORATOR,
+        search_ranked: bool = False,
         allow_clear: bool = False,
         floating: bool = False,
     ) -> None:
@@ -129,16 +134,18 @@ class SearchableSelectMixin(_SelectBase):
         self.show_spinner = show_spinner
         self.search_key = search_key
         self.search_params = dict(search_params or {})
+        # A wrong key or param set fails where the widget is built, not on first render.
+        if search_key is not None:
+            check_search_params(search_key, self.search_params)
         self.search_fields: tuple[str, ...] = tuple(search_fields) if search_fields else ()
         self.search_queryset = search_queryset
         self.search_decorator = search_decorator
+        self.search_ranked = search_ranked
         self.allow_clear = allow_clear
         self.floating = floating
         # Set per render by optgroups().
         self.truncated = False
         self.selected_past_page: list[str] = []
-        # Set by FormworkForm when it registers a search for this widget.
-        self._registry_key: str | None = None
 
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
@@ -179,25 +186,64 @@ class SearchableSelectMixin(_SelectBase):
         widget["search_url"] = None
         widget["shown"] = None
         widget["more_url"] = None
+        if self.truncated and self.search_key is not None:
+            widget["search_url"] = search_url(
+                self.search_key,
+                self.search_params,
+                widget=self.search_variant,
+                allow_clear=self.allow_clear,
+            )
+            widget["shown"] = SEARCH_PAGE_SIZE
+            more = {"offset": SEARCH_PAGE_SIZE, "exclude": self.selected_past_page}
+            widget["more_url"] = f"{widget['search_url']}&{urlencode(more, doseq=True)}"
         widget["truncated"] = self.truncated
         widget["show_spinner"] = self.show_spinner
         widget["show_search"] = (
             self.show_search if self.show_search is not None else total > self.search_threshold or self.truncated
         )
-        if self._registry_key is not None:
-            self._registered_search_context(widget, selected)
         self._floating_context(widget)
         return context
 
-    def _registered_search_context(self, widget: dict[str, Any], selected: list[dict[str, Any]]) -> None:
-        """Render the registered search's first page; the endpoint filters the rest."""
-        assert self._registry_key is not None  # caller checked  # noqa: S101
-        total, rows = _resolve_initial_results(self._registry_key)
-        chosen = {str(option["value"]) for option in selected}
-        widget["options"] = [{**row, "label_html": "", "selected": row["value"] in chosen} for row in rows]
-        widget["search_url"] = reverse("formwork:search", kwargs={"key": self._registry_key})
-        if self.show_search is None:
-            widget["show_search"] = total is None or total > self.search_threshold
+    def optgroups(
+        self, name: str, value: list[str], attrs: dict[str, Any] | None = None
+    ) -> list[tuple[str | None, list[dict[str, Any]], int | None]]:
+        """Every choice without a server search, else one page plus the selected ones."""
+        if self.search_key is None:
+            return super().optgroups(name, value, attrs)
+        chosen = {str(subvalue) for subvalue in value if subvalue}
+        limit = SEARCH_PAGE_SIZE
+        choices = self.choices
+        blank: list[tuple[Any, Any]] = []
+        if isinstance(choices, ModelChoiceIterator):
+            if choices.field.empty_label is not None:
+                blank.append(("", choices.field.empty_label))
+            key = choices.field.to_field_name or "pk"
+            # One extra row tells whether more exist, so no COUNT runs.
+            page = list(choices.queryset[: limit + 1])
+            shown = {str(getattr(obj, key)) for obj in page[:limit]}
+            try:
+                rest = list(choices.queryset.filter(**{f"{key}__in": chosen - shown}))
+            except ValueError, TypeError, ValidationError:
+                # A bound value the key column cannot hold matches no row.
+                rest = []
+            self.selected_past_page = [str(getattr(obj, key)) for obj in rest]
+            pairs = [*blank, *(choices.choice(obj) for obj in [*page[:limit], *rest])]
+        else:
+            flat: Iterator[tuple[Any, Any]] = flatten_choices(choices)
+            every: list[tuple[Any, Any]] = []
+            for pair in flat:
+                (every if str(pair[0]) else blank).append(pair)
+            page = every[: limit + 1]
+            beyond = [pair for pair in every[limit:] if str(pair[0]) in chosen]
+            self.selected_past_page = [str(pair[0]) for pair in beyond]
+            pairs = [*blank, *every[:limit], *beyond]
+        # The endpoint caps its rows the same way, so the hint reads the same.
+        self.truncated = len(page) > limit
+        options = [
+            self.create_option(name, choice, label, str(choice) in chosen, index, attrs=attrs)
+            for index, (choice, label) in enumerate(pairs)
+        ]
+        return [(None, options, 0)] if options else []
 
     def _floating_context(self, widget: dict[str, Any]) -> None:
         """The floating label's id, the trigger's name and its empty text."""

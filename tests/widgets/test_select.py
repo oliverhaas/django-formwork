@@ -9,9 +9,10 @@ from django.utils.safestring import mark_safe
 
 from django_formwork import ChoiceLabel
 from django_formwork.forms import FormworkForm
+from django_formwork.search import SEARCH_PAGE_SIZE
 from django_formwork.widgets import Select
 
-from .conftest import make_server_widget, open_dropdown, render_form, render_widget, submit
+from .conftest import open_dropdown, render_form, render_widget, server_widget, submit
 
 
 class SelectForm(FormworkForm):
@@ -80,12 +81,20 @@ def test_select_get_context_selected_label_empty_when_no_value():
 
 
 @pytest.mark.unit
-def test_select_get_context_search_url_resolved_from_registry():
-    """get_context resolves a search_url for widgets attached to the registry."""
-    widget = make_server_widget(Select, choices=[("a", "Alpha")])
+def test_select_get_context_search_url_set_past_one_page():
+    """A registered search with more choices than one page names its endpoint."""
+    widget = server_widget(Select)
     ctx = widget.get_context("test", "", {"id": "id_test"})
-    assert ctx["widget"]["search_url"] is not None
     assert ctx["widget"]["search_url"].startswith("/__formwork__/search/")
+
+
+@pytest.mark.unit
+def test_select_registered_search_that_fits_one_page_filters_in_the_browser():
+    """A registered search whose choices fit one page renders every row and no endpoint."""
+    widget = server_widget(Select, count=SEARCH_PAGE_SIZE)
+    ctx = widget.get_context("test", "", {"id": "id_test"})
+    assert ctx["widget"]["search_url"] is None
+    assert len(ctx["widget"]["options"]) == SEARCH_PAGE_SIZE
 
 
 @pytest.mark.unit
@@ -371,7 +380,7 @@ def test_select_keydown_handlers_on_wrapper():
 def test_select_xdata_binds_alpine_component():
     """Both client- and htmx-mode templates bind to the formworkSelect component."""
     plain = Select(choices=[("a", "A")]).render("test", "")
-    htmx_mode = make_server_widget(Select, choices=[]).render("test", "")
+    htmx_mode = server_widget(Select).render("test", "")
     for html in (plain, htmx_mode):
         assert 'x-data="formworkSelect"' in html
 
@@ -443,7 +452,7 @@ def test_select_no_wrapper_id_without_attrs_id():
 @pytest.mark.unit
 def test_select_htmx_wrapper_id():
     """details wrapper id is present even when search_url is set."""
-    widget = make_server_widget(Select, choices=[])
+    widget = server_widget(Select)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="formwork-select")
     assert details["id"] == "id_test_wrapper"
@@ -462,7 +471,7 @@ def test_select_search_input_inside_dropdown():
 @pytest.mark.unit
 def test_select_htmx_attrs_when_registered():
     """Search input carries htmx attrs when the widget is attached to the registry."""
-    widget = make_server_widget(Select, choices=[])
+    widget = server_widget(Select)
     soup = render_widget(widget, name="city", attrs={"id": "id_city"})
     dropdown = soup.find("div", class_="dropdown-content")
     search = dropdown.find("input", {"type": "search"})
@@ -483,21 +492,10 @@ def test_select_no_htmx_attrs_without_search_url():
 
 
 @pytest.mark.unit
-def test_select_static_choices_ignored_when_search_url():
-    """Static ``choices`` are ignored when server search is wired. The
-    listbox renders pre-rendered registry options instead.  ``count=0``
-    here so the listbox renders the empty-state alert (no options)."""
-    widget = make_server_widget(Select, count=0, choices=[("a", "Alpha")])
-    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
-    assert listbox.find_all("li", attrs={"role": "option"}) == []
-
-
-@pytest.mark.unit
 def test_select_renders_no_results_alert_when_initial_options_empty():
-    """An empty initial set still communicates state. The listbox carries
+    """An empty list still communicates state. The listbox carries
     the same ``role=status`` alert that the htmx response would render."""
-    widget = make_server_widget(Select, count=0)
+    widget = Select(choices=[])
     soup = render_widget(widget, attrs={"id": "id_test"})
     listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
     alert = listbox.find("div", attrs={"role": "status"})
@@ -509,45 +507,28 @@ def test_select_renders_no_results_alert_when_initial_options_empty():
 @pytest.mark.unit
 def test_select_no_alpine_no_results_when_search_url():
     """No 'No results' paragraph when search_url is set (server handles no results)."""
-    widget = make_server_widget(Select, choices=[])
+    widget = server_widget(Select)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     no_results = soup.find("p", string="No results")
     assert no_results is None
 
 
 @pytest.mark.unit
-def test_select_prerenders_initial_options_when_registered():
-    """The first ``max_results`` registry items are baked straight into the
-    listbox so the dropdown opens with real data; htmx replaces them on
-    first focus."""
-    widget = make_server_widget(Select, count=3)
+def test_select_server_mode_renders_one_page_and_a_load_more_button():
+    """Past one page the listbox holds the first page; "Load more" fetches the next."""
+    widget = server_widget(Select)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
     options = listbox.find_all("li", attrs={"role": "option"})
-    assert len(options) == 3
-    # Items carry the same data attrs as the htmx response markup.
-    first = options[0].find("button")
-    assert first["data-value"] == "0"
-    assert first["data-label"] == "Item 0"
+    assert [li.find("button")["data-value"] for li in options] == [str(i) for i in range(SEARCH_PAGE_SIZE)]
+    more = listbox.select_one('[role="status"] button[hx-get]')
+    assert f"offset={SEARCH_PAGE_SIZE}" in more["hx-get"]
 
 
 @pytest.mark.unit
-def test_select_prerendered_count_caps_at_registry_max_results():
-    """Pre-rendered options never exceed ``reg.max_results`` (default 50)."""
-    widget = make_server_widget(Select, count=2)
-    soup = render_widget(widget, attrs={"id": "id_x"})
-    assert len(soup.find("ul", attrs={"id": "id_x_listbox"}).find_all("li", attrs={"role": "option"})) == 2
-
-    widget = make_server_widget(Select, count=120)
-    soup = render_widget(widget, attrs={"id": "id_y"})
-    # Default reg.max_results is 50.
-    assert len(soup.find("ul", attrs={"id": "id_y_listbox"}).find_all("li", attrs={"role": "option"})) == 50
-
-
-@pytest.mark.unit
-def test_select_prerendered_options_include_icons_when_registry_has_icons():
-    """When ``icon_from_instance`` is registered, pre-rendered options include the icon glyph."""
-    widget = make_server_widget(Select, count=1, icons=True)
+def test_select_server_mode_options_include_icons():
+    """Server-mode rows keep the icon of their ChoiceLabel."""
+    widget = server_widget(Select, icons=True)
     soup = render_widget(widget, attrs={"id": "id_x"})
     first = soup.find("li", attrs={"role": "option"}).find("button")
     assert first.has_attr("data-icon")
@@ -555,9 +536,9 @@ def test_select_prerendered_options_include_icons_when_registry_has_icons():
 
 
 @pytest.mark.unit
-def test_select_prerendered_options_include_descriptions_when_registry_has_descriptions():
-    """When ``description_from_instance`` is registered, pre-rendered options carry a description span."""
-    widget = make_server_widget(Select, count=1, descriptions=True)
+def test_select_server_mode_options_include_descriptions():
+    """Server-mode rows keep the description of their ChoiceLabel."""
+    widget = server_widget(Select, descriptions=True)
     soup = render_widget(widget, attrs={"id": "id_x"})
     first = soup.find("li", attrs={"role": "option"})
     desc = first.find("span", class_="text-xs")
@@ -578,7 +559,7 @@ def test_select_client_mode_renders_every_choice():
 def test_select_renders_error_alert_when_search_url():
     """The error alert is rendered as a plain DaisyUI alert, hidden by
     default via x-show='hasError'."""
-    widget = make_server_widget(Select, choices=[])
+    widget = server_widget(Select)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     alert = soup.find("div", attrs={"role": "alert"})
     assert alert is not None
@@ -601,7 +582,7 @@ def test_select_error_alert_hidden_until_a_search_fails():
 @pytest.mark.unit
 def test_select_search_input_wires_error_handlers():
     """``hasError`` follows the response only; resetting it on request would flash the old list."""
-    widget = make_server_widget(Select, choices=[])
+    widget = server_widget(Select)
     soup = render_widget(widget, name="city", attrs={"id": "id_city"})
     search = soup.find("div", class_="dropdown-content").find("input", {"type": "search"})
     assert "@htmx:before:request" not in search.attrs
@@ -614,7 +595,7 @@ def test_select_search_input_wires_error_handlers():
 def test_select_listbox_hidden_only_on_error():
     """The listbox stays visible at all times except when an error occurs;
     the spinner indicates loading without blanking the listbox."""
-    widget = make_server_widget(Select, choices=[])
+    widget = server_widget(Select)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_listbox")
     assert listbox.get("x-show") == "!hasError"
@@ -623,16 +604,16 @@ def test_select_listbox_hidden_only_on_error():
 @pytest.mark.unit
 def test_select_has_search_url_flag_when_search_url():
     """data-has-search-url is 'true' when server search is wired."""
-    widget = make_server_widget(Select, choices=[])
+    widget = server_widget(Select)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="formwork-select")
     assert details["data-has-search-url"] == "true"
 
 
 @pytest.mark.unit
-def test_select_show_search_visible_from_first_render_when_count_meets_threshold():
-    """When the registry count meets the threshold, the search input opens from first paint."""
-    widget = make_server_widget(Select, count=30)
+def test_select_show_search_visible_from_first_render_in_server_mode():
+    """A list past one page shows the search input from first paint."""
+    widget = server_widget(Select)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="formwork-select")
     assert details["data-show-search"] == "true"
@@ -640,8 +621,8 @@ def test_select_show_search_visible_from_first_render_when_count_meets_threshold
 
 @pytest.mark.unit
 def test_select_show_search_hidden_when_count_below_threshold():
-    """A small registry count keeps the search input hidden."""
-    widget = make_server_widget(Select, count=5)
+    """A registered search with few choices keeps the search input hidden."""
+    widget = server_widget(Select, count=5)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="formwork-select")
     assert details["data-show-search"] == "false"
@@ -824,9 +805,9 @@ def test_select_option_data_selected_toggle_class_escaped():
 
 
 @pytest.mark.unit
-def test_select_prerendered_options_include_selected_toggle_class_when_registered():
-    """When selected_toggle_class_from_instance is registered, pre-rendered options carry the data attr."""
-    widget = make_server_widget(Select, count=1, selected_toggle_classes=True)
+def test_select_server_mode_options_include_selected_toggle_class():
+    """Server-mode rows keep the selected_toggle_class of their ChoiceLabel."""
+    widget = server_widget(Select, selected_toggle_classes=True)
     soup = render_widget(widget, attrs={"id": "id_x"})
     first = soup.find("li", attrs={"role": "option"}).find("button")
     assert first["data-selected-toggle-class"] == "select-error"
@@ -1255,7 +1236,7 @@ def test_select_selected_toggle_class_swaps_between_options(search_select_page):
 
 @pytest.mark.e2e
 def test_select_htmx_renders(search_select_page):
-    """Select with htmx search (fourth dropdown) renders visibly."""
+    """Select with a server search that fits one page (fourth dropdown) renders visibly."""
     sel = search_select_page.locator("details.dropdown.formwork-select").nth(3)
     assert sel.is_visible()
 
@@ -1272,22 +1253,25 @@ def test_select_htmx_open_loads_results(search_select_page):
 
 
 @pytest.mark.e2e
-def test_select_htmx_filters_via_htmx(search_select_page):
-    """Typing in the htmx search input triggers a server request and filters results."""
+def test_select_short_server_list_filters_in_the_browser(search_select_page):
+    """A server search that fits one page filters its rows without a request."""
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.formwork-select").nth(3)
+    requests: list[str] = []
+    search_select_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
     _open_dropdown(search_select_page, 3)
-    search_select_page.wait_for_timeout(200)
-    expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
+    expect(sel.locator("ul button:visible")).to_have_count(4, timeout=10000)
     _type_search(search_select_page, 3, "Tok")
-    expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
-    assert "Tokyo" in sel.locator("ul button").first.text_content()
+    expect(sel.locator("ul button:visible")).to_have_count(1, timeout=10000)
+    assert "Tokyo" in sel.locator("ul button:visible").text_content()
+    search_select_page.wait_for_timeout(500)
+    assert requests == []
 
 
 @pytest.mark.e2e
 def test_select_htmx_pick_sets_value(search_select_page):
-    """Clicking an htmx result button sets the hidden input value."""
+    """Clicking a filtered row sets the hidden input to the row's code."""
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.formwork-select").nth(3)
@@ -1295,7 +1279,7 @@ def test_select_htmx_pick_sets_value(search_select_page):
     _open_dropdown(search_select_page, 3)
     search_select_page.wait_for_timeout(200)
     _type_search(search_select_page, 3, "Lon")
-    expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
+    expect(sel.locator("ul button:visible")).to_have_count(1, timeout=10000)
     sel.locator("ul button", has_text="London").click()
     search_select_page.wait_for_timeout(200)
     assert hidden.input_value() == "ldn"
@@ -1303,32 +1287,33 @@ def test_select_htmx_pick_sets_value(search_select_page):
 
 @pytest.mark.e2e
 def test_select_htmx_no_results_message(search_select_page):
-    """A 'No results' item appears when the htmx search finds nothing."""
-    from playwright.sync_api import expect
-
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(3)
-    _open_dropdown(search_select_page, 3)
-    search_select_page.wait_for_timeout(200)
-    expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
-    _type_search(search_select_page, 3, "zzzzz")
-    no_results = sel.locator("li", has_text="No results")
-    expect(no_results).to_be_visible(timeout=10000)
-
-
-@pytest.mark.e2e
-def test_select_htmx_many_open_loads_all(search_select_page):
-    """Opening the htmx-many dropdown (nth=4) loads all 24 results."""
+    """A 'No results' row appears when the server search finds nothing."""
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.formwork-select").nth(4)
     _open_dropdown(search_select_page, 4)
-    buttons = sel.locator("ul button")
+    expect(sel.locator("ul button[data-value]")).to_have_count(20, timeout=10000)
+    _type_search(search_select_page, 4, "zzzzz")
+    expect(sel.locator("li", has_text="No results")).to_be_visible(timeout=10000)
+
+
+@pytest.mark.e2e
+def test_select_htmx_many_load_more_appends_the_next_page(search_select_page):
+    """The htmx-many dropdown (nth=4) opens on one page of 24 cities; "Load more" appends the rest."""
+    from playwright.sync_api import expect
+
+    sel = search_select_page.locator("details.dropdown.formwork-select").nth(4)
+    _open_dropdown(search_select_page, 4)
+    buttons = sel.locator("ul button[data-value]")
+    expect(buttons).to_have_count(20, timeout=10000)
+    sel.get_by_role("button", name="Load more").click()
     expect(buttons).to_have_count(24, timeout=10000)
+    expect(sel.get_by_role("button", name="Load more")).to_have_count(0)
 
 
 @pytest.mark.e2e
 def test_select_htmx_many_search_input_shown_above_threshold(search_select_page):
-    """Search input is visible after htmx loads because total (24) >= threshold (20)."""
+    """Search input is visible because the list is longer than one page."""
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.formwork-select").nth(4)
@@ -1358,13 +1343,13 @@ def test_select_htmx_icons_renders(search_select_page):
 
 @pytest.mark.e2e
 def test_select_htmx_icons_loads_results(search_select_page):
-    """Htmx-icons: opening loads all 31 country results."""
+    """Htmx-icons: opening shows the first page of the 31 countries."""
     from playwright.sync_api import expect
 
     sel = search_select_page.locator("details.dropdown.formwork-select").nth(5)
     _open_dropdown(search_select_page, 5)
-    buttons = sel.locator("ul button")
-    expect(buttons).to_have_count(31, timeout=10000)
+    buttons = sel.locator("ul button[data-value]")
+    expect(buttons).to_have_count(20, timeout=10000)
 
 
 @pytest.mark.e2e
@@ -1615,38 +1600,6 @@ def test_select_keyboard_close_clears_highlight(search_select_page):
 #
 # Gap: /search-select/ has only required=False fields, so an e2e error-flow
 # test needs a page with a required Select, which does not exist yet.
-
-
-# ─── Level 6b: E2e, server-side search loading + failure UX ─────────────
-#
-# Skeleton placeholders show on first full page load before the first
-# focus-triggered htmx request swaps in real options.  When the search
-# endpoint fails, an error alert replaces the listbox while the search
-# input stays usable so the user can retry.
-#
-# Indices on /search-select/:  3 = city_htmx (working),
-#                              7 = city_failing (slow + always 500).
-
-
-@pytest.mark.e2e
-def test_select_prerenders_options_on_initial_load(search_select_page):
-    """Real options render in every htmx-mode Select on first page load, before any user
-    interaction, with no skeleton flicker. The dropdown at index 3 wires up
-    ``search_choices_city_htmx`` against ``E2E_CITIES`` (4 cities), so all 4 options are baked in."""
-    htmx_dropdown = search_select_page.locator("details.dropdown.formwork-select").nth(3)
-    items = htmx_dropdown.locator("ul[role='listbox'] > li[role='option']")
-    assert items.count() == 4
-
-
-@pytest.mark.e2e
-def test_select_options_refresh_on_first_focus(search_select_page):
-    """First focus fires htmx; the swap replaces pre-rendered options with
-    the fresh response: same count, same listbox."""
-    from playwright.sync_api import expect
-
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(3)
-    _open_dropdown(search_select_page, 3)
-    expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
 
 
 @pytest.mark.e2e

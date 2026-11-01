@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from django import forms
 from django.utils.html import format_html
 
-from django_formwork import ChoiceLabel, FormworkForm, FormworkModelChoiceField, FormworkModelForm
+from django_formwork import ChoiceLabel, FormworkForm, FormworkModelForm
 from django_formwork.widgets import (
     ComboBox,
     DatePicker,
@@ -23,6 +25,10 @@ from django_formwork.widgets import (
 
 from .models import Member, Profile, Tag, Task
 from .widgets import PhoneInput
+
+if TYPE_CHECKING:
+    from django.db.models import QuerySet
+    from django.http import HttpRequest
 
 # Lifecycle ramp minus neutral, which reads as an unstyled border on a select.
 STATUS_SELECT_COLORS: dict[str, str] = {
@@ -45,6 +51,27 @@ STATUS_CHOICES = [
 ]
 
 
+def search_members(_request: HttpRequest) -> QuerySet[Member]:
+    """The rows the assignee search offers."""
+    return Member.objects.all()
+
+
+def search_tags(_request: HttpRequest) -> QuerySet[Tag]:
+    """The rows the tag search offers."""
+    return Tag.objects.all()
+
+
+class MemberChoiceField(forms.ModelChoiceField):
+    """A member with an initials badge and an email line."""
+
+    def label_from_instance(self, obj: Member) -> ChoiceLabel:
+        return ChoiceLabel(
+            obj.name,
+            icon=format_html("<span class='badge badge-ghost badge-sm w-8'>{}</span>", obj.initials),
+            description=obj.email,
+        )
+
+
 class TaskEditForm(FormworkModelForm):
     """Full create/edit page: every task field, solid select-{color} status
     border. Showcases Select + SelectMultiple + DatePicker + drop zones +
@@ -65,22 +92,17 @@ class TaskEditForm(FormworkModelForm):
         help_text="Same trick as priority, but a select-{color} border instead of a soft fill: "
         "solid here on the edit page, dotted in the inline list rows, recoloring on pick.",
     )
-    assignee = FormworkModelChoiceField(
+    assignee = MemberChoiceField(
         queryset=Member.objects.all(),
         required=False,
         empty_label="Unassigned",
-        widget=Select(search_fields=["name", "email"], search_decorator=None),
-        icon_from_instance=lambda instance: format_html(
-            "<span class='badge badge-ghost badge-sm w-8'>{}</span>",
-            instance.initials,
-        ),
-        description_from_instance=lambda instance: instance.email,
+        widget=Select(search_fields=["name", "email"], search_queryset=search_members, search_decorator=None),
         help_text="Select over the Member model: server-side search, initials badge, email line.",
     )
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
-        widget=SelectMultiple(search_fields=["name"], search_decorator=None),
+        widget=SelectMultiple(search_fields=["name"], search_queryset=search_tags, search_decorator=None),
         help_text="SelectMultiple with server-side search over tag names.",
     )
     rating = forms.TypedChoiceField(
@@ -135,26 +157,23 @@ class TaskRowForm(FormworkModelForm):
         initial=Task.Status.TODO,
         widget=Select(attrs={"class": "select-dotted"}),
     )
-    assignee = FormworkModelChoiceField(
+    assignee = MemberChoiceField(
         queryset=Member.objects.all(),
         required=False,
         empty_label="Unassigned",
         widget=Select(
             search_fields=["name", "email"],
+            search_queryset=search_members,
             search_decorator=None,
             attrs={"class": "select-ghost"},
         ),
-        icon_from_instance=lambda instance: format_html(
-            "<span class='badge badge-ghost badge-sm w-8'>{}</span>",
-            instance.initials,
-        ),
-        description_from_instance=lambda instance: instance.email,
     )
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
         widget=SelectMultiple(
             search_fields=["name"],
+            search_queryset=search_tags,
             search_decorator=None,
             attrs={"class": "select-ghost"},
         ),
@@ -232,7 +251,7 @@ class WizardFirstTaskForm(FormworkForm):
     first_task_tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
-        widget=SelectMultiple(search_fields=["name"], search_decorator=None),
+        widget=SelectMultiple(search_fields=["name"], search_queryset=search_tags, search_decorator=None),
         label="Tags",
     )
 

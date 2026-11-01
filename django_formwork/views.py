@@ -1,191 +1,148 @@
 """Server-side views for formwork widgets.
 
-:class:`FormworkSearchView` is the base class for dropdown search endpoints.
-:class:`FormworkAutoSearchView` dispatches auto-registered search endpoints.
+:class:`FormworkSearchView` serves every registered field search.
 :class:`FormworkValidateView` is the base class for textarea validation endpoints.
 """
 
 from __future__ import annotations
 
 from html import escape as html_escape
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
-from django.http import HttpRequest, HttpResponse, HttpResponseBase
+from django.apps import apps
+from django.core.exceptions import ValidationError
+from django.db.models import Q
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase
 from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+from django_formwork.search import SEARCH_PAGE_SIZE, declared_params, get_field
+from django_formwork.widgets import ComboBox, Select, SelectMultiple
+from django_formwork.widgets.select import label_extras
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from django_formwork._registry import SearchRegistration
+    from django import forms
+    from django.db.models import QuerySet
 
 __all__ = [
-    "FormworkAutoSearchView",
     "FormworkSearchView",
     "FormworkValidateView",
 ]
 
 
+@final
 class FormworkSearchView(View):
-    """Base view for server-side widget search.
+    """Resolve a field by URL key and return its search's ``<li>`` option rows.
 
-    :class:`FormworkAutoSearchView` (below) is the dispatch view that backs
-    every auto-registered widget; most users never subclass this directly.
-    Subclass :class:`FormworkSearchView` only to render a widget's
-    ``#option_list`` partial (the ``<li>`` rows htmx swaps in) from a custom
-    endpoint of your own.
+    Mounted by ``include("django_formwork.urls")``. Widgets configure their
+    search with ``search_queryset``, ``search_fields`` and ``search_decorator``;
+    the view is not meant to be subclassed.
 
-    Results dict keys:
-
-    - ``label`` (required): display text
-    - ``value`` (optional): the posted key for ``Select``; ``ComboBox`` posts the label
-    - ``icon`` (optional): icon markup wrapped in ``mark_safe()``
-      (plain strings are auto-escaped)
+    An anonymous request for an unknown key redirects to ``settings.LOGIN_URL``
+    when ``django.contrib.auth`` is installed, so it cannot tell a missing key
+    from one it may not reach.
     """
 
-    #: Which widget's ``#option_list`` renders the rows.  Set from the
-    #: registration, or override in a subclass.
-    widget_type: str = "search_select"
-
-    @staticmethod
-    def _option_list_template(widget_type: str) -> str:
-        from django_formwork.widgets import ComboBox, Select, SelectMultiple
-
-        templates = {
-            "search_select": Select.template_name,
-            "multi_select": SelectMultiple.template_name,
-            "combo_box": ComboBox.template_name,
-        }
-        return f"{templates[widget_type]}#option_list"
-
-    def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:  # noqa: ARG002
-        """Return search results for the given query.
-
-        Override this in your subclass.  Each result should be a dict with
-        at least a ``label`` key, and optionally ``value`` and ``icon``.
-
-        ``icon`` values should be wrapped in ``mark_safe()``; plain strings
-        are auto-escaped by the template engine.
-
-        Args:
-            query: The search string from the user's input.
-            **kwargs: Additional context (e.g. request).
-
-        Returns:
-            List of result dicts.
-        """
-        return []
-
+    field: forms.Field | None = None
     #: Maximum query length (characters). Longer queries are truncated.
-    MAX_QUERY_LENGTH = 200
+    MAX_QUERY_LENGTH: ClassVar[int] = 200
 
-    def get(self, request: HttpRequest) -> HttpResponse:
-        query = request.GET.get("q", "").strip()[: self.MAX_QUERY_LENGTH]
-
-        # SECURITY: the widget type comes from the server side only (the
-        # registration for auto-registered endpoints, or the subclass
-        # attribute).  A client-supplied ``type`` parameter is ignored so
-        # callers cannot render results through a template the registration
-        # never intended.
-        results = self.get_results(query, request=request)
-        html = render_to_string(
-            self._option_list_template(self.widget_type),
-            {"options": results, "truncated": False, "shown": None, "more_url": None},
-            request=request,
-        )
-        return HttpResponse(html.strip())
-
-
-class FormworkAutoSearchView(FormworkSearchView):
-    """Dispatch view for auto-registered search endpoints.
-
-    Serves all widgets that use ``search_fields`` for automatic search
-    registration.  A single URL pattern handles all registered endpoints::
-
-        # urls.py
-        path("__formwork__/", include("django_formwork.urls"))
-
-    The view looks up the registration by key, filters the queryset, and
-    renders the rows through the registered widget's ``#option_list``.
-    """
+    # The rows take the markup of the widget that asks, so one search serves every widget.
+    option_templates: ClassVar[dict[str, str]] = {
+        cls.search_variant: f"{cls.template_name}#option_list" for cls in (Select, SelectMultiple, ComboBox)
+    }
 
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
         super().setup(request, *args, **kwargs)
-        from django_formwork._registry import get_registration
-
-        self.registration = get_registration(kwargs.get("key", ""))
+        self.field = get_field(kwargs.get("key", ""))
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
-        if self.registration is None:
-            return HttpResponse(status=404)
-        reg = self.registration
-        self.widget_type = reg.widget_type
-        # Remove URL kwargs before passing to parent: get() doesn't accept them.
+        if self.field is None:
+            user = getattr(request, "user", None)
+            if apps.is_installed("django.contrib.auth") and not (user and user.is_authenticated):
+                # Deferred: the auth views need django.contrib.auth installed.
+                from django.contrib.auth.views import redirect_to_login
+
+                return redirect_to_login(request.get_full_path())
+            raise Http404
+        # The key is a routing detail; get() does not accept it.
         kwargs.pop("key", None)
-        # Apply the search_decorator (e.g. login_required) if one was set.
-        if reg.search_decorator is not None:
-            decorated = reg.search_decorator(super().dispatch)
-            return decorated(request, *args, **kwargs)
+        decorator = self.field.widget.search_decorator
+        if decorator is not None:
+            return decorator(super().dispatch)(request, *args, **kwargs)
         return super().dispatch(request, *args, **kwargs)
 
-    def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:
-        reg = self.registration
-        if reg is None:  # pragma: no cover (dispatch() returns 404 when None)
-            return []
+    def search(self, queryset: QuerySet[Any], *, widget: forms.Widget, query: str) -> QuerySet[Any]:
+        """Narrow ``queryset`` to the rows matching ``query``.
 
-        # Path 1: choices-backed (search_func).
-        if reg.search_func:
-            return self._normalize_results(reg.search_func(query, kwargs.get("request")))
+        Without ``search_fields`` the ``search_queryset`` reads ``q`` itself
+        and returns its rows best-first.
+        """
+        search_fields = getattr(widget, "search_fields", ())
+        if not query or not search_fields:
+            return queryset
+        condition = Q()
+        for field_name in search_fields:
+            condition |= Q(**{f"{field_name}__icontains": query})
+        return queryset.filter(condition)
 
-        # Path 2: model-backed (queryset + search_fields).
-        return self._queryset_results(reg, query)
-
-    @staticmethod
-    def _normalize_results(raw: list) -> list[dict[str, str]]:
-        """Convert (value, label) tuples or dicts to uniform result dicts."""
-        results: list[dict[str, str]] = []
-        for item in raw:
-            if isinstance(item, dict):
-                results.append(item)
-            elif isinstance(item, (list, tuple)) and len(item) >= 2:  # noqa: PLR2004
-                results.append({"value": str(item[0]), "label": str(item[1])})
-            else:
-                msg = (
-                    "search_choices results must be dicts or (value, label) sequences, "
-                    f"got {type(item).__name__}: {item!r}"
-                )
-                raise TypeError(msg)
-        return results
-
-    @staticmethod
-    def _queryset_results(reg: SearchRegistration, query: str) -> list[dict[str, str]]:
-        from django.db.models import Q
-
-        if reg.queryset_factory is None:  # pragma: no cover
-            return []
-        qs = reg.queryset_factory()
-        if query:
-            q = Q()
-            for field_name in reg.search_fields:
-                q |= Q(**{f"{field_name}__icontains": query})
-            qs = qs.filter(q)
-        qs = qs[: reg.max_results]
-        results: list[dict[str, str]] = []
-        for obj in qs:
-            result: dict[str, str] = {
-                "value": str(getattr(obj, reg.to_field_name)),
-                "label": reg.label_from_instance(obj) if reg.label_from_instance else str(obj),
-            }
-            if reg.icon_from_instance:
-                result["icon"] = reg.icon_from_instance(obj)
-            if reg.description_from_instance:
-                result["description"] = reg.description_from_instance(obj)
-            if reg.selected_toggle_class_from_instance:
-                result["selected_toggle_class"] = reg.selected_toggle_class_from_instance(obj)
-            results.append(result)
-        return results
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:  # noqa: ARG002
+        field = self.field
+        if field is None:  # pragma: no cover (dispatch() already guards)
+            raise Http404
+        widget: Any = field.widget
+        template = self.option_templates.get(request.GET.get("widget", ""))
+        if template is None:
+            raise Http404
+        try:
+            params = {name: kind(request.GET[name]) for name, kind in declared_params(widget.search_queryset).items()}
+            offset = int(request.GET.get("offset", 0))
+        except KeyError, ValueError:
+            raise Http404 from None
+        if offset < 0:
+            raise Http404
+        query = request.GET.get("q", "").strip()[: self.MAX_QUERY_LENGTH]
+        to_field_name = getattr(field, "to_field_name", None) or "pk"
+        queryset = widget.search_queryset(request, **params)
+        try:
+            queryset = queryset.exclude(**{f"{to_field_name}__in": request.GET.getlist("exclude")})
+        except ValueError, ValidationError:
+            raise Http404 from None
+        queryset = self.search(queryset, widget=widget, query=query)
+        # One row past the cap: cheaper than a COUNT and enough to say "there are more".
+        rows = list(queryset[offset : offset + SEARCH_PAGE_SIZE + 1])
+        truncated = len(rows) > SEARCH_PAGE_SIZE
+        del rows[SEARCH_PAGE_SIZE:]
+        # ModelChoiceField provides label_from_instance; a free-text ComboBox over a
+        # CharField supplies its own (or falls back to str()).
+        label_from_instance = (
+            getattr(field, "label_from_instance", None) or getattr(widget, "label_from_instance", None) or str
+        )
+        options = []
+        for obj in rows:
+            label = label_from_instance(obj)
+            options.append({"value": str(getattr(obj, to_field_name)), "label": str(label), **label_extras(label)})
+        # Only an optional field clears, with the label of its blank choice.
+        clear_label = None if field.required else getattr(field, "empty_label", None)
+        if offset == 0 and clear_label is not None and request.GET.get("allow_clear") == "1":
+            options.insert(0, {"value": "", "label": str(clear_label)})
+        more = request.GET.copy()
+        more["offset"] = str(offset + SEARCH_PAGE_SIZE)
+        html = render_to_string(
+            template,
+            {
+                "options": options,
+                "truncated": truncated,
+                "shown": offset + len(rows),
+                "more_url": f"{request.path}?{more.urlencode()}",
+            },
+            request=request,
+        )
+        return HttpResponse(html)
 
 
 # SECURITY: CSRF-exempt because this view performs read-only validation

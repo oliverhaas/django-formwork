@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from bs4 import BeautifulSoup
 from django import forms
 from django.contrib.auth.models import User
+from django.test import Client
 
 import django_formwork
 from django_formwork.forms import FormworkForm
@@ -15,11 +17,13 @@ from django_formwork.widgets import ComboBox, ComboBoxMultiple, Select, SelectMu
 
 FRUITS = [("a", "Apples"), ("b", "Bananas"), ("c", "Cherries"), ("d", "Dates")]
 MANY = [(str(i), f"Option {i}") for i in range(200)]
+SELECTED = "150"
+FIRST_PAGE = [str(i) for i in range(20)]
 WIDGET_TEMPLATES = Path(django_formwork.__file__).parent / "templates" / "formwork" / "widgets"
 
 
 def _users(request):
-    return User.objects.all()
+    return User.objects.order_by("pk")
 
 
 class _ToggleForm(FormworkForm):
@@ -27,7 +31,7 @@ class _ToggleForm(FormworkForm):
 
     client = forms.MultipleChoiceField(choices=FRUITS, widget=SelectMultiple)
     served = forms.MultipleChoiceField(
-        choices=FRUITS,
+        choices=[*FRUITS, *MANY],
         widget=SelectMultiple(search_fields=["email"], search_queryset=_users, search_decorator=None),
     )
 
@@ -37,6 +41,26 @@ class _ClientForm(FormworkForm):
 
     one = forms.ChoiceField(choices=MANY, widget=Select)
     many = forms.MultipleChoiceField(choices=MANY, widget=SelectMultiple)
+
+
+class _SearchForm(FormworkForm):
+    """Both select widgets with a server-side endpoint, registered as a real form does."""
+
+    one = forms.ChoiceField(
+        choices=[("", "Not set"), *MANY],
+        widget=Select(search_fields=["email"], search_queryset=_users, search_decorator=None, allow_clear=True),
+    )
+    many = forms.MultipleChoiceField(
+        choices=MANY,
+        widget=SelectMultiple(search_fields=["email"], search_queryset=_users, search_decorator=None),
+    )
+
+
+class _ModelSearchForm(FormworkForm):
+    one = forms.ModelChoiceField(
+        queryset=User.objects.order_by("pk"),
+        widget=Select(search_fields=["email"], search_queryset=_users, search_decorator=None),
+    )
 
 
 class _FamilyForm(FormworkForm):
@@ -64,6 +88,58 @@ def test_toggle_names_the_selected_options(field: str) -> None:
 @pytest.mark.parametrize("field", ["client", "served"])
 def test_toggle_counts_selections_past_the_summary_threshold(field: str) -> None:
     assert _toggle_text(field, ["a", "b", "c", "d"]) == "4 selected"
+
+
+def _values(form: forms.Form, field: str) -> list[str]:
+    listbox = BeautifulSoup(str(form[field]), "html.parser").select_one("ul[role=listbox]")
+    assert listbox is not None
+    rows = (row.select_one("[data-value]") for row in listbox.select("li"))
+    return [str(holder["data-value"]) for holder in rows if holder is not None]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("field", "initial", "expected"),
+    [
+        ("one", None, ["", *FIRST_PAGE]),
+        ("one", SELECTED, ["", *FIRST_PAGE, SELECTED]),
+        ("many", None, FIRST_PAGE),
+        ("many", [SELECTED], [*FIRST_PAGE, SELECTED]),
+    ],
+)
+def test_server_search_renders_one_page_and_leaves_filtering_to_the_endpoint(
+    field: str, initial: Any, expected: list[str]
+) -> None:
+    form = _SearchForm(initial={field: initial})
+
+    assert _values(form, field) == expected
+    search = BeautifulSoup(str(form[field]), "html.parser").select_one("input[type=search]")
+    assert search is not None
+    assert search["hx-trigger"] == "input changed delay:300ms"
+
+
+@pytest.mark.django_db
+def test_a_model_search_renders_one_page_and_a_selection_past_it() -> None:
+    User.objects.bulk_create(User(username=f"user{i}", email=f"user{i}@example.com") for i in range(22))
+    ids = [str(pk) for pk in User.objects.order_by("pk").values_list("pk", flat=True)]
+
+    form = _ModelSearchForm(initial={"one": ids[-1]})
+
+    assert _values(form, "one") == [*ids[:20], ids[-1]]
+    more = BeautifulSoup(str(form["one"]), "html.parser").select_one('[role="status"] button[hx-get]')
+    assert more is not None
+    response = Client().get(str(more["hx-get"]))
+    soup = BeautifulSoup(response.content.decode(), "html.parser")
+    assert [str(el["data-value"]) for el in soup.select("[data-value]")] == ids[20:-1]
+
+
+@pytest.mark.django_db
+def test_a_bound_value_the_key_cannot_hold_renders_no_selection() -> None:
+    User.objects.bulk_create(User(username=f"user{i}", email=f"user{i}@example.com") for i in range(22))
+
+    form = _ModelSearchForm(data={"one": "not-a-pk"})
+
+    assert len(_values(form, "one")) == 20
 
 
 @pytest.mark.unit

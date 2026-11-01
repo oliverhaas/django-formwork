@@ -2,13 +2,7 @@
 
 from __future__ import annotations
 
-import logging
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from django_formwork._registry import SearchRegistration
-
-logger = logging.getLogger(__name__)
+from typing import Any
 
 _KB = 1024
 _MB = 1024 * 1024
@@ -31,90 +25,6 @@ class _ModuleScript(str):
         from django.utils.html import format_html
 
         return format_html('<script type="module" src="{}"></script>', static(self))
-
-
-def _resolve_initial_results(registry_key: str | None) -> tuple[int | None, list[dict[str, Any]]]:
-    """Resolve ``(total_count, initial_options)`` from the registry for first-page render.
-
-    Called on every render, with no caching.  The initial options are
-    pre-rendered into the listbox so the dropdown opens with real data;
-    htmx replaces them on first focus.  Total count drives the
-    ``show_search`` decision (compared against ``search_threshold``).
-
-    - **Model-backed**: ``queryset_factory().count()`` for the total,
-      ``queryset_factory()[:reg.max_results]`` for the items.
-    - **Choices-backed**: ``search_func("")`` once for both the total
-      (``len``) and the items (sliced to ``reg.max_results``).
-
-    Returns ``(None, [])`` when no registration is attached.
-    """
-    if registry_key is None:
-        return None, []
-    from django_formwork._registry import get_registration
-
-    reg = get_registration(registry_key)
-    if reg is None:
-        return None, []
-    try:
-        if reg.queryset_factory is not None:
-            return _initial_from_queryset(reg)
-        if reg.search_func is not None:
-            return _initial_from_search_func(reg)
-    except Exception:
-        logger.warning("Failed to resolve initial results for registry key %r", registry_key, exc_info=True)
-        return None, []
-    return None, []
-
-
-def _initial_from_queryset(reg: SearchRegistration) -> tuple[int, list[dict[str, Any]]]:
-    assert reg.queryset_factory is not None  # caller checked  # noqa: S101
-    qs = reg.queryset_factory()
-    # NOTE: full ``COUNT(*)`` is wasteful when we only care whether it
-    # crosses the search threshold.  Worth a PostgreSQL approximate-count
-    # path later (pg_class.reltuples), left exact for now.
-    total = qs.count()
-    items = [
-        {
-            "value": str(getattr(obj, reg.to_field_name)),
-            "label": str(reg.label_from_instance(obj)) if reg.label_from_instance else str(obj),
-            "icon": reg.icon_from_instance(obj) if reg.icon_from_instance else "",
-            "description": reg.description_from_instance(obj) if reg.description_from_instance else "",
-            "selected_toggle_class": (
-                reg.selected_toggle_class_from_instance(obj) if reg.selected_toggle_class_from_instance else ""
-            ),
-        }
-        for obj in qs[: reg.max_results]
-    ]
-    return total, items
-
-
-def _initial_from_search_func(reg: SearchRegistration) -> tuple[int, list[dict[str, Any]]]:
-    assert reg.search_func is not None  # caller checked  # noqa: S101
-    raw = reg.search_func("", None) or []
-    total = len(raw)
-    items: list[dict[str, Any]] = []
-    for item in raw[: reg.max_results]:
-        if isinstance(item, dict):
-            items.append(
-                {
-                    "value": str(item.get("value", "")),
-                    "label": str(item.get("label", "")),
-                    "icon": item.get("icon", "") or "",
-                    "description": item.get("description", "") or "",
-                    "selected_toggle_class": item.get("selected_toggle_class", "") or "",
-                },
-            )
-        else:
-            items.append(
-                {
-                    "value": str(item[0]),
-                    "label": str(item[1]),
-                    "icon": "",
-                    "description": "",
-                    "selected_toggle_class": "",
-                },
-            )
-    return total, items
 
 
 def _format_size(size: int) -> str:

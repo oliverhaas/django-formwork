@@ -67,6 +67,9 @@ document.addEventListener("alpine:init", () => {
       // this widget's own htmx-triggered save) so the display doesn't lag
       // one swap behind the confirmed server state.
       new MutationObserver(sync).observe(el, { attributes: true, attributeFilter: ["data-selected"] });
+      // Rows a search or "Load more" swaps in render unchecked. The Load more
+      // swap replaces its own trigger, so its after:swap event never bubbles here.
+      new MutationObserver(() => this.syncChecked()).observe(this.$refs.options, { childList: true });
     },
 
     get hasSearchUrl() {

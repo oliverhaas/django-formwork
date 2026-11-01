@@ -11,9 +11,10 @@ from django.utils.safestring import mark_safe
 
 from django_formwork import ChoiceLabel
 from django_formwork.forms import FormworkForm
+from django_formwork.search import SEARCH_PAGE_SIZE
 from django_formwork.widgets import SelectMultiple
 
-from .conftest import make_server_widget, open_dropdown, render_form, render_widget, submit
+from .conftest import open_dropdown, render_form, render_widget, server_widget, submit
 
 
 class SelectMultipleForm(FormworkForm):
@@ -37,11 +38,10 @@ def test_select_multiple_choices_stored():
 
 
 @pytest.mark.unit
-def test_select_multiple_get_context_search_url_resolved_from_registry():
-    """get_context() resolves a search_url for widgets attached to the registry."""
-    widget = make_server_widget(SelectMultiple, choices=[("a", "A")])
+def test_select_multiple_get_context_search_url_set_past_one_page():
+    """A registered search with more choices than one page names its endpoint."""
+    widget = server_widget(SelectMultiple)
     ctx = widget.get_context("test", [], {"id": "id_test"})
-    assert ctx["widget"]["search_url"] is not None
     assert ctx["widget"]["search_url"].startswith("/__formwork__/search/")
 
 
@@ -71,17 +71,17 @@ def test_select_multiple_get_context_show_search_true_for_many():
 
 
 @pytest.mark.unit
-def test_select_multiple_get_context_show_search_true_when_registry_count_meets_threshold():
-    """show_search opens up-front when the registry reports a count >= threshold."""
-    widget = make_server_widget(SelectMultiple, count=30, choices=[("a", "A")])
+def test_select_multiple_get_context_show_search_true_in_server_mode():
+    """show_search opens up-front when the list is past one page."""
+    widget = server_widget(SelectMultiple)
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["show_search"] is True
 
 
 @pytest.mark.unit
-def test_select_multiple_get_context_show_search_false_when_registry_count_below_threshold():
-    """show_search stays closed when the registry count is below the threshold."""
-    widget = make_server_widget(SelectMultiple, count=5, choices=[("a", "A")])
+def test_select_multiple_get_context_show_search_false_when_registered_count_below_threshold():
+    """A registered search with few choices keeps the search input closed."""
+    widget = server_widget(SelectMultiple, count=5)
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["show_search"] is False
 
@@ -117,7 +117,7 @@ def test_select_multiple_get_context_icon_populated():
 @pytest.mark.unit
 def test_select_multiple_selected_json_empty_list():
     """selected_json is '[]' when search_url set but no values selected."""
-    widget = make_server_widget(SelectMultiple, choices=[("a", "Alpha")])
+    widget = server_widget(SelectMultiple)
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert json.loads(ctx["widget"]["selected_json"]) == []
 
@@ -125,9 +125,9 @@ def test_select_multiple_selected_json_empty_list():
 @pytest.mark.unit
 def test_select_multiple_selected_json_with_value():
     """selected_json pairs each selected value with its label."""
-    widget = make_server_widget(SelectMultiple, choices=[("a", "Alpha"), ("b", "Beta")])
-    ctx = widget.get_context("test", ["a"], {"id": "id_test"})
-    assert json.loads(ctx["widget"]["selected_json"]) == [["a", "Alpha"]]
+    widget = server_widget(SelectMultiple)
+    ctx = widget.get_context("test", ["1", "22"], {"id": "id_test"})
+    assert json.loads(ctx["widget"]["selected_json"]) == [["1", "Item 1"], ["22", "Item 22"]]
 
 
 @pytest.mark.unit
@@ -277,7 +277,7 @@ def test_select_multiple_keydown_invokes_nav_methods():
 def test_select_multiple_xdata_binds_alpine_component():
     """Both client- and htmx-mode templates bind to the formworkSelectMultiple component."""
     plain = SelectMultiple(choices=[("a", "A")]).render("test", [])
-    htmx_mode = make_server_widget(SelectMultiple, choices=[("a", "A")]).render("test", [])
+    htmx_mode = server_widget(SelectMultiple).render("test", [])
     assert 'x-data="formworkSelectMultiple"' in plain
     assert 'x-data="formworkSelectMultiple"' in htmx_mode
 
@@ -507,10 +507,10 @@ def test_select_multiple_summary_server_renders_count_above_cutoff():
 @pytest.mark.unit
 def test_select_multiple_summary_server_renders_selection_in_search_mode():
     """htmx-mode widgets derive the summary from the initial selected pairs."""
-    widget = make_server_widget(SelectMultiple, choices=[("a", "Alpha"), ("b", "Beta")])
-    soup = render_widget(widget, name="test", value=["b"], attrs={"id": "id_test"})
+    widget = server_widget(SelectMultiple)
+    soup = render_widget(widget, name="test", value=["1"], attrs={"id": "id_test"})
     span = soup.select_one("summary [x-text]")
-    assert span.get_text(strip=True) == "Beta"
+    assert span.get_text(strip=True) == "Item 1"
 
 
 @pytest.mark.unit
@@ -570,7 +570,7 @@ def test_select_multiple_no_wrapper_id_without_id():
 @pytest.mark.unit
 def test_select_multiple_htmx_attrs_when_registered():
     """Search input gets hx-get, hx-trigger, hx-target, hx-swap when registered."""
-    widget = make_server_widget(SelectMultiple, choices=[])
+    widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="lang", attrs={"id": "id_lang"})
     search_input = soup.find("input", {"type": "search"})
     assert search_input is not None
@@ -591,24 +591,10 @@ def test_select_multiple_no_htmx_attrs_without_search_url():
 
 
 @pytest.mark.unit
-def test_select_multiple_static_choices_ignored_when_search_url():
-    """Static ``choices`` are ignored when server search is wired: the
-    listbox renders pre-rendered registry options instead.  ``count=0``
-    here so the listbox renders only the empty-state alert."""
-    widget = make_server_widget(SelectMultiple, count=0, choices=[("a", "A")])
-    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
-    # Only the empty-state alert <li> remains.
-    items = listbox.find_all("li")
-    assert len(items) == 1
-    assert items[0].find("div", attrs={"role": "status"}) is not None
-
-
-@pytest.mark.unit
 def test_select_multiple_renders_no_results_alert_when_initial_options_empty():
-    """An empty initial set still communicates state: the listbox carries
+    """An empty list still communicates state: the listbox carries
     the same ``role=status`` alert that the htmx response would render."""
-    widget = make_server_widget(SelectMultiple, count=0)
+    widget = SelectMultiple(choices=[])
     soup = render_widget(widget, attrs={"id": "id_test"})
     listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
     alert = listbox.find("div", attrs={"role": "status"})
@@ -620,7 +606,7 @@ def test_select_multiple_renders_no_results_alert_when_initial_options_empty():
 @pytest.mark.unit
 def test_select_multiple_htmx_mode_passes_selected_json():
     """Server mode puts the selected value/label pairs on ``data-selected`` for the component."""
-    widget = make_server_widget(SelectMultiple, choices=[])
+    widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details")
     assert details["x-data"] == "formworkSelectMultiple"
@@ -631,53 +617,39 @@ def test_select_multiple_htmx_mode_passes_selected_json():
 @pytest.mark.unit
 def test_select_multiple_htmx_mode_posts_selection_from_hidden_inputs():
     """A searched list holds one page, so server mode posts the selection from hidden inputs."""
-    widget = make_server_widget(SelectMultiple, choices=[("a", "Alpha"), ("b", "Beta")])
-    soup = render_widget(widget, name="test", value=["a", "b"], attrs={"id": "id_test"})
+    widget = server_widget(SelectMultiple)
+    soup = render_widget(widget, name="test", value=["0", "1"], attrs={"id": "id_test"})
     values = soup.find("div", attrs={"x-ref": "values"})
     assert values["data-name"] == "test"
-    assert [i["value"] for i in values.find_all("input", {"type": "hidden", "name": "test"})] == ["a", "b"]
+    assert [i["value"] for i in values.find_all("input", {"type": "hidden", "name": "test"})] == ["0", "1"]
     assert all(not cb.has_attr("name") for cb in soup.find_all("input", {"type": "checkbox"}))
 
 
 @pytest.mark.unit
 def test_select_multiple_htmx_wrapper_has_id():
     """htmx mode also derives the <details> id from the widget id."""
-    widget = make_server_widget(SelectMultiple, choices=[])
+    widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="formwork-select-multiple")
     assert details["id"] == "id_test_wrapper"
 
 
 @pytest.mark.unit
-def test_select_multiple_prerenders_initial_options_when_registered():
-    """The first ``max_results`` registry items are baked straight into the
-    listbox so the dropdown opens with real data; htmx replaces them on
-    first focus."""
-    widget = make_server_widget(SelectMultiple, count=3)
+def test_select_multiple_server_mode_renders_one_page_and_a_load_more_button():
+    """Past one page the listbox holds the first page; "Load more" fetches the next."""
+    widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
-    items = listbox.find_all("li")
-    assert len(items) == 3
-    first_label = items[0].find("label")
-    assert first_label["data-value"] == "0"
+    values = [label["data-value"] for label in listbox.find_all("label", attrs={"data-value": True})]
+    assert values == [str(i) for i in range(SEARCH_PAGE_SIZE)]
+    more = listbox.select_one('[role="status"] button[hx-get]')
+    assert f"offset={SEARCH_PAGE_SIZE}" in more["hx-get"]
 
 
 @pytest.mark.unit
-def test_select_multiple_prerendered_count_caps_at_registry_max_results():
-    """Pre-rendered options never exceed ``reg.max_results`` (default 50)."""
-    widget = make_server_widget(SelectMultiple, count=2)
-    soup = render_widget(widget, attrs={"id": "id_x"})
-    assert len(soup.find("ul", attrs={"id": "id_x_listbox"}).find_all("li")) == 2
-
-    widget = make_server_widget(SelectMultiple, count=120)
-    soup = render_widget(widget, attrs={"id": "id_y"})
-    assert len(soup.find("ul", attrs={"id": "id_y_listbox"}).find_all("li")) == 50
-
-
-@pytest.mark.unit
-def test_select_multiple_prerendered_options_include_icons_when_registry_has_icons():
-    """When ``icon_from_instance`` is registered, pre-rendered options include the icon glyph."""
-    widget = make_server_widget(SelectMultiple, count=1, icons=True)
+def test_select_multiple_server_mode_options_include_icons():
+    """Server-mode rows keep the icon of their ChoiceLabel."""
+    widget = server_widget(SelectMultiple, icons=True)
     soup = render_widget(widget, attrs={"id": "id_x"})
     first = soup.find("li").find("label")
     assert "📍0" in first.get_text()
@@ -696,7 +668,7 @@ def test_select_multiple_client_mode_renders_every_choice():
 def test_select_multiple_renders_error_alert_when_search_url():
     """The error alert is rendered as a plain DaisyUI alert, hidden by
     default via x-show='hasError'."""
-    widget = make_server_widget(SelectMultiple, choices=[])
+    widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     alert = soup.find("div", attrs={"role": "alert"})
     assert alert is not None
@@ -719,7 +691,7 @@ def test_select_multiple_error_alert_hidden_until_a_search_fails():
 @pytest.mark.unit
 def test_select_multiple_search_input_wires_error_handlers():
     """``hasError`` follows the response only; resetting it on request would flash the old list."""
-    widget = make_server_widget(SelectMultiple, choices=[])
+    widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="lang", attrs={"id": "id_lang"})
     search = soup.find("input", {"type": "search"})
     assert "@htmx:before:request" not in search.attrs
@@ -731,7 +703,7 @@ def test_select_multiple_search_input_wires_error_handlers():
 @pytest.mark.unit
 def test_select_multiple_listbox_hidden_only_on_error():
     """The listbox stays visible at all times except when an error occurs."""
-    widget = make_server_widget(SelectMultiple, choices=[])
+    widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", id="id_test_listbox")
     assert listbox.get("x-show") == "!hasError"
@@ -740,7 +712,7 @@ def test_select_multiple_listbox_hidden_only_on_error():
 @pytest.mark.unit
 def test_select_multiple_has_search_url_flag_when_search_url():
     """data-has-search-url='true' selects the Map-tracked branch of the component."""
-    widget = make_server_widget(SelectMultiple, choices=[])
+    widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details", class_="formwork-select-multiple")
     assert details["data-has-search-url"] == "true"
@@ -948,24 +920,37 @@ def test_select_multiple_htmx_renders(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_select_multiple_htmx_open_loads_results(multi_select_page):
-    """htmx SelectMultiple loads results when opened."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
-    multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(200)
-    multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
-        const search = dds[2].querySelector('input[type="search"]');
-        htmx.ajax('GET', search.getAttribute('hx-get') + '?q=&type=multi_select&name=languages_htmx', {
-            target: search.getAttribute('hx-target'),
-            swap: 'innerHTML',
-        });
-    }""")
+def test_select_multiple_htmx_search_replaces_the_rows(multi_select_page):
+    """The listbox opens on one page of 25 languages; a search swaps in the server's matches."""
     from playwright.sync_api import expect
 
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
+    multi.locator("summary").click()
     checkboxes = multi.locator('input[type="checkbox"]')
-    expect(checkboxes.first).to_be_attached(timeout=10000)
-    assert checkboxes.count() >= 1
+    expect(checkboxes).to_have_count(20)
+    expect(multi.get_by_role("button", name="Load more")).to_be_attached()
+    _type_search(multi_select_page, 2, "Zig")
+    expect(checkboxes).to_have_count(1, timeout=10000)
+    assert checkboxes.get_attribute("value") == "zig"
+
+
+@pytest.mark.e2e
+def test_select_multiple_htmx_selection_stays_checked_when_load_more_brings_it_back(multi_select_page):
+    """A row picked from a search is checked again when "Load more" renders it after the search clears."""
+    from playwright.sync_api import expect
+
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
+    multi.locator("summary").click()
+    _type_search(multi_select_page, 2, "Zig")
+    zig = multi.locator('input[type="checkbox"][value="zig"]')
+    expect(multi.locator('input[type="checkbox"]')).to_have_count(1, timeout=10000)
+    zig.dispatch_event("click")
+    expect(zig).to_be_checked()
+    _type_search(multi_select_page, 2, "")
+    expect(multi.locator('input[type="checkbox"]')).to_have_count(20, timeout=10000)
+    multi.get_by_role("button", name="Load more").click()
+    expect(multi.locator('input[type="checkbox"]')).to_have_count(25, timeout=10000)
+    expect(zig).to_be_checked()
 
 
 @pytest.mark.e2e
@@ -974,17 +959,6 @@ def test_select_multiple_htmx_select_creates_hidden_inputs(multi_select_page):
     multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(200)
-    multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
-        const search = dds[2].querySelector('input[type="search"]');
-        htmx.ajax('GET', search.getAttribute('hx-get') + '?q=&type=multi_select&name=languages_htmx', {
-            target: search.getAttribute('hx-target'),
-            swap: 'innerHTML',
-        });
-    }""")
-    from playwright.sync_api import expect
-
-    expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=10000)
     multi_select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         const cbs = dds[2].querySelectorAll('input[type="checkbox"]');
@@ -1404,37 +1378,6 @@ def test_select_multiple_client_dirty_clears_on_revert(multi_select_page):
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # Needs a page with a required SelectMultiple; all /multi-select/ fields are optional.
-
-
-# ─── Level 6b: E2e, server-side search loading + failure UX ─────────────
-#
-# Indices on /multi-select/:  2 = languages_htmx (working),
-#                             4 = languages_failing (slow + always 500).
-
-
-@pytest.mark.e2e
-def test_select_multiple_prerenders_options_on_initial_load(multi_select_page):
-    """Real options render in every htmx-mode SelectMultiple on first page load, with no
-    skeleton flicker: the dropdown at index 2 wires ``search_choices_languages_htmx``
-    against all 6 ``E2E_LANGUAGES`` entries, which fit under the default ``reg.max_results`` of 50."""
-    htmx_dropdown = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
-    items = htmx_dropdown.locator("ul[role='listbox'] > li")
-    assert items.count() == 6
-
-
-@pytest.mark.e2e
-def test_select_multiple_options_refresh_on_first_focus(multi_select_page):
-    """First focus fires htmx; the swap replaces pre-rendered options with
-    the fresh response: same count, same listbox."""
-    from playwright.sync_api import expect
-
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
-    multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
-        dds[2].open = true;
-        dds[2].dispatchEvent(new Event('toggle'));
-    }""")
-    expect(multi.locator("ul[role='listbox'] label")).to_have_count(6, timeout=10000)
 
 
 @pytest.mark.e2e
