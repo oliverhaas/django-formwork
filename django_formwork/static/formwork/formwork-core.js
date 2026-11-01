@@ -151,11 +151,13 @@ document.addEventListener("htmx:after:swap", initAllDirtyForms);
 //
 // Overflow depends on text metrics, which move under the widget's feet:
 // web fonts load after first paint (a row that fit the fallback font can
-// overflow the real one) and the viewport resizes.  So this reruns on
-// initial load, once document.fonts settles, on window resize, and after
-// every htmx settle.  <details open> state is preserved across morphs (open
-// is in htmx.config.morphIgnore) and no Alpine :class binding fights it, so
-// an expanded row stays open; this pass only re-derives expandability.
+// overflow the real one), a container narrows without a window resize (a
+// sidebar or modal opens), and a morph or Alpine rewrites the row's text.
+// So this reruns on initial load, once document.fonts settles, after every
+// htmx settle, and whenever a disclosure changes size or text.  <details
+// open> state is preserved across morphs (open is in htmx.config.morphIgnore)
+// and no Alpine :class binding fights it, so an expanded row stays open; this
+// pass only re-derives expandability.
 
 const measureDisclosures = (target) => {
   const root = target instanceof Element ? target : document;
@@ -198,32 +200,61 @@ const measureDisclosures = (target) => {
   }
 };
 
+// The first callback for a newly observed row runs after layout and before
+// the first paint, so a new row is painted with its measured state.
+const disclosureSizes = new ResizeObserver((entries) => {
+  for (const { target } of entries) {
+    if (target.isConnected) {
+      measureDisclosures(target);
+    } else {
+      disclosureSizes.unobserve(target);
+      delete target._formworkObserved;
+    }
+  }
+});
+const disclosureTexts = new MutationObserver((records) => {
+  const changed = new Set();
+  for (const record of records) {
+    const node = record.target instanceof Element ? record.target : record.target.parentElement;
+    const d = node && node.closest("details.formwork-disclosure");
+    if (d) changed.add(d);
+  }
+  for (const d of changed) measureDisclosures(d);
+});
+
+const observeDisclosures = (target) => {
+  const root = target instanceof Element ? target : document;
+  const list = [...root.querySelectorAll("details.formwork-disclosure")];
+  if (target instanceof Element && target.matches("details.formwork-disclosure")) list.push(target);
+  for (const d of list) {
+    if (d._formworkObserved) continue;
+    d._formworkObserved = true;
+    disclosureSizes.observe(d);
+    disclosureTexts.observe(d, { characterData: true, childList: true, subtree: true });
+  }
+};
+
 // Defer to the next frame so layout is settled before measuring.
 const scheduleMeasureDisclosures = (target) =>
   requestAnimationFrame(() => measureDisclosures(target));
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => scheduleMeasureDisclosures(document));
+  document.addEventListener("DOMContentLoaded", () => {
+    observeDisclosures(document);
+    scheduleMeasureDisclosures(document);
+  });
 } else {
+  observeDisclosures(document);
   scheduleMeasureDisclosures(document);
 }
-// Web fonts change glyph widths after first paint; re-derive once they load.
+// Web fonts change glyph widths without resizing any box, so no observer fires.
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => measureDisclosures(document));
 }
-// Viewport width drives one-line overflow; re-derive on resize, coalesced to
-// one measurement per frame.
-let resizeScheduled = false;
-window.addEventListener("resize", () => {
-  if (resizeScheduled) return;
-  resizeScheduled = true;
-  requestAnimationFrame(() => {
-    resizeScheduled = false;
-    measureDisclosures(document);
-  });
-});
 document.addEventListener("htmx:after:settle", (e) => {
-  scheduleMeasureDisclosures(e.detail && e.detail.target ? e.detail.target : document);
+  const target = e.detail && e.detail.target ? e.detail.target : document;
+  observeDisclosures(target);
+  scheduleMeasureDisclosures(target);
 });
 
 // --- Alpine initialization for htmx-swapped content ---
