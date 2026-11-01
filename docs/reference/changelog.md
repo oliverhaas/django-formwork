@@ -4,6 +4,90 @@
 
 ### Breaking changes
 
+- **Widget, search and setup rework.** Every project needs code changes for this
+  upgrade: rename the widgets, move server-side search onto the widget, add
+  `"django.forms"` to `INSTALLED_APPS`, and load htmx's alpine-compat extension. If you
+  override formwork templates, copy them again from the new paths. The names in the older
+  entries of this section are the names before the rework.
+    - **Renamed widgets:** `SearchSelect` → `Select`, `MultiSelect` → `SelectMultiple`,
+      `ComboBox(multiple=True)` → `ComboBoxMultiple`, `Toggle` → `ToggleInput`,
+      `PasswordReveal` → `PasswordInput` (the show button is on by default,
+      `reveal=False` drops it), `InputNumber` → `StepperNumberInput`, `FileDropZone` →
+      `FileDropzoneInput`, `ImageDropZone` → `ImageDropzoneInput`. The floating-label
+      argument `floating_label=` → `floating=`. `widgets.Select` is the Alpine dropdown:
+      the floating native `Select` is gone, use `Select(floating=True)`. `ComboBox` takes
+      `ChoiceLabel` suggestions in place of its `icons=` and `descriptions=` dicts.
+    - **Renamed Alpine components:** `formworkSearchSelect` → `formworkSelect`,
+      `formworkMultiSelect` → `formworkSelectMultiple`, `formworkInputNumber` →
+      `formworkStepperNumber`, `formworkPasswordReveal` → `formworkPasswordInput`,
+      `formworkDropZone` → `formworkFileDropzone`, `formworkImageUpload` →
+      `formworkImageDropzone`. `OTPInput` renders one input with `length` slots and no
+      JavaScript, so `formworkOtpInput` is gone.
+    - **Renamed templates:** `django/forms/formwork.html` → `formwork/forms/div.html`,
+      `django/forms/formwork_field.html` → `formwork/forms/field.html`. Each widget
+      template is named after its widget module (`select.html`, `select_multiple.html`,
+      `stepper_number.html`, `file_dropzone.html`, ...).
+    - **Renderer:** `FormworkRenderer` is a `TemplatesSetting` renderer, so a template in
+      your project overrides the formwork one. It needs `"django.forms"` in
+      `INSTALLED_APPS` and a `DjangoTemplates` backend that finds app templates. See
+      [Installation](../getting-started/installation.md).
+    - **Server-side search:** a `Select`, `SelectMultiple` or `ComboBox` searches on the
+      server when it gets `search_queryset`, a callable that takes the request and returns
+      the rows. `search_fields` names the columns to match, and `search_decorator` (an
+      auth decorator, or `None` for a public search) is required. A `FormworkForm` or
+      `FormworkModelForm` class registers the search when Python creates it, and the app
+      imports the `forms` module of every installed app at startup. The endpoint returns 20 rows, the dropdown adds a "Load more"
+      button, and no `COUNT` query runs. `search_ranked=True` orders matches by quality on
+      PostgreSQL (pg_trgm) and raises `ImproperlyConfigured` on other databases.
+      `search_key` with `search_params` reuses one registered search for fields built in
+      `__init__`. `FormworkSearchView` is final, and an anonymous request for an unknown
+      key redirects to `LOGIN_URL`. See [Server-side search](views.md#server-side-search).
+    - **Scripts:** load htmx, then `dist/ext/hx-alpine-compat.js`, then
+      `{% formwork_js %}`, then Alpine with `defer`. Without alpine-compat a morph strips
+      the state that Alpine bindings wrote into the page. An `htmx.config.extensions`
+      whitelist must list `alpine-compat` and `formwork-morph`. A morph cannot open or
+      close a `<details>` or `<dialog>`, because `open` is in `htmx.config.morphIgnore`.
+    - **Removed:** the Jinja2 support (`FormworkJinja2Renderer`, `FormworkJinja2Form`,
+      `FormworkJinja2ModelForm`, `formwork_jinja2_environment` and the `jinja2/`
+      templates), the `search_choices_<field>` form methods, `FormworkAutoSearchView`
+      and the `widget_type` tokens, and `FormworkModelChoiceField` and
+      `FormworkModelMultipleChoiceField` with their `icon_from_instance` and
+      `description_from_instance` arguments. Return a `ChoiceLabel` from a plain
+      `ModelChoiceField.label_from_instance()` instead. `ChoiceLabel` lives in
+      `django_formwork.widgets.select` and stays importable from `django_formwork` and
+      `django_formwork.widgets`.
+    - **New widgets:** `SuffixNumberInput`, `DateInput`, `DateRangeInput` with
+      `DateRangeField` and `DateRange` (in `django_formwork.fields`), `Display` for
+      read-only values, `CardRadioSelect`, `CardCheckboxSelectMultiple`,
+      `CheckboxInput(text=...)`, `CheckboxSelectMultiple(columns=...)`,
+      `ComboBoxMultiple` and `PatternHintMixin`. `TextInput` takes `input_type=`,
+      `Textarea` takes `floating=`, and `SearchInput` takes `show_spinner`, `show_clear`
+      and `filter_items`. `Select` and `SelectMultiple` take `allow_clear` and
+      `floating`. See [Widgets](widgets.md).
+    - **Section forms:** `section_forms()` and the `{% formwork_section %}` tag let
+      several forms on one page autosave their own fields of one row. Load
+      `{% formwork_sections_js %}` after htmx on those pages, and give each form
+      `hx-sync="closest [data-section-forms]:queue all"`. See
+      [Section forms](forms.md#section-forms).
+    - **`Meta.mandatory`** marks a field that a save accepts empty but a later step
+      needs. Its label gets the red `*` and its widget gets `aria-required`, as on a
+      required field.
+    - **Translations:** every string formwork shows goes through Django's translation
+      functions, plurals included. Formwork ships no catalog, so run `makemessages` in
+      your project. The JavaScript reads its texts from `data-*` attributes and needs no
+      JavaScript catalog.
+    - **What looks different:** `error_display = "auto"` is the default, so a field with
+      help text shows its error inline and a field without help text shows it in a
+      tooltip; set `"inline"` or `"tooltip"` in `Meta` or pass `error_display=` to keep
+      one style. Checkbox and radio groups render as a plain stacked list, each label as
+      wide as its text. A disabled dropdown trigger is greyed out, and the open panel is
+      at most 288px high. `OTPInput` is one `<input>` drawn as digit slots, in place of
+      one input per digit.
+    - **What looks the same:** required fields keep the red `*` and optional fields get
+      no marker. `ToggleInput` keeps its label beside the switch, with no background.
+      The dropdowns keep their caret, compact rows and "Select…" placeholder, and the
+      closed `SelectMultiple` keeps the option icons.
+
 - **Widget-type tokens are snake_case everywhere.** The tokens carried by
   `SearchRegistration.widget_type` and `FormworkSearchView.widget_type` renamed:
   `"multiselect"` → `"multi_select"` and `"combobox"` → `"combo_box"` (`"search_select"` is
