@@ -7,21 +7,12 @@
    silently render at 1em regardless of their size-N class. */
 @import "./static/iconx/icons.css" layer(components);
 
-/* Scan our templates AND the whole formwork package so Tailwind picks
- * up classes referenced in widget templates and widget Python defaults
- * (e.g. `mask-star-2` on Rating, `toggle` on ToggleInput, etc.). */
+/* formwork.css scans the package itself and safelists the `badge-{color}`
+ * and `select-{color}` classes that `task.status_color` and the
+ * selected_toggle_class values interpolate, so only the project sources
+ * are listed here. */
 @source "./templates/";
 @source "./taskmanager/";
-@source "../../django_formwork/";
-
-/* `badge-{{ task.status_color }}` (templates) and `select-{color}`
- * toggle classes (forms.py) are interpolated from model dicts at render
- * time, so Tailwind's static scan never sees them. Safelist the eight
- * DaisyUI semantic colours for both. Everything else (`bg-base-200`,
- * `text-base-content/70`, ...) appears as a literal in the templates or
- * Python sources and gets picked up normally. */
-@source inline("badge-{primary,secondary,accent,info,success,warning,error,neutral}");
-@source inline("select-{primary,secondary,accent,info,success,warning,error,neutral}");
 
 /* Row actions menu: place the top-layer popover (shown by the <details>
  * @toggle bridge) against its trigger.  Mirrors the formwork widgets' anchor

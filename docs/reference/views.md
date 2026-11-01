@@ -1,41 +1,15 @@
 # Server-side Views
 
-Formwork provides three class-based views for server-side search and validation. All are importable from `django_formwork` (or from `django_formwork.views`).
+Formwork has two views: `FormworkSearchView` serves the server-side search of
+every dropdown, and `FormworkValidateView` is the base class for a textarea
+validation endpoint. Both are importable from `django_formwork` (or from
+`django_formwork.views`).
 
-## FormworkSearchView
+## Server-side search
 
-Base view for the registry-driven search endpoint. `FormworkAutoSearchView` (below) inherits from it and serves every auto-registered widget; you'd subclass `FormworkSearchView` directly only if you want to render the formwork response templates (the `<li>` fragments that htmx swaps in) from a custom endpoint of your own, e.g. for a non-formwork widget that reuses the same look.
-
-### Response templates
-
-The HTML fragment is rendered by one of three class-level Django templates, selected by the view's `widget_type` (`"search_select"`, `"combo_box"`, or `"multi_select"`). Auto-registered endpoints take it from the registration; subclasses set the class attribute. A client-supplied `type` query parameter is ignored, so callers cannot switch templates:
-
-| Template attribute | Widget | Purpose |
-|---|---|---|
-| `SEARCH_SELECT_TEMPLATE` | `SearchSelect` | Value + label, with checkmark for current selection |
-| `COMBO_BOX_TEMPLATE` | `ComboBox` | Label only, for autocomplete suggestions |
-| `MULTI_SELECT_TEMPLATE` | `MultiSelect` | Checkbox options that sync with Alpine.js widget state |
-
-Override any of these on your subclass to change the rendered markup. Implementing `get_results(query, **kwargs)` is the per-request hook.
-
-### Result dict keys
-
-| Key | Required | Description |
-|---|---|---|
-| `label` | Yes | Display text shown in the dropdown |
-| `value` | For SearchSelect / MultiSelect | Submitted form value |
-| `icon` | No | Icon markup; wrap in `mark_safe()`, plain strings are auto-escaped |
-| `description` | No | Secondary line of text shown below the label |
-
-### `MAX_QUERY_LENGTH`
-
-Queries longer than `MAX_QUERY_LENGTH` (default `200`) are truncated before being passed to `get_results()`. Override the class attribute to change the limit.
-
----
-
-## FormworkAutoSearchView
-
-A dispatch view that serves all widgets registered via the auto-registration system (widgets with `search_fields`, or forms with `search_choices_<fieldname>` methods). A single URL pattern handles every registered endpoint.
+`Select`, `SelectMultiple`, `ComboBox` and `ComboBoxMultiple` search on the
+server when the widget gets a `search_queryset`. You configure the search on
+the widget; you write no URL and no view.
 
 ### Setup
 
@@ -48,89 +22,184 @@ urlpatterns = [
 ]
 ```
 
-This mounts one URL: `__formwork__/search/<key>/` which `FormworkAutoSearchView` handles.
+This mounts one URL, `__formwork__/search/<key>/` (name `formwork:search`),
+which `FormworkSearchView` serves for every registered search.
 
-### Auto-registration
-
-Registration happens automatically when a `FormworkForm` or `FormworkModelForm` is instantiated. Two modes are supported:
-
-**Model-backed**: The widget has `search_fields` and the field is a `ModelChoiceField` or `ModelMultipleChoiceField`. Formwork registers an endpoint that filters the queryset using `__icontains` on the listed fields:
+### Configure a widget
 
 ```python
-from django_formwork import FormworkForm
-from django_formwork.widgets import SearchSelect
+from django.contrib.auth.decorators import login_required
+
+from django_formwork import FormworkForm, widgets
+
+
+def cities(request):
+    return City.objects.filter(active=True).select_related("country")
 
 
 class CityForm(FormworkForm):
     city = forms.ModelChoiceField(
-        queryset=City.objects.all(),
-        widget=SearchSelect(search_fields=["name", "country__name"]),
+        queryset=City.objects.filter(active=True),
+        widget=widgets.Select(
+            search_queryset=cities,
+            search_fields=["name", "country__name"],
+            search_decorator=login_required,
+        ),
     )
 ```
 
-!!! note "`__icontains` does not use a plain index"
-    The generated `field__icontains=query` filter runs as `LIKE '%query%'`. The
-    leading wildcard rules out an ordinary B-tree index, so on a large table the
-    database falls back to a sequential scan. For small lookup tables this is
-    fine. For big ones, add a backend-specific index (on PostgreSQL, a `GIN`
-    trigram index via `django.contrib.postgres`), or switch that field to a
-    choices-backed `search_choices_<fieldname>` method and run whatever query
-    your backend can serve efficiently (full-text search, a search service, and
-    so on).
+| Parameter | Description |
+|---|---|
+| `search_queryset` | `callable(request, **params)` that returns the rows to search. The endpoint calls it for each request, so it can scope the rows to the user. |
+| `search_fields` | Field paths that the query matches with `__icontains` (or ranks, with `search_ranked`). Without them the endpoint does not filter: `search_queryset` reads `request.GET["q"]` itself and returns its rows best first. |
+| `search_decorator` | Required. A view decorator that wraps the endpoint, such as `login_required` or `permission_required("app.view_city")`. Pass `None` for a public endpoint. |
+| `search_ranked` | Orders the rows by match quality on PostgreSQL. See [Ranked search](#ranked-search). |
+| `search_key`, `search_params` | Reuse another field's search with its own params. See [Search templates](#search-templates). |
+| `allow_clear` | `Select` and `SelectMultiple`: the list starts with the empty choice of an optional field (`empty_label` of a `ModelChoiceField`), so the user can clear it. |
 
-**Choices-backed**: The form defines a `search_choices_<fieldname>(query, request)` static method. It receives the search query and the request, and returns a list of dicts or `(value, label)` tuples. Declare it `@staticmethod`: the endpoint calls it without the form instance, and formwork raises `ImproperlyConfigured` at form init for an instance method:
+The form registers each search when its class is created, under a stable key
+built from the module, the form and the field name. Formwork imports the
+`forms` module of every installed app at startup, so a search declared there
+exists in every worker before the first request. A form defined elsewhere
+registers when its module is first imported. Registration raises
+`ImproperlyConfigured` for a widget without `search_decorator`, for
+`search_fields` without `search_queryset`, and for `search_ranked` without
+`search_fields` or outside PostgreSQL.
 
-```python
-from django_formwork import FormworkForm
-from django_formwork.widgets import SearchSelect
+The endpoint renders each row with `label_from_instance` of the field, so a
+[`ChoiceLabel`](widgets.md#choicelabel) adds an icon, a description or a
+trigger class to the results. A `ComboBox` over a `CharField` takes its own
+`label_from_instance=` and falls back to `str()`.
 
+### Paging
 
-class TagForm(FormworkForm):
-    tags = forms.ChoiceField(widget=SearchSelect)
+The widget renders the first 20 rows itself, plus the selected rows that lie
+past them. A search returns the next 20 matches at most. When more exist, the
+list ends with a hint and a "Load more" button that fetches the next page. The
+endpoint fetches one row past the page to tell whether more exist, so it never
+runs a `COUNT`. The first "Load more" request excludes the selected rows that
+the widget already shows past the first page.
 
-    @staticmethod
-    def search_choices_tags(query, request):
-        return [{"value": t.slug, "label": t.name} for t in Tag.objects.filter(name__icontains=query)[:20]]
-```
-
-!!! warning "The registry is per-process"
-    Registration happens in `__init__`, into a per-process registry. In a multi-worker deployment a search request can land on a worker that has not instantiated the form yet (for example right after a deploy) and return an intermittent 404. If that matters for your setup, instantiate the form once at startup, e.g. in `AppConfig.ready()`.
-
-!!! warning "The endpoint serves the queryset captured at form construction"
-    Model-backed registration captures the field's queryset when the form is instantiated. Assigning `form.fields["x"].queryset = scoped_qs` afterwards changes the rendered choices only; the search endpoint keeps serving and labelling results from the originally captured queryset. Do not rely on post-construction assignment for per-user scoping. Bake visibility rules into the class-level queryset and use `search_decorator` for access control.
+With static choices and no `search_queryset`, the widget filters in the
+browser. It shows the search box past `search_threshold` (10) options, or when
+`show_search=True`.
 
 ### Access control
 
-Auto-registered endpoints require a `search_decorator` on the widget. Omitting it raises `ImproperlyConfigured`: formwork refuses to silently expose an unauthenticated search endpoint.
-
-Pass a standard Django auth decorator:
+`search_decorator` wraps `FormworkSearchView.dispatch` for that search.
+Formwork refuses to expose a search without an explicit decision, so omitting
+it raises `ImproperlyConfigured`:
 
 ```python
 from django.contrib.auth.decorators import login_required, permission_required
 
-# Require login:
-SearchSelect(
+widgets.Select(search_queryset=cities, search_fields=["name"], search_decorator=login_required)
+widgets.Select(
+    search_queryset=cities,
     search_fields=["name"],
-    search_decorator=login_required,
+    search_decorator=permission_required("geo.view_city"),
 )
-
-# Require a specific permission:
-SearchSelect(
-    search_fields=["name"],
-    search_decorator=permission_required("myapp.view_city"),
-)
+widgets.Select(search_queryset=cities, search_fields=["name"], search_decorator=None)  # public
 ```
 
-To explicitly allow unauthenticated access (public endpoint), pass `None`:
+A request for an unknown key from an anonymous user redirects to
+`settings.LOGIN_URL` when `django.contrib.auth` is installed, so the response
+does not tell a missing key from a protected one. Otherwise an unknown key
+returns 404. Queries longer than `FormworkSearchView.MAX_QUERY_LENGTH` (200)
+characters are truncated.
+
+`FormworkSearchView` is final: configure a search through the widget, not by
+subclassing the view.
+
+### Ranked search
+
+`search_ranked=True` orders the rows by how well they match, and matches typos
+too. It needs PostgreSQL with the `pg_trgm` extension, and at least one
+`search_fields` entry.
 
 ```python
-SearchSelect(
+widgets.Select(
+    search_queryset=cities,
     search_fields=["name"],
-    search_decorator=None,  # public, no auth required
+    search_ranked=True,
+    search_decorator=login_required,
 )
 ```
 
-The decorator wraps `FormworkAutoSearchView.dispatch` for that endpoint.
+Rows that contain the query come first, then typo matches. Within each group,
+whole-word matches rank above partial ones, and the closest value comes first.
+A query shorter than 3 characters has too few trigrams to rank by, so it ranks
+exact matches first, then prefix matches, then the other rows that contain the
+query.
+
+A GIN trigram index on `UPPER(field::text)` per search field serves every
+lookup of the ranked search and of plain `__icontains`:
+
+```python
+from django.contrib.postgres.indexes import GinIndex, OpClass
+from django.db.models import TextField
+from django.db.models.functions import Cast, Upper
+
+
+class City(models.Model):
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        indexes = [
+            GinIndex(
+                OpClass(Upper(Cast("name", output_field=TextField())), name="gin_trgm_ops"),
+                name="city_name_trgm",
+            ),
+        ]
+```
+
+Create the extension in a migration with
+`django.contrib.postgres.operations.TrigramExtension()`. Without
+`search_ranked`, `__icontains` runs as `LIKE '%query%'`; the leading wildcard
+rules out a B-tree index, so a large table needs the same trigram index.
+
+`ranked_search(queryset, fields, query)` in `django_formwork.search` applies
+the same ordering to any queryset.
+
+### Search templates
+
+A form that builds fields in `__init__` (one field per group, for example)
+reuses one registered search with its own params. Declare a template field
+whose `search_queryset` takes keyword-only `int` or `str` params after the
+request, then pass its `search_key` and the params to the fields you build:
+
+```python
+def group_members(request, *, group: int):
+    return User.objects.filter(groups=group)
+
+
+class TeamForm(FormworkForm):
+    members_template = forms.ModelMultipleChoiceField(
+        queryset=User.objects.none(),
+        widget=widgets.SelectMultiple(
+            search_queryset=group_members,
+            search_fields=["email"],
+            search_decorator=login_required,
+        ),
+    )
+
+    def __init__(self, *args, groups, **kwargs):
+        super().__init__(*args, **kwargs)
+        key = self.fields.pop("members_template").widget.search_key
+        for group in groups:
+            self.fields[f"group_{group.pk}"] = forms.ModelMultipleChoiceField(
+                queryset=User.objects.filter(groups=group),
+                widget=widgets.SelectMultiple(search_key=key, search_params={"group": group.pk}),
+            )
+```
+
+The params travel in the search URL, and the endpoint converts them to the
+declared type before it calls `search_queryset`. The widget raises
+`ImproperlyConfigured` when the params do not match the declared names, and a
+param cannot take a name the endpoint reads itself (`q`, `offset`, `exclude`,
+`widget`, `allow_clear`). A user can edit the params in the URL, so
+`search_queryset` must return only rows that the requesting user is allowed to see,
+whatever the params say.
 
 ---
 

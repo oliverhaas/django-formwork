@@ -16,20 +16,17 @@ class ContactForm(forms.Form):
 ```
 
 ```html
-<!-- template.html -->
-{% load formwork %}
-{% formwork_css %}
-
+<!-- template.html; the base template loads the CSS and the scripts -->
 <form method="post" class="max-w-md mx-auto">
   {% csrf_token %}
   {{ form }}
   <button type="submit" class="btn btn-primary mt-4">Send</button>
 </form>
-
-{% formwork_js %}
 ```
 
-Each field renders inside a `<fieldset class="fieldset">` with a label, help text, and an error tooltip.
+The [installation guide](installation.md#5-htmx-and-alpinejs) shows the `<head>` with the scripts in the order they must load.
+
+Each field renders inside a `<fieldset class="fieldset">` with a label, help text and errors. A required field shows a red `*` after its label. Errors sit inline under a field that has help text and in a tooltip on a field without.
 
 ## Per-form styling
 
@@ -50,69 +47,64 @@ class ProfileForm(FormworkModelForm):
         fields = ["name", "bio", "avatar"]
 ```
 
-## Custom widgets
+## Formwork widgets
+
+The widget names follow Django's and shadow `django.forms` on purpose, so import the module and write `widgets.Select`:
 
 ```python
-from django_formwork.widgets import (
-    Toggle,
-    Range,
-    Rating,
-    PasswordReveal,
-    SearchSelect,
-    MultiSelect,
-    ComboBox,
-    DataList,
-    FileDropZone,
-    ImageDropZone,
-    ValidatedTextarea,
-)
+from django import forms
+
+from django_formwork import widgets
 
 
 class ExampleForm(forms.Form):
-    # Toggle switch instead of checkbox
-    dark_mode = forms.BooleanField(widget=Toggle)
+    # Toggle switch, with the label beside it
+    dark_mode = forms.BooleanField(widget=widgets.ToggleInput, required=False)
 
     # Range slider
-    volume = forms.IntegerField(widget=Range(attrs={"min": 0, "max": 100}))
+    volume = forms.IntegerField(widget=widgets.Range(attrs={"min": 0, "max": 100}))
 
     # Star rating
     rating = forms.TypedChoiceField(
-        choices=Rating.make_choices(5),
+        choices=widgets.Rating.make_choices(5),
         coerce=int,
-        widget=Rating,
+        widget=widgets.Rating,
     )
 
-    # Password with show/hide toggle
-    password = forms.CharField(widget=PasswordReveal)
+    # Password with a show/hide button
+    password = forms.CharField(widget=widgets.PasswordInput)
 
-    # Searchable single-select dropdown
+    # Dropdown; a search box appears past ten options
     country = forms.ChoiceField(
         choices=[("us", "United States"), ("de", "Germany")],
-        widget=SearchSelect,
+        widget=widgets.Select,
     )
 
-    # Multi-select with checkboxes
+    # Multi-select dropdown with checkboxes
     languages = forms.MultipleChoiceField(
         choices=[("py", "Python"), ("js", "JavaScript")],
-        widget=MultiSelect,
+        widget=widgets.SelectMultiple,
     )
 
-    # Text input with autocomplete suggestions
-    tags = forms.CharField(
-        widget=ComboBox(suggestions=["Python", "Django", "htmx"]),
+    # Free text with suggestions
+    topic = forms.CharField(
+        widget=widgets.ComboBox(suggestions=["Python", "Django", "htmx"]),
     )
 
-    # Native browser datalist
-    browser = forms.CharField(
-        widget=DataList(datalist=["Chrome", "Firefox", "Safari"]),
-    )
+    # Number between - and + buttons
+    seats = forms.IntegerField(widget=widgets.StepperNumberInput(integer=True, min=1))
+
+    # Native date input
+    start = forms.DateField(widget=widgets.DateInput)
 
     # Drag-and-drop file upload
-    attachment = forms.FileField(widget=FileDropZone)
+    attachment = forms.FileField(widget=widgets.FileDropzoneInput)
 
     # Image upload with preview
-    avatar = forms.ImageField(widget=ImageDropZone)
+    avatar = forms.ImageField(widget=widgets.ImageDropzoneInput)
 ```
+
+The [widget reference](../reference/widgets.md) lists every widget and its parameters.
 
 ## Server-side textarea validation
 
@@ -149,7 +141,7 @@ content = forms.CharField(
 
 ## Server-side search
 
-`SearchSelect`, `MultiSelect`, and `ComboBox` register a search endpoint automatically when used on a `FormworkForm`. Wire the URL pattern once:
+`Select`, `SelectMultiple` and `ComboBox` search on the server when the widget gets a `search_queryset`. Wire the URL pattern once:
 
 ```python
 # urls.py
@@ -160,36 +152,30 @@ urlpatterns = [
 ]
 ```
 
-There are two registration paths. For model-backed search, pair the widget with `search_fields` against a `ModelChoiceField` queryset:
+Then give the widget the rows to search, the fields to match and an access rule:
 
 ```python
 from django.contrib.auth.decorators import login_required
-from django_formwork import FormworkForm
-from django_formwork.widgets import SearchSelect
+
+from django_formwork import FormworkForm, widgets
+
+
+def cities(request):
+    return City.objects.filter(active=True)
 
 
 class CityForm(FormworkForm):
     city = forms.ModelChoiceField(
-        queryset=City.objects.all(),
-        widget=SearchSelect(
+        queryset=City.objects.filter(active=True),
+        widget=widgets.Select(
+            search_queryset=cities,
             search_fields=["name", "country__name"],
             search_decorator=login_required,
         ),
     )
 ```
 
-For choices-backed search, define a `search_choices_<fieldname>` static method on the form. It must be a `@staticmethod`: the endpoint calls it as `(query, request)` without the form instance, and formwork rejects an instance method at form init:
-
-```python
-class TagForm(FormworkForm):
-    tags = forms.ChoiceField(widget=SearchSelect)
-
-    @staticmethod
-    def search_choices_tags(query, request):
-        return [{"value": t.slug, "label": t.name} for t in Tag.objects.filter(name__icontains=query)[:20]]
-```
-
-`search_decorator` is required whenever auto-registration is active. It protects the generated endpoint; pass `None` explicitly for a public endpoint. The [views reference](../reference/views.md) covers the decorator and the `FormworkSearchView` base class for hand-written endpoints.
+The form registers the search when its class is created. Formwork imports the `forms` module of each installed app at startup, so a search declared there works in every worker from the first request. `search_queryset` is a callable that takes the request; the endpoint calls it for each search, so it can scope the rows to the user. `search_decorator` is required: pass an auth decorator such as `login_required`, or `None` for a public endpoint. The [views reference](../reference/views.md) covers the endpoint, paging, ranked search and search templates.
 
 ## Template tags
 
@@ -199,6 +185,12 @@ class TagForm(FormworkForm):
 <!-- CSS link tag -->
 {% formwork_css %}
 
-<!-- JS script tag (htmx 4 morph configuration) -->
+<!-- JS module: core plus every widget component; load it after htmx and before Alpine -->
 {% formwork_js %}
+
+<!-- Section forms (opt-in); load it after htmx -->
+{% formwork_sections_js %}
+
+<!-- Hidden input that names the section a section form saves -->
+{% formwork_section "general" %}
 ```

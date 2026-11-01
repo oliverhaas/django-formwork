@@ -10,11 +10,9 @@ changelog record what already landed). File:line refs are where the evidence liv
 The three original release blockers (security/correctness, CSS/icon distribution, API
 naming lock-in) are resolved, and the architectural root cause is gone: the inline
 `x-data` extraction landed 2026-07-12, so all widget JS now ships as lintable
-`Alpine.data` modules with config passed through autoescaped `data-*` attributes, and
-both template engines are verified in sync. Since the 2026-07-12 cleanup, editable tables
-(`as_row`/`as_rows`/`FormworkRowSaveMixin`), the `error_display` Meta option, native
-`<select multiple>` auto-upgrade to `MultiSelect`, and a uniform top-level import surface
-all landed; the `Unreleased` changelog has grown large enough that an `a3`/beta cut is
+`Alpine.data` modules with config passed through autoescaped `data-*` attributes. Since
+the 2026-07-12 cleanup, editable tables (`as_row`/`as_rows`/`FormworkRowSaveMixin`), the
+`error_display` Meta option, and a uniform top-level import surface all landed; the `Unreleased` changelog has grown large enough that an `a3`/beta cut is
 due. What remains is scoped work: the server-side upload enforcement decision, the
 remaining async save-path tests, screenshot coverage, dropdown a11y, docs (now including
 editable tables), and the config surface.
@@ -30,7 +28,7 @@ editable tables), and the config surface.
   semantics, but the API *implies* enforcement. The docs already warn for `max_size`;
   nothing says `accept` is cosmetic. Ship a validator auto-attached from the widget
   config (or `FormworkFileField`/`ImageField`), or extend the docs warnings to
-  `accept`/count. (`django_formwork/widgets/file_drop_zone.py:42`, medium)
+  `accept`/count. (`django_formwork/widgets/file_dropzone.py:21`, medium)
 - [ ] **Finish covering the async ModelForm save path.** `avalidate_constraints` now has
   tests (constraint violation surfaces as a form error), but the two branches the audit
   named are still unexercised: `avalidate_unique`'s ValidationError branch has no async
@@ -39,31 +37,29 @@ editable tables), and the config surface.
   hook is bound. Add a unique-collision async test and an `asave()` test on a form with a
   real `ManyToManyField`. (`django_formwork/async_forms.py:125`, medium)
 - [ ] **Add screenshot coverage and deeper e2e for** `date_picker`, `input_mask`,
-  `input_number`, `otp_input`. The extraction (2026-07-12) gave each its first browser
+  `stepper_number`, `otp_input`. The extraction (2026-07-12) gave each its first browser
   smoke test, so their JS is no longer entirely undriven; still missing are screenshot
   baselines (none exist for these four) and the interaction cases the test files list
   as planned (keyboard navigation, morph preservation). (`tests/widgets/`, medium)
-- [ ] **Fix custom-dropdown accessibility.** `keyboardNav` only adds a `highlighted` CSS
-  class and scrolls the option into view; it never sets `aria-activedescendant` on the
-  listbox or `aria-selected` on the option, and the file has no `role`/`aria-*` wiring at
-  all, so keyboard users get no announced selection. (`static/formwork/widgets/_helpers.js:147`,
-  medium)
-- [ ] **Document formsets, editable tables, Jinja2 setup, and a consolidated settings
-  page.** The marketed batched-uniqueness formsets have zero docs and no nav entry; the
-  newer editable tables (`as_row`/`as_rows`/`FormworkRowSaveMixin` and per-row htmx
-  autosave) shipped with no docs or nav entry either; Jinja2 users have no documented way
-  to configure the renderer or emit CSS/JS (the tags are DTL-only `simple_tag`s that don't
-  work in Jinja2); no single settings reference for `FORM_RENDERER`/`FORMWORK_FORCE_ASYNC`.
+- [ ] **Fix custom-dropdown accessibility.** Arrow-key navigation only adds a
+  `highlighted` CSS class and scrolls the option into view; it never sets
+  `aria-activedescendant`, so keyboard users get no announced highlight.
+  (`static/formwork/widgets/_helpers.js:292`, medium)
+- [ ] **Document formsets, editable tables, and a consolidated settings page.** The
+  marketed batched-uniqueness formsets have zero docs and no nav entry; the newer editable
+  tables (`as_row`/`as_rows`/`FormworkRowSaveMixin` and per-row htmx autosave) shipped with
+  no docs or nav entry either; no single settings reference for
+  `FORM_RENDERER`/`FORMWORK_FORCE_ASYNC`.
   (`mkdocs.yml:44`, medium)
-- [ ] **Settle the config surface.** `search_threshold` is class-only, `max_results`
-  isn't settable from the widget, `FORMWORK_FORCE_ASYNC` is an undocumented bare
-  `getattr`. Introduce one documented `FORMWORK` settings dict + constructor kwargs.
-  (`widgets/search_select.py:54`, medium)
+- [ ] **Settle the config surface.** `search_threshold` is class-only, the search page
+  size (`SEARCH_PAGE_SIZE`) isn't settable at all, `FORMWORK_FORCE_ASYNC` is an
+  undocumented bare `getattr`. Introduce one documented `FORMWORK` settings dict +
+  constructor kwargs. (`widgets/select.py:105`, medium)
 - [ ] **Scope the global htmx morph config to formwork subtrees.** `formwork-core.js`
   pushes `'open'` into `htmx.config.morphIgnore` and appends x-for/x-if selectors to
   `morphSkipChildren` *globally*, silently changing morph for every non-formwork
   `<details>` and Alpine list on the host page. Gate on a formwork marker in the
-  per-node hook. (`static/formwork/formwork-core.js:112`, medium)
+  per-node hook. (`static/formwork/formwork-core.js:321`, medium)
 - [ ] **Collapse the type-checking debt.** Two checkers with divergent suppression force
   every ignore to be written twice; `async_forms.py` types `self: Any` on all 13 methods,
   disabling checking on the entire async validation/ORM path. Give the cooperative mixins
@@ -74,11 +70,11 @@ editable tables), and the config surface.
   real-form need with zero support today (users must abandon `{{ form }}`). Per VISION:
   easy to build fragile, so only with a design that holds up; needs a server-side guard
   so hidden fields skip validation.
-  (`templates/django/forms/formwork_field.html:1`, medium)
-- [ ] **Reduce e2e flakiness.** 204 `wait_for_timeout` sleeps (recounted 2026-07-18)
+  (`templates/formwork/forms/field.html:1`, medium)
+- [ ] **Reduce e2e flakiness.** 194 `wait_for_timeout` sleeps (recounted 2026-11-01)
   violate the project's own Playwright guidance and will intermittently fail as the
   suite grows. Convert to `expect()` state-based waits.
-  (`tests/widgets/test_search_select.py:1`, medium)
+  (`tests/widgets/test_select.py:1`, medium)
 
 ---
 
@@ -93,15 +89,11 @@ editable tables), and the config surface.
   `{{ form }}` can only produce one-column stacks; every non-trivial CRUD screen loses to
   crispy/manual templates. Design the API deliberately rather than rushing into the
   freeze. (large)
-- [ ] **`TimePicker` / `DateTimePicker` / `DateRangePicker`.** `DatePicker` is the only
-  temporal widget; `TimeField`/`DateTimeField` are among the most common Django fields.
-  Reuses the existing calendar. (medium)
+- [ ] **`TimePicker` / `DateTimePicker` / `DateRangePicker`.** `DatePicker`, `DateInput`
+  and `DateRangeInput` handle dates only; `TimeField`/`DateTimeField` are among the most
+  common Django fields. A calendar range picker reuses the existing calendar. (medium)
 - [ ] **Tags/token input, plus color, slug, and JSON widgets.** The most frequently
   hand-rolled widgets in Django projects. (medium)
-- [ ] **Full internationalization** (gettext + locale catalog + JS string
-  externalization). No `{% trans %}` or `locale/` dir anywhere; dozens of hardcoded
-  English strings block non-English deployment. The inline-x-data extraction has
-  landed, so this is now unblocked. (large)
 - [ ] **`FormworkWizardView` + an htmx form-submit mixin/helper.** The docs advertise a
   wizard that only exists hand-coded in `examples/full`; every view repeats the same
   `HX-Request` partial-vs-page + `HX-Redirect` branching, exactly the boilerplate the
@@ -117,25 +109,21 @@ editable tables), and the config surface.
 
 ## Quick wins (small effort, high value)
 
-- [ ] Add a Jinja2 setup section (FORM_RENDERER wiring + how to emit CSS/JS)
-- [ ] Document the no-`self` convention for `search_choices_<field>` handlers
+- [ ] Make the `[more]`/`[less]` error toggle translatable. The text is CSS `content`
+  in `formwork.css`, which no gettext call reaches. (`static/formwork/formwork.css:989`)
 
 ---
 
 ## Open questions (your calls; decide before the relevant work)
 
-1. **Is i18n a 1.0 requirement or a fast-follow?** Full gettext + locale + JS
-   externalization is large (though the inline-x-data extraction that made it cheap has
-   now landed). Blocking 1.0 on it could delay significantly; shipping English-only
-   forecloses non-English adopters until a minor release.
-2. **Which strategic feature is the 1.0 differentiator?** You can realistically land one
+1. **Which strategic feature is the 1.0 differentiator?** You can realistically land one
    large feature for 1.0: conditional fields (medium, highest value-per-effort), the
    layout system (large, decides non-trivial CRUD adoption), or finishing the
    inline-formset UI (now medium, since rendering and per-row autosave already landed and
    only add/remove/reorder rows remains). Pick deliberately.
-3. **Type-checking direction:** keep both mypy and ty (pay the double-suppression tax,
+2. **Type-checking direction:** keep both mypy and ty (pay the double-suppression tax,
    flip `respect-type-ignore-comments=true`), or drop one checker for the library source?
-4. **Should `max_size`/`accept` be enforced server-side** (auto-attach validators,
+3. **Should `max_size`/`accept` be enforced server-side** (auto-attach validators,
    changing behavior) or remain presentational-only with loud docs? An API-semantics call
    that freezes user expectations at 1.0.
 

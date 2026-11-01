@@ -1,8 +1,10 @@
 # Forms
 
-`FormworkForm` and `FormworkModelForm` bundle the DaisyUI renderer with three
-behaviours plain Django forms do not have: automatic search-endpoint
-registration, dirty-only validation, and async validation and saving.
+`FormworkForm` and `FormworkModelForm` bundle the DaisyUI renderer with
+behaviours plain Django forms do not have: search registration, a choice of
+error placement, mandatory fields, dirty-only validation, and async validation
+and saving. `section_forms()` builds the forms of a page that saves one row in
+several sections.
 
 With `FORM_RENDERER = "django_formwork.FormworkRenderer"` set, every form in
 the project renders styled, including plain `forms.Form`. Reach for the base
@@ -12,46 +14,84 @@ forms without the global renderer.
 Everything documented here is importable from the package root:
 
 ```python
-from django_formwork import FormworkForm, FormworkModel, FormworkModelForm
+from django_formwork import FormworkForm, FormworkModel, FormworkModelForm, section_forms
 ```
 
 ## Base classes
 
-| Class | Renderer | Use with |
-|---|---|---|
-| `FormworkForm` | `FormworkRenderer` | Django templates |
-| `FormworkModelForm` | `FormworkRenderer` | Django templates, model-backed |
-| `FormworkJinja2Form` | `FormworkJinja2Renderer` | Jinja2 templates |
-| `FormworkJinja2ModelForm` | `FormworkJinja2Renderer` | Jinja2 templates, model-backed |
+| Class | Use with |
+|---|---|
+| `FormworkForm` | any data |
+| `FormworkModelForm` | a model; subscript it for typed `instance` and `save()`: `FormworkModelForm[Book]` |
 
-The ModelForm variants upgrade auto-generated `ModelChoiceField` and
-`ModelMultipleChoiceField` instances to their Formwork equivalents, so
-`icon_from_instance` and `description_from_instance` callbacks can be attached
-to fields that come from `Meta.fields`. Explicitly declared fields, including
-custom subclasses, are left alone.
+Both render with `FormworkRenderer` and use `FormworkBoundField`. It adds
+`aria-required` to a [mandatory field](#required-and-mandatory-fields), and
+`aria-labelledby` to a dropdown trigger that `<label for>` cannot target.
 
-## Search endpoint registration
+For icons, descriptions or a trigger class on model choices, return a
+[`ChoiceLabel`](widgets.md#choicelabel) from `label_from_instance`:
 
-Fields rendered with `SearchSelect`, `MultiSelect`, or `ComboBox` register
-their server-side search automatically when the form is instantiated; a single
-`include("django_formwork.urls")` serves them all. Model-backed search needs
-`search_fields` on the widget and a queryset on the field; choices-backed
-search needs a `search_choices_<fieldname>(query, request)` method on the
-form. Both require `search_decorator`: pass an auth decorator such as
-`login_required`, or `None` for a public endpoint. See
-[Views](views.md) for the endpoint machinery and the
-[quickstart](../getting-started/quickstart.md#server-side-search) for worked
-examples.
+```python
+from django_formwork import ChoiceLabel
+
+
+class MemberChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return ChoiceLabel(obj.name, description=obj.email)
+```
+
+## Search registration
+
+A field whose widget (`Select`, `SelectMultiple`, `ComboBox`) has a
+`search_queryset` registers its search when the form class is created.
+Formwork imports the `forms` module of every installed app at startup, so the
+search exists in every worker before the first request. A single
+`include("django_formwork.urls")` serves all of them. Registration raises
+`ImproperlyConfigured` for a widget without `search_decorator`: pass an auth
+decorator such as `login_required`, or `None` for a public endpoint. See
+[Views](views.md#server-side-search) for the endpoint and the
+[quickstart](../getting-started/quickstart.md#server-side-search) for a worked
+example.
+
+## Required and mandatory fields
+
+A required field shows a red `*` after its label, and the widget carries
+`aria-required="true"`. A disabled field shows no asterisk. Formwork marks no
+optional field.
+
+`Meta.mandatory` names fields that a save accepts empty but a later step needs,
+for example a draft that the user publishes later. They get the asterisk and
+`aria-required` too, and they still validate as optional:
+
+```python
+class ListingForm(FormworkModelForm):
+    class Meta:
+        model = Listing
+        fields = ["title", "price", "description"]
+        mandatory = ["price", "description"]
+```
+
+`Meta.mandatory` seeds the set `self.mandatory`. Add a name that depends on the
+data after `super().__init__()`:
+
+```python
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.category == "vehicle":
+            self.mandatory.add("mileage")
+```
 
 ## error_display
 
-Field errors render inline by default: the same visual pattern already used
-for help text, a small icon below the widget, in error color, with the error
-message truncated to one line and a `[more]` toggle when it overflows.
-`error_display = "tooltip"` switches every field on the form to a DaisyUI
-tooltip instead, which is more compact but easy to miss in a dense layout
-like a table row, and leaves no room for the help text once an error
-appears. Set it on the Meta class or per instantiation:
+`error_display` picks where field errors render:
+
+| Value | Placement |
+|---|---|
+| `"auto"` (default) | inline when the field has help text, in a tooltip when it has none |
+| `"inline"` | inline under every field |
+| `"tooltip"` | in a DaisyUI tooltip on every field |
+
+Set it on the Meta class or per instantiation:
 
 ```python
 class ContactForm(FormworkForm):
@@ -63,16 +103,17 @@ class ContactForm(FormworkForm):
 form = ContactForm(request.POST, error_display="tooltip")
 ```
 
-Collapsed, only the truncated error shows, and the help text (if any) is
-present for screen readers but visually hidden. Clicking `[more]` reveals
-the full error message and the help text together; `[less]` collapses both
-again. Errors and help text always share one expand/collapse state per
-field.
+An inline error uses the pattern of the help text: a small icon below the
+widget, in error color, with the message truncated to one line and a `[more]`
+toggle when it overflows. `[more]` reveals the full error and the help text
+together; `[less]` collapses both. Collapsed, the help text is
+present for screen readers but visually hidden. A tooltip error is more
+compact, but it is easy to miss in a dense layout like a table row.
 
-Use `"inline"` (the default) for inline table-row editing, dense
-multi-column layouts, or forms where the help text should stay reachable
-even while an error is showing, and `"tooltip"` for fields with breathing
-room where a compact tooltip is preferred.
+Use `"inline"` for inline table-row editing, dense multi-column layouts, or
+forms where the help text must stay reachable while an error shows, and
+`"tooltip"` for fields with room around them. A plain `forms.Form` rendered by
+`FormworkRenderer` uses `"auto"`.
 
 ## validate_dirty_only
 
@@ -100,8 +141,10 @@ For a field the user did not change:
 - the stored value is carried into `cleaned_data` and left untouched on the
   instance, so an unchanged relation is never re-assigned
 
-Changed fields validate as usual, and the form-wide `clean()` method always
-runs. Whether a field counts as changed is decided by the machinery behind
+A field that the post leaves out counts as unchanged, so a form that posts
+only its changed fields (a section form with `data-send-changed`) validates
+only those. Changed fields validate as usual, and the form-wide `clean()`
+method always runs. Whether a field counts as changed is decided by the machinery behind
 `Form.changed_data`, comparing the posted value against the form's initial
 data; with `instance=` bound, initial data is what the database holds. The
 model-level exclusions only apply to existing instances. On create, the
@@ -158,6 +201,74 @@ the un-awaited coroutine in `cleaned_data` instead of running the check, so
 validation is skipped. Enable `FORMWORK_FORCE_ASYNC` in any project that defines
 async validators and touches forms from sync code (including templates that read
 `form.errors`) so the mistake fails loudly.
+
+## Section forms
+
+A section form saves its own fields of one row, without a submit button: it
+posts on every change and morphs itself back from the response. Several
+section forms on one page share a request queue, so their saves run in order.
+
+`section_forms(request, sections, **kwargs)` builds every section's form and
+binds only the one that the POST names. The keyword arguments go to each form,
+for example `instance=`. A POST that names no known section raises
+`BadRequest`.
+
+```python
+from django_formwork import section_forms
+
+
+def edit_product(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    sections = section_forms(
+        request,
+        {"general": ProductGeneralForm, "extras": ProductExtrasForm},
+        instance=product,
+    )
+    for form in sections.values():
+        if form.is_bound and form.is_valid():
+            form.save()
+    return render(request, "product_edit.html", {"sections": sections})
+```
+
+```html
+{% load formwork %}
+<div data-section-forms>
+  <form id="general_form" data-section-form novalidate
+        hx-post="{{ request.path }}" hx-trigger="change delay:300ms"
+        hx-select="#general_form" hx-swap="outerMorph"
+        hx-sync="closest [data-section-forms]:queue all">
+    {% csrf_token %}{% formwork_section "general" %}
+    {{ sections.general }}
+  </form>
+  <form id="extras_form" data-section-form data-send-changed novalidate
+        hx-post="{{ request.path }}" hx-trigger="change delay:300ms"
+        hx-select="#extras_form" hx-swap="outerMorph"
+        hx-sync="closest [data-section-forms]:queue all">
+    {% csrf_token %}{% formwork_section "extras" %}
+    {{ sections.extras }}
+  </form>
+</div>
+```
+
+Load `{% formwork_sections_js %}` after htmx. The formwork bundle leaves it
+out, and it does not need Alpine.
+
+- `{% formwork_section "name" %}` writes the hidden `_formwork_section` input
+  that names the section.
+- Every section form needs `hx-sync="closest [data-section-forms]:queue all"`.
+  A dropped or replaced save leaves its change unsent, and a request that
+  waits for that save then never runs.
+- A response to a save that is older than the latest change leaves the form
+  alone; the queued request after it carries that change.
+- A request that replaces section forms (a tab switch, for example) waits
+  until their saves are answered. Leaving the page during a save asks for
+  confirmation.
+- `data-send-changed` on a form posts only the fields that differ from the last
+  valid render, plus `csrfmiddlewaretoken` and `_formwork_section`. Pair it
+  with `validate_dirty_only`, so the fields the post leaves out keep their
+  stored values.
+- `data-section-indicator="<selector>"` on a field wrapper shows that indicator
+  while a save the field started runs.
 
 ## FormworkModel
 
