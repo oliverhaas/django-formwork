@@ -33,6 +33,9 @@ from django_formwork.renderers import FormworkRenderer
 from django_formwork.search import register_form_searches
 from django_formwork.tables import RowRenderMixin
 
+if TYPE_CHECKING:
+    from django.forms import BoundField
+
 __all__ = [
     "FormworkForm",
     "FormworkFormMetaclass",
@@ -102,7 +105,10 @@ class _DirtyOnlyFormMixin:
     fields where ``BoundField._has_changed()`` returns False (the per-field
     machinery behind ``Form.changed_data``) and carry the bound field's
     ``initial`` value through to ``cleaned_data``.  ``clean_<name>`` methods
-    are skipped for those fields too.
+    are skipped for those fields too.  A field the post leaves out (the
+    widget's ``value_omitted_from_data()``) counts as unchanged, because a
+    ``data-send-changed`` form posts only the fields that differ from the
+    render.
 
     One consequence to know about: for an unchanged field, ``cleaned_data``
     holds ``BoundField.initial`` rather than the field's cleaned Python value.
@@ -120,6 +126,8 @@ class _DirtyOnlyFormMixin:
         _bound_items: Any
         cleaned_data: dict[str, Any]
         add_error: Any
+        data: Any
+        files: Any
 
     def __init__(self, *args: Any, validate_dirty_only: bool | None = None, **kwargs: Any) -> None:
         if validate_dirty_only is None:
@@ -128,13 +136,17 @@ class _DirtyOnlyFormMixin:
         self._validate_dirty_only: bool = validate_dirty_only
         super().__init__(*args, **kwargs)
 
+    def _unchanged(self, bf: BoundField) -> bool:
+        omitted = bf.field.widget.value_omitted_from_data(self.data, self.files, bf.html_name)
+        return omitted or not bf._has_changed()  # type: ignore[attr-defined]  # noqa: SLF001
+
     def _clean_fields(self) -> None:
         if not self._validate_dirty_only:
             super()._clean_fields()  # type: ignore[misc]
             return
         for name, bf in self._bound_items():
             field = bf.field
-            if not bf._has_changed():  # noqa: SLF001
+            if self._unchanged(bf):
                 self.cleaned_data[name] = bf.initial
                 continue
             try:
@@ -151,7 +163,7 @@ class _DirtyOnlyFormMixin:
             return
         for name, bf in self._bound_items():
             field = bf.field
-            if not bf._has_changed():  # noqa: SLF001
+            if self._unchanged(bf):
                 self.cleaned_data[name] = bf.initial
                 continue
             try:
@@ -249,7 +261,7 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
         exclude: set[str] = set(self._meta.exclude or ())
         if self._validate_dirty_only and not self.instance._state.adding:  # noqa: SLF001
             for name, bf in self._bound_items():
-                if not bf._has_changed():  # noqa: SLF001
+                if self._unchanged(bf):
                     exclude.add(name)
         return exclude
 

@@ -14,6 +14,7 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from e2e.models import BasicFormData, DirtyTrackedData, DirtyUniquePair
 
 from django_formwork.forms import FormworkForm, FormworkModelForm
+from django_formwork.widgets import SelectMultiple
 
 pytestmark = pytest.mark.django_db
 
@@ -251,6 +252,106 @@ class TestCrossFieldRuleGuard:
             instance=obj,
         )
         assert form.is_valid() is True
+
+
+# ---------------------------------------------------------------------------
+# Fields the post leaves out (data-send-changed)
+# ---------------------------------------------------------------------------
+
+
+class FlagsForm(FormworkForm):
+    tags = forms.MultipleChoiceField(
+        choices=[("a", "A"), ("b", "B")],
+        required=False,
+        widget=SelectMultiple(),
+    )
+    agree = forms.BooleanField(required=False)
+
+    class Meta:
+        validate_dirty_only = True
+
+
+class TestOmittedField:
+    def test_omitted_required_field_counts_as_unchanged(self):
+        form = FormOnlyForm(data={"note": "new"}, initial={"name": "alice", "note": ""}, validate_dirty_only=True)
+        assert form.is_valid() is True
+        assert form.cleaned_data == {"name": "alice", "note": "new"}
+
+    def test_omitted_field_fails_without_dirty_only(self):
+        form = FormOnlyForm(data={"note": "new"}, initial={"name": "alice", "note": ""})
+        assert form.is_valid() is False
+        assert "name" in form.errors
+
+    def test_omitted_field_renders_its_initial_value(self):
+        form = FormOnlyForm(data={"note": "new"}, initial={"name": "alice", "note": ""}, validate_dirty_only=True)
+        assert form["name"].value() == "alice"
+        assert form["note"].value() == "new"
+
+    def test_omitted_field_renders_empty_without_dirty_only(self):
+        form = FormOnlyForm(data={"note": "new"}, initial={"name": "alice", "note": ""})
+        assert form["name"].value() is None
+
+    def test_unchecked_checkbox_is_a_change(self):
+        form = FlagsForm(data={}, initial={"agree": True})
+        assert form.is_valid() is True
+        assert form.cleaned_data["agree"] is False
+
+    def test_select_multiple_without_its_marker_is_unchanged(self):
+        form = FlagsForm(data={"agree": "on"}, initial={"tags": ["a"], "agree": True})
+        assert form.is_valid() is True
+        assert form.cleaned_data["tags"] == ["a"]
+
+    def test_select_multiple_marker_alone_clears_the_selection(self):
+        form = FlagsForm(data={"tags": "", "agree": "on"}, initial={"tags": ["a"], "agree": True})
+        assert form.is_valid() is True
+        assert form.cleaned_data["tags"] == []
+
+    def test_model_form_keeps_omitted_fields(self):
+        obj = DirtyTrackedData(name="alice", email="a@b.com", note="")
+        obj.save()
+        obj = DirtyTrackedData.objects.get(pk=obj.pk)
+        form = DirtyTrackedFormOn(data={"note": "changed"}, instance=obj)
+        assert form.is_valid() is True
+        form.save()
+        obj.refresh_from_db()
+        assert (obj.name, obj.email, obj.note) == ("alice", "a@b.com", "changed")
+
+    def test_model_form_without_dirty_only_rejects_omitted_fields(self):
+        obj = DirtyTrackedData(name="alice", email="a@b.com", note="")
+        obj.save()
+        form = DirtyTrackedForm(data={"note": "changed"}, instance=obj)
+        assert form.is_valid() is False
+        assert set(form.errors) == {"name", "email"}
+
+    def test_model_form_keeps_an_omitted_relation(self):
+        obj = _seed_with_region()
+        obj = DirtyTrackedData.objects.get(pk=obj.pk)
+        region_id = obj.region_id
+        form = DirtyTrackedFKForm(data={"note": "changed"}, instance=obj)
+        assert form.is_valid() is True
+        form.save()
+        obj.refresh_from_db()
+        assert obj.region_id == region_id
+        assert obj.note == "changed"
+
+
+@pytest.mark.asyncio(loop_scope="class")
+class TestAsyncOmittedField:
+    async def test_omitted_required_field_counts_as_unchanged(self):
+        form = FormOnlyForm(data={"note": "new"}, initial={"name": "alice", "note": ""}, validate_dirty_only=True)
+        assert await form.ais_valid() is True
+        assert form.cleaned_data == {"name": "alice", "note": "new"}
+
+    async def test_model_form_keeps_omitted_fields(self):
+        from asgiref.sync import sync_to_async
+
+        obj = await DirtyTrackedData.objects.acreate(name="alice", email="a@b.com", note="")
+        obj = await DirtyTrackedData.objects.aget(pk=obj.pk)
+        form = DirtyTrackedFormOn(data={"note": "changed"}, instance=obj)
+        assert await form.ais_valid() is True
+        await form.asave()
+        await sync_to_async(obj.refresh_from_db)()
+        assert (obj.name, obj.email, obj.note) == ("alice", "a@b.com", "changed")
 
 
 # ---------------------------------------------------------------------------

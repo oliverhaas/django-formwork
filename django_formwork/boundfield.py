@@ -20,6 +20,21 @@ class FormworkBoundField(forms.BoundField):
         """Required by this save, or by a later step through the form's ``mandatory``."""
         return self.field.required or self.name in getattr(self.form, "mandatory", ())
 
+    def value(self) -> object:
+        """The posted value, or the initial one for a field a dirty-only post left out.
+
+        Dirty-only validation counts an omitted field as unchanged, so a
+        re-render shows what the field held instead of an empty value.
+        """
+        form = self.form
+        if (
+            form.is_bound
+            and getattr(form, "_validate_dirty_only", False)
+            and self.field.widget.value_omitted_from_data(form.data, form.files, self.html_name)
+        ):
+            return self.field.prepare_value(self.initial)
+        return super().value()
+
     def build_widget_attrs(self, attrs: dict[str, str | bool], widget: Widget | None = None) -> dict[str, str | bool]:
         attrs = super().build_widget_attrs(attrs, widget)
         if self.is_mandatory and not self.field.disabled and self.form.use_required_attribute:
