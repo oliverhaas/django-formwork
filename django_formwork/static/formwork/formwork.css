@@ -375,52 +375,14 @@ select.select-soft::picker(select) {
    share the same border width, so 0.25rem panel inset + 0.5rem option
    padding equals the toggle's 0.75rem padding-inline-start.  Fixed values
    (not DaisyUI's size-scaled --option-px) because the toggle padding is
-   fixed too.  The block padding and the row gap mirror the custom widgets'
-   px-1 py-2 list and their gap-0.5, py-2 rows. */
+   fixed too; this also mirrors the custom widgets' p-1 panel + px-2 rows. */
 select::picker(select) {
-    padding: 0.5rem 0.25rem;
+    padding-inline: 0.25rem;
 }
 
 option {
     column-gap: 0.75rem;
-    padding: 0.5rem;
-}
-
-option + option {
-    margin-block-start: 0.125rem;
-}
-
-option:checked {
-    background-color: var(--color-base-200);
-}
-
-/* Native customizable select: the chevron the dropdown widgets use, turned
-   while the picker is open.  Without base-select, DaisyUI's gradient
-   chevron stays. */
-@supports (appearance: base-select) {
-    select:not([multiple]) {
-        background-image: none;
-        padding-inline-end: 0.75rem;
-    }
-
-    select:not([multiple])::picker-icon {
-        display: block;
-        content: "";
-        width: 0.75rem;
-        height: 0.75rem;
-        flex-shrink: 0;
-        background-color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
-        mask-image: url("../icons/lucide/chevron-down.svg");
-        mask-size: contain;
-        mask-repeat: no-repeat;
-        mask-position: center;
-        mask-mode: alpha;
-        transition: rotate 0.2s ease-in-out;
-    }
-
-    select:not([multiple]):open::picker-icon {
-        rotate: 180deg;
-    }
+    padding-inline: 0.5rem;
 }
 
 option::checkmark {
@@ -652,16 +614,19 @@ select {
 }
 
 /* SelectMultiple / Select summary triggers — DaisyUI .select
-   applied via @apply to avoid @layer utilities conflict.  The templates
-   render the chevron as an icon, so drop DaisyUI's gradient chevron and
-   the end padding it reserves. */
+   applied via @apply to avoid @layer utilities conflict. */
 details.formwork-select > summary,
 details.formwork-select-multiple > summary {
     @apply select w-full text-left;
-    background-image: none;
-    padding-inline-end: 0.75rem;
     list-style: none;
     cursor: pointer;
+}
+
+/* DaisyUI turns the caret up on :focus and on a native select's :open.
+   Keep it up while the dropdown is open: the search box takes focus. */
+details.formwork-select[open] > summary,
+details.formwork-select-multiple[open] > summary {
+    background-image: linear-gradient(135deg, #0000 50%, currentColor 50%), linear-gradient(45deg, currentColor 50%, #0000 50%);
 }
 
 details.formwork-select > summary::-webkit-details-marker,

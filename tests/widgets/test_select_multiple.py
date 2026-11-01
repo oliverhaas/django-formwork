@@ -326,6 +326,17 @@ def test_select_multiple_renders_summary_trigger():
 
 
 @pytest.mark.unit
+def test_select_multiple_open_icon_replaces_the_caret():
+    """The toggle keeps DaisyUI's caret unless open_icon names an icon to show in its place."""
+    default = render_widget(SelectMultiple(choices=[("a", "A")]), name="test").find("summary")
+    custom = render_widget(SelectMultiple(choices=[("a", "A")], open_icon="filter"), name="test").find("summary")
+    assert default.select("i.icon") == []
+    assert "bg-none" not in default["class"]
+    assert custom.select_one("i.icon-filter") is not None
+    assert "bg-none" in custom["class"]
+
+
+@pytest.mark.unit
 def test_select_multiple_renders_dropdown_content():
     """A <div class='dropdown-content'> is present."""
     widget = SelectMultiple(choices=[("a", "A")])

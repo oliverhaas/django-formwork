@@ -45,8 +45,9 @@ class SelectMultiple(SearchableSelectMixin, forms.SelectMultiple):
     #: Past this many selections the toggle shows a count instead of the labels.
     summary_threshold = 3
 
-    def __init__(self, *args: Any, open_icon: str = "chevron-down", **kwargs: Any) -> None:
+    def __init__(self, *args: Any, open_icon: str | None = None, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        #: An icon in place of DaisyUI's caret on the toggle; None keeps the caret.
         self.open_icon = open_icon
 
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
