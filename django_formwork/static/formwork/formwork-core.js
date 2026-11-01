@@ -123,8 +123,13 @@ const initDirtyTracking = (form) => {
   form.addEventListener("input", (e) => check(e.target));
   form.addEventListener("change", (e) => check(e.target));
 
-  // Re-snapshot after successful morph (new server-rendered values = new baseline).
-  form.addEventListener("htmx:after:swap", () => requestAnimationFrame(snapshot));
+  // Re-snapshot after a successful morph of the form (new server-rendered
+  // values = new baseline), not after a dropdown search swaps rows into it.
+  form.addEventListener("htmx:after:swap", (e) => {
+    const target = e.detail?.ctx?.target;
+    if (target instanceof Element && !target.contains(form)) return;
+    requestAnimationFrame(snapshot);
+  });
 
   // Expose snapshot for programmatic reset.
   form._formworkDirtySnapshot = snapshot;
@@ -338,6 +343,13 @@ if (typeof htmx !== "undefined") {
 
       if (!(oldNode instanceof Element) || !(newNode instanceof Element)) {
         return true;
+      }
+
+      // A dropdown holding a pick the server has not confirmed yet skips a
+      // stale echo whole: its hidden inputs would otherwise post the older
+      // choice.
+      if (oldNode._formworkAcceptMorph && !oldNode._formworkAcceptMorph(newNode)) {
+        return false;
       }
 
       // Sync input `.value` property to match the new server-rendered

@@ -1,23 +1,21 @@
-// Shared helpers for the formwork dropdown Alpine.data components
+// The shared base of the formwork dropdown Alpine.data components
 // (formworkSelect, formworkSelectMultiple, formworkComboBox).
 
-export const visibleOptions = (component, selector) =>
-  [...component.$refs.options.querySelectorAll(selector)]
-    .filter((b) => b.offsetParent !== null);
-
 // Reset that also notifies x-model and any htmx trigger bound to `input`.
-export const clearInput = (input) => {
+const clearInput = (input) => {
   input.value = "";
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.focus();
 };
 
+const visibleOptions = (component) =>
+  [...component.$refs.options.querySelectorAll("[data-value]")].filter((el) => el.offsetParent !== null);
+
 const labelMatches = (el, query) => (el.dataset.label || "").toLowerCase().includes(query);
 
-// Client filter for a row or an optgroup heading. Reads the row's own label,
-// so no option value is interpolated into JS. A heading shows while any row
-// of its group does.
-export const matchesQuery = (el, query) => {
+// Reads the row's own label, so no option value is interpolated into JS. A
+// group heading shows while any row of its group does.
+const matchesQuery = (el, query) => {
   if (!query) return true;
   const q = query.toLowerCase();
   if (!("group" in el.dataset)) return labelMatches(el, q);
@@ -27,149 +25,38 @@ export const matchesQuery = (el, query) => {
   return false;
 };
 
-// htmx 4 builds the GET query from the request body. The search box has no
-// name, so the form never posts it.
-export const searchConfig = (component, event, query) => {
-  const body = event.detail.ctx.request.body;
-  body.set("q", query);
-  body.set("name", component.$root.dataset.name);
-};
-
-// An error response must not replace the list. Returns whether the swap
-// carries a real response, which clears a previous error.
-export const searchSwapAllowed = (event) => {
-  const status = event.detail.ctx?.response?.status;
-  if (status >= 400) {
-    event.preventDefault();
-    return false;
-  }
-  return Boolean(status);
-};
-
 // --- Top-layer dropdown panels -----------------------------------------
-// popover="manual" (not "auto"): the details toggle / Alpine `open` state
-// stays the source of truth, so light dismiss must not close the popover
-// behind its back.  Placement is CSS anchor positioning where supported,
-// positionPanel() otherwise; with no Popover API the panel stays
-// absolutely positioned.
+// popover="manual" (not "auto"): the details open attribute (the combobox's
+// `open`) stays the source of truth, so light dismiss must not close the
+// popover behind its back. CSS anchor positioning places the panel where
+// supported, setDropDirection() otherwise; with no Popover API the panel
+// stays absolutely positioned.
 
-const supportsPopover =
-  typeof HTMLElement !== "undefined" && "showPopover" in HTMLElement.prototype;
-const supportsAnchor =
-  typeof CSS !== "undefined" && CSS.supports("anchor-name: --a");
+const supportsPopover = typeof HTMLElement !== "undefined" && "showPopover" in HTMLElement.prototype;
+const supportsAnchor = typeof CSS !== "undefined" && CSS.supports("anchor-name: --a");
+
+// The first mirrors the panel's max-h-72 in the templates.
+const PANEL_MAX_HEIGHT = 288;
+// Matches the anchor-positioned margin (0.25rem).
+const PANEL_OFFSET = 4;
+const VIEWPORT_MARGIN = 8;
+// Below this a list is too cramped to pick from, so flipping up is worth it.
+const PANEL_USABLE_HEIGHT = 192;
+
+const borderHeight = (el) => {
+  const style = getComputedStyle(el);
+  return parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+};
 
 let anchorSeq = 0;
 
-// Panels whose widget currently holds them open; lets the morph-recovery
-// observer below re-show a panel without a handle on the Alpine component.
-const openPanels = new WeakSet();
-const repositioners = new WeakMap();
-
-// Anchor names must be unique per instance, so they are inline styles
-// rather than a stylesheet rule.
-export const panelPopover = (root) => {
-  const panel = root.querySelector(":scope > .dropdown-content");
-  if (!panel || !supportsPopover) return null;
-  const apply = () => {
-    panel.setAttribute("popover", "manual");
-    if (supportsAnchor) {
-      if (!root.style.anchorName) root.style.anchorName = `--formwork-anchor-${++anchorSeq}`;
-      panel.style.positionAnchor = root.style.anchorName;
-    }
-  };
-  apply();
-  // Morph swaps (htmx 4) sync attributes back to the server HTML, which
-  // carries none of this plumbing: the popover attribute and inline anchor
-  // styles get stripped, force-hiding an open panel out of the top layer.
-  // Re-assert them; the observer runs before the next paint, so an open
-  // panel never renders unanchored.
-  const observer = new MutationObserver(() => {
-    const intact =
-      panel.getAttribute("popover") === "manual" &&
-      (!supportsAnchor || (root.style.anchorName && panel.style.positionAnchor));
-    if (intact) return;
-    apply();
-    if (openPanels.has(panel) && !panel.matches(":popover-open")) {
-      try {
-        panel.showPopover();
-      } catch {
-        return;
-      }
-      repositioners.get(panel)?.();
-    }
-  });
-  observer.observe(root, { attributes: true, attributeFilter: ["style"] });
-  observer.observe(panel, { attributes: true, attributeFilter: ["style", "popover"] });
-  // Deliberate teardowns (the screenshot harness flattens panels into normal
-  // flow) must disconnect this first or the re-assert fights them.
-  panel._formworkPopoverObserver = observer;
-  return panel;
-};
-
-const positionPanel = (root, panel) => {
-  const GAP = 4; // matches the anchor-positioned margin (0.25rem)
-  const EDGE = 8;
-  const box = root.getBoundingClientRect();
-  panel.style.margin = "0";
-  panel.style.minWidth = `${box.width}px`;
-  const pw = panel.offsetWidth;
-  const ph = panel.offsetHeight;
-  const below = window.innerHeight - box.bottom - GAP;
-  const above = box.top - GAP;
-  // Open toward whichever side has the most room (like a native <select>),
-  // not just when the panel would overflow below.
-  const flip = above > below;
-  panel.style.top = flip
-    ? `${Math.max(EDGE, box.top - GAP - ph)}px`
-    : `${box.bottom + GAP}px`;
-  panel.style.left = `${Math.max(EDGE, Math.min(box.left, window.innerWidth - pw - EDGE))}px`;
-};
-
-export const openPanel = (component) => {
-  const panel = component._panel;
-  if (!panel || !panel.isConnected) return;
-  try {
-    panel.showPopover();
-  } catch {
-    return;
-  }
-  openPanels.add(panel);
-  if (!supportsAnchor) {
-    const reposition = () => positionPanel(component.$root, panel);
-    reposition();
-    component._reposition = reposition;
-    repositioners.set(panel, reposition);
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    // The panel can resize while open (htmx swaps in search results).
-    component._resizeObserver = new ResizeObserver(reposition);
-    component._resizeObserver.observe(panel);
-  }
-};
-
-export const closePanel = (component) => {
-  const panel = component._panel;
-  if (!panel) return;
-  openPanels.delete(panel);
-  repositioners.delete(panel);
-  if (component._reposition) {
-    window.removeEventListener("scroll", component._reposition, true);
-    window.removeEventListener("resize", component._reposition);
-    component._reposition = null;
-  }
-  component._resizeObserver?.disconnect();
-  component._resizeObserver = null;
-  if (panel.matches(":popover-open")) panel.hidePopover();
-};
-
 // Close any open <details> dropdown when a real click lands outside it, so a
 // click anywhere else on the page (including another dropdown's trigger)
-// dismisses it. Native <details> has no such behaviour, and the panels use
-// popover="manual" so the browser's light dismiss stays off. One shared
-// listener rather than a per-widget @click.outside: this module loads once
-// (ES-module dedup), and setting `open = false` fires each widget's @toggle,
-// which tears the panel down. A genuine click only, never a morph, so it
-// cannot close a panel behind the widget's back the way light dismiss would.
+// dismisses it. Native <details> has no such behaviour, and light dismiss is
+// off. One shared listener rather than a per-widget @click.outside: this
+// module loads once (ES-module dedup), and setting `open = false` lets each
+// widget's open observer hide its panel. A genuine click only, never a
+// morph, so it cannot close a panel behind the widget's back.
 if (typeof document !== "undefined") {
   document.addEventListener("click", (e) => {
     for (const details of document.querySelectorAll("details.dropdown[open]")) {
@@ -178,21 +65,249 @@ if (typeof document !== "undefined") {
   });
 }
 
-export const clearHighlight = (component) => {
-  if (component.highlightedEl) {
-    component.highlightedEl.classList.remove("highlighted");
-    component.highlightedEl = null;
-  }
-};
+const baseData = () => ({
+  _v: 0,
+  _dirty: false,
+  search: "",
+  showSearch: false,
+  placeholder: "",
+  highlightedEl: null,
+  dropUp: false,
+  hasError: false,
+  _unfollow: null,
 
-export const keyboardNav = (component, dir, selector) => {
-  const visible = visibleOptions(component, selector);
-  if (!visible.length) return;
-  let idx = visible.indexOf(component.highlightedEl);
-  if (idx === -1) idx = dir > 0 ? 0 : visible.length - 1;
-  else idx = (idx + dir + visible.length) % visible.length;
-  clearHighlight(component);
-  component.highlightedEl = visible[idx];
-  component.highlightedEl.classList.add("highlighted");
-  component.highlightedEl.scrollIntoView({ block: "nearest" });
-};
+  // The <details> element owns the open state; the combobox is a plain <div>
+  // and overrides this.
+  get isOpen() {
+    return this.$root.open === true;
+  },
+
+  // Set by the widget template when the list is filled by the search endpoint.
+  get hasSearchUrl() {
+    return this.$root.dataset.hasSearchUrl === "true";
+  },
+
+  // The text the list is filtered by and the search endpoint receives.
+  get query() {
+    return this.search;
+  },
+
+  close() {
+    this.$root.open = false;
+    this.hidePanel();
+    this.clearHighlight();
+  },
+
+  // Anchor names must be unique per instance, so they are inline styles
+  // rather than a stylesheet rule.
+  anchorPanel() {
+    const root = this.$root;
+    const panel = this.$refs.panel;
+    if (!panel || !supportsPopover) return;
+    const apply = () => {
+      panel.setAttribute("popover", "manual");
+      if (supportsAnchor) {
+        if (!root.style.anchorName) root.style.anchorName = `--formwork-anchor-${++anchorSeq}`;
+        panel.style.positionAnchor = root.style.anchorName;
+      }
+    };
+    apply();
+    // A morph syncs attributes back to the server HTML, which carries none
+    // of the inline styles: the anchor name and the placement get stripped.
+    // Re-assert them; the observer runs before the next paint, so an open
+    // panel never renders unplaced.
+    const observer = new MutationObserver(() => {
+      const intact =
+        panel.getAttribute("popover") === "manual" &&
+        (!supportsAnchor || (root.style.anchorName && panel.style.positionAnchor)) &&
+        (!this.isOpen || (panel.matches(":popover-open") && panel.style.maxHeight));
+      if (intact) return;
+      apply();
+      this.reposition();
+    });
+    observer.observe(root, { attributeFilter: ["style"] });
+    observer.observe(panel, { attributeFilter: ["style", "popover"] });
+    // Deliberate teardowns (the screenshot harness flattens panels into normal
+    // flow) must disconnect this first or the re-assert fights them.
+    panel._formworkPopoverObserver = observer;
+  },
+
+  // The panel is a popover: the top layer escapes any clipping ancestor, such
+  // as a modal body. Down is the default. Flip up only when the room below is
+  // too cramped and above holds more, then cap the height so the panel stays
+  // on screen.
+  setDropDirection() {
+    const panel = this.$refs.panel;
+    if (!panel?.isConnected || !supportsPopover) return;
+    if (!panel.matches(":popover-open")) {
+      try {
+        panel.showPopover();
+      } catch {
+        return;
+      }
+    }
+    const rect = this.$root.getBoundingClientRect();
+    // Width first: it decides how the options wrap, so the measured height.
+    if (!supportsAnchor) panel.style.minWidth = `${rect.width}px`;
+    const reserved = PANEL_OFFSET + VIEWPORT_MARGIN;
+    const below = window.innerHeight - rect.bottom - reserved;
+    const above = rect.top - reserved;
+    // A searched list arrives after the open.
+    // scrollHeight is the padding box; max-height caps the border box.
+    const measured = panel.scrollHeight + borderHeight(panel);
+    const wanted = this.hasSearchUrl ? PANEL_MAX_HEIGHT : Math.min(measured, PANEL_MAX_HEIGHT);
+    this.dropUp = below < Math.min(wanted, PANEL_USABLE_HEIGHT) && above > below;
+    const room = this.dropUp ? above : below;
+    panel.style.maxHeight = `${Math.max(Math.min(wanted, room), 0)}px`;
+    if (supportsAnchor) {
+      panel.style.positionArea = `${this.dropUp ? "block-start" : "block-end"} span-inline-end`;
+      return;
+    }
+    const width = panel.offsetWidth;
+    panel.style.left = `${Math.max(VIEWPORT_MARGIN, Math.min(rect.left, window.innerWidth - width - VIEWPORT_MARGIN))}px`;
+    panel.style.top = this.dropUp ? "auto" : `${rect.bottom + PANEL_OFFSET}px`;
+    panel.style.bottom = this.dropUp ? `${window.innerHeight - rect.top + PANEL_OFFSET}px` : "auto";
+  },
+
+  reposition() {
+    if (this.isOpen) this.setDropDirection();
+  },
+
+  showPanel() {
+    this.setDropDirection();
+    if (supportsAnchor || this._unfollow) return;
+    // Without anchor positioning the panel follows its trigger by hand, and
+    // re-measures when a swap resizes it.
+    const follow = () => this.reposition();
+    const resize = new ResizeObserver(follow);
+    resize.observe(this.$refs.panel);
+    window.addEventListener("scroll", follow, true);
+    window.addEventListener("resize", follow);
+    this._unfollow = () => {
+      resize.disconnect();
+      window.removeEventListener("scroll", follow, true);
+      window.removeEventListener("resize", follow);
+    };
+  },
+
+  hidePanel() {
+    this._unfollow?.();
+    this._unfollow = null;
+    const panel = this.$refs.panel;
+    if (panel?.matches(":popover-open")) panel.hidePopover();
+  },
+
+  // The toggle event runs after the browser can paint the open panel, so the
+  // open attribute decides instead: a MutationObserver runs before that paint.
+  // A disabled widget stays shut; a disabled <fieldset> reaches form controls
+  // but not the <summary> trigger.
+  watchOpen() {
+    const el = this.$root;
+    new MutationObserver(() => {
+      if (!el.open) {
+        this.hidePanel();
+        return;
+      }
+      if (el.dataset.disabled === "true" || el.closest("fieldset:disabled")) {
+        el.open = false;
+        return;
+      }
+      this.showPanel();
+    }).observe(el, { attributeFilter: ["open"] });
+  },
+
+  onToggle() {
+    if (!this.$el.open) {
+      this.clearHighlight();
+      return;
+    }
+    if (this.showSearch) setTimeout(() => this.$refs.search?.focus(), 0);
+  },
+
+  onNav(event, dir) {
+    if (!this.isOpen) return;
+    event.preventDefault();
+    this.nav(dir);
+  },
+
+  onEnter(event) {
+    if (!this.isOpen || event.target.closest("button")) return;
+    event.preventDefault();
+    this.confirm();
+  },
+
+  // The server filters a searched list itself, on more fields than the label.
+  matches(el) {
+    return matchesQuery(el, this.hasSearchUrl ? "" : this.query);
+  },
+
+  // Client-side filtering only: a swapped-in list brings its own empty row.
+  // Reads the rows, not their layout, so it does not wait on their x-show.
+  get noResults() {
+    const query = this.query;
+    if (this.hasSearchUrl || !query) return false;
+    return ![...this.$refs.options.querySelectorAll("li[role=option]")].some((li) => matchesQuery(li, query));
+  },
+
+  clearSearch() {
+    clearInput(this.$refs.search);
+  },
+
+  clearHighlight() {
+    if (this.highlightedEl) {
+      this.highlightedEl.classList.remove("highlighted");
+      this.highlightedEl = null;
+    }
+  },
+
+  nav(dir) {
+    const visible = visibleOptions(this);
+    if (!visible.length) return;
+    let idx = visible.findIndex((el) => el.closest("li") === this.highlightedEl);
+    if (idx === -1) idx = dir > 0 ? 0 : visible.length - 1;
+    else idx = (idx + dir + visible.length) % visible.length;
+    this.clearHighlight();
+    this.highlightedEl = visible[idx].closest("li");
+    this.highlightedEl.classList.add("highlighted");
+    this.highlightedEl.scrollIntoView({ block: "nearest" });
+  },
+
+  // The highlighted row's option, else the first visible one.
+  confirmTarget() {
+    const target = this.highlightedEl?.querySelector("[data-value]");
+    return target && target.offsetParent !== null ? target : visibleOptions(this)[0];
+  },
+
+  // htmx 4 builds the GET query from the request body. The search box has no
+  // name, so the form never posts it.
+  onSearchConfig(event) {
+    event.detail.ctx.request.body.set("q", this.query);
+  },
+
+  // Bound on the root, so it also covers "Load more". An error response must
+  // not replace the list; a real one clears a previous error.
+  onSearchBeforeSwap(event) {
+    const status = event.detail.ctx?.response?.status;
+    if (status >= 400) {
+      event.preventDefault();
+      return;
+    }
+    if (status) this.hasError = false;
+  },
+
+  onSearchError() {
+    this.hasError = true;
+  },
+});
+
+// Merges descriptors rather than values: object spread would *call* every getter
+// above against a component that Alpine has not bound yet, so `this.$root` is
+// still undefined and the read throws before the widget ever initializes.
+export const dropdownBase = (component) =>
+  Object.defineProperties(
+    {},
+    {
+      ...Object.getOwnPropertyDescriptors(baseData()),
+      ...Object.getOwnPropertyDescriptors(component),
+    },
+  );

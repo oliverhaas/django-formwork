@@ -408,15 +408,21 @@ def test_combo_box_error_alert_hidden_until_a_search_fails():
 
 
 @pytest.mark.unit
-def test_combo_box_input_wires_error_handlers():
-    """``hasError`` follows the response only; resetting it on request would flash the old list."""
+def test_combo_box_root_wires_error_handlers():
+    """The root hears both the search and "Load more"; only the input sets the query.
+
+    ``hasError`` follows the response only; resetting it on request would flash the old list.
+    """
     widget = server_widget(ComboBox)
     soup = render_widget(widget, name="tags", attrs={"id": "id_tags"})
-    trigger = soup.find("input", class_="combobox-input")
-    assert "@htmx:before:request" not in trigger.attrs
-    assert trigger["@htmx:before:swap"] == "onSearchBeforeSwap($event)"
-    assert trigger["@htmx:response:error"] == "onSearchError()"
-    assert trigger["@htmx:error"] == "onSearchError()"
+    root = soup.find("div", id="id_tags_wrapper")
+    assert "@htmx:before:request" not in root.attrs
+    assert root["@htmx:before:swap"] == "onSearchBeforeSwap($event)"
+    assert root["@htmx:response:error"] == "onSearchError()"
+    assert root["@htmx:error"] == "onSearchError()"
+    trigger = root.find("input", class_="combobox-input")
+    assert trigger["@htmx:config:request"] == "onSearchConfig($event)"
+    assert "@htmx:before:swap" not in trigger.attrs
 
 
 @pytest.mark.unit
@@ -757,6 +763,32 @@ def test_combo_box_single_pick_dispatches_change_event(combobox_page):
 
 
 @pytest.mark.e2e
+@pytest.mark.parametrize("name", ["language_single", "language_htmx"])
+def test_combo_box_pick_does_not_reopen_the_panel(combobox_page, name):
+    """The panel stays closed past the search delay, and typing opens it again.
+
+    A pick fires change, which neither the input handler nor the search trigger hears.
+    """
+    from playwright.sync_api import expect
+
+    combo = combobox_page.locator(f"#id_{name}_wrapper")
+    panel = combo.locator("[x-ref=panel]")
+    inp = combobox_page.locator(f'input[name="{name}"]')
+    inp.click()
+    inp.fill("Ru")
+    rust = combo.locator("button[data-value]", has_text="Rust")
+    expect(rust).to_be_visible(timeout=10000)
+    rust.click()
+    expect(inp).to_have_value("Rust")
+    combobox_page.wait_for_timeout(500)
+    expect(panel).to_be_hidden()
+    assert not panel.evaluate("el => el.matches(':popover-open')")
+    assert combo.evaluate("el => Alpine.$data(el).open") is False
+    inp.fill("Py")
+    expect(panel).to_be_visible()
+
+
+@pytest.mark.e2e
 def test_combo_box_free_text_allowed(combobox_page):
     """Arbitrary text can be typed (ComboBox is free text, not constrained)."""
     inp = combobox_page.locator('input[name="language_single"]')
@@ -859,7 +891,7 @@ def test_combo_box_keyboard_arrowdown_highlights_first(combobox_page):
     inp = open_combo_box(combobox_page, "language_single")
     inp.press("ArrowDown")
     combobox_page.wait_for_timeout(100)
-    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("[data-label].highlighted")
+    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("li.highlighted > [data-value]")
     assert highlighted.count() == 1
     assert highlighted.first.get_attribute("data-label") == "Python"
 
@@ -871,7 +903,7 @@ def test_combo_box_keyboard_arrowdown_navigates(combobox_page):
     inp.press("ArrowDown")
     inp.press("ArrowDown")
     combobox_page.wait_for_timeout(50)
-    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("[data-label].highlighted")
+    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("li.highlighted > [data-value]")
     assert highlighted.first.get_attribute("data-label") == "JavaScript"
 
 
@@ -883,7 +915,7 @@ def test_combo_box_keyboard_arrowdown_wraps_to_first(combobox_page):
     for _ in range(7):
         inp.press("ArrowDown")
     combobox_page.wait_for_timeout(50)
-    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("[data-label].highlighted")
+    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("li.highlighted > [data-value]")
     assert highlighted.first.get_attribute("data-label") == "Python"
 
 
@@ -893,7 +925,7 @@ def test_combo_box_keyboard_arrowup_wraps_to_last(combobox_page):
     inp = open_combo_box(combobox_page, "language_single")
     inp.press("ArrowUp")
     combobox_page.wait_for_timeout(50)
-    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("[data-label].highlighted")
+    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("li.highlighted > [data-value]")
     assert highlighted.first.get_attribute("data-label") == "Ruby"
 
 
@@ -909,7 +941,7 @@ def test_combo_box_keyboard_filter_skips_hidden_options(combobox_page):
     combobox_page.wait_for_timeout(50)
     inp.press("ArrowDown")  # Should wrap back to Rust
     combobox_page.wait_for_timeout(50)
-    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("[data-label].highlighted")
+    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("li.highlighted > [data-value]")
     val = highlighted.first.get_attribute("data-label")
     assert val == "Rust"
 
@@ -982,10 +1014,10 @@ def test_combo_box_keyboard_close_clears_highlight(combobox_page):
     inp.press("ArrowDown")
     combobox_page.wait_for_timeout(50)
     combo = combobox_page.locator(".dropdown.formwork-combobox").first
-    assert combo.locator("[data-label].highlighted").count() == 1
+    assert combo.locator("li.highlighted > [data-value]").count() == 1
     inp.press("Escape")
     combobox_page.wait_for_timeout(150)
-    assert combo.locator("[data-label].highlighted").count() == 0
+    assert combo.locator("li.highlighted > [data-value]").count() == 0
 
 
 @pytest.mark.e2e

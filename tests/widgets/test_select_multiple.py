@@ -689,15 +689,23 @@ def test_select_multiple_error_alert_hidden_until_a_search_fails():
 
 
 @pytest.mark.unit
-def test_select_multiple_search_input_wires_error_handlers():
-    """``hasError`` follows the response only; resetting it on request would flash the old list."""
+def test_select_multiple_root_wires_htmx_handlers():
+    """The root hears both the search and "Load more"; only the search box sets the query.
+
+    ``hasError`` follows the response only; resetting it on request would flash the old list.
+    Swapped-in rows render unchecked, so every swap re-checks them from the selection.
+    """
     widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="lang", attrs={"id": "id_lang"})
-    search = soup.find("input", {"type": "search"})
-    assert "@htmx:before:request" not in search.attrs
-    assert search["@htmx:before:swap"] == "onSearchBeforeSwap($event)"
-    assert search["@htmx:response:error"] == "onSearchError()"
-    assert search["@htmx:error"] == "onSearchError()"
+    root = soup.find("details", id="id_lang_wrapper")
+    assert "@htmx:before:request" not in root.attrs
+    assert root["@htmx:before:swap"] == "onSearchBeforeSwap($event)"
+    assert root["@htmx:after:swap"] == "syncChecked()"
+    assert root["@htmx:response:error"] == "onSearchError()"
+    assert root["@htmx:error"] == "onSearchError()"
+    search = root.find("input", {"type": "search"})
+    assert search["@htmx:config:request"] == "onSearchConfig($event)"
+    assert "@htmx:before:swap" not in search.attrs
 
 
 @pytest.mark.unit
@@ -974,15 +982,27 @@ def test_select_multiple_htmx_select_creates_hidden_inputs(multi_select_page):
     assert hidden.count() >= 2
 
 
+_ECHO = """async (selected) => {
+    const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
+    const echo = dd.cloneNode(true);
+    echo.dataset.selected = JSON.stringify(selected);
+    const values = selected.map(([v]) => v);
+    for (const cb of echo.querySelectorAll('input[type="checkbox"]')) cb.toggleAttribute('checked', values.includes(cb.value));
+    const holder = echo.querySelector('[x-ref="values"]');
+    holder.replaceChildren(...values.map((value) => Object.assign(document.createElement('input'),
+        {type: 'hidden', name: holder.dataset.name, value})));
+    await htmx.swap({text: echo.outerHTML, target: dd, swap: 'outerMorph'});
+}"""
+
+
 @pytest.mark.e2e
 def test_select_multiple_htmx_stale_echo_keeps_local_state(multi_select_page):
-    """A stale data-selected echo keeps the newer local selection; a confirming echo re-arms server updates.
+    """A stale morph keeps the newer local selection; a confirming morph re-arms server updates.
 
     Checkboxes and hidden inputs keep tracking the local selection, so the next submit carries all of it.
     """
     multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(200)
     from playwright.sync_api import expect
 
     expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=10000)
@@ -995,7 +1015,6 @@ def test_select_multiple_htmx_stale_echo_keeps_local_state(multi_select_page):
         });
         return [cbs[0].value, cbs[1].value];
     }""")
-    multi_select_page.wait_for_timeout(100)
 
     state = """() => {
         const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
@@ -1010,44 +1029,16 @@ def test_select_multiple_htmx_stale_echo_keeps_local_state(multi_select_page):
     both = sorted(values)
     assert multi_select_page.evaluate(state)["map"] == both
 
-    # Stale echo: the server confirms only the first toggle.
-    multi_select_page.evaluate(
-        """(v) => {
-            const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
-            dd.dataset.selected = JSON.stringify([[v, 'Stale']]);
-        }""",
-        values[0],
-    )
-    multi_select_page.wait_for_timeout(100)
+    multi_select_page.evaluate(_ECHO, [[values[0], "Stale"]])
     result = multi_select_page.evaluate(state)
-    assert result["map"] == both, "stale echo clobbered pending local selections"
-    assert result["hidden"] == both
-    assert result["checked"] == both
+    assert result == {"map": both, "hidden": both, "checked": both}, "stale echo clobbered pending local selections"
 
-    # Confirming echo (matches local state): accepted, dirty flag cleared.
-    multi_select_page.evaluate(
-        """(vs) => {
-            const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
-            dd.dataset.selected = JSON.stringify(vs.map(v => [v, 'Confirmed']));
-        }""",
-        values,
-    )
-    multi_select_page.wait_for_timeout(100)
+    multi_select_page.evaluate(_ECHO, [[v, "Confirmed"] for v in values])
+    assert multi_select_page.evaluate(state) == {"map": both, "hidden": both, "checked": both}
 
-    # A genuine server-driven change is now accepted, and the checkboxes
-    # follow the selection, so the visual state matches what submits.
-    multi_select_page.evaluate(
-        """(v) => {
-            const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
-            dd.dataset.selected = JSON.stringify([[v, 'Server']]);
-        }""",
-        values[0],
-    )
-    multi_select_page.wait_for_timeout(100)
+    multi_select_page.evaluate(_ECHO, [[values[0], "Server"]])
     result = multi_select_page.evaluate(state)
-    assert result["map"] == [values[0]]
-    assert result["hidden"] == [values[0]]
-    assert result["checked"] == [values[0]]
+    assert result == {"map": [values[0]], "hidden": [values[0]], "checked": [values[0]]}
 
 
 @pytest.mark.e2e
@@ -1192,7 +1183,7 @@ def test_select_multiple_keyboard_arrowdown_highlights_first(multi_select_page):
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
     multi_select_page.wait_for_timeout(50)
-    highlighted = multi.locator("[data-value].highlighted")
+    highlighted = multi.locator("li.highlighted > [data-value]")
     assert highlighted.count() == 1
     assert highlighted.first.get_attribute("data-value") == "ldn"
 
@@ -1205,13 +1196,13 @@ def test_select_multiple_keyboard_arrowdown_navigates(multi_select_page):
     search.press("ArrowDown")  # ldn
     search.press("ArrowDown")  # par
     multi_select_page.wait_for_timeout(50)
-    highlighted = multi.locator("[data-value].highlighted")
+    highlighted = multi.locator("li.highlighted > [data-value]")
     assert highlighted.first.get_attribute("data-value") == "par"
     # Continue: ber, then tyo (skips group header)
     search.press("ArrowDown")
     search.press("ArrowDown")
     multi_select_page.wait_for_timeout(50)
-    assert multi.locator("[data-value].highlighted").first.get_attribute("data-value") == "tyo"
+    assert multi.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "tyo"
 
 
 @pytest.mark.e2e
@@ -1223,7 +1214,7 @@ def test_select_multiple_keyboard_arrowdown_wraps_to_first(multi_select_page):
     for _ in range(10):
         search.press("ArrowDown")
     multi_select_page.wait_for_timeout(50)
-    assert multi.locator("[data-value].highlighted").first.get_attribute("data-value") == "ldn"
+    assert multi.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "ldn"
 
 
 @pytest.mark.e2e
@@ -1233,7 +1224,7 @@ def test_select_multiple_keyboard_arrowup_wraps_to_last(multi_select_page):
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowUp")
     multi_select_page.wait_for_timeout(50)
-    assert multi.locator("[data-value].highlighted").first.get_attribute("data-value") == "mex"
+    assert multi.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "mex"
 
 
 @pytest.mark.e2e
@@ -1246,7 +1237,7 @@ def test_select_multiple_keyboard_filter_skips_hidden_options(multi_select_page)
     search.press("ArrowDown")
     search.press("ArrowDown")  # Should wrap back to ldn (only one visible)
     multi_select_page.wait_for_timeout(50)
-    highlighted = multi.locator("[data-value].highlighted")
+    highlighted = multi.locator("li.highlighted > [data-value]")
     assert highlighted.count() == 1
     assert highlighted.first.get_attribute("data-value") == "ldn"
 
@@ -1264,7 +1255,7 @@ def test_select_multiple_keyboard_enter_toggles_keeps_open(multi_select_page):
     # Dropdown still open
     assert multi.get_attribute("open") is not None
     # Highlight still there
-    highlighted = multi.locator("[data-value].highlighted")
+    highlighted = multi.locator("li.highlighted > [data-value]")
     assert highlighted.first.get_attribute("data-value") == "ldn"
 
 
@@ -1299,10 +1290,10 @@ def test_select_multiple_keyboard_close_clears_highlight(multi_select_page):
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
     multi_select_page.wait_for_timeout(50)
-    assert multi.locator("[data-value].highlighted").count() == 1
+    assert multi.locator("li.highlighted > [data-value]").count() == 1
     multi.locator("summary").click()  # close
     multi_select_page.wait_for_timeout(150)
-    assert multi.locator("[data-value].highlighted").count() == 0
+    assert multi.locator("li.highlighted > [data-value]").count() == 0
 
 
 # ─── Level 5e: E2e, dirty tracking ───────────────────────────────────────
@@ -1373,6 +1364,29 @@ def test_select_multiple_client_dirty_clears_on_revert(multi_select_page):
     expect(fieldset).to_have_class(re.compile(r"\bformwork-dirty\b"))
     _toggle_checkbox(multi_select_page, 0, 'input[value="py"]')
     expect(fieldset).not_to_have_class(re.compile(r"\bformwork-dirty\b"))
+
+
+@pytest.mark.e2e
+def test_select_multiple_htmx_search_keeps_the_dirty_baseline(multi_select_page):
+    """A search swapping rows into the list is not a new baseline: a toggle made before it still counts."""
+    import re
+
+    from playwright.sync_api import expect
+
+    _enable_dirty_tracking(multi_select_page)
+    fieldset = multi_select_page.locator("#id_languages_htmx_field")
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
+    multi.locator("summary").click()
+    checkboxes = multi.locator('input[type="checkbox"]')
+    expect(checkboxes).to_have_count(20)
+    _toggle_checkbox(multi_select_page, 2, 'input[type="checkbox"]')
+    expect(fieldset).to_have_class(re.compile(r"\bformwork-dirty\b"))
+    _type_search(multi_select_page, 2, "Zig")
+    expect(checkboxes).to_have_count(1, timeout=10000)
+    multi_select_page.evaluate("() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))")
+    _toggle_checkbox(multi_select_page, 2, 'input[type="checkbox"][value="zig"]')
+    _toggle_checkbox(multi_select_page, 2, 'input[type="checkbox"][value="zig"]')
+    expect(fieldset).to_have_class(re.compile(r"\bformwork-dirty\b"))
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────

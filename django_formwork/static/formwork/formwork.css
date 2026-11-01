@@ -579,6 +579,15 @@ details.formwork-select-multiple > summary {
     @apply select w-full text-left;
 }
 
+/* A disabled widget's trigger takes no clicks. A disabled <fieldset> reaches
+   form controls, but the trigger is a <summary>. */
+details.formwork-select > summary[aria-disabled="true"],
+details.formwork-select-multiple > summary[aria-disabled="true"],
+fieldset:disabled details.formwork-select > summary,
+fieldset:disabled details.formwork-select-multiple > summary {
+    pointer-events: none;
+}
+
 /* Show placeholder-style color when no value is selected.
    Native <select>: detected via the empty-value option being :checked.
    Select / SelectMultiple: Alpine toggles .formwork-placeholder on the summary. */
@@ -832,9 +841,9 @@ input[type="hidden"] {
 }
 
 /* Select / SelectMultiple / ComboBox keyboard navigation: highlight focused option. */
-details.formwork-select [data-value].highlighted,
-details.formwork-select-multiple [data-value].highlighted,
-.dropdown.formwork-combobox [data-value].highlighted {
+details.formwork-select li.highlighted > [data-value],
+details.formwork-select-multiple li.highlighted > [data-value],
+.dropdown.formwork-combobox li.highlighted > [data-value] {
     @apply bg-base-200;
 }
 
@@ -1177,10 +1186,11 @@ details.formwork-select-multiple [data-value]:active,
 
 
 /* ================================================================
-   Top-layer dropdown panels (popover="manual", set by the widget JS;
-   anchor names are per-instance inline styles).  Without anchor
-   positioning the JS places the panel via inline top/left instead of
-   the @supports block.
+   Top-layer dropdown panels (popover="manual"; anchor names are
+   per-instance inline styles).  Without anchor positioning the JS
+   places the panel via inline top/left instead of the anchor block.
+   Without the Popover API the attribute does nothing, so the panel
+   stays absolutely positioned below its trigger.
 
    MUST be unlayered: DaisyUI's .dropdown .dropdown-content sets
    position:absolute in a layer that outranks @layer components, and an
@@ -1190,12 +1200,14 @@ details.formwork-select-multiple [data-value]:active,
    and the mt-1 utility (wrong side after a flip).
    ================================================================ */
 
-details.dropdown.formwork-select-multiple > .dropdown-content[popover],
-details.dropdown.formwork-select > .dropdown-content[popover],
-.dropdown.formwork-combobox > .dropdown-content[popover] {
-    position: fixed;
-    min-width: 0;
-    margin: 0;
+@supports selector(:popover-open) {
+    details.dropdown.formwork-select-multiple > .dropdown-content[popover],
+    details.dropdown.formwork-select > .dropdown-content[popover],
+    .dropdown.formwork-combobox > .dropdown-content[popover] {
+        position: fixed;
+        min-width: 0;
+        margin: 0;
+    }
 }
 
 @supports (anchor-name: --a) {
@@ -1204,9 +1216,6 @@ details.dropdown.formwork-select > .dropdown-content[popover],
     .dropdown.formwork-combobox > .dropdown-content[popover] {
         position-area: block-end span-inline-end;
         position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
-        /* Open toward whichever side has the most room (like a native
-           <select>), not just when the default below-position overflows. */
-        position-try-order: most-block-size;
         position-visibility: anchors-visible;
         /* Symmetric so the gap survives a flip. */
         margin: 0.25rem 0;

@@ -580,15 +580,21 @@ def test_select_error_alert_hidden_until_a_search_fails():
 
 
 @pytest.mark.unit
-def test_select_search_input_wires_error_handlers():
-    """``hasError`` follows the response only; resetting it on request would flash the old list."""
+def test_select_root_wires_error_handlers():
+    """The root hears both the search and "Load more"; only the search box sets the query.
+
+    ``hasError`` follows the response only; resetting it on request would flash the old list.
+    """
     widget = server_widget(Select)
     soup = render_widget(widget, name="city", attrs={"id": "id_city"})
-    search = soup.find("div", class_="dropdown-content").find("input", {"type": "search"})
-    assert "@htmx:before:request" not in search.attrs
-    assert search["@htmx:before:swap"] == "onSearchBeforeSwap($event)"
-    assert search["@htmx:response:error"] == "onSearchError()"
-    assert search["@htmx:error"] == "onSearchError()"
+    root = soup.find("details", id="id_city_wrapper")
+    assert "@htmx:before:request" not in root.attrs
+    assert root["@htmx:before:swap"] == "onSearchBeforeSwap($event)"
+    assert root["@htmx:response:error"] == "onSearchError()"
+    assert root["@htmx:error"] == "onSearchError()"
+    search = root.find("input", {"type": "search"})
+    assert search["@htmx:config:request"] == "onSearchConfig($event)"
+    assert "@htmx:before:swap" not in search.attrs
 
 
 @pytest.mark.unit
@@ -1503,7 +1509,7 @@ def test_select_keyboard_arrowdown_highlights_first(search_select_page):
     search = sel.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
     search_select_page.wait_for_timeout(50)
-    highlighted = sel.locator("[data-value].highlighted")
+    highlighted = sel.locator("li.highlighted > [data-value]")
     assert highlighted.count() == 1
     assert highlighted.first.get_attribute("data-value") == "ldn"
 
@@ -1517,7 +1523,7 @@ def test_select_keyboard_arrowdown_navigates(search_select_page):
         search.press("ArrowDown")
     search.press("ArrowDown")  # tyo (next group)
     search_select_page.wait_for_timeout(50)
-    assert sel.locator("[data-value].highlighted").first.get_attribute("data-value") == "tyo"
+    assert sel.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "tyo"
 
 
 @pytest.mark.e2e
@@ -1528,7 +1534,7 @@ def test_select_keyboard_arrowdown_wraps_to_first(search_select_page):
     for _ in range(10):  # 9 + 1 wrap
         search.press("ArrowDown")
     search_select_page.wait_for_timeout(50)
-    assert sel.locator("[data-value].highlighted").first.get_attribute("data-value") == "ldn"
+    assert sel.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "ldn"
 
 
 @pytest.mark.e2e
@@ -1538,7 +1544,7 @@ def test_select_keyboard_arrowup_wraps_to_last(search_select_page):
     search = sel.locator('.dropdown-content input[type="search"]')
     search.press("ArrowUp")
     search_select_page.wait_for_timeout(50)
-    assert sel.locator("[data-value].highlighted").first.get_attribute("data-value") == "mex"
+    assert sel.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "mex"
 
 
 @pytest.mark.e2e
@@ -1551,7 +1557,7 @@ def test_select_keyboard_filter_skips_hidden_options(search_select_page):
     search.press("ArrowDown")
     search.press("ArrowDown")  # Wrap around (only one visible)
     search_select_page.wait_for_timeout(50)
-    highlighted = sel.locator("[data-value].highlighted")
+    highlighted = sel.locator("li.highlighted > [data-value]")
     assert highlighted.count() == 1
     assert highlighted.first.get_attribute("data-value") == "ldn"
 
@@ -1590,10 +1596,10 @@ def test_select_keyboard_close_clears_highlight(search_select_page):
     search = sel.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
     search_select_page.wait_for_timeout(50)
-    assert sel.locator("[data-value].highlighted").count() == 1
+    assert sel.locator("li.highlighted > [data-value]").count() == 1
     sel.locator("summary").click()
     search_select_page.wait_for_timeout(150)
-    assert sel.locator("[data-value].highlighted").count() == 0
+    assert sel.locator("li.highlighted > [data-value]").count() == 0
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
