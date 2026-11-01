@@ -1095,7 +1095,8 @@ def test_select_multiple_popover_survives_morph_attribute_strip(multi_select_pag
     multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     panel = multi.locator(".dropdown-content")
     multi.locator("summary").click()
-    expect(panel).to_have_attribute("popover", "manual")
+    multi_select_page.wait_for_function("""() => document.querySelector(
+        'details.dropdown.formwork-select-multiple > .dropdown-content').matches(':popover-open')""")
 
     # Strip the client-added plumbing exactly like a morph: one batch of
     # attribute mutations restoring the server-rendered state.
