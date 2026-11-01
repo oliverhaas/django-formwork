@@ -2,13 +2,9 @@ import pytest
 from django import forms
 from django.test import override_settings
 
-from django_formwork.forms import (
-    FormworkForm,
-    FormworkJinja2Form,
-    FormworkJinja2ModelForm,
-    FormworkModelForm,
-)
-from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
+from django_formwork.boundfield import FormworkBoundField
+from django_formwork.forms import FormworkForm, FormworkModelForm
+from django_formwork.renderers import FormworkRenderer
 
 
 class TestFormworkForm:
@@ -48,13 +44,27 @@ class TestFormworkModelForm:
     def test_default_renderer(self):
         assert FormworkModelForm.default_renderer is FormworkRenderer
 
+    @pytest.mark.django_db
+    def test_subscript_with_model_at_runtime(self):
+        """``FormworkModelForm[Model]`` works without django-stubs-ext's monkeypatch."""
+        from e2e.models import BasicFormData
+
+        assert FormworkModelForm[BasicFormData] is FormworkModelForm
+
+        class F(FormworkModelForm[BasicFormData]):
+            class Meta:
+                model = BasicFormData
+                fields = ["name"]
+
+        assert isinstance(F().instance, BasicFormData)
+
 
 class TestFormworkRenderer:
     def test_form_template_name(self):
-        assert FormworkRenderer.form_template_name == "django/forms/formwork.html"
+        assert FormworkRenderer.form_template_name == "formwork/forms/div.html"
 
     def test_field_template_name(self):
-        assert FormworkRenderer.field_template_name == "django/forms/formwork_field.html"
+        assert FormworkRenderer.field_template_name == "formwork/forms/field.html"
 
     @override_settings(FORM_RENDERER="django_formwork.FormworkRenderer")
     def test_plain_form_uses_formwork_template(self):
@@ -118,8 +128,8 @@ class TestFormworkRenderer:
         assert 'class="label"' in html
 
     @override_settings(FORM_RENDERER="django_formwork.FormworkRenderer")
-    def test_as_field_group_renders_required_marker(self):
-        """as_field_group shows required marker for required fields."""
+    def test_as_field_group_badges_optional_field(self):
+        """A plain Form marks the optional field, not the required one."""
 
         class F(forms.Form):
             name = forms.CharField()
@@ -128,8 +138,19 @@ class TestFormworkRenderer:
         form = F()
         name_html = form["name"].as_field_group()
         optional_html = form["optional"].as_field_group()
-        assert "text-error" in name_html
-        assert "text-error" not in optional_html
+        assert "badge" not in name_html
+        assert ">optional</span>" in optional_html
+
+    @override_settings(FORM_RENDERER="django_formwork.FormworkRenderer")
+    def test_plain_form_gets_formwork_bound_field(self):
+        """The renderer's bound_field_class reaches plain Forms."""
+
+        class F(forms.Form):
+            name = forms.CharField()
+
+        bound = F()["name"]
+        assert isinstance(bound, FormworkBoundField)
+        assert 'aria-required="true"' in str(bound)
 
     def test_plain_form_without_renderer_uses_default(self):
         """Without FORM_RENDERER setting, plain Form uses Django's div.html."""
@@ -287,31 +308,3 @@ def test_metaclass_leaves_declared_plain_model_choice_field_alone():
     field = _Form.base_fields["region"]
     assert type(field) is forms.ModelChoiceField
     assert field.template_name == "custom/field.html"
-
-
-def test_formwork_jinja2_form_renders_formwork_markup():
-    """FormworkJinja2Form renders formwork fieldset markup via the Jinja2 renderer."""
-
-    class F(FormworkJinja2Form):
-        name = forms.CharField()
-
-    assert F.default_renderer is FormworkJinja2Renderer
-    html = str(F())
-    assert "fieldset-legend" in html
-    assert 'name="name"' in html
-
-
-@pytest.mark.django_db
-def test_formwork_jinja2_model_form_renders_formwork_markup():
-    """FormworkJinja2ModelForm renders formwork fieldset markup via the Jinja2 renderer."""
-    from e2e.models import BasicFormData
-
-    class F(FormworkJinja2ModelForm):
-        class Meta:
-            model = BasicFormData
-            fields = ["name"]
-
-    assert F.default_renderer is FormworkJinja2Renderer
-    html = str(F())
-    assert "fieldset-legend" in html
-    assert 'name="name"' in html

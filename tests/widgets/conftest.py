@@ -10,9 +10,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from bs4 import BeautifulSoup, NavigableString, Tag
+from bs4 import BeautifulSoup
 
-from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
+from django_formwork.renderers import FormworkRenderer
 
 # Re-export e2e fixtures, the submit helper, and the autouse settings
 # override so e2e widget tests in this directory can use them.
@@ -155,26 +155,6 @@ def open_combo_box(page, name: str):
     return inp
 
 
-def _normalize(node: Tag | NavigableString) -> tuple:
-    """Reduce an element to a comparable tuple, ignoring insignificant whitespace."""
-    if isinstance(node, NavigableString):
-        return ("text", " ".join(str(node).split()))
-    children = [_normalize(c) for c in node.children if not (isinstance(c, NavigableString) and not str(c).strip())]
-    return (node.name, dict(sorted(node.attrs.items())), children)
-
-
-def assert_html_equivalent(a: Tag, b: Tag) -> None:
-    """Assert two BeautifulSoup elements are equivalent, ignoring insignificant whitespace.
-
-    Compares tag names, attribute dicts (order-insensitive), and children
-    recursively.  Whitespace-only text nodes between elements are skipped.
-    Text node whitespace is collapsed to single spaces.
-    """
-    norm_a = _normalize(a)
-    norm_b = _normalize(b)
-    assert norm_a == norm_b, f"HTML trees differ.\nA:\n{a}\n\nB:\n{b}"
-
-
 @pytest.fixture(autouse=True)
 def _clean_widget_registry():
     """Drop any registry entries created by ``attach_server_search`` so tests
@@ -185,19 +165,6 @@ def _clean_widget_registry():
     clear_registry()
 
 
-@pytest.fixture(params=["dtl", "jinja2"], ids=["dtl", "jinja2"])
-def renderer(request) -> FormworkRenderer | FormworkJinja2Renderer:
-    """Parametrized renderer: each integration test runs against both engines."""
-    if request.param == "dtl":
-        return FormworkRenderer()
-    return FormworkJinja2Renderer()
-
-
 @pytest.fixture
-def dtl_renderer() -> FormworkRenderer:
+def renderer() -> FormworkRenderer:
     return FormworkRenderer()
-
-
-@pytest.fixture
-def jinja2_renderer() -> FormworkJinja2Renderer:
-    return FormworkJinja2Renderer()

@@ -8,7 +8,7 @@ from django.http import QueryDict
 
 from django_formwork.forms import FormworkForm
 
-from .conftest import assert_html_equivalent, render_form, render_widget, submit
+from .conftest import render_form, render_widget, submit
 
 TOPPING_CHOICES = [
     ("cheese", "Cheese"),
@@ -174,7 +174,7 @@ def test_checkbox_select_multiple_error_state(renderer):
     checkboxes = soup.find_all("input", attrs={"name": "toppings"})
     assert len(checkboxes) == 4
     assert all(cb.get("aria-invalid") == "true" for cb in checkboxes)
-    tooltip = soup.find(id="id_toppings_tooltip")
+    tooltip = soup.find(id="id_toppings_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -186,17 +186,6 @@ def test_checkbox_select_multiple_form_prefix(renderer):
     soup = render_form(form, renderer=renderer)
     checkboxes = soup.find_all("input", attrs={"type": "checkbox", "name": "order-toppings"})
     assert len(checkboxes) == 4
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_checkbox_select_multiple_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """CheckboxSelectMultiple produces equivalent HTML via DTL and Jinja2."""
-    soup_dtl = render_form(CheckboxSelectMultipleForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(CheckboxSelectMultipleForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

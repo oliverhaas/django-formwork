@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import ImageDropZone
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import render_form, render_widget
 
 
 # Pillow is not a project dependency so use FileField to avoid validation
@@ -292,7 +292,7 @@ def test_image_drop_zone_error_state_shows_tooltip(renderer):
     form = ImageDropZoneForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_avatar_tooltip")
+    tooltip = soup.find(id="id_avatar_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -305,17 +305,6 @@ def test_image_drop_zone_form_prefix_handling(renderer):
     inp = soup.find("input", {"type": "file", "name": "profile-avatar"})
     assert inp is not None
     assert inp["id"] == "id_profile-avatar"
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_image_drop_zone_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """ImageDropZone produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(ImageDropZoneForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(ImageDropZoneForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

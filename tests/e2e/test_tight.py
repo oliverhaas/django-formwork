@@ -18,7 +18,7 @@ class TestTightForm:
 
     def test_submit_empty_shows_tooltip(self, tight_page):
         submit(tight_page)
-        assert tight_page.locator("#id_username_tooltip").count() == 1
+        assert tight_page.locator("#id_username_error.tooltip-content").count() == 1
 
     def test_error_renders_as_tooltip_not_inline(self, tight_page):
         submit(tight_page)
@@ -39,11 +39,11 @@ class TestTightForm:
         tight_page.locator('input[name="username"]').fill("admin")
         tight_page.locator('input[name="pin"]').fill("1234")
         submit(tight_page)
-        assert tight_page.locator("#id_username_tooltip").count() == 1
+        assert tight_page.locator("#id_username_error.tooltip-content").count() == 1
 
     def test_valid_submit_clears_tooltip(self, tight_page):
         submit(tight_page)
-        assert tight_page.locator("#id_username_tooltip").count() == 1
+        assert tight_page.locator("#id_username_error.tooltip-content").count() == 1
         tight_page.locator('input[name="username"]').fill("bob")
         tight_page.locator('input[name="pin"]').fill("1234")
         submit(tight_page)

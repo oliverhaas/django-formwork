@@ -7,7 +7,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import PasswordReveal
 
-from .conftest import assert_html_equivalent, render_form, render_widget, submit
+from .conftest import render_form, render_widget, submit
 
 
 class PasswordRevealForm(FormworkForm):
@@ -196,7 +196,7 @@ def test_password_reveal_error_state_shows_tooltip(renderer):
     form = PasswordRevealForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_password_tooltip")
+    tooltip = soup.find(id="id_password_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -209,17 +209,6 @@ def test_password_reveal_form_prefix_handling(renderer):
     inp = soup.find("input", attrs={"name": "auth-password"})
     assert inp is not None
     assert inp["id"] == "id_auth-password"
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_password_reveal_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """PasswordReveal produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(PasswordRevealForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(PasswordRevealForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

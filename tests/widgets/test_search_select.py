@@ -14,7 +14,7 @@ from django_formwork.fields import ChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import SearchSelect
 
-from .conftest import assert_html_equivalent, make_server_widget, open_dropdown, render_form, render_widget, submit
+from .conftest import make_server_widget, open_dropdown, render_form, render_widget, submit
 
 
 class SearchSelectForm(FormworkForm):
@@ -960,7 +960,7 @@ def test_search_select_form_error_state_shows_tooltip(renderer):
     form = SearchSelectForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_city_tooltip")
+    tooltip = soup.find(id="id_city_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -975,59 +975,7 @@ def test_search_select_form_prefix_handling(renderer):
     assert hidden["id"] == "id_loc-city"
 
 
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_search_select_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """SearchSelect produces equivalent HTML via DTL and Jinja2."""
-    soup_dtl = render_form(SearchSelectForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(SearchSelectForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
-
-
-@pytest.mark.integration
-def test_search_select_grouped_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """Grouped SearchSelect produces equivalent HTML via DTL and Jinja2."""
-
-    class GroupedForm(FormworkForm):
-        city = forms.ChoiceField(
-            choices=[
-                ("", ""),
-                ("Europe", [("ldn", "London"), ("par", "Paris")]),
-                ("Asia", [("tyo", "Tokyo")]),
-            ],
-            widget=SearchSelect,
-            required=False,
-        )
-
-    soup_dtl = render_form(GroupedForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(GroupedForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
-
-
-@pytest.mark.integration
-def test_search_select_selected_toggle_class_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """selected_toggle_class renders identically via DTL and Jinja2 (root + option attrs)."""
-
-    class PriorityForm(FormworkForm):
-        priority = forms.ChoiceField(
-            choices=[
-                ("", ""),
-                ("low", ChoiceLabel("Low", selected_toggle_class="select-success")),
-                ("high", ChoiceLabel("High", selected_toggle_class="select-error")),
-            ],
-            widget=SearchSelect,
-            required=False,
-        )
-
-    # Bound with "high" so the root data attr and the option attrs both render.
-    soup_dtl = render_form(PriorityForm({"priority": "high"}), renderer=dtl_renderer)
-    soup_jinja2 = render_form(PriorityForm({"priority": "high"}), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
-
-
-# ─── Level 4b: Escaping regressions (both engines) ───────────────────────
+# ─── Level 4: Escaping regressions ──────────────────────────────────────
 
 
 class RoundTripSearchSelectForm(FormworkForm):
@@ -1060,8 +1008,8 @@ def test_search_select_checkmark_literal_decodes_to_data_value(renderer):
 
 
 @pytest.mark.integration
-def test_search_select_data_icon_escaped_under_both_engines(renderer):
-    """Regression: Jinja2's |e honors __html__, leaving mark_safe icon SVG raw inside data-icon."""
+def test_search_select_data_icon_escapes_safe_markup(renderer):
+    """A mark_safe icon stays escaped inside the data-icon attribute."""
     icon = '<img src="a.svg">'
 
     class IconForm(FormworkForm):

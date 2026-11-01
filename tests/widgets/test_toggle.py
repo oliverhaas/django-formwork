@@ -168,7 +168,7 @@ def test_toggle_error_state_shows_tooltip(renderer):
     form = ToggleForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_enabled_tooltip")
+    tooltip = soup.find(id="id_enabled_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 

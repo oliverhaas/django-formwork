@@ -20,17 +20,18 @@ Search endpoints are automatically registered so that a single
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.db.models import UniqueConstraint
+from django.db.models import Model, UniqueConstraint
 from django.forms import Form, ModelChoiceField, ModelForm, ModelMultipleChoiceField
 from django.forms.models import InlineForeignKeyField, ModelFormMetaclass, construct_instance
 
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
+from django_formwork.boundfield import FormworkBoundField
 from django_formwork.fields import FormworkModelChoiceField, FormworkModelMultipleChoiceField
-from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
+from django_formwork.renderers import FormworkRenderer
 from django_formwork.tables import RowRenderMixin
 
 if TYPE_CHECKING:
@@ -41,11 +42,13 @@ if TYPE_CHECKING:
 
 __all__ = [
     "FormworkForm",
-    "FormworkJinja2Form",
-    "FormworkJinja2ModelForm",
     "FormworkModelForm",
     "FormworkModelFormMetaclass",
 ]
+
+_M = TypeVar("_M", bound=Model)
+
+_ERROR_DISPLAY_CHOICES = ("auto", "inline", "tooltip")
 
 
 class FormworkModelFormMetaclass(ModelFormMetaclass):
@@ -239,18 +242,33 @@ class _AutoSearchMixin:
 
 
 class _ErrorDisplayFormMixin:
-    """Choose how field errors render: DaisyUI tooltip or inline (help-text style).
+    """Form-level choice of how field errors render: ``auto``, ``inline`` or ``tooltip``.
 
-    ``error_display`` is ``"inline"`` (default) or ``"tooltip"``, set via
-    ``Meta.error_display`` or the matching ``__init__`` kwarg.  Read by
-    ``formwork_field.html`` as ``field.form.error_display``.
+    ``auto`` resolves per field in ``formwork/forms/field.html``: inline when
+    the field has help text, a tooltip when it does not.
     """
 
     def __init__(self, *args: Any, error_display: str | None = None, **kwargs: Any) -> None:
         if error_display is None:
             meta = getattr(type(self), "Meta", None)
-            error_display = getattr(meta, "error_display", "inline")
+            error_display = getattr(meta, "error_display", "auto")
+        if error_display not in _ERROR_DISPLAY_CHOICES:
+            msg = f"error_display must be one of {_ERROR_DISPLAY_CHOICES}, got {error_display!r}"
+            raise ImproperlyConfigured(msg)
         self.error_display: str = error_display
+        super().__init__(*args, **kwargs)
+
+
+class _MandatoryFormMixin:
+    """Fields a later step such as publish needs, though a save takes them empty.
+
+    ``Meta.mandatory`` seeds ``self.mandatory`` before ``Form.__init__``, so a
+    subclass adds data-dependent names after its own ``super().__init__()``.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        meta = getattr(type(self), "Meta", None)
+        self.mandatory: set[str] = set(getattr(meta, "mandatory", ()))
         super().__init__(*args, **kwargs)
 
 
@@ -478,7 +496,26 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
                 await self.avalidate_constraints()
 
 
-class FormworkForm(RowRenderMixin, _ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
+if TYPE_CHECKING:
+    from django.forms import ModelForm as _GenericModelForm
+else:
+
+    class _GenericModelForm:
+        """``ModelForm[_M]`` for the type checker, plain ``ModelForm`` at runtime."""
+
+        def __class_getitem__(cls, item: object) -> type[ModelForm]:
+            return ModelForm
+
+
+class FormworkForm(
+    RowRenderMixin,
+    _MandatoryFormMixin,
+    _ErrorDisplayFormMixin,
+    _DirtyOnlyFormMixin,
+    AsyncFormMixin,
+    _AutoSearchMixin,
+    Form,
+):
     """Form base class with DaisyUI styling and async support.
 
     Usage::
@@ -503,24 +540,34 @@ class FormworkForm(RowRenderMixin, _ErrorDisplayFormMixin, _DirtyOnlyFormMixin, 
     Pass ``validate_dirty_only=True`` (or set ``Meta.validate_dirty_only = True``)
     to skip field validators on fields the user did not change.
 
-    Field errors render inline (below the widget, help-text style) by default.
-    Pass ``error_display="tooltip"`` (or set ``Meta.error_display = "tooltip"``)
-    to render them in a DaisyUI tooltip instead.
+    ``Meta.error_display`` (or the ``error_display`` kwarg) picks where field
+    errors render: ``"auto"`` (default) puts them inline when the field has
+    help text and in a DaisyUI tooltip when it does not; ``"inline"`` and
+    ``"tooltip"`` force one placement.
+
+    Optional fields carry an "optional" badge.  ``Meta.mandatory`` names
+    fields that a save accepts empty but a later step needs: they get no badge
+    and announce ``aria-required``.
     """
 
     default_renderer = FormworkRenderer
+    bound_field_class = FormworkBoundField
 
 
 class FormworkModelForm(
     RowRenderMixin,
+    _MandatoryFormMixin,
     _ErrorDisplayFormMixin,
     _DirtyOnlyModelFormMixin,
     AsyncModelFormMixin,
     _AutoSearchMixin,
-    ModelForm,
+    _GenericModelForm[_M],
     metaclass=FormworkModelFormMetaclass,
 ):
     """ModelForm base class with DaisyUI styling and async support.
+
+    Subscript it with the model for typed ``instance`` and ``save()``:
+    ``class BookForm(FormworkModelForm[Book])``.
 
     With ``Meta.validate_dirty_only = True`` (or the matching ``__init__``
     kwarg), field validation, model field validation, unique checks and
@@ -530,41 +577,18 @@ class FormworkModelForm(
     with a changed field stays validated, so the compound check still runs.
     Requires the bound model to inherit :class:`~django_formwork.FormworkModel`.
 
-    Field errors render inline (below the widget, help-text style) by default.
-    Pass ``error_display="tooltip"`` (or set ``Meta.error_display = "tooltip"``)
-    to render them in a DaisyUI tooltip instead.
+    ``Meta.error_display`` and ``Meta.mandatory`` work as on
+    :class:`FormworkForm`.
     """
 
     default_renderer = FormworkRenderer
+    bound_field_class = FormworkBoundField
 
+    if TYPE_CHECKING:
+        # The mixins above declare these as Any, which hides ModelForm[_M]'s types.
+        instance: _M
 
-class FormworkJinja2Form(
-    RowRenderMixin,
-    _ErrorDisplayFormMixin,
-    _DirtyOnlyFormMixin,
-    AsyncFormMixin,
-    _AutoSearchMixin,
-    Form,
-):
-    """Form base class with DaisyUI styling (Jinja2 renderer) and async support.
+        def save(self, commit: bool = True) -> _M: ...  # noqa: FBT001, FBT002
 
-    Use this when your project uses Jinja2 templates.  Equivalent to
-    :class:`FormworkForm` but renders via
-    :class:`~django_formwork.renderers.FormworkJinja2Renderer`.
-    """
-
-    default_renderer = FormworkJinja2Renderer
-
-
-class FormworkJinja2ModelForm(
-    RowRenderMixin,
-    _ErrorDisplayFormMixin,
-    _DirtyOnlyModelFormMixin,
-    AsyncModelFormMixin,
-    _AutoSearchMixin,
-    ModelForm,
-    metaclass=FormworkModelFormMetaclass,
-):
-    """ModelForm base class with DaisyUI styling (Jinja2 renderer) and async support."""
-
-    default_renderer = FormworkJinja2Renderer
+    def __class_getitem__(cls, item: object) -> type[Self]:
+        return cls

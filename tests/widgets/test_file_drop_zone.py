@@ -10,7 +10,7 @@ from django.utils.datastructures import MultiValueDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import FileDropZone
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import render_form, render_widget
 
 
 class FileDropZoneForm(FormworkForm):
@@ -347,7 +347,7 @@ def test_file_drop_zone_error_state_shows_tooltip(renderer):
     form = FileDropZoneForm(data={}, files={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_upload_tooltip")
+    tooltip = soup.find(id="id_upload_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -370,17 +370,6 @@ def test_file_drop_zone_form_prefix_handling(renderer):
     inp = soup.find("input", {"type": "file", "name": "doc-upload"})
     assert inp is not None
     assert inp["id"] == "id_doc-upload"
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_file_drop_zone_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """FileDropZone produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(FileDropZoneForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(FileDropZoneForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

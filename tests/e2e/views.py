@@ -137,11 +137,11 @@ class AutoSaveForm(FormworkModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Model has blank=True (allows partial saves) but visually these
-        # fields are required. set required=True for the asterisk.
+        # fields are required. set required=True to drop the optional badge.
         self.fields["name"].required = True
         self.fields["email"].required = True
         # Strip the HTML required attribute so native validation doesn't
-        # fire. keep field.required=True for the template asterisk.
+        # fire. keep field.required=True for the label.
         for field in self.fields.values():
             field.widget.use_required_attribute = lambda *_a: False
 
@@ -972,7 +972,7 @@ class ComplexForm(FormworkForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Strip HTML required so auto-validate POSTs don't trigger native
-        # validation.  field.required stays True for the asterisk.
+        # validation.  field.required stays True for the label.
         for field in self.fields.values():
             field.widget.use_required_attribute = lambda *_a: False
 

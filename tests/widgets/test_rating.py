@@ -7,7 +7,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import Rating
 
-from .conftest import assert_html_equivalent, render_form, render_widget, submit
+from .conftest import render_form, render_widget, submit
 
 
 class RatingForm(FormworkForm):
@@ -276,7 +276,7 @@ def test_rating_error_state_shows_tooltip(renderer):
     form = RatingForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_rating_tooltip")
+    tooltip = soup.find(id="id_rating_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -289,17 +289,6 @@ def test_rating_form_prefix_handling(renderer):
     radios = soup.find_all("input", {"type": "radio", "name": "srv-rating"})
     assert len(radios) > 0
     assert radios[0]["id"].startswith("id_srv-rating")
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_rating_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """Rating produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(RatingForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(RatingForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

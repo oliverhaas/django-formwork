@@ -69,6 +69,6 @@ def attr(attrs: dict, key: str) -> str:
     (``widget.attrs.aria-invalid`` is a syntax error) and has no
     subscript form, so this filter bridges the gap for keys like
     ``aria-invalid`` / ``aria-describedby`` that Django writes onto a
-    widget's attrs.  Jinja2 templates use native subscription instead.
+    widget's attrs.
     """
     return attrs.get(key, "")

@@ -98,7 +98,7 @@ class TestComplexFormValidation:
 
     def test_submit_empty_shows_errors(self, complex_page):
         submit(complex_page)
-        errors = complex_page.locator("#complex-form details.formwork-errors")
+        errors = complex_page.locator("#complex-form .formwork-errors")
         assert errors.count() >= 3
 
     def test_password_mismatch_error(self, complex_page):

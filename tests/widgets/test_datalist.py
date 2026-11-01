@@ -7,7 +7,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import DataList
 
-from .conftest import assert_html_equivalent, render_form, render_widget, submit
+from .conftest import render_form, render_widget, submit
 
 
 class DataListForm(FormworkForm):
@@ -218,7 +218,7 @@ def test_datalist_error_state_shows_tooltip(renderer):
     form = DataListForm(data={"browser": ""}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_browser_tooltip")
+    tooltip = soup.find(id="id_browser_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -231,17 +231,6 @@ def test_datalist_form_prefix_handling(renderer):
     inp = soup.find("input", attrs={"name": "cfg-browser"})
     assert inp is not None
     assert inp["id"] == "id_cfg-browser"
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_datalist_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """DataList produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(DataListForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(DataListForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

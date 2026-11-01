@@ -39,7 +39,6 @@ Changelog = "https://oliverhaas.github.io/django-formwork/reference/changelog/"
 dev = [
   "beautifulsoup4==4.15.0",
   "django-stubs==6.1.2",
-  "jinja2==3.1.6",
   "mypy==2.4.0",
   "numpy>=2.5.3",
   "pillow>=12.3.0",
@@ -218,17 +217,6 @@ include = ["django_formwork/forms.py"]
 unresolved-attribute = "ignore"
 invalid-assignment = "ignore"
 invalid-argument-type = "ignore"
-
-[[tool.ty.overrides]]
-include = ["django_formwork/renderers.py"]
-
-[tool.ty.overrides.rules]
-# Django's Jinja2 renderer uses cached_property for backend/engine; type stubs
-# expose them as property, causing false positives on operator, type-form, and
-# assignment checks.
-unsupported-operator = "ignore"
-invalid-type-form = "ignore"
-invalid-assignment = "ignore"
 
 [[tool.ty.overrides]]
 include = ["django_formwork/widgets/*.py"]

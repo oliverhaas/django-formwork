@@ -10,7 +10,7 @@ from django.utils.safestring import mark_safe
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import ComboBox
 
-from .conftest import assert_html_equivalent, make_server_widget, open_combo_box, render_form, render_widget, submit
+from .conftest import make_server_widget, open_combo_box, render_form, render_widget, submit
 
 
 class ComboBoxForm(FormworkForm):
@@ -715,7 +715,7 @@ def test_combo_box_error_state_shows_tooltip(renderer):
     form = ComboBoxForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_tag_tooltip")
+    tooltip = soup.find(id="id_tag_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -730,36 +730,7 @@ def test_combo_box_form_prefix_handling(renderer):
     assert inp["id"] == "id_cfg-tag"
 
 
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_combo_box_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """ComboBox produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(ComboBoxForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(ComboBoxForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
-
-
-@pytest.mark.integration
-def test_combo_box_grouped_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """Grouped ComboBox renders identically via DTL and Jinja2."""
-
-    class GroupedComboBoxForm(FormworkForm):
-        food = forms.CharField(
-            widget=ComboBox(
-                suggestions=[("Italian", ["Pizza", "Pasta"]), ("Asian", ["Sushi"])],
-                icons={"Pizza": mark_safe("<i>p</i>")},
-            ),
-            required=False,
-        )
-
-    soup_dtl = render_form(GroupedComboBoxForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(GroupedComboBoxForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
-
-
-# ─── Level 4b: Escaping regressions (both engines) ───────────────────────
+# ─── Level 4: Escaping regressions ──────────────────────────────────────
 
 
 @pytest.mark.integration
@@ -775,8 +746,8 @@ def test_combo_box_data_suggestion_round_trips_raw(renderer):
 
 
 @pytest.mark.integration
-def test_combo_box_data_icon_escaped_under_both_engines(renderer):
-    """Regression: Jinja2's |e honors __html__, leaving mark_safe icon SVG raw inside data-icon."""
+def test_combo_box_data_icon_escapes_safe_markup(renderer):
+    """A mark_safe icon stays escaped inside the data-icon attribute."""
     icon = '<img src="py.svg">'
 
     class IconComboBoxForm(FormworkForm):

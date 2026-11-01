@@ -8,7 +8,7 @@ from django.http import QueryDict
 
 from django_formwork.forms import FormworkForm
 
-from .conftest import assert_html_equivalent, render_form, render_widget, submit
+from .conftest import render_form, render_widget, submit
 
 
 class _FakeFile:
@@ -129,17 +129,6 @@ def test_clearable_file_input_form_prefix(renderer):
     inp = soup.find("input", attrs={"name": "upload-document", "type": "file"})
     assert inp is not None
     assert inp["id"] == "id_upload-document"
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_clearable_file_input_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """ClearableFileInput produces equivalent HTML via DTL and Jinja2."""
-    soup_dtl = render_form(ClearableFileForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(ClearableFileForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

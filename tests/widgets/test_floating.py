@@ -8,7 +8,7 @@ from django import forms
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import Select, Textarea, TextInput
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import render_form, render_widget
 
 WRAPPER_TEMPLATE = "formwork/widgets/floating_label.html"
 
@@ -176,17 +176,6 @@ def test_floating_wraps_control_in_form(renderer):
     soup = render_form(FloatingForm(), renderer=renderer)
     label = soup.find("label", class_="floating-label")
     assert label.find("input", attrs={"name": "nickname"}) is not None
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_floating_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """Floating widgets produce equivalent HTML via DTL and Jinja2."""
-    soup_dtl = render_form(FloatingForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(FloatingForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5+: E2e, morph, screenshot ────────────────────────────────────

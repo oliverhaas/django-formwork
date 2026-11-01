@@ -13,7 +13,7 @@ from django_formwork.fields import ChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import MultiSelect
 
-from .conftest import assert_html_equivalent, make_server_widget, open_dropdown, render_form, render_widget, submit
+from .conftest import make_server_widget, open_dropdown, render_form, render_widget, submit
 
 
 class MultiSelectForm(FormworkForm):
@@ -841,7 +841,7 @@ def test_multi_select_renders_via_form(renderer):
 
 @pytest.mark.integration
 def test_multi_select_option_data_value_round_trips_raw_value(renderer):
-    """Regression: escapejs on the option data-value mangled a hyphenated value (both engines)."""
+    """Regression: escapejs on the option data-value mangled a hyphenated value."""
 
     class HyphenForm(FormworkForm):
         tags = forms.MultipleChoiceField(
@@ -890,7 +890,7 @@ def test_multi_select_error_state_shows_tooltip(renderer):
     form = MultiSelectForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_tags_tooltip")
+    tooltip = soup.find(id="id_tags_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -903,17 +903,6 @@ def test_multi_select_form_prefix_handling(renderer):
     details = soup.find("details", class_="multiselect")
     assert details is not None
     assert details.get("id") == "id_cfg-tags_multiselect"
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_multi_select_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """MultiSelect produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(MultiSelectForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(MultiSelectForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

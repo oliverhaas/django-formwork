@@ -7,7 +7,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import InputNumber
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import render_form, render_widget
 
 
 class InputNumberForm(FormworkForm):
@@ -137,7 +137,7 @@ def test_input_number_error_state(renderer):
     form = InputNumberForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_quantity_tooltip")
+    tooltip = soup.find(id="id_quantity_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -168,17 +168,6 @@ def test_input_number_escapes_value_in_x_data(renderer):
     assert wrapper["x-data"] == "formworkInputNumber"
     # BeautifulSoup entity-decodes: an exact round-trip proves lossless escaping.
     assert wrapper["data-value"] == payload
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_input_number_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """InputNumber produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(InputNumberForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(InputNumberForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

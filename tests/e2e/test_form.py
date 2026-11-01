@@ -58,9 +58,9 @@ class TestFormStructure:
         assert help_text.is_visible()
         assert "textinput" in help_text.text_content().lower()
 
-    def test_required_asterisk(self, basic_page):
-        asterisks = basic_page.locator("#basic-form .text-error")
-        assert asterisks.count() >= 1
+    def test_optional_badge_marks_only_optional_fields(self, basic_page):
+        expect(basic_page.locator("#id_message_field .badge")).to_have_text("optional")
+        expect(basic_page.locator("#id_name_field .badge")).to_have_count(0)
 
     def test_submit_empty_shows_errors(self, basic_page):
         submit(basic_page)

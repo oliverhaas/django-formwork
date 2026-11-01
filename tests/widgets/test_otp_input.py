@@ -8,7 +8,7 @@ from django import forms
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import OTPInput
 
-from .conftest import assert_html_equivalent, render_form, render_widget
+from .conftest import render_form, render_widget
 
 
 class OTPForm(FormworkForm):
@@ -161,17 +161,6 @@ def test_otp_input_renders_with_int_initial(renderer):
     soup = render_form(form, renderer=renderer)
     wrapper = soup.find("div", attrs={"x-data": "formworkOtpInput"})
     assert json.loads(wrapper["data-digits"]) == ["1", "2", "3", "4", "5", "6"]
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_otp_input_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """OTPInput produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(OTPForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(OTPForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

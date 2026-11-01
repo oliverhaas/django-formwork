@@ -1,0 +1,9 @@
+{% if errors %}
+<div role="alert" class="alert alert-soft alert-error col-span-full"><i class="icon icon-circle-x" aria-hidden="true"></i><div>{% for error in errors %}<p>{{ error }}</p>{% endfor %}</div></div>
+{% endif %}
+{% if errors and not fields %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}
+{% for field, errors in fields %}
+{{ field.as_field_group }}
+{% if forloop.last %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}
+{% endfor %}
+{% if not fields and not errors %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}

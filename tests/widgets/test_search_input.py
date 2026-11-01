@@ -12,7 +12,7 @@ from django import forms
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import SearchInput
 
-from .conftest import assert_html_equivalent, render_form
+from .conftest import render_form
 
 
 class SearchForm(FormworkForm):
@@ -56,14 +56,6 @@ def test_search_input_preserves_value_and_attrs(renderer):
     inp = soup.select_one("label.input input[type=search]")
     assert inp["value"] == "design"
     assert inp["placeholder"] == "Search…"
-
-
-@pytest.mark.integration
-def test_search_input_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """The widget produces equivalent HTML via DTL and Jinja2."""
-    soup_dtl = render_form(SearchForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(SearchForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 @pytest.mark.integration

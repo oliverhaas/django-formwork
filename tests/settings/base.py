@@ -9,6 +9,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "django.contrib.staticfiles",
+    "django.forms",
     "django_iconx",
     "django_formwork",
     "e2e",

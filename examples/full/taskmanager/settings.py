@@ -16,6 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.forms",
     "django_iconx",
     "django_filters",
     "django_formwork",
