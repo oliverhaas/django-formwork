@@ -191,6 +191,17 @@ fieldset.fieldset > details.formwork-disclosure {
     width: 100%;
 }
 
+/* Intrinsic-width widgets: shrink the wrapper to its content so DaisyUI's
+   centered tooltip-bottom sits under the widget, not the full row.
+   Unlayered for the same reason as the rule above. */
+.tooltip:has(> .formwork-errors):has(> input[type="checkbox"]),
+.tooltip:has(> .formwork-errors):has(> label > input[type="checkbox"]),
+.choice-group > .tooltip:has(> .formwork-errors),
+.tooltip:has(> .formwork-errors):has(> .rating),
+.tooltip:has(> .formwork-errors):has(> div > .rating) {
+    width: fit-content;
+}
+
 /* Single checkbox: two-column grid — checkbox in column 1, label and
    help text in column 2.  Help text aligns under the label, not the
    checkbox, for a clean indented look.
@@ -713,21 +724,21 @@ input[type="range"] {
 }
 
 /* CheckboxSelectMultiple and RadioSelect (the field template marks the
-   fieldset .choice-group): the options sit on one tinted surface, each
-   option row highlights on hover.  Django renders <div id> > <div> >
-   <label> > <input>; the error tooltip wraps the outer <div>. */
+   fieldset .choice-group): a plain stacked list, each label as wide as
+   its text.  Django renders <div id> > <div> > <label> > <input>; the
+   error tooltip wraps the outer <div>. */
 .choice-group > div:not(.tooltip):has(> div > label > input:is([type="checkbox"], [type="radio"])),
 .choice-group > .tooltip > div:has(> div > label > input:is([type="checkbox"], [type="radio"])) {
-    @apply flex flex-col gap-y-0.5 rounded-field bg-base-200 p-1.5;
+    @apply flex flex-col items-start gap-y-1;
 }
 
 .choice-group label:has(> input:is([type="checkbox"], [type="radio"])) {
-    @apply flex items-center gap-x-2 rounded-field px-2.5 py-2 text-sm cursor-pointer transition-colors hover:bg-base-300;
+    @apply flex items-center gap-x-2 py-0.5 text-sm cursor-pointer;
 }
 
 /* CheckboxInput with a text: the label is the click target. */
 .checkbox-single {
-    @apply min-h-10 rounded-field bg-base-200 px-3 py-2 text-sm text-balance transition-colors hover:bg-base-300;
+    @apply min-h-10 w-fit text-sm text-balance;
 }
 
 /* PasswordInput: room for the reveal button at the inline end. */
@@ -968,15 +979,6 @@ details.dropdown.formwork-select > .dropdown-content {
 /* Spacing between multiple error messages inside tooltip. */
 .formwork-errors > p + p {
     @apply mt-0.5;
-}
-
-/* Intrinsic-width widgets: shrink tooltip wrapper to content so
-   DaisyUI's centered tooltip-bottom aligns with the actual widget,
-   not the full container width. */
-.tooltip:has(> .formwork-errors):has(> input[type="checkbox"]),
-.tooltip:has(> .formwork-errors):has(> .rating),
-.tooltip:has(> .formwork-errors):has(> div > .rating) {
-    @apply w-fit;
 }
 
 /* ================================================================
