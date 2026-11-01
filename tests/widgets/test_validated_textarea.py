@@ -142,7 +142,7 @@ def test_errors_tooltip_present():
     assert tooltip["id"] == "id_content_vttooltip"
     errors = tooltip.find("div", class_="formwork-errors")
     assert errors is not None
-    assert errors["id"] == "id_content_error"
+    assert errors["id"] == "id_content_live_error"
     assert errors["role"] == "alert"
 
 
@@ -218,7 +218,7 @@ def test_htmx_config_request_errors_id():
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
     textarea = soup.find("textarea")
     config = textarea["hx-on::config:request"]
-    assert "event.detail.ctx.request.body.set('errors_id', 'id_content_error')" in config
+    assert "event.detail.ctx.request.body.set('errors_id', 'id_content_live_error')" in config
 
 
 @pytest.mark.unit
@@ -400,14 +400,14 @@ def _trigger_validation(page, text):
         const params = new URLSearchParams();
         params.append('text', text);
         params.append('field_name', 'bio');
-        params.append('errors_id', textarea.id + '_error');
+        params.append('errors_id', textarea.id + '_live_error');
         fetch(url, {method: 'POST', body: params})
             .then(r => r.text())
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString('<div>' + html + '</div>', 'text/html');
                 const oob = doc.querySelector('[hx-swap-oob]');
-                const errorsTarget = document.getElementById(textarea.id + '_error');
+                const errorsTarget = document.getElementById(textarea.id + '_live_error');
                 if (oob && errorsTarget) {
                     errorsTarget.innerHTML = oob.innerHTML;
                     oob.remove();
