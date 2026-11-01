@@ -15,7 +15,7 @@ def _fill_base_fields(page):
     page.locator('input[name="terms"]').check()
 
 
-def _pick_search_select(page, value, label):
+def _pick_select(page, value, label):
     """Open the Select and pick one of its server-rendered options."""
     details = page.locator("details.formwork-select")
     # Open the dropdown via JS (summary::before overlay blocks clicks)
@@ -42,7 +42,7 @@ def _settle_auto_validate(page):
     page.wait_for_timeout(2500)
 
 
-def _toggle_multiselect_option(page, value):
+def _toggle_select_multiple_option(page, value):
     """Click the hidden checkbox: it fires the row's input and change events without opening the panel."""
     page.evaluate(
         f"""(() => {{
@@ -66,11 +66,11 @@ class TestComplexFormStructure:
     def test_has_two_password_fields(self, complex_page):
         expect(complex_page.locator('[x-data="formworkPasswordInput"]')).to_have_count(2)
 
-    def test_has_search_select(self, complex_page):
+    def test_has_select(self, complex_page):
         details = complex_page.locator("details.formwork-select")
         assert details.count() == 1
 
-    def test_has_multi_select(self, complex_page):
+    def test_has_select_multiple(self, complex_page):
         details = complex_page.locator("details.formwork-select-multiple")
         assert details.count() == 1
 
@@ -140,7 +140,7 @@ class TestComplexFormValidation:
     def test_country_without_languages_error(self, complex_page):
         """Selecting a country without languages shows cross-field error."""
         _fill_base_fields(complex_page)
-        _pick_search_select(complex_page, "us", "United States")
+        _pick_select(complex_page, "us", "United States")
         submit(complex_page)
         errors = complex_page.locator("#id_languages_error")
         assert errors.count() == 1
@@ -149,8 +149,8 @@ class TestComplexFormValidation:
     def test_country_with_languages_no_error(self, complex_page):
         """Selecting both country and languages passes cross-field validation."""
         _fill_base_fields(complex_page)
-        _pick_search_select(complex_page, "us", "United States")
-        _toggle_multiselect_option(complex_page, "py")
+        _pick_select(complex_page, "us", "United States")
+        _toggle_select_multiple_option(complex_page, "py")
         submit(complex_page)
         errors = complex_page.locator("#id_languages_error")
         assert errors.count() == 0
@@ -159,9 +159,9 @@ class TestComplexFormValidation:
 class TestComplexFormMorphResilience:
     """Morph resilience tests: client-side state survives server-side morphing."""
 
-    def test_search_select_value_survives_morph(self, complex_page):
+    def test_select_value_survives_morph(self, complex_page):
         """Select selected value persists through morph."""
-        _pick_search_select(complex_page, "us", "United States")
+        _pick_select(complex_page, "us", "United States")
         summary = complex_page.locator("details.formwork-select summary")
         expect(summary).to_contain_text("United States", timeout=2000)
         submit(complex_page)
@@ -170,9 +170,9 @@ class TestComplexFormMorphResilience:
         summary = complex_page.locator("details.formwork-select summary")
         expect(summary).to_contain_text("United States", timeout=2000)
 
-    def test_multiselect_value_survives_morph(self, complex_page):
+    def test_select_multiple_value_survives_morph(self, complex_page):
         """SelectMultiple selected values persist through morph."""
-        _toggle_multiselect_option(complex_page, "py")
+        _toggle_select_multiple_option(complex_page, "py")
         submit(complex_page)
         checked = complex_page.locator('input[type="checkbox"][name="languages"]:checked')
         expect(checked).to_have_count(1)
@@ -187,7 +187,7 @@ class TestComplexFormMorphResilience:
         submit(complex_page)
         expect(inp).to_have_attribute("type", "text")
 
-    def test_search_select_dropdown_state_survives_morph(self, complex_page):
+    def test_select_dropdown_state_survives_morph(self, complex_page):
         """Open Select dropdown stays open through morph."""
         page = complex_page
         page.evaluate("document.querySelector('details.formwork-select').open = true")
@@ -213,7 +213,7 @@ class TestComplexFormMorphResilience:
         """Auto-validation shows cross-field errors without explicit submit."""
         page = complex_page
         # Pick a country via Select (triggers change)
-        _pick_search_select(page, "us", "United States")
+        _pick_select(page, "us", "United States")
         # Cross-field error: country without languages.  The timeout covers
         # the 1500ms auto-validate debounce plus the round trip.
         errors = page.locator("#id_languages_error")
@@ -222,7 +222,7 @@ class TestComplexFormMorphResilience:
 
 
 @pytest.mark.screenshot
-def test_search_select_open_screenshot(complex_page, assert_screenshot):
+def test_select_open_screenshot(complex_page, assert_screenshot):
     """Visual snapshot: Select dropdown open with server-loaded results."""
     page = complex_page
     page.evaluate("document.querySelector('details.formwork-select').open = true")
@@ -238,7 +238,7 @@ def test_search_select_open_screenshot(complex_page, assert_screenshot):
 
 
 @pytest.mark.screenshot
-def test_search_select_filtered_screenshot(complex_page, assert_screenshot):
+def test_select_filtered_screenshot(complex_page, assert_screenshot):
     """Visual snapshot: Select dropdown with search text filtering results."""
     page = complex_page
     page.evaluate("document.querySelector('details.formwork-select').open = true")
@@ -261,7 +261,7 @@ def test_search_select_filtered_screenshot(complex_page, assert_screenshot):
 
 
 @pytest.mark.screenshot
-def test_multiselect_open_screenshot(complex_page, assert_screenshot):
+def test_select_multiple_open_screenshot(complex_page, assert_screenshot):
     """Visual snapshot: SelectMultiple dropdown open with server-loaded options."""
     page = complex_page
     page.evaluate("document.querySelector('details.formwork-select-multiple').open = true")
@@ -277,12 +277,12 @@ def test_multiselect_open_screenshot(complex_page, assert_screenshot):
 
 
 @pytest.mark.screenshot
-def test_multiselect_selections_screenshot(complex_page, assert_screenshot):
+def test_select_multiple_selections_screenshot(complex_page, assert_screenshot):
     """Visual snapshot: SelectMultiple summary with three options toggled."""
     page = complex_page
-    _toggle_multiselect_option(page, "py")
-    _toggle_multiselect_option(page, "rs")
-    _toggle_multiselect_option(page, "go")
+    _toggle_select_multiple_option(page, "py")
+    _toggle_select_multiple_option(page, "rs")
+    _toggle_select_multiple_option(page, "go")
     _settle_auto_validate(page)
     assert_screenshot(page.locator("#id_languages_field"), "complex-multiselect-selected.png")
 
@@ -291,9 +291,9 @@ def test_multiselect_selections_screenshot(complex_page, assert_screenshot):
 def test_full_form_filled_screenshot(complex_page, assert_screenshot):
     """Visual snapshot: all fields filled, before explicit submit."""
     page = complex_page
-    _pick_search_select(page, "de", "Germany")
-    _toggle_multiselect_option(page, "py")
-    _toggle_multiselect_option(page, "ts")
+    _pick_select(page, "de", "Germany")
+    _toggle_select_multiple_option(page, "py")
+    _toggle_select_multiple_option(page, "ts")
     _settle_auto_validate(page)
     # The morph preserves the Select summary label now; the hidden
     # input carries the submitted key.
@@ -306,9 +306,9 @@ def test_full_form_filled_screenshot(complex_page, assert_screenshot):
 def test_full_form_after_submit_screenshot(complex_page, assert_screenshot):
     """Visual snapshot: valid form submitted with no errors, morphed state."""
     page = complex_page
-    _pick_search_select(page, "de", "Germany")
-    _toggle_multiselect_option(page, "py")
-    _toggle_multiselect_option(page, "ts")
+    _pick_select(page, "de", "Germany")
+    _toggle_select_multiple_option(page, "py")
+    _toggle_select_multiple_option(page, "ts")
     _settle_auto_validate(page)
     _fill_base_fields_silently(page)
     submit(page)
@@ -333,12 +333,12 @@ def test_password_reveal_screenshot(complex_page, assert_screenshot):
 def test_auto_validate_error_then_fix_screenshot(complex_page, assert_screenshot):
     """Visual snapshot: auto-validate cross-field error, then the fixed state."""
     page = complex_page
-    _pick_search_select(page, "us", "United States")
+    _pick_select(page, "us", "United States")
     _settle_auto_validate(page)
     errors = page.locator("#id_languages_error")
     expect(errors).to_have_count(1, timeout=3000)
     assert_screenshot(page.locator("#id_languages_field"), "complex-languages-error.png")
-    _toggle_multiselect_option(page, "py")
+    _toggle_select_multiple_option(page, "py")
     _settle_auto_validate(page)
     expect(errors).to_have_count(0, timeout=3000)
     assert_screenshot(page.locator("#id_languages_field"), "complex-languages-fixed.png")

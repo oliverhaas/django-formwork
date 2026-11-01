@@ -191,7 +191,7 @@ class AutoSaveForm(FormworkModelForm):
 
 
 class SimpleForm(FormworkForm):
-    """Toggle switch, range slider, password reveal, datalist, rating."""
+    """ToggleInput, Range, PasswordInput with reveal, DataList, Rating."""
 
     toggle = forms.BooleanField(widget=ToggleInput, required=False)
     volume = forms.IntegerField(
@@ -1047,7 +1047,7 @@ class TextareaForm(FormworkForm):
 
 
 class NewWidgetsForm(FormworkForm):
-    """DatePicker, StepperNumberInput, OTP, Country, InputMask."""
+    """DatePicker, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons."""
 
     due_date = forms.DateField(
         widget=DatePicker,
@@ -1074,7 +1074,7 @@ class NewWidgetsForm(FormworkForm):
         choices=[("", "")] + [(c, ChoiceLabel(n, icon=flag)) for c, flag, n in _COUNTRIES],
         widget=Select(),
         required=False,
-        help_text="Searchable country selector with flag emojis.",
+        help_text="A Select whose options carry flag icons.",
     )
     zip_code = forms.CharField(
         widget=InputMask(mask="#####"),
@@ -1485,7 +1485,7 @@ _PAGES = [
         "simple",
         "/simple/",
         "Simple Custom Widgets",
-        "Toggle switch, range slider, password reveal, datalist, and star rating",
+        "ToggleInput, Range, PasswordInput with reveal, DataList, and Rating",
     ),
     (
         "inline-errors",
@@ -1506,14 +1506,14 @@ _PAGES = [
         "Django\u2019s built-in compound widgets, SplitDateTimeWidget, ClearableFileInput, CheckboxSelectMultiple, SelectDateWidget",
     ),
     (
-        "search-select",
-        "/search-select/",
+        "select",
+        "/select/",
         "Select",
         "Searchable dropdown, static, with icons, and server-side search via htmx",
     ),
     (
-        "multi-select",
-        "/multi-select/",
+        "select-multiple",
+        "/select-multiple/",
         "SelectMultiple",
         "Multi-select dropdown, plain, with icons and auto-search, and server-side via htmx",
     ),
@@ -1541,7 +1541,7 @@ _PAGES = [
         "new-widgets",
         "/new-widgets/",
         "New Widgets",
-        "DatePicker, StepperNumberInput, OTP, Country, InputMask",
+        "DatePicker, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons",
     ),
     (
         "complex",
@@ -1830,12 +1830,12 @@ def builtin_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, BuiltinWidgetsForm, "builtin")
 
 
-def search_select_view(request: HttpRequest) -> HttpResponse:
-    return _form_view(request, SelectForm, "search-select")
+def select_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, SelectForm, "select")
 
 
-def multi_select_view(request: HttpRequest) -> HttpResponse:
-    return _form_view(request, SelectMultipleForm, "multi-select")
+def select_multiple_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, SelectMultipleForm, "select-multiple")
 
 
 def combobox_view(request: HttpRequest) -> HttpResponse:

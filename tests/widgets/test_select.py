@@ -220,7 +220,7 @@ def test_select_renders_details_dropdown():
 
 @pytest.mark.unit
 def test_select_class_on_wrapper():
-    """Widget wrapper also has the 'search-select' class."""
+    """Widget wrapper also has the 'formwork-select' class."""
     widget = Select(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test")
     wrapper = soup.find("details", class_="formwork-select")
@@ -1037,22 +1037,22 @@ def _type_search(page, index, text):
 
 
 @pytest.mark.e2e
-def test_select_renders_on_page(search_select_page):
-    """Select is visible on the /search-select/ page."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").first
+def test_select_renders_on_page(select_page):
+    """Select is visible on the /select/ page."""
+    sel = select_page.locator("details.dropdown.formwork-select").first
     assert sel.is_visible()
 
 
 @pytest.mark.e2e
-def test_select_open_close_dropdown(search_select_page):
+def test_select_open_close_dropdown(select_page):
     """Clicking the summary trigger opens the dropdown; clicking again closes it."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").first
+    sel = select_page.locator("details.dropdown.formwork-select").first
     summary = sel.locator("summary")
     summary.click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     assert sel.get_attribute("open") is not None
     summary.click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     assert sel.get_attribute("open") is None
 
 
@@ -1066,154 +1066,154 @@ def _click_summary(page, index):
 
 
 @pytest.mark.e2e
-def test_select_opening_another_closes_the_open_one(search_select_page):
+def test_select_opening_another_closes_the_open_one(select_page):
     """Only one dropdown stays open at a time: opening a second closes the
     first, in both directions (regression: manual popovers used to leave both
     open)."""
-    selects = search_select_page.locator("details.dropdown.formwork-select")
-    _click_summary(search_select_page, 0)
-    _click_summary(search_select_page, 1)
+    selects = select_page.locator("details.dropdown.formwork-select")
+    _click_summary(select_page, 0)
+    _click_summary(select_page, 1)
     assert selects.nth(0).get_attribute("open") is None
     assert selects.nth(1).get_attribute("open") is not None
 
-    search_select_page.mouse.click(2, 2)
-    search_select_page.wait_for_timeout(150)
-    _click_summary(search_select_page, 1)
-    _click_summary(search_select_page, 0)
+    select_page.mouse.click(2, 2)
+    select_page.wait_for_timeout(150)
+    _click_summary(select_page, 1)
+    _click_summary(select_page, 0)
     assert selects.nth(0).get_attribute("open") is not None
     assert selects.nth(1).get_attribute("open") is None
 
 
 @pytest.mark.e2e
-def test_select_click_outside_closes(search_select_page):
+def test_select_click_outside_closes(select_page):
     """A click anywhere outside the dropdown closes it; a click inside its
     panel leaves it open."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(1)
-    _click_summary(search_select_page, 1)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(1)
+    _click_summary(select_page, 1)
     assert sel.get_attribute("open") is not None
 
     sel.locator(".dropdown-content").evaluate("el => el.click()")
-    search_select_page.wait_for_timeout(150)
+    select_page.wait_for_timeout(150)
     assert sel.get_attribute("open") is not None
 
-    search_select_page.mouse.click(2, 2)
-    search_select_page.wait_for_timeout(150)
+    select_page.mouse.click(2, 2)
+    select_page.wait_for_timeout(150)
     assert sel.get_attribute("open") is None
 
 
 @pytest.mark.e2e
-def test_select_no_search_input_with_few_options(search_select_page):
+def test_select_no_search_input_with_few_options(select_page):
     """Search input is hidden when option count is below threshold."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").first
-    _open_dropdown(search_select_page, 0)
-    search_select_page.wait_for_timeout(200)
+    sel = select_page.locator("details.dropdown.formwork-select").first
+    _open_dropdown(select_page, 0)
+    select_page.wait_for_timeout(200)
     search_wrapper = sel.locator(".dropdown-content > div").first
     assert not search_wrapper.is_visible()
 
 
 @pytest.mark.e2e
-def test_select_pick_option_sets_value(search_select_page):
+def test_select_pick_option_sets_value(select_page):
     """Clicking an option sets the hidden input value."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").first
+    sel = select_page.locator("details.dropdown.formwork-select").first
     hidden = sel.locator('input[type="hidden"][name]')
-    _open_dropdown(search_select_page, 0)
-    search_select_page.wait_for_timeout(200)
+    _open_dropdown(select_page, 0)
+    select_page.wait_for_timeout(200)
     sel.locator("button", has_text="London").click()
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     assert hidden.input_value() == "ldn"
 
 
 @pytest.mark.e2e
-def test_select_pick_closes_dropdown(search_select_page):
+def test_select_pick_closes_dropdown(select_page):
     """Picking an option closes the dropdown and updates the summary label."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").first
+    sel = select_page.locator("details.dropdown.formwork-select").first
     summary = sel.locator("summary")
     summary.click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     sel.locator("button", has_text="London").click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     assert sel.get_attribute("open") is None
     assert "London" in summary.text_content()
 
 
 @pytest.mark.e2e
-def test_select_wrapper_has_id(search_select_page):
+def test_select_wrapper_has_id(select_page):
     """The details wrapper element has a stable id ending in '_wrapper'."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").first
+    sel = select_page.locator("details.dropdown.formwork-select").first
     el_id = sel.get_attribute("id")
     assert el_id is not None
     assert el_id.endswith("_wrapper")
 
 
 @pytest.mark.e2e
-def test_select_many_search_input_shown(search_select_page):
+def test_select_many_search_input_shown(select_page):
     """Search input is visible when option count is at or above threshold."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(1)
-    _open_dropdown(search_select_page, 1)
-    search_select_page.wait_for_timeout(200)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(1)
+    _open_dropdown(select_page, 1)
+    select_page.wait_for_timeout(200)
     search = sel.locator('.dropdown-content input[type="search"]')
     assert search.count() == 1
 
 
 @pytest.mark.e2e
-def test_select_many_filters_options(search_select_page):
+def test_select_many_filters_options(select_page):
     """Typing in the search input filters the visible options."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(1)
-    _open_dropdown(search_select_page, 1)
-    search_select_page.wait_for_timeout(200)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(1)
+    _open_dropdown(select_page, 1)
+    select_page.wait_for_timeout(200)
     search = sel.locator('.dropdown-content input[type="search"]')
     search.fill("Jap")
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     assert sel.locator("button", has_text="Japan").is_visible()
     assert not sel.locator("button", has_text="Brazil").is_visible()
 
 
 @pytest.mark.e2e
-def test_select_many_pick_option_sets_value(search_select_page):
+def test_select_many_pick_option_sets_value(select_page):
     """Picking an option from the many-options list sets the correct value."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(1)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(1)
     hidden = sel.locator('input[type="hidden"][name]')
-    _open_dropdown(search_select_page, 1)
-    search_select_page.wait_for_timeout(200)
+    _open_dropdown(select_page, 1)
+    select_page.wait_for_timeout(200)
     sel.locator("button", has_text="Germany").click()
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     assert hidden.input_value() == "de"
 
 
 @pytest.mark.e2e
-def test_select_icons_renders(search_select_page):
+def test_select_icons_renders(select_page):
     """Select with icons (third dropdown) renders visibly."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(2)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(2)
     assert sel.is_visible()
 
 
 @pytest.mark.e2e
-def test_select_icons_pick_shows_label_in_summary(search_select_page):
+def test_select_icons_pick_shows_label_in_summary(select_page):
     """After picking an icon-option, the label appears in the summary."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(2)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(2)
     summary = sel.locator("summary")
-    _open_dropdown(search_select_page, 2)
-    search_select_page.wait_for_timeout(200)
+    _open_dropdown(select_page, 2)
+    select_page.wait_for_timeout(200)
     sel.locator("button", has_text="New York").click()
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     assert "New York" in summary.text_content()
 
 
 @pytest.mark.e2e
-def test_select_selected_toggle_class_applied_on_pick(search_select_page):
+def test_select_selected_toggle_class_applied_on_pick(select_page):
     """Picking a priority option moves its class onto the closed trigger, no round-trip.
 
     The priority dropdown is the 9th Select on the page (nth(8)); it is
     appended last precisely so it does not shift the other dropdowns' indices.
     """
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(8)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(8)
     summary = sel.locator("summary")
     # Nothing selected yet: the trigger carries none of the priority classes.
     assert "select-error" not in (summary.get_attribute("class") or "")
     summary.click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     sel.locator("button", has_text="High").click()
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     assert sel.get_attribute("open") is None
     assert "High" in summary.text_content()
     classes = (summary.get_attribute("class") or "").split()
@@ -1222,94 +1222,94 @@ def test_select_selected_toggle_class_applied_on_pick(search_select_page):
 
 
 @pytest.mark.e2e
-def test_select_selected_toggle_class_swaps_between_options(search_select_page):
+def test_select_selected_toggle_class_swaps_between_options(select_page):
     """Re-picking swaps the trigger class: the previous option's class is removed."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(8)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(8)
     summary = sel.locator("summary")
     summary.click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     sel.locator("button", has_text="High").click()
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     assert "select-error" in (summary.get_attribute("class") or "")
     summary.click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     sel.locator("button", has_text="Low").click()
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     cls = summary.get_attribute("class") or ""
     assert "select-success" in cls
     assert "select-error" not in cls
 
 
 @pytest.mark.e2e
-def test_select_htmx_renders(search_select_page):
+def test_select_htmx_renders(select_page):
     """Select with a server search that fits one page (fourth dropdown) renders visibly."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(3)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(3)
     assert sel.is_visible()
 
 
 @pytest.mark.e2e
-def test_select_htmx_open_loads_results(search_select_page):
+def test_select_htmx_open_loads_results(select_page):
     """The htmx search dropdown opens on the server-rendered first page."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(3)
-    _open_dropdown(search_select_page, 3)
-    search_select_page.wait_for_timeout(200)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(3)
+    _open_dropdown(select_page, 3)
+    select_page.wait_for_timeout(200)
     expect(sel.locator("ul button")).to_have_count(4, timeout=10000)
 
 
 @pytest.mark.e2e
-def test_select_short_server_list_filters_in_the_browser(search_select_page):
+def test_select_short_server_list_filters_in_the_browser(select_page):
     """A server search that fits one page filters its rows without a request."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(3)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(3)
     requests: list[str] = []
-    search_select_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
-    _open_dropdown(search_select_page, 3)
+    select_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
+    _open_dropdown(select_page, 3)
     expect(sel.locator("ul button:visible")).to_have_count(4, timeout=10000)
-    _type_search(search_select_page, 3, "Tok")
+    _type_search(select_page, 3, "Tok")
     expect(sel.locator("ul button:visible")).to_have_count(1, timeout=10000)
     assert "Tokyo" in sel.locator("ul button:visible").text_content()
-    search_select_page.wait_for_timeout(500)
+    select_page.wait_for_timeout(500)
     assert requests == []
 
 
 @pytest.mark.e2e
-def test_select_htmx_pick_sets_value(search_select_page):
+def test_select_htmx_pick_sets_value(select_page):
     """Clicking a filtered row sets the hidden input to the row's code."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(3)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(3)
     hidden = sel.locator('input[type="hidden"][name]')
-    _open_dropdown(search_select_page, 3)
-    search_select_page.wait_for_timeout(200)
-    _type_search(search_select_page, 3, "Lon")
+    _open_dropdown(select_page, 3)
+    select_page.wait_for_timeout(200)
+    _type_search(select_page, 3, "Lon")
     expect(sel.locator("ul button:visible")).to_have_count(1, timeout=10000)
     sel.locator("ul button", has_text="London").click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     assert hidden.input_value() == "ldn"
 
 
 @pytest.mark.e2e
-def test_select_htmx_no_results_message(search_select_page):
+def test_select_htmx_no_results_message(select_page):
     """A 'No results' row appears when the server search finds nothing."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(4)
-    _open_dropdown(search_select_page, 4)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(4)
+    _open_dropdown(select_page, 4)
     expect(sel.locator("ul button[data-value]")).to_have_count(20, timeout=10000)
-    _type_search(search_select_page, 4, "zzzzz")
+    _type_search(select_page, 4, "zzzzz")
     expect(sel.locator("li", has_text="No results")).to_be_visible(timeout=10000)
 
 
 @pytest.mark.e2e
-def test_select_htmx_many_load_more_appends_the_next_page(search_select_page):
+def test_select_htmx_many_load_more_appends_the_next_page(select_page):
     """The htmx-many dropdown (nth=4) opens on one page of 24 cities; "Load more" appends the rest."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(4)
-    _open_dropdown(search_select_page, 4)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(4)
+    _open_dropdown(select_page, 4)
     buttons = sel.locator("ul button[data-value]")
     expect(buttons).to_have_count(20, timeout=10000)
     sel.get_by_role("button", name="Load more").click()
@@ -1318,64 +1318,64 @@ def test_select_htmx_many_load_more_appends_the_next_page(search_select_page):
 
 
 @pytest.mark.e2e
-def test_select_htmx_many_search_input_shown_above_threshold(search_select_page):
+def test_select_htmx_many_search_input_shown_above_threshold(select_page):
     """Search input is visible because the list is longer than one page."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(4)
-    _open_dropdown(search_select_page, 4)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(4)
+    _open_dropdown(select_page, 4)
     search_wrapper = sel.locator(".dropdown-content > div").first
     expect(search_wrapper).to_be_visible(timeout=10000)
 
 
 @pytest.mark.e2e
-def test_select_htmx_many_filters_via_htmx(search_select_page):
+def test_select_htmx_many_filters_via_htmx(select_page):
     """Htmx-many: typing a search term filters down to matching options."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(4)
-    _open_dropdown(search_select_page, 4)
-    _type_search(search_select_page, 4, "Ber")
+    sel = select_page.locator("details.dropdown.formwork-select").nth(4)
+    _open_dropdown(select_page, 4)
+    _type_search(select_page, 4, "Ber")
     expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
     assert "Berlin" in sel.locator("ul button").first.text_content()
 
 
 @pytest.mark.e2e
-def test_select_htmx_icons_renders(search_select_page):
+def test_select_htmx_icons_renders(select_page):
     """Htmx-icons dropdown (nth=5) renders visibly."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(5)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(5)
     assert sel.is_visible()
 
 
 @pytest.mark.e2e
-def test_select_htmx_icons_loads_results(search_select_page):
+def test_select_htmx_icons_loads_results(select_page):
     """Htmx-icons: opening shows the first page of the 31 countries."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(5)
-    _open_dropdown(search_select_page, 5)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(5)
+    _open_dropdown(select_page, 5)
     buttons = sel.locator("ul button[data-value]")
     expect(buttons).to_have_count(20, timeout=10000)
 
 
 @pytest.mark.e2e
-def test_select_htmx_icons_search_input_shown(search_select_page):
+def test_select_htmx_icons_search_input_shown(select_page):
     """Htmx-icons: search input is visible because total >= search_threshold."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(5)
-    _open_dropdown(search_select_page, 5)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(5)
+    _open_dropdown(select_page, 5)
     search_wrapper = sel.locator(".dropdown-content > div").first
     expect(search_wrapper).to_be_visible(timeout=10000)
 
 
 @pytest.mark.e2e
-def test_select_htmx_icons_results_have_icons(search_select_page):
+def test_select_htmx_icons_results_have_icons(select_page):
     """Htmx-icons: each option button has an icon span."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(5)
-    _open_dropdown(search_select_page, 5)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(5)
+    _open_dropdown(select_page, 5)
     first_button = sel.locator("ul button").first
     expect(first_button).to_be_visible(timeout=10000)
     icon_span = first_button.locator("span.shrink-0").first
@@ -1383,37 +1383,37 @@ def test_select_htmx_icons_results_have_icons(search_select_page):
 
 
 @pytest.mark.e2e
-def test_select_htmx_icons_results_have_descriptions(search_select_page):
+def test_select_htmx_icons_results_have_descriptions(select_page):
     """Htmx-icons: each option button has a description span."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(5)
-    _open_dropdown(search_select_page, 5)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(5)
+    _open_dropdown(select_page, 5)
     descs = sel.locator("ul button span.text-xs")
     expect(descs.first).to_be_visible(timeout=10000)
     assert descs.first.text_content().strip() != ""
 
 
 @pytest.mark.e2e
-def test_select_htmx_icons_filters(search_select_page):
+def test_select_htmx_icons_filters(select_page):
     """Htmx-icons: search term filters down to one matching country."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(5)
-    _open_dropdown(search_select_page, 5)
-    _type_search(search_select_page, 5, "Jap")
+    sel = select_page.locator("details.dropdown.formwork-select").nth(5)
+    _open_dropdown(select_page, 5)
+    _type_search(select_page, 5, "Jap")
     expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
     assert "Japan" in sel.locator("ul button").first.text_content()
 
 
 @pytest.mark.e2e
-def test_select_htmx_icons_pick_sets_value(search_select_page):
+def test_select_htmx_icons_pick_sets_value(select_page):
     """Htmx-icons: picking an option sets the correct hidden input value."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(5)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(5)
     hidden = sel.locator('input[type="hidden"][name]')
-    _open_dropdown(search_select_page, 5)
+    _open_dropdown(select_page, 5)
     sel.locator("ul button", has_text="France").click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     assert hidden.input_value() == "fr"
 
 
@@ -1423,11 +1423,11 @@ def test_select_htmx_icons_pick_sets_value(search_select_page):
 
 
 @pytest.mark.e2e
-def test_select_grouped_shows_headers(search_select_page):
+def test_select_grouped_shows_headers(select_page):
     """Open the grouped Select; all three group headers are visible."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(6)
-    _open_dropdown(search_select_page, 6)
-    search_select_page.wait_for_timeout(200)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(6)
+    _open_dropdown(select_page, 6)
+    select_page.wait_for_timeout(200)
 
     headers = sel.locator("li.menu-title")
     assert headers.count() == 3
@@ -1436,14 +1436,14 @@ def test_select_grouped_shows_headers(search_select_page):
 
 
 @pytest.mark.e2e
-def test_select_grouped_search_hides_empty_groups(search_select_page):
+def test_select_grouped_search_hides_empty_groups(select_page):
     """Typing 'lon' hides Asia and Americas headers (no children match)."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(6)
-    _open_dropdown(search_select_page, 6)
-    search_select_page.wait_for_timeout(200)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(6)
+    _open_dropdown(select_page, 6)
+    select_page.wait_for_timeout(200)
 
-    _type_search(search_select_page, 6, "lon")
-    search_select_page.wait_for_timeout(200)
+    _type_search(select_page, 6, "lon")
+    select_page.wait_for_timeout(200)
 
     visible_headers = [h.inner_text().strip() for h in sel.locator("li.menu-title").all() if h.is_visible()]
     assert visible_headers == ["Europe"]
@@ -1456,42 +1456,42 @@ def test_select_grouped_search_hides_empty_groups(search_select_page):
 
 
 @pytest.mark.e2e
-def test_select_search_auto_focus_on_open(search_select_page):
+def test_select_search_auto_focus_on_open(select_page):
     """Opening a Select with a search box auto-focuses the input."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(1)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(1)
     sel.locator("summary").click()
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     search = sel.locator('.dropdown-content input[type="search"]')
     expect(search).to_be_focused(timeout=2000)
 
 
 @pytest.mark.e2e
-def test_select_search_refocus_on_reopen(search_select_page):
+def test_select_search_refocus_on_reopen(select_page):
     """Closing then reopening a search-enabled Select re-focuses the input."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(1)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(1)
     sel.locator("summary").click()
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     sel.locator("summary").click()  # close
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     sel.locator("summary").click()  # reopen
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     search = sel.locator('.dropdown-content input[type="search"]')
     expect(search).to_be_focused(timeout=2000)
 
 
 @pytest.mark.e2e
-def test_select_no_search_no_focus_error(search_select_page):
+def test_select_no_search_no_focus_error(select_page):
     """Opening a search-less Select does not raise any console error."""
     errors: list[str] = []
-    search_select_page.on("pageerror", lambda e: errors.append(str(e)))
+    select_page.on("pageerror", lambda e: errors.append(str(e)))
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").first
+    sel = select_page.locator("details.dropdown.formwork-select").first
     sel.locator("summary").click()
-    search_select_page.wait_for_timeout(150)
+    select_page.wait_for_timeout(150)
     assert errors == []
 
 
@@ -1503,121 +1503,121 @@ def test_select_no_search_no_focus_error(search_select_page):
 
 
 @pytest.mark.e2e
-def test_select_keyboard_arrowdown_highlights_first(search_select_page):
+def test_select_keyboard_arrowdown_highlights_first(select_page):
     """ArrowDown highlights the first visible option."""
-    sel = open_dropdown(search_select_page, "formwork-select", 6, settle_ms=200)
+    sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
-    search_select_page.wait_for_timeout(50)
+    select_page.wait_for_timeout(50)
     highlighted = sel.locator("li.highlighted > [data-value]")
     assert highlighted.count() == 1
     assert highlighted.first.get_attribute("data-value") == "ldn"
 
 
 @pytest.mark.e2e
-def test_select_keyboard_arrowdown_navigates(search_select_page):
+def test_select_keyboard_arrowdown_navigates(select_page):
     """Each ArrowDown moves to the next option, skipping group headers."""
-    sel = open_dropdown(search_select_page, "formwork-select", 6, settle_ms=200)
+    sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="search"]')
     for _ in range(3):  # ldn, par, ber
         search.press("ArrowDown")
     search.press("ArrowDown")  # tyo (next group)
-    search_select_page.wait_for_timeout(50)
+    select_page.wait_for_timeout(50)
     assert sel.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "tyo"
 
 
 @pytest.mark.e2e
-def test_select_keyboard_arrowdown_wraps_to_first(search_select_page):
+def test_select_keyboard_arrowdown_wraps_to_first(select_page):
     """ArrowDown past the last option wraps to the first."""
-    sel = open_dropdown(search_select_page, "formwork-select", 6, settle_ms=200)
+    sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="search"]')
     for _ in range(10):  # 9 + 1 wrap
         search.press("ArrowDown")
-    search_select_page.wait_for_timeout(50)
+    select_page.wait_for_timeout(50)
     assert sel.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "ldn"
 
 
 @pytest.mark.e2e
-def test_select_keyboard_arrowup_wraps_to_last(search_select_page):
+def test_select_keyboard_arrowup_wraps_to_last(select_page):
     """ArrowUp from no highlight goes to the last visible option."""
-    sel = open_dropdown(search_select_page, "formwork-select", 6, settle_ms=200)
+    sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="search"]')
     search.press("ArrowUp")
-    search_select_page.wait_for_timeout(50)
+    select_page.wait_for_timeout(50)
     assert sel.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "mex"
 
 
 @pytest.mark.e2e
-def test_select_keyboard_filter_skips_hidden_options(search_select_page):
+def test_select_keyboard_filter_skips_hidden_options(select_page):
     """After filtering, ArrowDown only highlights visible (matching) options."""
-    sel = open_dropdown(search_select_page, "formwork-select", 6, settle_ms=200)
+    sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="search"]')
     search.fill("lon")  # Matches only "London"
-    search_select_page.wait_for_timeout(150)
+    select_page.wait_for_timeout(150)
     search.press("ArrowDown")
     search.press("ArrowDown")  # Wrap around (only one visible)
-    search_select_page.wait_for_timeout(50)
+    select_page.wait_for_timeout(50)
     highlighted = sel.locator("li.highlighted > [data-value]")
     assert highlighted.count() == 1
     assert highlighted.first.get_attribute("data-value") == "ldn"
 
 
 @pytest.mark.e2e
-def test_select_keyboard_enter_picks_and_closes(search_select_page):
+def test_select_keyboard_enter_picks_and_closes(select_page):
     """Enter on highlighted option sets value and closes the dropdown."""
-    sel = open_dropdown(search_select_page, "formwork-select", 6, settle_ms=200)
+    sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")  # ldn
     search.press("ArrowDown")  # par
     search.press("Enter")
-    search_select_page.wait_for_timeout(150)
+    select_page.wait_for_timeout(150)
     hidden = sel.locator('input[type="hidden"][name]')
     assert hidden.input_value() == "par"
     assert sel.get_attribute("open") is None
 
 
 @pytest.mark.e2e
-def test_select_keyboard_enter_no_highlight_picks_first(search_select_page):
+def test_select_keyboard_enter_no_highlight_picks_first(select_page):
     """With no highlight, Enter picks the first visible option."""
-    sel = open_dropdown(search_select_page, "formwork-select", 6, settle_ms=200)
+    sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="search"]')
     search.fill("tok")
-    search_select_page.wait_for_timeout(150)
+    select_page.wait_for_timeout(150)
     search.press("Enter")
-    search_select_page.wait_for_timeout(150)
+    select_page.wait_for_timeout(150)
     hidden = sel.locator('input[type="hidden"][name]')
     assert hidden.input_value() == "tyo"
 
 
 @pytest.mark.e2e
-def test_select_keyboard_close_clears_highlight(search_select_page):
+def test_select_keyboard_close_clears_highlight(select_page):
     """Closing the dropdown via summary click clears ``.highlighted``."""
-    sel = open_dropdown(search_select_page, "formwork-select", 6, settle_ms=200)
+    sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
     search = sel.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
-    search_select_page.wait_for_timeout(50)
+    select_page.wait_for_timeout(50)
     assert sel.locator("li.highlighted > [data-value]").count() == 1
     sel.locator("summary").click()
-    search_select_page.wait_for_timeout(150)
+    select_page.wait_for_timeout(150)
     assert sel.locator("li.highlighted > [data-value]").count() == 0
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# Gap: /search-select/ has only required=False fields, so an e2e error-flow
+# Gap: /select/ has only required=False fields, so an e2e error-flow
 # test needs a page with a required Select, which does not exist yet.
 
 
 @pytest.mark.e2e
-def test_select_failing_search_shows_error_alert(search_select_page):
+def test_select_failing_search_shows_error_alert(select_page):
     """When the search endpoint returns 500, the error alert appears in
     place of the listbox and the alert carries the failure message."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(7)
-    _open_dropdown(search_select_page, 7)
-    search_select_page.wait_for_timeout(200)
-    _type_search(search_select_page, 7, "x")
+    sel = select_page.locator("details.dropdown.formwork-select").nth(7)
+    _open_dropdown(select_page, 7)
+    select_page.wait_for_timeout(200)
+    _type_search(select_page, 7, "x")
     alert = sel.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
     assert "Search failed" in alert.text_content()
@@ -1625,24 +1625,24 @@ def test_select_failing_search_shows_error_alert(search_select_page):
 
 
 @pytest.mark.e2e
-def test_select_search_input_works_after_error(search_select_page):
+def test_select_search_input_works_after_error(select_page):
     """The search input remains usable after a failure; typing fires a new
     request and the value lands in the input."""
     from playwright.sync_api import expect
 
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(7)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(7)
     requests: list[str] = []
-    search_select_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
-    _open_dropdown(search_select_page, 7)
-    _type_search(search_select_page, 7, "x")
+    select_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
+    _open_dropdown(select_page, 7)
+    _type_search(select_page, 7, "x")
     alert = sel.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
     initial_count = len(requests)
-    _type_search(search_select_page, 7, "xy")
+    _type_search(select_page, 7, "xy")
     # 300ms input-changed debounce + buffer for the request to fire.
-    search_select_page.wait_for_timeout(500)
+    select_page.wait_for_timeout(500)
     assert len(requests) > initial_count, "expected typing to fire a new search request"
-    val = search_select_page.evaluate("""() => {
+    val = select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.formwork-select');
         return dds[7].querySelector('.dropdown-content input[type="search"]').value;
     }""")
@@ -1653,77 +1653,77 @@ def test_select_search_input_works_after_error(search_select_page):
 
 
 @pytest.mark.e2e
-def test_select_morph_preserves_value(search_select_page):
+def test_select_morph_preserves_value(select_page):
     """Selected value survives an htmx form morph."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").first
-    search_select_page.evaluate("""
+    sel = select_page.locator("details.dropdown.formwork-select").first
+    select_page.evaluate("""
         document.querySelector('details.dropdown.formwork-select').open = true;
     """)
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     sel.locator("button", has_text="London").click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     hidden = sel.locator('input[type="hidden"][name]')
     assert hidden.input_value() == "ldn"
-    submit(search_select_page)
-    hidden = search_select_page.locator(
+    submit(select_page)
+    hidden = select_page.locator(
         "details.dropdown.formwork-select input[type='hidden']",
     ).first
     assert hidden.input_value() == "ldn"
-    summary = search_select_page.locator(
+    summary = select_page.locator(
         "details.dropdown.formwork-select summary",
     ).first
     assert "London" in summary.text_content()
 
 
 @pytest.mark.e2e
-def test_select_morph_preserves_dropdown_closed(search_select_page):
+def test_select_morph_preserves_dropdown_closed(select_page):
     """Closed dropdown stays closed after a morph."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").first
-    search_select_page.evaluate("""
+    sel = select_page.locator("details.dropdown.formwork-select").first
+    select_page.evaluate("""
         document.querySelector('details.dropdown.formwork-select').open = true;
     """)
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     sel.locator("button", has_text="Tokyo").click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     assert sel.get_attribute("open") is None
-    submit(search_select_page)
+    submit(select_page)
     assert sel.get_attribute("open") is None
 
 
 @pytest.mark.e2e
-def test_select_morph_preserves_dropdown_open(search_select_page):
+def test_select_morph_preserves_dropdown_open(select_page):
     """Open dropdown stays open after a morph."""
-    search_select_page.evaluate("""
+    select_page.evaluate("""
         document.querySelector('details.dropdown.formwork-select').open = true;
     """)
-    search_select_page.wait_for_timeout(200)
-    search_select_page.evaluate("""
+    select_page.wait_for_timeout(200)
+    select_page.evaluate("""
         const form = document.querySelector('form[hx-post]');
         form.noValidate = true;
         form.requestSubmit();
     """)
-    search_select_page.wait_for_timeout(500)
-    sel = search_select_page.locator("details.dropdown.formwork-select").first
+    select_page.wait_for_timeout(500)
+    sel = select_page.locator("details.dropdown.formwork-select").first
     assert sel.get_attribute("open") is not None
 
 
 @pytest.mark.e2e
-def test_select_toggle_class_survives_noop_morph(search_select_page):
+def test_select_toggle_class_survives_noop_morph(select_page):
     """Alpine-applied trigger classes survive a no-op morph.
 
     A re-render of already-saved state changes no data attributes, so nothing
     re-evaluates the :class binding; the morph itself must keep the classes.
     """
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(8)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(8)
     summary = sel.locator("summary")
     summary.click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     sel.locator("button", has_text="High").click()
-    search_select_page.wait_for_timeout(100)
+    select_page.wait_for_timeout(100)
     assert "select-error" in (summary.get_attribute("class") or "")
-    submit(search_select_page)
+    submit(select_page)
     assert "select-error" in (summary.get_attribute("class") or "")
-    submit(search_select_page)
+    submit(select_page)
     classes = (summary.get_attribute("class") or "").split()
     assert "select-error" in classes
     assert "false" not in classes
@@ -1733,44 +1733,44 @@ def test_select_toggle_class_survives_noop_morph(search_select_page):
 
 
 @pytest.mark.screenshot
-def test_select_screenshot_default(search_select_page, assert_screenshot):
+def test_select_screenshot_default(select_page, assert_screenshot):
     """Visual snapshot: Select in default (closed) state."""
-    wrapper = search_select_page.locator("#id_city_plain_field")
+    wrapper = select_page.locator("#id_city_plain_field")
     assert_screenshot(wrapper, "search-select-default.png")
 
 
 @pytest.mark.screenshot
-def test_select_screenshot_open(search_select_page, assert_screenshot):
+def test_select_screenshot_open(select_page, assert_screenshot):
     """Visual snapshot: Select with dropdown open."""
-    search_select_page.evaluate("""() => {
+    select_page.evaluate("""() => {
         const dd = document.querySelector('details.dropdown.formwork-select');
         dd.open = true;
         dd.dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(200)
-    wrapper = search_select_page.locator("#id_city_plain_field")
+    select_page.wait_for_timeout(200)
+    wrapper = select_page.locator("#id_city_plain_field")
     assert_screenshot(wrapper, "search-select-open.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot
-def test_select_screenshot_selected(search_select_page, assert_screenshot):
+def test_select_screenshot_selected(select_page, assert_screenshot):
     """Visual snapshot: Select with an option selected."""
-    search_select_page.evaluate("""() => {
+    select_page.evaluate("""() => {
         const dd = document.querySelector('details.dropdown.formwork-select');
         dd.open = true;
         dd.dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(200)
-    search_select_page.locator("details.dropdown.formwork-select").first.locator("button", has_text="London").click()
-    search_select_page.wait_for_timeout(100)
-    wrapper = search_select_page.locator("#id_city_plain_field")
+    select_page.wait_for_timeout(200)
+    select_page.locator("details.dropdown.formwork-select").first.locator("button", has_text="London").click()
+    select_page.wait_for_timeout(100)
+    wrapper = select_page.locator("#id_city_plain_field")
     assert_screenshot(wrapper, "search-select-selected.png")
 
 
 @pytest.mark.screenshot
-def test_select_screenshot_selected_toggle_class(search_select_page, assert_screenshot):
+def test_select_screenshot_selected_toggle_class(select_page, assert_screenshot):
     """Visual snapshot: priority Select trigger recolored by the picked option."""
-    search_select_page.evaluate("""() => {
+    select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.formwork-select');
         // The top-layer panel tracks its trigger; Playwright can't scroll
         // a fixed element into view, so the trigger must be visible first.
@@ -1778,35 +1778,35 @@ def test_select_screenshot_selected_toggle_class(search_select_page, assert_scre
         dds[8].open = true;
         dds[8].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(200)
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(8)
+    select_page.wait_for_timeout(200)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(8)
     sel.locator("button", has_text="High").click()
-    search_select_page.wait_for_timeout(100)
-    wrapper = search_select_page.locator("#id_priority_field")
+    select_page.wait_for_timeout(100)
+    wrapper = select_page.locator("#id_priority_field")
     assert_screenshot(wrapper, "search-select-selected-toggle-class.png")
 
 
 @pytest.mark.screenshot
-def test_select_screenshot_grouped_open(search_select_page, assert_screenshot):
+def test_select_screenshot_grouped_open(select_page, assert_screenshot):
     """Visual snapshot: grouped Select with dropdown open showing optgroup headers."""
-    search_select_page.evaluate("""() => {
+    select_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.formwork-select');
         dds[6].open = true;
         dds[6].dispatchEvent(new Event('toggle'));
     }""")
-    search_select_page.wait_for_timeout(200)
-    wrapper = search_select_page.locator("#id_city_grouped_field")
+    select_page.wait_for_timeout(200)
+    wrapper = select_page.locator("#id_city_grouped_field")
     assert_screenshot(wrapper, "search-select-grouped-open.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot
-def test_select_screenshot_keyboard_highlighted(search_select_page, assert_screenshot):
+def test_select_screenshot_keyboard_highlighted(select_page, assert_screenshot):
     """Visual snapshot: Select with an option highlighted via keyboard."""
-    sel = search_select_page.locator("details.dropdown.formwork-select").nth(6)
+    sel = select_page.locator("details.dropdown.formwork-select").nth(6)
     sel.locator("summary").click()
-    search_select_page.wait_for_timeout(200)
+    select_page.wait_for_timeout(200)
     search = sel.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")  # Highlight ldn
-    search_select_page.wait_for_timeout(50)
-    wrapper = search_select_page.locator("#id_city_grouped_field")
+    select_page.wait_for_timeout(50)
+    wrapper = select_page.locator("#id_city_grouped_field")
     assert_screenshot(wrapper, "search-select-keyboard-highlighted.png", capture_dropdown=True)

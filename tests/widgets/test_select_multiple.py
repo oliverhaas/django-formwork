@@ -844,32 +844,32 @@ def test_select_multiple_form_prefix_handling(renderer):
 
 
 @pytest.mark.e2e
-def test_select_multiple_renders_on_page(multi_select_page):
-    """SelectMultiple dropdown is visible on the /multi-select/ page."""
+def test_select_multiple_renders_on_page(select_multiple_page):
+    """SelectMultiple dropdown is visible on the /select-multiple/ page."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     expect(multi).to_be_visible()
 
 
 @pytest.mark.e2e
-def test_select_multiple_open_shows_checkboxes(multi_select_page):
+def test_select_multiple_open_shows_checkboxes(select_multiple_page):
     """Opening the dropdown reveals checkbox inputs."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     summary = multi.locator("summary")
     summary.click()
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     checkboxes = multi.locator('input[type="checkbox"]')
     assert checkboxes.count() >= 2
 
 
 @pytest.mark.e2e
-def test_select_multiple_select_multiple(multi_select_page):
+def test_select_multiple_select_multiple(select_multiple_page):
     """User can check multiple options via JS dispatch."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(100)
-    multi_select_page.evaluate("""() => {
+    select_multiple_page.wait_for_timeout(100)
+    select_multiple_page.evaluate("""() => {
         const dd = document.querySelector('details.dropdown.formwork-select-multiple');
         ['py', 'go'].forEach(v => {
             const cb = dd.querySelector(`input[value="${v}"]`);
@@ -877,35 +877,35 @@ def test_select_multiple_select_multiple(multi_select_page):
             cb.dispatchEvent(new Event('change', {bubbles: true}));
         });
     }""")
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     assert multi.locator('input[value="py"]').is_checked()
     assert multi.locator('input[value="go"]').is_checked()
 
 
 @pytest.mark.e2e
-def test_select_multiple_summary_shows_selection(multi_select_page):
+def test_select_multiple_summary_shows_selection(select_multiple_page):
     """After selecting an option the summary reflects the selection."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     summary = multi.locator("summary")
     summary.click()
-    multi_select_page.wait_for_timeout(100)
-    multi_select_page.evaluate("""() => {
+    select_multiple_page.wait_for_timeout(100)
+    select_multiple_page.evaluate("""() => {
         const dd = document.querySelector('details.dropdown.formwork-select-multiple');
         const cb = dd.querySelector('input[value="py"]');
         cb.checked = true;
         cb.dispatchEvent(new Event('change', {bubbles: true}));
     }""")
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     summary_text = summary.text_content()
     assert "Python" in summary_text or "1" in summary_text
 
 
 @pytest.mark.e2e
-def test_select_multiple_summary_shows_picked_icons_and_escapes_labels(multi_select_page):
+def test_select_multiple_summary_shows_picked_icons_and_escapes_labels(select_multiple_page):
     """Each pick shows its icon in the closed toggle, and its label stays text."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("#id_countries_icons_wrapper")
+    multi = select_multiple_page.locator("#id_countries_icons_wrapper")
     toggle = multi.locator("summary [x-html]")
     multi.locator("summary").click()
     multi.locator('input[value="ar"]').dispatch_event("click")
@@ -920,73 +920,73 @@ def test_select_multiple_summary_shows_picked_icons_and_escapes_labels(multi_sel
 
 
 @pytest.mark.e2e
-def test_select_multiple_no_search_bar_for_plain(multi_select_page):
+def test_select_multiple_no_search_bar_for_plain(select_multiple_page):
     """Plain SelectMultiple with 4 choices hides its search input (below threshold)."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     expect(multi.locator('input[type="search"]')).to_be_hidden()
 
 
 @pytest.mark.e2e
-def test_select_multiple_icons_has_search_bar(multi_select_page):
+def test_select_multiple_icons_has_search_bar(select_multiple_page):
     """Icons SelectMultiple with 31 countries shows a search bar (above threshold)."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(1)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(1)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     search = multi.locator('input[type="search"]')
     assert search.count() == 1
 
 
 @pytest.mark.e2e
-def test_select_multiple_icons_has_many_checkboxes(multi_select_page):
+def test_select_multiple_icons_has_many_checkboxes(select_multiple_page):
     """Icons SelectMultiple has 31 country checkboxes."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(1)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(1)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     checkboxes = multi.locator('input[type="checkbox"]')
     assert checkboxes.count() == 31
 
 
 @pytest.mark.e2e
-def test_select_multiple_htmx_renders(multi_select_page):
+def test_select_multiple_htmx_renders(select_multiple_page):
     """htmx SelectMultiple is visible on the page."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     expect(multi).to_be_visible()
 
 
 @pytest.mark.e2e
-def test_select_multiple_htmx_search_replaces_the_rows(multi_select_page):
+def test_select_multiple_htmx_search_replaces_the_rows(select_multiple_page):
     """The listbox opens on one page of 25 languages; a search swaps in the server's matches."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
     checkboxes = multi.locator('input[type="checkbox"]')
     expect(checkboxes).to_have_count(20)
     expect(multi.get_by_role("button", name="Load more")).to_be_attached()
-    _type_search(multi_select_page, 2, "Zig")
+    _type_search(select_multiple_page, 2, "Zig")
     expect(checkboxes).to_have_count(1, timeout=10000)
     assert checkboxes.get_attribute("value") == "zig"
 
 
 @pytest.mark.e2e
-def test_select_multiple_htmx_selection_stays_checked_when_load_more_brings_it_back(multi_select_page):
+def test_select_multiple_htmx_selection_stays_checked_when_load_more_brings_it_back(select_multiple_page):
     """A row picked from a search is checked again when "Load more" renders it after the search clears."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
-    _type_search(multi_select_page, 2, "Zig")
+    _type_search(select_multiple_page, 2, "Zig")
     zig = multi.locator('input[type="checkbox"][value="zig"]')
     expect(multi.locator('input[type="checkbox"]')).to_have_count(1, timeout=10000)
     zig.dispatch_event("click")
     expect(zig).to_be_checked()
-    _type_search(multi_select_page, 2, "")
+    _type_search(select_multiple_page, 2, "")
     expect(multi.locator('input[type="checkbox"]')).to_have_count(20, timeout=10000)
     multi.get_by_role("button", name="Load more").click()
     expect(multi.locator('input[type="checkbox"]')).to_have_count(25, timeout=10000)
@@ -994,12 +994,12 @@ def test_select_multiple_htmx_selection_stays_checked_when_load_more_brings_it_b
 
 
 @pytest.mark.e2e
-def test_select_multiple_htmx_select_creates_hidden_inputs(multi_select_page):
+def test_select_multiple_htmx_select_creates_hidden_inputs(select_multiple_page):
     """Selecting items in htmx mode creates hidden inputs for form submission."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(200)
-    multi_select_page.evaluate("""() => {
+    select_multiple_page.wait_for_timeout(200)
+    select_multiple_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         const cbs = dds[2].querySelectorAll('input[type="checkbox"]');
         if (cbs.length >= 2) {
@@ -1009,7 +1009,7 @@ def test_select_multiple_htmx_select_creates_hidden_inputs(multi_select_page):
             cbs[1].dispatchEvent(new Event('change', {bubbles: true}));
         }
     }""")
-    multi_select_page.wait_for_timeout(300)
+    select_multiple_page.wait_for_timeout(300)
     hidden = multi.locator('input[type="hidden"][name="languages_htmx"]')
     assert hidden.count() >= 2
 
@@ -1028,17 +1028,17 @@ _ECHO = """async (selected) => {
 
 
 @pytest.mark.e2e
-def test_select_multiple_htmx_stale_echo_keeps_local_state(multi_select_page):
+def test_select_multiple_htmx_stale_echo_keeps_local_state(select_multiple_page):
     """A stale morph keeps the newer local selection; a confirming morph re-arms server updates.
 
     Checkboxes and hidden inputs keep tracking the local selection, so the next submit carries all of it.
     """
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
     from playwright.sync_api import expect
 
     expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=10000)
-    values = multi_select_page.evaluate("""() => {
+    values = select_multiple_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         const cbs = dds[2].querySelectorAll('input[type="checkbox"]');
         [cbs[0], cbs[1]].forEach(cb => {
@@ -1059,45 +1059,45 @@ def test_select_multiple_htmx_stale_echo_keeps_local_state(multi_select_page):
         };
     }"""
     both = sorted(values)
-    assert multi_select_page.evaluate(state)["map"] == both
+    assert select_multiple_page.evaluate(state)["map"] == both
 
-    multi_select_page.evaluate(_ECHO, [[values[0], "Stale"]])
-    result = multi_select_page.evaluate(state)
+    select_multiple_page.evaluate(_ECHO, [[values[0], "Stale"]])
+    result = select_multiple_page.evaluate(state)
     assert result == {"map": both, "hidden": both, "checked": both}, "stale echo clobbered pending local selections"
 
-    multi_select_page.evaluate(_ECHO, [[v, "Confirmed"] for v in values])
-    assert multi_select_page.evaluate(state) == {"map": both, "hidden": both, "checked": both}
+    select_multiple_page.evaluate(_ECHO, [[v, "Confirmed"] for v in values])
+    assert select_multiple_page.evaluate(state) == {"map": both, "hidden": both, "checked": both}
 
-    multi_select_page.evaluate(_ECHO, [[values[0], "Server"]])
-    result = multi_select_page.evaluate(state)
+    select_multiple_page.evaluate(_ECHO, [[values[0], "Server"]])
+    result = select_multiple_page.evaluate(state)
     assert result == {"map": [values[0]], "hidden": [values[0]], "checked": [values[0]]}
 
 
 @pytest.mark.e2e
-def test_select_multiple_wrapper_has_id_e2e(multi_select_page):
+def test_select_multiple_wrapper_has_id_e2e(select_multiple_page):
     """The <details> wrapper has an id ending in '_wrapper'."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     wrapper_id = multi.get_attribute("id")
     assert wrapper_id is not None
     assert wrapper_id.endswith("_wrapper")
 
 
 @pytest.mark.e2e
-def test_select_multiple_popover_survives_morph_attribute_strip(multi_select_page):
+def test_select_multiple_popover_survives_morph_attribute_strip(select_multiple_page):
     """Morph swaps (htmx 4) sync attributes back to the server HTML, which
     carries no popover attribute or inline anchor styles; the widget must
     re-assert them and keep an open panel in the top layer."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     panel = multi.locator(".dropdown-content")
     multi.locator("summary").click()
-    multi_select_page.wait_for_function("""() => document.querySelector(
+    select_multiple_page.wait_for_function("""() => document.querySelector(
         'details.dropdown.formwork-select-multiple > .dropdown-content').matches(':popover-open')""")
 
     # Strip the client-added plumbing exactly like a morph: one batch of
     # attribute mutations restoring the server-rendered state.
-    multi_select_page.evaluate("""() => {
+    select_multiple_page.evaluate("""() => {
         const root = document.querySelector('details.dropdown.formwork-select-multiple');
         const panel = root.querySelector(':scope > .dropdown-content');
         panel.removeAttribute('popover');
@@ -1106,7 +1106,7 @@ def test_select_multiple_popover_survives_morph_attribute_strip(multi_select_pag
     }""")
 
     expect(panel).to_have_attribute("popover", "manual")
-    assert multi_select_page.evaluate("""() => {
+    assert select_multiple_page.evaluate("""() => {
         const root = document.querySelector('details.dropdown.formwork-select-multiple');
         const panel = root.querySelector(':scope > .dropdown-content');
         const anchored = !CSS.supports('anchor-name: --a') ||
@@ -1122,34 +1122,34 @@ def test_select_multiple_popover_survives_morph_attribute_strip(multi_select_pag
 
 
 @pytest.mark.e2e
-def test_select_multiple_grouped_shows_headers(multi_select_page):
+def test_select_multiple_grouped_shows_headers(select_multiple_page):
     """Open the grouped SelectMultiple; all three group headers are visible."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(150)
+    select_multiple_page.wait_for_timeout(150)
     headers = [h.inner_text().strip() for h in multi.locator("li.menu-title").all() if h.is_visible()]
     assert headers == ["Europe", "Asia", "Americas"]
 
 
 @pytest.mark.e2e
-def test_select_multiple_grouped_filter_hides_empty_groups(multi_select_page):
+def test_select_multiple_grouped_filter_hides_empty_groups(select_multiple_page):
     """Typing 'lon' (matches only London in Europe) hides Asia and Americas headers."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(150)
+    select_multiple_page.wait_for_timeout(150)
     search = multi.locator('.dropdown-content input[type="search"]')
     search.fill("lon")
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     visible_headers = [h.inner_text().strip() for h in multi.locator("li.menu-title").all() if h.is_visible()]
     assert visible_headers == ["Europe"]
 
 
 @pytest.mark.e2e
-def test_select_multiple_grouped_pick_via_click(multi_select_page):
+def test_select_multiple_grouped_pick_via_click(select_multiple_page):
     """Clicking a checkbox label inside a group toggles its checked state."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
     multi.locator('label[data-value="ldn"]').click()
     expect(multi.locator('input[value="ldn"]')).to_be_checked()
@@ -1160,11 +1160,11 @@ def test_select_multiple_grouped_pick_via_click(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_select_multiple_search_auto_focus_on_open(multi_select_page):
+def test_select_multiple_search_auto_focus_on_open(select_multiple_page):
     """Opening a SelectMultiple with a search box auto-focuses the search input."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     search = multi.locator('.dropdown-content input[type="search"]')
     from playwright.sync_api import expect
 
@@ -1172,32 +1172,32 @@ def test_select_multiple_search_auto_focus_on_open(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_select_multiple_search_refocus_on_reopen(multi_select_page):
+def test_select_multiple_search_refocus_on_reopen(select_multiple_page):
     """Closing then reopening re-focuses the search input."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     # Close
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     # Reopen
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     search = multi.locator('.dropdown-content input[type="search"]')
     expect(search).to_be_focused(timeout=2000)
 
 
 @pytest.mark.e2e
-def test_select_multiple_no_search_no_focus_error(multi_select_page):
+def test_select_multiple_no_search_no_focus_error(select_multiple_page):
     """Opening a search-less SelectMultiple does not raise any console error."""
     errors: list[str] = []
-    multi_select_page.on("pageerror", lambda e: errors.append(str(e)))
+    select_multiple_page.on("pageerror", lambda e: errors.append(str(e)))
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(150)
+    select_multiple_page.wait_for_timeout(150)
     assert errors == []
 
 
@@ -1209,79 +1209,79 @@ def test_select_multiple_no_search_no_focus_error(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_select_multiple_keyboard_arrowdown_highlights_first(multi_select_page):
+def test_select_multiple_keyboard_arrowdown_highlights_first(select_multiple_page):
     """ArrowDown from no highlight goes to the first visible option."""
-    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    multi = open_dropdown(select_multiple_page, "formwork-select-multiple", 3)
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
-    multi_select_page.wait_for_timeout(50)
+    select_multiple_page.wait_for_timeout(50)
     highlighted = multi.locator("li.highlighted > [data-value]")
     assert highlighted.count() == 1
     assert highlighted.first.get_attribute("data-value") == "ldn"
 
 
 @pytest.mark.e2e
-def test_select_multiple_keyboard_arrowdown_navigates(multi_select_page):
+def test_select_multiple_keyboard_arrowdown_navigates(select_multiple_page):
     """Each ArrowDown moves to the next option, skipping group headers."""
-    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    multi = open_dropdown(select_multiple_page, "formwork-select-multiple", 3)
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")  # ldn
     search.press("ArrowDown")  # par
-    multi_select_page.wait_for_timeout(50)
+    select_multiple_page.wait_for_timeout(50)
     highlighted = multi.locator("li.highlighted > [data-value]")
     assert highlighted.first.get_attribute("data-value") == "par"
     # Continue: ber, then tyo (skips group header)
     search.press("ArrowDown")
     search.press("ArrowDown")
-    multi_select_page.wait_for_timeout(50)
+    select_multiple_page.wait_for_timeout(50)
     assert multi.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "tyo"
 
 
 @pytest.mark.e2e
-def test_select_multiple_keyboard_arrowdown_wraps_to_first(multi_select_page):
+def test_select_multiple_keyboard_arrowdown_wraps_to_first(select_multiple_page):
     """Pressing ArrowDown past the last option wraps to the first."""
-    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    multi = open_dropdown(select_multiple_page, "formwork-select-multiple", 3)
     search = multi.locator('.dropdown-content input[type="search"]')
     # 9 options total; 10 ArrowDowns from no-highlight = 9 to last + 1 wrap
     for _ in range(10):
         search.press("ArrowDown")
-    multi_select_page.wait_for_timeout(50)
+    select_multiple_page.wait_for_timeout(50)
     assert multi.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "ldn"
 
 
 @pytest.mark.e2e
-def test_select_multiple_keyboard_arrowup_wraps_to_last(multi_select_page):
+def test_select_multiple_keyboard_arrowup_wraps_to_last(select_multiple_page):
     """ArrowUp from no highlight goes to the last visible option."""
-    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    multi = open_dropdown(select_multiple_page, "formwork-select-multiple", 3)
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowUp")
-    multi_select_page.wait_for_timeout(50)
+    select_multiple_page.wait_for_timeout(50)
     assert multi.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "mex"
 
 
 @pytest.mark.e2e
-def test_select_multiple_keyboard_filter_skips_hidden_options(multi_select_page):
+def test_select_multiple_keyboard_filter_skips_hidden_options(select_multiple_page):
     """After filtering, ArrowDown only highlights visible (matching) options."""
-    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    multi = open_dropdown(select_multiple_page, "formwork-select-multiple", 3)
     search = multi.locator('.dropdown-content input[type="search"]')
     search.fill("lon")  # Matches only "London"
-    multi_select_page.wait_for_timeout(150)
+    select_multiple_page.wait_for_timeout(150)
     search.press("ArrowDown")
     search.press("ArrowDown")  # Should wrap back to ldn (only one visible)
-    multi_select_page.wait_for_timeout(50)
+    select_multiple_page.wait_for_timeout(50)
     highlighted = multi.locator("li.highlighted > [data-value]")
     assert highlighted.count() == 1
     assert highlighted.first.get_attribute("data-value") == "ldn"
 
 
 @pytest.mark.e2e
-def test_select_multiple_keyboard_enter_toggles_keeps_open(multi_select_page):
+def test_select_multiple_keyboard_enter_toggles_keeps_open(select_multiple_page):
     """Enter toggles the highlighted checkbox; dropdown stays open."""
-    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    multi = open_dropdown(select_multiple_page, "formwork-select-multiple", 3)
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")  # Highlight ldn
     search.press("Enter")
-    multi_select_page.wait_for_timeout(150)
+    select_multiple_page.wait_for_timeout(150)
     # Checkbox toggled
     assert multi.locator('input[type="checkbox"][value="ldn"]').is_checked()
     # Dropdown still open
@@ -1292,45 +1292,45 @@ def test_select_multiple_keyboard_enter_toggles_keeps_open(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_select_multiple_keyboard_enter_again_toggles_off(multi_select_page):
+def test_select_multiple_keyboard_enter_again_toggles_off(select_multiple_page):
     """Pressing Enter twice on the same option toggles it off again."""
-    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    multi = open_dropdown(select_multiple_page, "formwork-select-multiple", 3)
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
     search.press("Enter")
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     assert multi.locator('input[type="checkbox"][value="ldn"]').is_checked()
     search.press("Enter")
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     assert not multi.locator('input[type="checkbox"][value="ldn"]').is_checked()
 
 
 @pytest.mark.e2e
-def test_select_multiple_keyboard_enter_no_highlight_toggles_first(multi_select_page):
+def test_select_multiple_keyboard_enter_no_highlight_toggles_first(select_multiple_page):
     """With no highlight, Enter toggles the first visible option."""
-    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    multi = open_dropdown(select_multiple_page, "formwork-select-multiple", 3)
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("Enter")
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     assert multi.locator('input[type="checkbox"][value="ldn"]').is_checked()
 
 
 @pytest.mark.e2e
-def test_select_multiple_keyboard_close_clears_highlight(multi_select_page):
+def test_select_multiple_keyboard_close_clears_highlight(select_multiple_page):
     """Closing the dropdown clears the ``.highlighted`` class."""
-    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    multi = open_dropdown(select_multiple_page, "formwork-select-multiple", 3)
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
-    multi_select_page.wait_for_timeout(50)
+    select_multiple_page.wait_for_timeout(50)
     assert multi.locator("li.highlighted > [data-value]").count() == 1
     multi.locator("summary").click()  # close
-    multi_select_page.wait_for_timeout(150)
+    select_multiple_page.wait_for_timeout(150)
     assert multi.locator("li.highlighted > [data-value]").count() == 0
 
 
 # ─── Level 5e: E2e, dirty tracking ───────────────────────────────────────
 #
-# The /multi-select/ page ships formwork-core.js but its form does not opt
+# The /select-multiple/ page ships formwork-core.js but its form does not opt
 # in to dirty tracking, so the tests enable it in place: set the opt-in
 # attribute and fire the htmx:after:swap event that initAllDirtyForms
 # already listens for.
@@ -1369,76 +1369,76 @@ def _toggle_checkbox(page, dropdown_index, value_selector):
 
 
 @pytest.mark.e2e
-def test_select_multiple_htmx_dirty_clears_on_revert(multi_select_page):
+def test_select_multiple_htmx_dirty_clears_on_revert(select_multiple_page):
     """htmx-mode: selecting then unselecting an option leaves the fieldset clean."""
     import re
 
     from playwright.sync_api import expect
 
-    _enable_dirty_tracking(multi_select_page)
-    fieldset = multi_select_page.locator("#id_languages_htmx_field")
-    _toggle_checkbox(multi_select_page, 2, 'input[type="checkbox"]')
+    _enable_dirty_tracking(select_multiple_page)
+    fieldset = select_multiple_page.locator("#id_languages_htmx_field")
+    _toggle_checkbox(select_multiple_page, 2, 'input[type="checkbox"]')
     expect(fieldset).to_have_class(re.compile(r"\bformwork-dirty\b"))
-    _toggle_checkbox(multi_select_page, 2, 'input[type="checkbox"]')
+    _toggle_checkbox(select_multiple_page, 2, 'input[type="checkbox"]')
     expect(fieldset).not_to_have_class(re.compile(r"\bformwork-dirty\b"))
 
 
 @pytest.mark.e2e
-def test_select_multiple_client_dirty_clears_on_revert(multi_select_page):
+def test_select_multiple_client_dirty_clears_on_revert(select_multiple_page):
     """Client-mode: checking then unchecking a box leaves the fieldset clean."""
     import re
 
     from playwright.sync_api import expect
 
-    _enable_dirty_tracking(multi_select_page)
-    fieldset = multi_select_page.locator("#id_languages_plain_field")
-    _toggle_checkbox(multi_select_page, 0, 'input[value="py"]')
+    _enable_dirty_tracking(select_multiple_page)
+    fieldset = select_multiple_page.locator("#id_languages_plain_field")
+    _toggle_checkbox(select_multiple_page, 0, 'input[value="py"]')
     expect(fieldset).to_have_class(re.compile(r"\bformwork-dirty\b"))
-    _toggle_checkbox(multi_select_page, 0, 'input[value="py"]')
+    _toggle_checkbox(select_multiple_page, 0, 'input[value="py"]')
     expect(fieldset).not_to_have_class(re.compile(r"\bformwork-dirty\b"))
 
 
 @pytest.mark.e2e
-def test_select_multiple_htmx_search_keeps_the_dirty_baseline(multi_select_page):
+def test_select_multiple_htmx_search_keeps_the_dirty_baseline(select_multiple_page):
     """A search swapping rows into the list is not a new baseline: a toggle made before it still counts."""
     import re
 
     from playwright.sync_api import expect
 
-    _enable_dirty_tracking(multi_select_page)
-    fieldset = multi_select_page.locator("#id_languages_htmx_field")
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
+    _enable_dirty_tracking(select_multiple_page)
+    fieldset = select_multiple_page.locator("#id_languages_htmx_field")
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
     checkboxes = multi.locator('input[type="checkbox"]')
     expect(checkboxes).to_have_count(20)
-    _toggle_checkbox(multi_select_page, 2, 'input[type="checkbox"]')
+    _toggle_checkbox(select_multiple_page, 2, 'input[type="checkbox"]')
     expect(fieldset).to_have_class(re.compile(r"\bformwork-dirty\b"))
-    _type_search(multi_select_page, 2, "Zig")
+    _type_search(select_multiple_page, 2, "Zig")
     expect(checkboxes).to_have_count(1, timeout=10000)
-    multi_select_page.evaluate("() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))")
-    _toggle_checkbox(multi_select_page, 2, 'input[type="checkbox"][value="zig"]')
-    _toggle_checkbox(multi_select_page, 2, 'input[type="checkbox"][value="zig"]')
+    select_multiple_page.evaluate("() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))")
+    _toggle_checkbox(select_multiple_page, 2, 'input[type="checkbox"][value="zig"]')
+    _toggle_checkbox(select_multiple_page, 2, 'input[type="checkbox"][value="zig"]')
     expect(fieldset).to_have_class(re.compile(r"\bformwork-dirty\b"))
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# Needs a page with a required SelectMultiple; all /multi-select/ fields are optional.
+# Needs a page with a required SelectMultiple; all /select-multiple/ fields are optional.
 
 
 @pytest.mark.e2e
-def test_select_multiple_failing_search_shows_error_alert(multi_select_page):
+def test_select_multiple_failing_search_shows_error_alert(select_multiple_page):
     """When the search endpoint returns 500, the error alert replaces the listbox."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(4)
-    multi_select_page.evaluate("""() => {
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(4)
+    select_multiple_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
-    multi_select_page.wait_for_timeout(200)
-    _type_search(multi_select_page, 4, "x")
+    select_multiple_page.wait_for_timeout(200)
+    _type_search(select_multiple_page, 4, "x")
     alert = multi.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
     assert "Search failed" in alert.text_content()
@@ -1446,28 +1446,28 @@ def test_select_multiple_failing_search_shows_error_alert(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_select_multiple_search_input_works_after_error(multi_select_page):
+def test_select_multiple_search_input_works_after_error(select_multiple_page):
     """The search input remains usable after a failure: typing fires a new
     request and the value lands in the input."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(4)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(4)
     requests: list[str] = []
-    multi_select_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
-    multi_select_page.evaluate("""() => {
+    select_multiple_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
+    select_multiple_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
-    _type_search(multi_select_page, 4, "x")
+    _type_search(select_multiple_page, 4, "x")
     alert = multi.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
     initial_count = len(requests)
-    _type_search(multi_select_page, 4, "xy")
+    _type_search(select_multiple_page, 4, "xy")
     # 300ms input-changed debounce + buffer for the request to fire.
-    multi_select_page.wait_for_timeout(500)
+    select_multiple_page.wait_for_timeout(500)
     assert len(requests) > initial_count, "expected typing to fire a new search request"
-    val = multi_select_page.evaluate("""() => {
+    val = select_multiple_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         return dds[4].querySelector('.dropdown-content input[type="search"]').value;
     }""")
@@ -1478,13 +1478,13 @@ def test_select_multiple_search_input_works_after_error(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_select_multiple_morph_preserves_values(multi_select_page):
+def test_select_multiple_morph_preserves_values(select_multiple_page):
     """Checked options survive an htmx form morph."""
-    multi_select_page.evaluate("""
+    select_multiple_page.evaluate("""
         document.querySelector('details.dropdown.formwork-select-multiple').open = true;
     """)
-    multi_select_page.wait_for_timeout(200)
-    multi_select_page.evaluate("""
+    select_multiple_page.wait_for_timeout(200)
+    select_multiple_page.evaluate("""
         const dd = document.querySelector('details.dropdown.formwork-select-multiple');
         const cbs = dd.querySelectorAll('input[type="checkbox"]');
         cbs[0].checked = true;
@@ -1492,13 +1492,13 @@ def test_select_multiple_morph_preserves_values(multi_select_page):
         cbs[2].checked = true;
         cbs[2].dispatchEvent(new Event('change', {bubbles: true}));
     """)
-    multi_select_page.wait_for_timeout(200)
-    multi_select_page.evaluate("""
+    select_multiple_page.wait_for_timeout(200)
+    select_multiple_page.evaluate("""
         document.querySelector('details.dropdown.formwork-select-multiple').open = false;
     """)
-    multi_select_page.wait_for_timeout(100)
-    submit(multi_select_page)
-    checked = multi_select_page.evaluate("""
+    select_multiple_page.wait_for_timeout(100)
+    submit(select_multiple_page)
+    checked = select_multiple_page.evaluate("""
         [...document.querySelectorAll('details.dropdown.formwork-select-multiple input[type="checkbox"]:checked')]
             .map(cb => cb.value)
     """)
@@ -1507,19 +1507,19 @@ def test_select_multiple_morph_preserves_values(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_select_multiple_morph_preserves_dropdown_open(multi_select_page):
+def test_select_multiple_morph_preserves_dropdown_open(select_multiple_page):
     """An open dropdown stays open after a morph."""
-    multi_select_page.evaluate("""
+    select_multiple_page.evaluate("""
         document.querySelector('details.dropdown.formwork-select-multiple').open = true;
     """)
-    multi_select_page.wait_for_timeout(200)
-    multi_select_page.evaluate("""
+    select_multiple_page.wait_for_timeout(200)
+    select_multiple_page.evaluate("""
         const form = document.querySelector('form[hx-post]');
         form.noValidate = true;
         form.requestSubmit();
     """)
-    multi_select_page.wait_for_timeout(500)
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    select_multiple_page.wait_for_timeout(500)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     assert multi.get_attribute("open") is not None
 
 
@@ -1527,30 +1527,30 @@ def test_select_multiple_morph_preserves_dropdown_open(multi_select_page):
 
 
 @pytest.mark.screenshot
-def test_select_multiple_screenshot_default(multi_select_page, assert_screenshot):
+def test_select_multiple_screenshot_default(select_multiple_page, assert_screenshot):
     """Visual snapshot: SelectMultiple in default (closed) state."""
-    wrapper = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    wrapper = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     assert_screenshot(wrapper, "multi-select-default.png")
 
 
 @pytest.mark.screenshot
-def test_select_multiple_screenshot_open(multi_select_page, assert_screenshot):
+def test_select_multiple_screenshot_open(select_multiple_page, assert_screenshot):
     """Visual snapshot: SelectMultiple with dropdown open."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
-    multi_select_page.evaluate("""
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
+    select_multiple_page.evaluate("""
         document.querySelector('details.dropdown.formwork-select-multiple').open = true;
     """)
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     assert_screenshot(multi, "multi-select-open.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot
-def test_select_multiple_screenshot_selected(multi_select_page, assert_screenshot):
+def test_select_multiple_screenshot_selected(select_multiple_page, assert_screenshot):
     """Visual snapshot: SelectMultiple with at least 3 options selected."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").first
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(100)
-    multi_select_page.evaluate("""() => {
+    select_multiple_page.wait_for_timeout(100)
+    select_multiple_page.evaluate("""() => {
         const dd = document.querySelector('details.dropdown.formwork-select-multiple');
         ['py', 'js', 'go'].forEach(v => {
             const cb = dd.querySelector(`input[value="${v}"]`);
@@ -1560,26 +1560,26 @@ def test_select_multiple_screenshot_selected(multi_select_page, assert_screensho
             }
         });
     }""")
-    multi_select_page.wait_for_timeout(100)
+    select_multiple_page.wait_for_timeout(100)
     assert_screenshot(multi, "multi-select-selected.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot
-def test_select_multiple_screenshot_grouped_open(multi_select_page, assert_screenshot):
+def test_select_multiple_screenshot_grouped_open(select_multiple_page, assert_screenshot):
     """Visual snapshot: grouped SelectMultiple with dropdown open showing optgroup headers."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(150)
+    select_multiple_page.wait_for_timeout(150)
     assert_screenshot(multi, "multi-select-grouped-open.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot
-def test_select_multiple_screenshot_keyboard_highlighted(multi_select_page, assert_screenshot):
+def test_select_multiple_screenshot_keyboard_highlighted(select_multiple_page, assert_screenshot):
     """Visual snapshot: SelectMultiple with an option highlighted via keyboard."""
-    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
-    multi_select_page.wait_for_timeout(150)
+    select_multiple_page.wait_for_timeout(150)
     search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")  # Highlight first (ldn)
-    multi_select_page.wait_for_timeout(50)
+    select_multiple_page.wait_for_timeout(50)
     assert_screenshot(multi, "multi-select-keyboard-highlighted.png", capture_dropdown=True)

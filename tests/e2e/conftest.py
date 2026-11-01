@@ -113,15 +113,15 @@ def toggle_page(page, live_server):
 
 
 @pytest.fixture
-def search_select_page(page, live_server):
+def select_page(page, live_server):
     """Navigate to the Select page."""
-    return _navigate(page, live_server, "/search-select/")
+    return _navigate(page, live_server, "/select/")
 
 
 @pytest.fixture
-def multi_select_page(page, live_server):
+def select_multiple_page(page, live_server):
     """Navigate to the SelectMultiple page."""
-    return _navigate(page, live_server, "/multi-select/")
+    return _navigate(page, live_server, "/select-multiple/")
 
 
 @pytest.fixture
