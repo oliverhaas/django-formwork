@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -12,6 +13,26 @@ if TYPE_CHECKING:
 
 _DIFF_OUTPUT_DIR = Path("test-results")
 _PER_PIXEL_TOLERANCE = 10  # per-channel tolerance (out of 255)
+
+
+@pytest.fixture(scope="session")
+def django_db_setup(django_db_setup, django_db_blocker):
+    """On PostgreSQL, add pg_trgm for the ranked search.
+
+    Async tests query from asgiref's executor thread, whose open connection
+    would keep the test database from being dropped, so close it last.
+    """
+    from asgiref.sync import sync_to_async
+    from django.db import connection, connections
+
+    if connection.vendor != "postgresql":
+        yield
+        return
+    with django_db_blocker.unblock(), connection.cursor() as cursor:
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+    yield
+    with django_db_blocker.unblock():
+        asyncio.run(sync_to_async(connections.close_all)())
 
 
 def pytest_addoption(parser):
