@@ -50,13 +50,9 @@ def attach_server_search(  # noqa: PLR0913
     selected_toggle_classes: bool = False,
     key: str | None = None,
 ) -> None:
-    """Wire a SearchSelect/MultiSelect/ComboBox into the registry as if it were
-    auto-registered, so unit tests can exercise the server-side rendering paths
-    without going through a full FormworkForm.
+    """Register a widget's search as FormworkForm would, without a form.
 
-    ``count`` populates a fake queryset whose ``.count()`` and slicing yield
-    that many objects with ``label`` / ``icon`` / ``description`` /
-    ``selected_toggle_class`` attributes.
+    ``count`` sizes a fake queryset of objects with label, icon, description and toggle class.
     """
     from django_formwork._registry import SearchRegistration, register
 
@@ -116,11 +112,7 @@ def make_server_widget(
     selected_toggle_classes: bool = False,
     **kwargs,
 ):
-    """Build a SearchSelect/MultiSelect/ComboBox already wired into the registry.
-
-    Drop-in for tests that previously created a widget with ``search_url=``
-    and expected server-side mode to be active.
-    """
+    """Build a Select/SelectMultiple/ComboBox already wired into the registry."""
     widget = widget_cls(**kwargs)
     attach_server_search(
         widget,

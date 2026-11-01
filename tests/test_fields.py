@@ -295,17 +295,17 @@ class TestFormworkModelFormMetaclass:
     def test_preserves_widget(self):
         """The original widget from Meta.widgets is preserved after the swap."""
         from django_formwork.forms import FormworkModelForm
-        from django_formwork.widgets import MultiSelect
+        from django_formwork.widgets import SelectMultiple
 
         class F(FormworkModelForm):
             class Meta:
                 model = User
                 fields = ["groups"]
-                widgets = {"groups": MultiSelect()}
+                widgets = {"groups": SelectMultiple()}
 
         field = F.base_fields["groups"]
         assert isinstance(field, FormworkModelMultipleChoiceField)
-        assert isinstance(field.widget, MultiSelect)
+        assert isinstance(field.widget, SelectMultiple)
 
     def test_non_model_fields_untouched(self):
         """Regular CharField, etc. are not affected by the metaclass."""

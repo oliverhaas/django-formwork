@@ -81,10 +81,13 @@ class TestTightFormFloatingLabels:
     def test_floating_wraps_the_control(self, tight_page):
         """The real control sits inside the floating-label wrapper (accessible name)."""
         assert tight_page.locator("#tight-form .floating-label > input[name='nickname']").count() == 1
-        assert tight_page.locator("#tight-form .floating-label > select[name='role']").count() == 1
+        assert (
+            tight_page.locator("#tight-form .floating-label > details.formwork-select input[name='role']").count() == 1
+        )
         assert tight_page.locator("#tight-form .floating-label > textarea[name='note']").count() == 1
 
     def test_select_has_no_placeholder_attr(self, tight_page):
-        """<select> has no placeholder attribute; the text lives only in the span."""
-        select = tight_page.locator("#tight-form select[name='role']")
-        assert select.get_attribute("placeholder") is None
+        """The Select trigger has no placeholder attribute; the text lives only in the span."""
+        trigger = tight_page.locator("#tight-form #id_role")
+        assert trigger.get_attribute("placeholder") is None
+        assert "Role" not in trigger.inner_text()

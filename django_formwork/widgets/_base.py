@@ -10,12 +10,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Sentinel: distinguishes "developer didn't pass search_decorator" from
-# "developer explicitly passed None" (= no decorator, public endpoint).
-# Typed ``Any`` so it can default a ``Callable | None`` parameter; it never
-# leaks past _AutoSearchMixin, which validates it on form instantiation.
-_NOT_SET: Any = object()
-
 _KB = 1024
 _MB = 1024 * 1024
 

@@ -8,32 +8,17 @@ from __future__ import annotations
 import pytest
 from bs4 import BeautifulSoup
 from django import forms
-from django.forms.utils import flatatt
-from django.utils.html import format_html
 
 from django_formwork.forms import FormworkForm
+from django_formwork.widgets import Select
 
 CHOICES = [("a", "Apples"), ("b", "Bananas")]
 HELP_TEXT = "Pick one."
 
 
-class _SummaryTrigger(forms.Widget):
-    """Choice widget whose trigger is a ``<summary>``, which no label can target."""
-
-    def id_for_label(self, id_: str) -> str:
-        return ""
-
-    def render(self, name, value, attrs=None, renderer=None):
-        return format_html(
-            "<details><summary{}>{}</summary></details>",
-            flatatt(self.build_attrs(self.attrs, attrs)),
-            value or "",
-        )
-
-
 class _Form(FormworkForm):
     name = forms.CharField(help_text=HELP_TEXT)
-    fruit = forms.ChoiceField(choices=CHOICES, help_text=HELP_TEXT, widget=_SummaryTrigger)
+    fruit = forms.ChoiceField(choices=CHOICES, help_text=HELP_TEXT, widget=Select)
 
     class Meta:
         error_display = "inline"

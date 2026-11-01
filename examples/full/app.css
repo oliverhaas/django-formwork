@@ -60,7 +60,7 @@
 }
 
 /* Border-style variants for selects (DaisyUI ships none). Combined with a
-   `select-{color}` on a SearchSelect's closed trigger via selected_toggle_class,
+   `select-{color}` on a Select's closed trigger via selected_toggle_class,
    they read lighter than a solid colored border. The status field uses
    `select-dashed select-{color}`. Unlayered so they beat DaisyUI's `.select`
    border-style; only the style changes, the color class still sets the hue. */

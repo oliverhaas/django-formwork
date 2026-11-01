@@ -1,4 +1,4 @@
-"""MultiSelect tests, including server-side search loading and failure UX (level 6b)."""
+"""SelectMultiple tests, including server-side search loading and failure UX (level 6b)."""
 
 from __future__ import annotations
 
@@ -9,19 +9,19 @@ from django import forms
 from django.http import QueryDict
 from django.utils.safestring import mark_safe
 
-from django_formwork.fields import ChoiceLabel
+from django_formwork import ChoiceLabel
 from django_formwork.forms import FormworkForm
-from django_formwork.widgets import MultiSelect
+from django_formwork.widgets import SelectMultiple
 
 from .conftest import make_server_widget, open_dropdown, render_form, render_widget, submit
 
 
-class MultiSelectForm(FormworkForm):
-    """Form fixture for MultiSelect integration tests."""
+class SelectMultipleForm(FormworkForm):
+    """Form fixture for SelectMultiple integration tests."""
 
     tags = forms.MultipleChoiceField(
         choices=[("a", "A"), ("b", "B"), ("c", "C")],
-        widget=MultiSelect(choices=[("a", "A"), ("b", "B"), ("c", "C")]),
+        widget=SelectMultiple(choices=[("a", "A"), ("b", "B"), ("c", "C")]),
         required=True,
     )
 
@@ -30,66 +30,66 @@ class MultiSelectForm(FormworkForm):
 
 
 @pytest.mark.unit
-def test_multi_select_choices_stored():
+def test_select_multiple_choices_stored():
     """Choices passed to constructor are available via widget.choices."""
-    widget = MultiSelect(choices=[("py", "Python"), ("js", "JavaScript")])
+    widget = SelectMultiple(choices=[("py", "Python"), ("js", "JavaScript")])
     assert list(widget.choices) == [("py", "Python"), ("js", "JavaScript")]
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_search_url_resolved_from_registry():
+def test_select_multiple_get_context_search_url_resolved_from_registry():
     """get_context() resolves a search_url for widgets attached to the registry."""
-    widget = make_server_widget(MultiSelect, choices=[("a", "A")])
+    widget = make_server_widget(SelectMultiple, choices=[("a", "A")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["search_url"] is not None
     assert ctx["widget"]["search_url"].startswith("/__formwork__/search/")
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_search_url_none_when_unregistered():
+def test_select_multiple_get_context_search_url_none_when_unregistered():
     """get_context() leaves search_url None when no registry entry is attached."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["search_url"] is None
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_show_search_false_for_few():
+def test_select_multiple_get_context_show_search_false_for_few():
     """show_search is False when choices < search_threshold and no search_url."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["show_search"] is False
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_show_search_true_for_many():
+def test_select_multiple_get_context_show_search_true_for_many():
     """show_search is True when choices >= search_threshold (20)."""
     choices = [(str(i), f"Option {i}") for i in range(21)]
-    widget = MultiSelect(choices=choices)
+    widget = SelectMultiple(choices=choices)
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["show_search"] is True
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_show_search_true_when_registry_count_meets_threshold():
+def test_select_multiple_get_context_show_search_true_when_registry_count_meets_threshold():
     """show_search opens up-front when the registry reports a count >= threshold."""
-    widget = make_server_widget(MultiSelect, count=30, choices=[("a", "A")])
+    widget = make_server_widget(SelectMultiple, count=30, choices=[("a", "A")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["show_search"] is True
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_show_search_false_when_registry_count_below_threshold():
+def test_select_multiple_get_context_show_search_false_when_registry_count_below_threshold():
     """show_search stays closed when the registry count is below the threshold."""
-    widget = make_server_widget(MultiSelect, count=5, choices=[("a", "A")])
+    widget = make_server_widget(SelectMultiple, count=5, choices=[("a", "A")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["show_search"] is False
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_optgroups_have_icon():
+def test_select_multiple_get_context_optgroups_have_icon():
     """Each option in get_context() optgroups has an 'icon' key."""
-    widget = MultiSelect(choices=[("a", "Alpha"), ("b", "Beta")])
+    widget = SelectMultiple(choices=[("a", "Alpha"), ("b", "Beta")])
     ctx = widget.get_context("test", [], {})
     for _group, options, _index in ctx["widget"]["optgroups"]:
         for option in options:
@@ -97,9 +97,9 @@ def test_multi_select_get_context_optgroups_have_icon():
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_icon_populated():
+def test_select_multiple_get_context_icon_populated():
     """ChoiceLabel icons are reflected in option['icon']."""
-    widget = MultiSelect(
+    widget = SelectMultiple(
         choices=[
             ("a", ChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>"))),
             ("b", "Beta"),
@@ -115,90 +115,80 @@ def test_multi_select_get_context_icon_populated():
 
 
 @pytest.mark.unit
-def test_multi_select_initial_selected_json_empty_without_search_url():
-    """initial_selected_json is not present when no search_url."""
-    widget = MultiSelect(choices=[("a", "Alpha")])
+def test_select_multiple_selected_json_empty_list():
+    """selected_json is '[]' when search_url set but no values selected."""
+    widget = make_server_widget(SelectMultiple, choices=[("a", "Alpha")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
-    assert "initial_selected_json" not in ctx["widget"]
+    assert json.loads(ctx["widget"]["selected_json"]) == []
 
 
 @pytest.mark.unit
-def test_multi_select_initial_selected_json_empty_list():
-    """initial_selected_json is '[]' when search_url set but no values selected."""
-    widget = make_server_widget(MultiSelect, choices=[("a", "Alpha")])
-    ctx = widget.get_context("test", [], {"id": "id_test"})
-    initial = json.loads(ctx["widget"]["initial_selected_json"])
-    assert initial == []
-
-
-@pytest.mark.unit
-def test_multi_select_initial_selected_json_with_value():
-    """initial_selected_json encodes selected value with label and icon."""
-    widget = make_server_widget(MultiSelect, choices=[("a", "Alpha"), ("b", "Beta")])
+def test_select_multiple_selected_json_with_value():
+    """selected_json pairs each selected value with its label."""
+    widget = make_server_widget(SelectMultiple, choices=[("a", "Alpha"), ("b", "Beta")])
     ctx = widget.get_context("test", ["a"], {"id": "id_test"})
-    initial = json.loads(ctx["widget"]["initial_selected_json"])
-    assert initial == [["a", ["Alpha", ""]]]
+    assert json.loads(ctx["widget"]["selected_json"]) == [["a", "Alpha"]]
 
 
 @pytest.mark.unit
-def test_multi_select_value_from_datadict_returns_list():
+def test_select_multiple_value_from_datadict_returns_list():
     """value_from_datadict returns a list of selected values."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B"), ("c", "C")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B"), ("c", "C")])
     data = QueryDict("field=a&field=c")
     result = widget.value_from_datadict(data, {}, "field")
     assert result == ["a", "c"]
 
 
 @pytest.mark.unit
-def test_multi_select_value_from_datadict_empty():
+def test_select_multiple_value_from_datadict_empty():
     """value_from_datadict returns empty list when no values submitted."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     data = QueryDict("")
     result = widget.value_from_datadict(data, {}, "field")
     assert result == []
 
 
 @pytest.mark.unit
-def test_multi_select_value_from_datadict_single():
+def test_select_multiple_value_from_datadict_single():
     """value_from_datadict returns a single-item list when one value submitted."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     data = QueryDict("field=b")
     result = widget.value_from_datadict(data, {}, "field")
     assert result == ["b"]
 
 
 @pytest.mark.unit
-def test_multi_select_search_threshold_default():
-    """search_threshold is 20 by default."""
-    widget = MultiSelect(choices=[])
-    assert widget.search_threshold == 20
+def test_select_multiple_search_threshold_default():
+    """search_threshold is 10 by default, shared with Select."""
+    widget = SelectMultiple(choices=[])
+    assert widget.search_threshold == 10
 
 
 @pytest.mark.unit
-def test_multi_select_get_context_with_value_none():
+def test_select_multiple_get_context_with_value_none():
     """Passing value=None is tolerated."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     ctx = widget.get_context("field", None, {"id": "id_field"})
     assert ctx["widget"]["name"] == "field"
 
 
 @pytest.mark.unit
-def test_multi_select_renders_without_id():
+def test_select_multiple_renders_without_id():
     """Widget renders without an id attribute."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     soup = render_widget(widget, name="field", attrs={})
     details = soup.find("details")
     assert details is not None
 
 
 @pytest.mark.unit
-def test_multi_select_optgroup_rendering():
+def test_select_multiple_optgroup_rendering():
     """Grouped choices render all options from all groups."""
     choices = [
         ("Fruits", [("apple", "Apple"), ("banana", "Banana")]),
         ("Vegs", [("carrot", "Carrot")]),
     ]
-    widget = MultiSelect(choices=choices)
+    widget = SelectMultiple(choices=choices)
     soup = render_widget(widget, name="food", attrs={"id": "id_food"})
     checkboxes = soup.find_all("input", attrs={"type": "checkbox"})
     values = {cb["value"] for cb in checkboxes}
@@ -209,54 +199,41 @@ def test_multi_select_optgroup_rendering():
 
 
 @pytest.mark.unit
-def test_multi_select_grouped_renders_group_headers():
+def test_select_multiple_grouped_renders_group_headers():
     """Grouped choices render a ``<li class='menu-title'>`` for each group."""
     choices = [
         ("Fruits", [("apple", "Apple"), ("banana", "Banana")]),
         ("Vegs", [("carrot", "Carrot")]),
     ]
-    widget = MultiSelect(choices=choices)
+    widget = SelectMultiple(choices=choices)
     soup = render_widget(widget, name="food", attrs={"id": "id_food"})
     headers = soup.find_all("li", class_="menu-title")
     assert [h.text.strip() for h in headers] == ["Fruits", "Vegs"]
 
 
 @pytest.mark.unit
-def test_multi_select_no_group_headers_for_flat_choices():
+def test_select_multiple_no_group_headers_for_flat_choices():
     """Flat choices produce no ``menu-title`` headers."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     soup = render_widget(widget, name="test")
     headers = soup.find_all("li", class_="menu-title")
     assert headers == []
 
 
 @pytest.mark.unit
-def test_multi_select_grouped_group_header_xshow_includes_child_labels_when_searchable():
-    """When the widget shows a search box, group headers carry ``x-show`` so
-    they hide if no child matches the query."""
-    # show_search=True overrides the 20-choice threshold that would hide the box.
+def test_select_multiple_group_header_precedes_its_rows():
+    """A group heading is filtered by the rows after it, so its labels stay in the DOM."""
     choices = [("Group", [("a", "Alpha"), ("b", "Beta")])]
-    widget = MultiSelect(choices=choices, show_search=True)
+    widget = SelectMultiple(choices=choices, show_search=True)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     header = soup.find("li", class_="menu-title")
-    xshow = header.get("x-show", "")
-    assert "Alpha" in xshow
-    assert "Beta" in xshow
-    assert "search" in xshow
+    assert header["x-show"] == "matches($el)"
+    assert header.has_attr("data-group")
+    assert [li["data-label"] for li in header.find_next_siblings("li")] == ["Alpha", "Beta"]
 
 
 @pytest.mark.unit
-def test_multi_select_grouped_no_xshow_when_not_searchable():
-    """No ``x-show`` on group headers when the widget hides the search box."""
-    choices = [("Group", [("a", "Alpha")])]
-    widget = MultiSelect(choices=choices)
-    soup = render_widget(widget, name="test")
-    header = soup.find("li", class_="menu-title")
-    assert "x-show" not in header.attrs
-
-
-@pytest.mark.unit
-def test_multi_select_grouped_options_keep_icons():
+def test_select_multiple_grouped_options_keep_icons():
     """Icons from ChoiceLabel render inside grouped option labels."""
     choices = [
         (
@@ -267,7 +244,7 @@ def test_multi_select_grouped_options_keep_icons():
             ],
         ),
     ]
-    widget = MultiSelect(choices=choices)
+    widget = SelectMultiple(choices=choices)
     soup = render_widget(widget, name="test")
     a_label = soup.find("input", value="a").parent
     assert "<svg>a</svg>" in str(a_label)
@@ -277,9 +254,9 @@ def test_multi_select_grouped_options_keep_icons():
 
 
 @pytest.mark.unit
-def test_multi_select_keydown_handlers_on_wrapper():
+def test_select_multiple_keydown_handlers_on_wrapper():
     """The ``<details>`` wrapper has @keydown handlers for arrows and enter."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     html = widget.render("test", [])
     assert "@keydown.arrow-down" in html
     assert "@keydown.arrow-up" in html
@@ -287,28 +264,28 @@ def test_multi_select_keydown_handlers_on_wrapper():
 
 
 @pytest.mark.unit
-def test_multi_select_keydown_invokes_nav_methods():
-    """Inline keydown handlers reference the nav/confirm methods on the component."""
-    widget = MultiSelect(choices=[("a", "A")])
+def test_select_multiple_keydown_invokes_nav_methods():
+    """Keydown handlers call the component's nav and enter methods."""
+    widget = SelectMultiple(choices=[("a", "A")])
     html = widget.render("test", [])
-    assert "nav(1)" in html
-    assert "nav(-1)" in html
-    assert "confirm()" in html
+    assert "onNav($event, 1)" in html
+    assert "onNav($event, -1)" in html
+    assert "onEnter($event)" in html
 
 
 @pytest.mark.unit
-def test_multi_select_xdata_binds_alpine_component():
-    """Both client- and htmx-mode templates bind to the formworkMultiSelect component."""
-    plain = MultiSelect(choices=[("a", "A")]).render("test", [])
-    htmx_mode = make_server_widget(MultiSelect, choices=[("a", "A")]).render("test", [])
-    assert 'x-data="formworkMultiSelect"' in plain
-    assert 'x-data="formworkMultiSelect"' in htmx_mode
+def test_select_multiple_xdata_binds_alpine_component():
+    """Both client- and htmx-mode templates bind to the formworkSelectMultiple component."""
+    plain = SelectMultiple(choices=[("a", "A")]).render("test", [])
+    htmx_mode = make_server_widget(SelectMultiple, choices=[("a", "A")]).render("test", [])
+    assert 'x-data="formworkSelectMultiple"' in plain
+    assert 'x-data="formworkSelectMultiple"' in htmx_mode
 
 
 @pytest.mark.unit
-def test_multi_select_options_have_data_value():
+def test_select_multiple_options_have_data_value():
     """Each option label carries ``data-value`` so nav can target it."""
-    widget = MultiSelect(choices=[("py", "Python"), ("js", "JS")])
+    widget = SelectMultiple(choices=[("py", "Python"), ("js", "JS")])
     soup = render_widget(widget, name="test")
     labels = soup.find_all(attrs={"data-value": True})
     values = {lbl["data-value"] for lbl in labels}
@@ -319,27 +296,27 @@ def test_multi_select_options_have_data_value():
 
 
 @pytest.mark.unit
-def test_multi_select_renders_details_dropdown():
+def test_select_multiple_renders_details_dropdown():
     """Rendered HTML has a <details class='dropdown'> wrapper."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     soup = render_widget(widget, name="test")
     details = soup.find("details", class_="dropdown")
     assert details is not None
 
 
 @pytest.mark.unit
-def test_multi_select_renders_multiselect_class_on_details():
-    """The <details> wrapper also has the 'multiselect' class."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+def test_select_multiple_renders_widget_class_on_details():
+    """The <details> wrapper has the 'formwork-select-multiple' class."""
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     soup = render_widget(widget, name="test")
-    details = soup.find("details", class_="multiselect")
+    details = soup.find("details", class_="formwork-select-multiple")
     assert details is not None
 
 
 @pytest.mark.unit
-def test_multi_select_renders_summary_trigger():
+def test_select_multiple_renders_summary_trigger():
     """Rendered HTML has a <summary> element with 'text-left' class."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     soup = render_widget(widget, name="test")
     summary = soup.find("summary")
     assert summary is not None
@@ -348,27 +325,27 @@ def test_multi_select_renders_summary_trigger():
 
 
 @pytest.mark.unit
-def test_multi_select_renders_dropdown_content():
+def test_select_multiple_renders_dropdown_content():
     """A <div class='dropdown-content'> is present."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test")
     dropdown = soup.find("div", class_="dropdown-content")
     assert dropdown is not None
 
 
 @pytest.mark.unit
-def test_multi_select_options_in_list_items():
+def test_select_multiple_options_in_list_items():
     """Options render as <li> elements inside a <ul>."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     soup = render_widget(widget, name="test")
     items = soup.find("div", class_="dropdown-content").find("ul").find_all("li")
     assert len(items) == 2
 
 
 @pytest.mark.unit
-def test_multi_select_renders_hidden_checkboxes():
+def test_select_multiple_renders_hidden_checkboxes():
     """Each option renders as an <input type='checkbox'> with class 'hidden'."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B"), ("c", "C")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B"), ("c", "C")])
     soup = render_widget(widget, name="test")
     checkboxes = soup.find_all("input", {"type": "checkbox"})
     assert len(checkboxes) == 3
@@ -377,19 +354,9 @@ def test_multi_select_renders_hidden_checkboxes():
 
 
 @pytest.mark.unit
-def test_multi_select_checkboxes_have_multiselect_class():
-    """Each checkbox has the 'multiselect' CSS class."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
-    soup = render_widget(widget, name="test")
-    checkboxes = soup.find_all("input", {"type": "checkbox"})
-    for cb in checkboxes:
-        assert "multiselect" in cb.get("class", [])
-
-
-@pytest.mark.unit
-def test_multi_select_checkbox_values():
+def test_select_multiple_checkbox_values():
     """Checkboxes have correct values matching the choices."""
-    widget = MultiSelect(choices=[("py", "Python"), ("js", "JS")])
+    widget = SelectMultiple(choices=[("py", "Python"), ("js", "JS")])
     soup = render_widget(widget, name="lang")
     checkboxes = soup.find_all("input", {"type": "checkbox"})
     values = [cb["value"] for cb in checkboxes]
@@ -397,18 +364,18 @@ def test_multi_select_checkbox_values():
 
 
 @pytest.mark.unit
-def test_multi_select_checkbox_name():
+def test_select_multiple_checkbox_name():
     """Checkboxes use the widget's field name."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="field")
     cb = soup.find("input", {"type": "checkbox"})
     assert cb["name"] == "field"
 
 
 @pytest.mark.unit
-def test_multi_select_selected_values_checked():
+def test_select_multiple_selected_values_checked():
     """Pre-selected values render as checked checkboxes."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B"), ("c", "C")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B"), ("c", "C")])
     soup = render_widget(widget, name="test", value=["a", "c"])
     checkboxes = soup.find_all("input", {"type": "checkbox"})
     checked = [cb["value"] for cb in checkboxes if cb.has_attr("checked")]
@@ -416,9 +383,9 @@ def test_multi_select_selected_values_checked():
 
 
 @pytest.mark.unit
-def test_multi_select_checkmark_present():
+def test_select_multiple_checkmark_present():
     """Each option has a <span class='formwork-check opacity-0'> checkmark indicator."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test")
     check = soup.find("span", class_="formwork-check")
     assert check is not None
@@ -426,9 +393,9 @@ def test_multi_select_checkmark_present():
 
 
 @pytest.mark.unit
-def test_multi_select_checkmark_after_label_text():
+def test_select_multiple_checkmark_after_label_text():
     """Label structure is: input, text span, trailing checkmark span."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test")
     label = soup.find("label")
     children = [c for c in label.children if getattr(c, "name", None)]
@@ -438,18 +405,18 @@ def test_multi_select_checkmark_after_label_text():
 
 
 @pytest.mark.unit
-def test_multi_select_alpine_x_data():
-    """The <details> wrapper binds to the formworkMultiSelect Alpine.data component."""
-    widget = MultiSelect(choices=[("a", "A")])
+def test_select_multiple_alpine_x_data():
+    """The <details> wrapper binds to the formworkSelectMultiple Alpine.data component."""
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test")
-    wrapper = soup.find("details", attrs={"x-data": "formworkMultiSelect"})
+    wrapper = soup.find("details", attrs={"x-data": "formworkSelectMultiple"})
     assert wrapper is not None
 
 
 @pytest.mark.unit
-def test_multi_select_option_labels():
+def test_select_multiple_option_labels():
     """Choice labels are rendered as text spans inside list items."""
-    widget = MultiSelect(choices=[("a", "Alpha"), ("b", "Beta")])
+    widget = SelectMultiple(choices=[("a", "Alpha"), ("b", "Beta")])
     soup = render_widget(widget, name="test")
     spans = soup.find_all("span", class_="select-none")
     texts = [s.get_text(strip=True) for s in spans]
@@ -458,59 +425,50 @@ def test_multi_select_option_labels():
 
 
 @pytest.mark.unit
-def test_multi_select_search_hidden_for_few_choices():
+def test_select_multiple_search_hidden_for_few_choices():
     """Search input is absent when choices < search_threshold."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     soup = render_widget(widget, name="test")
     search = soup.find("input", {"type": "text", "x-model": "search"})
     assert search is None
 
 
 @pytest.mark.unit
-def test_multi_select_search_shown_for_many_choices():
-    """Search input appears when choices >= search_threshold (20)."""
+def test_select_multiple_search_shown_for_many_choices():
+    """The search box shows after the choices pass search_threshold."""
     choices = [(str(i), f"Option {i}") for i in range(21)]
-    widget = MultiSelect(choices=choices)
+    widget = SelectMultiple(choices=choices)
     soup = render_widget(widget, name="test")
-    search = soup.find("input", {"type": "text", "x-model": "search"})
-    assert search is not None
+    assert soup.find("input", {"type": "search", "x-model": "search"}) is not None
+    assert soup.find("details")["data-show-search"] == "true"
 
 
 @pytest.mark.unit
-def test_multi_select_no_results_alert_for_many_choices():
+def test_select_multiple_no_results_alert_for_many_choices():
     """A DaisyUI alert-info alert-soft is rendered when show_search is active."""
     choices = [(str(i), f"Option {i}") for i in range(21)]
-    widget = MultiSelect(choices=choices)
+    widget = SelectMultiple(choices=choices)
     soup = render_widget(widget, name="test")
-    alert = soup.find("div", attrs={"role": "status"})
+    alert = soup.find("div", attrs={"x-show": "noResults"}).find("div", attrs={"role": "status"})
     assert alert is not None
-    assert alert.get("x-show") == "noResults"
     assert "alert" in alert["class"]
     assert "alert-info" in alert["class"]
 
 
 @pytest.mark.unit
-def test_multi_select_no_results_alert_hidden_for_few_choices():
-    """No 'No results' alert is rendered when choices are below the threshold."""
-    widget = MultiSelect(choices=[("a", "A")])
+def test_select_multiple_summary_renders_selection_as_text():
+    """The toggle binds the joined labels with x-text, so a label never parses as markup."""
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test")
-    assert soup.find("div", attrs={"role": "status"}) is None
+    span = soup.select_one("summary [x-text]")
+    assert span["x-text"] == "displayText || placeholder"
+    assert soup.select_one("summary [x-html]") is None
 
 
 @pytest.mark.unit
-def test_multi_select_summary_renders_selection_via_x_html():
-    """The summary span uses x-html so mark_safe SVG icons render as markup."""
-    widget = MultiSelect(choices=[("a", "A")])
-    soup = render_widget(widget, name="test")
-    span = soup.find("summary").find("span", attrs={"x-html": True})
-    assert span.get("x-html") == "displayHtml || 'Select…'"
-    assert "x-text" not in span.attrs
-
-
-@pytest.mark.unit
-def test_multi_select_summary_static_placeholder_class_tracks_selection():
+def test_select_multiple_summary_static_placeholder_class_tracks_selection():
     """The placeholder class is server-rendered only while nothing is selected."""
-    widget = MultiSelect(choices=[("a", "A"), ("b", "B")])
+    widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
     soup = render_widget(widget, name="test")
     assert "formwork-placeholder" in soup.find("summary")["class"]
     soup = render_widget(widget, name="test", value=["a"])
@@ -518,139 +476,128 @@ def test_multi_select_summary_static_placeholder_class_tracks_selection():
 
 
 @pytest.mark.unit
-def test_multi_select_summary_server_renders_selected_labels():
+def test_select_multiple_summary_server_renders_selected_labels():
     """Selected labels appear in the summary at first paint, before Alpine."""
-    widget = MultiSelect(choices=[("a", "Alpha"), ("b", "Beta"), ("c", "Gamma")])
+    widget = SelectMultiple(choices=[("a", "Alpha"), ("b", "Beta"), ("c", "Gamma")])
     soup = render_widget(widget, name="test", value=["a", "b"])
-    span = soup.find("summary").find("span", attrs={"x-html": True})
+    span = soup.select_one("summary [x-text]")
     assert span.get_text(strip=True) == "Alpha, Beta"
 
 
 @pytest.mark.unit
-def test_multi_select_summary_server_renders_icon_markup():
-    """Icons of selected options are server-rendered as markup in the summary."""
-    widget = MultiSelect(
-        choices=[("a", ChoiceLabel("Alpha", icon=mark_safe("<svg>icon</svg>"))), ("b", "Beta")],
-    )
-    soup = render_widget(widget, name="test", value=["a"])
-    span = soup.find("summary").find("span", attrs={"x-html": True})
-    assert span.find("svg") is not None
-
-
-@pytest.mark.unit
-def test_multi_select_summary_server_escapes_label_text():
+def test_select_multiple_summary_server_escapes_label_text():
     """HTML in labels is escaped in the server-rendered summary."""
-    widget = MultiSelect(choices=[("a", "<b>Bold</b>")])
+    widget = SelectMultiple(choices=[("a", "<b>Bold</b>")])
     soup = render_widget(widget, name="test", value=["a"])
-    span = soup.find("summary").find("span", attrs={"x-html": True})
+    span = soup.select_one("summary [x-text]")
     assert span.find("b") is None
     assert span.get_text(strip=True) == "<b>Bold</b>"
 
 
 @pytest.mark.unit
-def test_multi_select_summary_server_renders_count_above_cutoff():
+def test_select_multiple_summary_server_renders_count_above_cutoff():
     """More than three selections collapse to 'N selected' server-side too."""
     choices = [(str(i), f"Option {i}") for i in range(5)]
-    widget = MultiSelect(choices=choices)
+    widget = SelectMultiple(choices=choices)
     soup = render_widget(widget, name="test", value=["0", "1", "2", "3"])
-    span = soup.find("summary").find("span", attrs={"x-html": True})
+    span = soup.select_one("summary [x-text]")
     assert span.get_text(strip=True) == "4 selected"
 
 
 @pytest.mark.unit
-def test_multi_select_summary_server_renders_selection_in_search_mode():
+def test_select_multiple_summary_server_renders_selection_in_search_mode():
     """htmx-mode widgets derive the summary from the initial selected pairs."""
-    widget = make_server_widget(MultiSelect, choices=[("a", "Alpha"), ("b", "Beta")])
+    widget = make_server_widget(SelectMultiple, choices=[("a", "Alpha"), ("b", "Beta")])
     soup = render_widget(widget, name="test", value=["b"], attrs={"id": "id_test"})
-    span = soup.find("summary").find("span", attrs={"x-html": True})
+    span = soup.select_one("summary [x-text]")
     assert span.get_text(strip=True) == "Beta"
 
 
 @pytest.mark.unit
-def test_multi_select_aria_invalid_on_summary():
+def test_select_multiple_aria_invalid_on_summary():
     """aria-invalid='true' is forwarded to the <summary> trigger."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test", "aria-invalid": "true"})
     summary = soup.find("summary")
     assert summary["aria-invalid"] == "true"
 
 
 @pytest.mark.unit
-def test_multi_select_no_aria_invalid_when_valid():
+def test_select_multiple_no_aria_invalid_when_valid():
     """aria-invalid is absent on <summary> when no error."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     summary = soup.find("summary")
     assert not summary.has_attr("aria-invalid")
 
 
 @pytest.mark.unit
-def test_multi_select_aria_describedby_on_summary():
+def test_select_multiple_aria_describedby_on_summary():
     """aria-describedby is forwarded to the <summary> trigger."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test", "aria-describedby": "id_test_helptext"})
     summary = soup.find("summary")
     assert summary["aria-describedby"] == "id_test_helptext"
 
 
 @pytest.mark.unit
-def test_multi_select_no_aria_describedby_by_default():
+def test_select_multiple_no_aria_describedby_by_default():
     """aria-describedby is absent on <summary> without help text or errors."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     summary = soup.find("summary")
     assert not summary.has_attr("aria-describedby")
 
 
 @pytest.mark.unit
-def test_multi_select_wrapper_has_id():
-    """<details> gets id='{id}_multiselect' when attrs contain an id."""
-    widget = MultiSelect(choices=[("a", "A")])
+def test_select_multiple_wrapper_has_id():
+    """<details> gets id='{id}_wrapper' when attrs contain an id."""
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    details = soup.find("details", class_="multiselect")
-    assert details["id"] == "id_test_multiselect"
+    details = soup.find("details", class_="formwork-select-multiple")
+    assert details["id"] == "id_test_wrapper"
 
 
 @pytest.mark.unit
-def test_multi_select_no_wrapper_id_without_id():
+def test_select_multiple_no_wrapper_id_without_id():
     """<details> has no id when no id attr is passed."""
-    widget = MultiSelect(choices=[("a", "A")])
+    widget = SelectMultiple(choices=[("a", "A")])
     soup = render_widget(widget, name="test")
-    details = soup.find("details", class_="multiselect")
+    details = soup.find("details", class_="formwork-select-multiple")
     assert not details.has_attr("id")
 
 
 @pytest.mark.unit
-def test_multi_select_htmx_attrs_when_registered():
+def test_select_multiple_htmx_attrs_when_registered():
     """Search input gets hx-get, hx-trigger, hx-target, hx-swap when registered."""
-    widget = make_server_widget(MultiSelect, choices=[])
+    widget = make_server_widget(SelectMultiple, choices=[])
     soup = render_widget(widget, name="lang", attrs={"id": "id_lang"})
-    search_input = soup.find("input", {"type": "text"})
+    search_input = soup.find("input", {"type": "search"})
     assert search_input is not None
     assert search_input["hx-get"].startswith("/__formwork__/search/")
-    assert "input changed delay:300ms" in search_input["hx-trigger"]
-    assert search_input["hx-target"] == "#id_lang_options"
+    assert search_input["hx-trigger"] == "input changed delay:300ms"
+    assert search_input["hx-target"] == "next ul"
     assert search_input["hx-swap"] == "innerHTML"
 
 
 @pytest.mark.unit
-def test_multi_select_no_htmx_attrs_without_search_url():
+def test_select_multiple_no_htmx_attrs_without_search_url():
     """Search input has no htmx attributes when search_url is absent."""
     choices = [(str(i), f"Option {i}") for i in range(21)]
-    widget = MultiSelect(choices=choices)
+    widget = SelectMultiple(choices=choices)
     soup = render_widget(widget, name="test")
-    search_input = soup.find("input", {"type": "text"})
+    search_input = soup.find("input", {"type": "search"})
     assert not search_input.has_attr("hx-get")
 
 
 @pytest.mark.unit
-def test_multi_select_static_choices_ignored_when_search_url():
+def test_select_multiple_static_choices_ignored_when_search_url():
     """Static ``choices`` are ignored when server search is wired: the
     listbox renders pre-rendered registry options instead.  ``count=0``
     here so the listbox renders only the empty-state alert."""
-    widget = make_server_widget(MultiSelect, count=0, choices=[("a", "A")])
+    widget = make_server_widget(SelectMultiple, count=0, choices=[("a", "A")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    listbox = soup.find("ul", attrs={"id": "id_test_options"})
+    listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
     # Only the empty-state alert <li> remains.
     items = listbox.find_all("li")
     assert len(items) == 1
@@ -658,12 +605,12 @@ def test_multi_select_static_choices_ignored_when_search_url():
 
 
 @pytest.mark.unit
-def test_multi_select_renders_no_results_alert_when_initial_options_empty():
+def test_select_multiple_renders_no_results_alert_when_initial_options_empty():
     """An empty initial set still communicates state: the listbox carries
     the same ``role=status`` alert that the htmx response would render."""
-    widget = make_server_widget(MultiSelect, count=0)
+    widget = make_server_widget(SelectMultiple, count=0)
     soup = render_widget(widget, attrs={"id": "id_test"})
-    listbox = soup.find("ul", attrs={"id": "id_test_options"})
+    listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
     alert = listbox.find("div", attrs={"role": "status"})
     assert alert is not None
     assert "alert-info" in alert["class"]
@@ -671,48 +618,44 @@ def test_multi_select_renders_no_results_alert_when_initial_options_empty():
 
 
 @pytest.mark.unit
-def test_multi_select_htmx_mode_passes_initial_selected_json():
-    """htmx mode renders the initial-selected map as JSON on a data attribute,
-    which the Alpine.data component hydrates into a Map."""
-    widget = make_server_widget(MultiSelect, choices=[])
+def test_select_multiple_htmx_mode_passes_selected_json():
+    """Server mode puts the selected value/label pairs on ``data-selected`` for the component."""
+    widget = make_server_widget(SelectMultiple, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     details = soup.find("details")
-    assert details["x-data"] == "formworkMultiSelect"
+    assert details["x-data"] == "formworkSelectMultiple"
     assert details["data-has-search-url"] == "true"
-    # data-initial-selected holds a JSON array (empty here: nothing pre-selected).
-    assert json.loads(details["data-initial-selected"]) == []
+    assert json.loads(details["data-selected"]) == []
 
 
 @pytest.mark.unit
-def test_multi_select_htmx_mode_hidden_inputs_template():
-    """htmx mode uses an x-for template that renders hidden inputs per selected value."""
-    widget = make_server_widget(MultiSelect, choices=[])
-    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    template = soup.find("template", {"x-for": True})
-    assert template is not None
-    hidden = template.find("input", {"type": "hidden"})
-    assert hidden is not None
-    assert hidden[":value"] == "val"
-    assert hidden["name"] == "test"
+def test_select_multiple_htmx_mode_posts_selection_from_hidden_inputs():
+    """A searched list holds one page, so server mode posts the selection from hidden inputs."""
+    widget = make_server_widget(SelectMultiple, choices=[("a", "Alpha"), ("b", "Beta")])
+    soup = render_widget(widget, name="test", value=["a", "b"], attrs={"id": "id_test"})
+    values = soup.find("div", attrs={"x-ref": "values"})
+    assert values["data-name"] == "test"
+    assert [i["value"] for i in values.find_all("input", {"type": "hidden", "name": "test"})] == ["a", "b"]
+    assert all(not cb.has_attr("name") for cb in soup.find_all("input", {"type": "checkbox"}))
 
 
 @pytest.mark.unit
-def test_multi_select_htmx_wrapper_has_id():
+def test_select_multiple_htmx_wrapper_has_id():
     """htmx mode also derives the <details> id from the widget id."""
-    widget = make_server_widget(MultiSelect, choices=[])
+    widget = make_server_widget(SelectMultiple, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    details = soup.find("details", class_="multiselect")
-    assert details["id"] == "id_test_multiselect"
+    details = soup.find("details", class_="formwork-select-multiple")
+    assert details["id"] == "id_test_wrapper"
 
 
 @pytest.mark.unit
-def test_multi_select_prerenders_initial_options_when_registered():
+def test_select_multiple_prerenders_initial_options_when_registered():
     """The first ``max_results`` registry items are baked straight into the
     listbox so the dropdown opens with real data; htmx replaces them on
     first focus."""
-    widget = make_server_widget(MultiSelect, count=3)
+    widget = make_server_widget(SelectMultiple, count=3)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    listbox = soup.find("ul", attrs={"id": "id_test_options"})
+    listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
     items = listbox.find_all("li")
     assert len(items) == 3
     first_label = items[0].find("label")
@@ -720,39 +663,40 @@ def test_multi_select_prerenders_initial_options_when_registered():
 
 
 @pytest.mark.unit
-def test_multi_select_prerendered_count_caps_at_registry_max_results():
+def test_select_multiple_prerendered_count_caps_at_registry_max_results():
     """Pre-rendered options never exceed ``reg.max_results`` (default 50)."""
-    widget = make_server_widget(MultiSelect, count=2)
+    widget = make_server_widget(SelectMultiple, count=2)
     soup = render_widget(widget, attrs={"id": "id_x"})
-    assert len(soup.find("ul", attrs={"id": "id_x_options"}).find_all("li")) == 2
+    assert len(soup.find("ul", attrs={"id": "id_x_listbox"}).find_all("li")) == 2
 
-    widget = make_server_widget(MultiSelect, count=120)
+    widget = make_server_widget(SelectMultiple, count=120)
     soup = render_widget(widget, attrs={"id": "id_y"})
-    assert len(soup.find("ul", attrs={"id": "id_y_options"}).find_all("li")) == 50
+    assert len(soup.find("ul", attrs={"id": "id_y_listbox"}).find_all("li")) == 50
 
 
 @pytest.mark.unit
-def test_multi_select_prerendered_options_include_icons_when_registry_has_icons():
+def test_select_multiple_prerendered_options_include_icons_when_registry_has_icons():
     """When ``icon_from_instance`` is registered, pre-rendered options include the icon glyph."""
-    widget = make_server_widget(MultiSelect, count=1, icons=True)
+    widget = make_server_widget(SelectMultiple, count=1, icons=True)
     soup = render_widget(widget, attrs={"id": "id_x"})
     first = soup.find("li").find("label")
     assert "📍0" in first.get_text()
 
 
 @pytest.mark.unit
-def test_multi_select_no_prerendered_options_without_search_url():
-    """No server-search → no pre-rendered options (the listbox shows static optgroups instead)."""
-    widget = MultiSelect(choices=[("a", "Alpha")])
+def test_select_multiple_client_mode_renders_every_choice():
+    """Without server search the browser filters, so every choice is an option."""
+    widget = SelectMultiple(choices=[("a", "Alpha"), ("b", "Beta")])
     ctx = widget.get_context("test", [], {"id": "id_test"})
-    assert ctx["widget"]["initial_options"] == []
+    assert ctx["widget"]["search_url"] is None
+    assert [o["value"] for o in ctx["widget"]["options"]] == ["a", "b"]
 
 
 @pytest.mark.unit
-def test_multi_select_renders_error_alert_when_search_url():
+def test_select_multiple_renders_error_alert_when_search_url():
     """The error alert is rendered as a plain DaisyUI alert, hidden by
     default via x-show='hasError'."""
-    widget = make_server_widget(MultiSelect, choices=[])
+    widget = make_server_widget(SelectMultiple, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     alert = soup.find("div", attrs={"role": "alert"})
     assert alert is not None
@@ -763,51 +707,49 @@ def test_multi_select_renders_error_alert_when_search_url():
 
 
 @pytest.mark.unit
-def test_multi_select_no_error_alert_without_search_url():
-    """No error alert without server-side search."""
-    widget = MultiSelect(choices=[("a", "Alpha")])
+def test_select_multiple_error_alert_hidden_until_a_search_fails():
+    """The error alert waits on ``hasError``, which only a failed search sets."""
+    widget = SelectMultiple(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    assert soup.find("div", attrs={"role": "alert"}) is None
+    alert = soup.find("div", attrs={"role": "alert"})
+    assert alert["x-show"] == "hasError"
+    assert alert.has_attr("x-cloak")
 
 
 @pytest.mark.unit
-def test_multi_select_search_input_wires_error_handlers():
-    """``hasError`` clears in ``before:swap`` on success and sets on
-    error events.  The ``before:request`` reset was removed to avoid
-    briefly re-showing the prerendered listbox between request and
-    failed response."""
-    widget = make_server_widget(MultiSelect, choices=[])
+def test_select_multiple_search_input_wires_error_handlers():
+    """``hasError`` follows the response only; resetting it on request would flash the old list."""
+    widget = make_server_widget(SelectMultiple, choices=[])
     soup = render_widget(widget, name="lang", attrs={"id": "id_lang"})
-    search = soup.find("input", {"type": "text"})
-    assert "hx-on::before:request" not in search.attrs
-    assert "preventDefault" in search["hx-on::before:swap"]
-    assert "hasError = false" in search["hx-on::before:swap"]
-    assert "hasError = true" in search["hx-on::response:error"]
-    assert "hasError = true" in search["hx-on::error"]
+    search = soup.find("input", {"type": "search"})
+    assert "@htmx:before:request" not in search.attrs
+    assert search["@htmx:before:swap"] == "onSearchBeforeSwap($event)"
+    assert search["@htmx:response:error"] == "onSearchError()"
+    assert search["@htmx:error"] == "onSearchError()"
 
 
 @pytest.mark.unit
-def test_multi_select_listbox_hidden_only_on_error():
+def test_select_multiple_listbox_hidden_only_on_error():
     """The listbox stays visible at all times except when an error occurs."""
-    widget = make_server_widget(MultiSelect, choices=[])
+    widget = make_server_widget(SelectMultiple, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    listbox = soup.find("ul", id="id_test_options")
+    listbox = soup.find("ul", id="id_test_listbox")
     assert listbox.get("x-show") == "!hasError"
 
 
 @pytest.mark.unit
-def test_multi_select_has_search_url_flag_when_search_url():
+def test_select_multiple_has_search_url_flag_when_search_url():
     """data-has-search-url='true' selects the Map-tracked branch of the component."""
-    widget = make_server_widget(MultiSelect, choices=[])
+    widget = make_server_widget(SelectMultiple, choices=[])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    details = soup.find("details", class_="multiselect")
+    details = soup.find("details", class_="formwork-select-multiple")
     assert details["data-has-search-url"] == "true"
 
 
 @pytest.mark.unit
-def test_multi_select_icons_rendered():
+def test_select_multiple_icons_rendered():
     """ChoiceLabel icons appear in the rendered HTML."""
-    widget = MultiSelect(
+    widget = SelectMultiple(
         choices=[
             ("a", ChoiceLabel("Alpha", icon=mark_safe('<img src="a.svg">'))),
             ("b", "Beta"),
@@ -819,9 +761,9 @@ def test_multi_select_icons_rendered():
 
 
 @pytest.mark.unit
-def test_multi_select_no_icon_when_not_provided():
+def test_select_multiple_no_icon_when_not_provided():
     """No <img> elements rendered when no ChoiceLabel icons."""
-    widget = MultiSelect(choices=[("a", "Alpha")])
+    widget = SelectMultiple(choices=[("a", "Alpha")])
     soup = render_widget(widget, name="test")
     icons = soup.find_all("img")
     assert len(icons) == 0
@@ -831,22 +773,22 @@ def test_multi_select_no_icon_when_not_provided():
 
 
 @pytest.mark.integration
-def test_multi_select_renders_via_form(renderer):
-    """Field renders the <details class="multiselect"> dropdown."""
-    form = MultiSelectForm()
+def test_select_multiple_renders_via_form(renderer):
+    """Field renders the <details class="formwork-select-multiple"> dropdown."""
+    form = SelectMultipleForm()
     soup = render_form(form, renderer=renderer)
-    details = soup.find("details", class_="multiselect")
+    details = soup.find("details", class_="formwork-select-multiple")
     assert details is not None
 
 
 @pytest.mark.integration
-def test_multi_select_option_data_value_round_trips_raw_value(renderer):
+def test_select_multiple_option_data_value_round_trips_raw_value(renderer):
     """Regression: escapejs on the option data-value mangled a hyphenated value."""
 
     class HyphenForm(FormworkForm):
         tags = forms.MultipleChoiceField(
             choices=[("uuid-1234", "Ticket")],
-            widget=MultiSelect(choices=[("uuid-1234", "Ticket")]),
+            widget=SelectMultiple(choices=[("uuid-1234", "Ticket")]),
         )
 
     soup = render_form(HyphenForm(), renderer=renderer)
@@ -856,18 +798,18 @@ def test_multi_select_option_data_value_round_trips_raw_value(renderer):
 
 
 @pytest.mark.integration
-def test_multi_select_form_wraps_in_fieldset(renderer):
-    """Field template wraps the MultiSelect in a fieldset with a stable id."""
-    form = MultiSelectForm()
+def test_select_multiple_form_wraps_in_fieldset(renderer):
+    """Field template wraps the SelectMultiple in a fieldset with a stable id."""
+    form = SelectMultipleForm()
     soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_tags_field")
     assert fieldset is not None
 
 
 @pytest.mark.integration
-def test_multi_select_error_state_aria_invalid(renderer):
+def test_select_multiple_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the summary trigger."""
-    form = MultiSelectForm(data={})
+    form = SelectMultipleForm(data={})
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     summary = soup.find("summary")
@@ -875,9 +817,9 @@ def test_multi_select_error_state_aria_invalid(renderer):
 
 
 @pytest.mark.integration
-def test_multi_select_error_state_aria_describedby(renderer):
+def test_select_multiple_error_state_aria_describedby(renderer):
     """Django's auto aria-describedby (→ the error container) reaches the summary."""
-    form = MultiSelectForm(data={})
+    form = SelectMultipleForm(data={})
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     summary = soup.find("summary")
@@ -885,9 +827,9 @@ def test_multi_select_error_state_aria_describedby(renderer):
 
 
 @pytest.mark.integration
-def test_multi_select_error_state_shows_tooltip(renderer):
+def test_select_multiple_error_state_shows_tooltip(renderer):
     """Bound form with errors renders a tooltip containing the error text."""
-    form = MultiSelectForm(data={}, error_display="tooltip")
+    form = SelectMultipleForm(data={}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     tooltip = soup.find(id="id_tags_error", class_="tooltip-content")
@@ -896,31 +838,31 @@ def test_multi_select_error_state_shows_tooltip(renderer):
 
 
 @pytest.mark.integration
-def test_multi_select_form_prefix_handling(renderer):
+def test_select_multiple_form_prefix_handling(renderer):
     """Form prefix propagates to widget id and wrapper id."""
-    form = MultiSelectForm(prefix="cfg")
+    form = SelectMultipleForm(prefix="cfg")
     soup = render_form(form, renderer=renderer)
-    details = soup.find("details", class_="multiselect")
+    details = soup.find("details", class_="formwork-select-multiple")
     assert details is not None
-    assert details.get("id") == "id_cfg-tags_multiselect"
+    assert details.get("id") == "id_cfg-tags_wrapper"
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
 
 
 @pytest.mark.e2e
-def test_multi_select_renders_on_page(multi_select_page):
-    """MultiSelect dropdown is visible on the /multi-select/ page."""
+def test_select_multiple_renders_on_page(multi_select_page):
+    """SelectMultiple dropdown is visible on the /multi-select/ page."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     expect(multi).to_be_visible()
 
 
 @pytest.mark.e2e
-def test_multi_select_open_shows_checkboxes(multi_select_page):
+def test_select_multiple_open_shows_checkboxes(multi_select_page):
     """Opening the dropdown reveals checkbox inputs."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     summary = multi.locator("summary")
     summary.click()
     multi_select_page.wait_for_timeout(100)
@@ -929,13 +871,13 @@ def test_multi_select_open_shows_checkboxes(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_select_multiple(multi_select_page):
+def test_select_multiple_select_multiple(multi_select_page):
     """User can check multiple options via JS dispatch."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(100)
     multi_select_page.evaluate("""() => {
-        const dd = document.querySelector('details.dropdown.multiselect');
+        const dd = document.querySelector('details.dropdown.formwork-select-multiple');
         ['py', 'go'].forEach(v => {
             const cb = dd.querySelector(`input[value="${v}"]`);
             cb.checked = true;
@@ -948,14 +890,14 @@ def test_multi_select_select_multiple(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_summary_shows_selection(multi_select_page):
+def test_select_multiple_summary_shows_selection(multi_select_page):
     """After selecting an option the summary reflects the selection."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     summary = multi.locator("summary")
     summary.click()
     multi_select_page.wait_for_timeout(100)
     multi_select_page.evaluate("""() => {
-        const dd = document.querySelector('details.dropdown.multiselect');
+        const dd = document.querySelector('details.dropdown.formwork-select-multiple');
         const cb = dd.querySelector('input[value="py"]');
         cb.checked = true;
         cb.dispatchEvent(new Event('change', {bubbles: true}));
@@ -966,29 +908,30 @@ def test_multi_select_summary_shows_selection(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_no_search_bar_for_plain(multi_select_page):
-    """Plain MultiSelect with 4 choices has no search input (below threshold)."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+def test_select_multiple_no_search_bar_for_plain(multi_select_page):
+    """Plain SelectMultiple with 4 choices hides its search input (below threshold)."""
+    from playwright.sync_api import expect
+
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(100)
-    search = multi.locator('input[type="text"]')
-    assert search.count() == 0
+    expect(multi.locator('input[type="search"]')).to_be_hidden()
 
 
 @pytest.mark.e2e
-def test_multi_select_icons_has_search_bar(multi_select_page):
-    """Icons MultiSelect with 31 countries shows a search bar (above threshold)."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(1)
+def test_select_multiple_icons_has_search_bar(multi_select_page):
+    """Icons SelectMultiple with 31 countries shows a search bar (above threshold)."""
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(1)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(100)
-    search = multi.locator('input[type="text"]')
+    search = multi.locator('input[type="search"]')
     assert search.count() == 1
 
 
 @pytest.mark.e2e
-def test_multi_select_icons_has_many_checkboxes(multi_select_page):
-    """Icons MultiSelect should have 31 country checkboxes."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(1)
+def test_select_multiple_icons_has_many_checkboxes(multi_select_page):
+    """Icons SelectMultiple has 31 country checkboxes."""
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(1)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(100)
     checkboxes = multi.locator('input[type="checkbox"]')
@@ -996,23 +939,23 @@ def test_multi_select_icons_has_many_checkboxes(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_htmx_renders(multi_select_page):
-    """htmx MultiSelect is visible on the page."""
+def test_select_multiple_htmx_renders(multi_select_page):
+    """htmx SelectMultiple is visible on the page."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(2)
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     expect(multi).to_be_visible()
 
 
 @pytest.mark.e2e
-def test_multi_select_htmx_open_loads_results(multi_select_page):
-    """htmx MultiSelect loads results when opened."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(2)
+def test_select_multiple_htmx_open_loads_results(multi_select_page):
+    """htmx SelectMultiple loads results when opened."""
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(200)
     multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
-        const search = dds[2].querySelector('input[type="text"]');
+        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
+        const search = dds[2].querySelector('input[type="search"]');
         htmx.ajax('GET', search.getAttribute('hx-get') + '?q=&type=multi_select&name=languages_htmx', {
             target: search.getAttribute('hx-target'),
             swap: 'innerHTML',
@@ -1026,14 +969,14 @@ def test_multi_select_htmx_open_loads_results(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_htmx_select_creates_hidden_inputs(multi_select_page):
+def test_select_multiple_htmx_select_creates_hidden_inputs(multi_select_page):
     """Selecting items in htmx mode creates hidden inputs for form submission."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(2)
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(200)
     multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
-        const search = dds[2].querySelector('input[type="text"]');
+        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
+        const search = dds[2].querySelector('input[type="search"]');
         htmx.ajax('GET', search.getAttribute('hx-get') + '?q=&type=multi_select&name=languages_htmx', {
             target: search.getAttribute('hx-target'),
             swap: 'innerHTML',
@@ -1043,7 +986,7 @@ def test_multi_select_htmx_select_creates_hidden_inputs(multi_select_page):
 
     expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=10000)
     multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         const cbs = dds[2].querySelectorAll('input[type="checkbox"]');
         if (cbs.length >= 2) {
             cbs[0].checked = true;
@@ -1058,28 +1001,19 @@ def test_multi_select_htmx_select_creates_hidden_inputs(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_htmx_stale_echo_keeps_local_state(multi_select_page):
-    """A server echo older than the latest toggles (a morph updating
-    data-initial-selected while a newer selection is pending) must not clobber
-    the client state: checkboxes and hidden inputs keep tracking the Map so
-    the next submit still carries the full selection.  Once the echo confirms
-    the client state, later server-driven changes are accepted again."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(2)
+def test_select_multiple_htmx_stale_echo_keeps_local_state(multi_select_page):
+    """A stale data-selected echo keeps the newer local selection; a confirming echo re-arms server updates.
+
+    Checkboxes and hidden inputs keep tracking the local selection, so the next submit carries all of it.
+    """
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(200)
-    multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
-        const search = dds[2].querySelector('input[type="text"]');
-        htmx.ajax('GET', search.getAttribute('hx-get') + '?q=&type=multi_select&name=languages_htmx', {
-            target: search.getAttribute('hx-target'),
-            swap: 'innerHTML',
-        });
-    }""")
     from playwright.sync_api import expect
 
     expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=10000)
     values = multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         const cbs = dds[2].querySelectorAll('input[type="checkbox"]');
         [cbs[0], cbs[1]].forEach(cb => {
             cb.checked = true;
@@ -1090,11 +1024,12 @@ def test_multi_select_htmx_stale_echo_keeps_local_state(multi_select_page):
     multi_select_page.wait_for_timeout(100)
 
     state = """() => {
-        const dd = document.querySelectorAll('details.dropdown.multiselect')[2];
+        const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
         const data = Alpine.$data(dd);
         return {
-            map: [...data.selected.keys()].sort(),
-            hidden: [...dd.querySelectorAll('input[type="hidden"][name="languages_htmx"]')].map(i => i.value).sort(),
+            map: Object.keys(data.selected).sort(),
+            hidden: [...dd.querySelectorAll('input[type="hidden"][name="languages_htmx"]')]
+                .map(i => i.value).filter(Boolean).sort(),
             checked: [...dd.querySelectorAll('input[type="checkbox"]')].filter(b => b.checked).map(b => b.value).sort(),
         };
     }"""
@@ -1104,8 +1039,8 @@ def test_multi_select_htmx_stale_echo_keeps_local_state(multi_select_page):
     # Stale echo: the server confirms only the first toggle.
     multi_select_page.evaluate(
         """(v) => {
-            const dd = document.querySelectorAll('details.dropdown.multiselect')[2];
-            dd.dataset.initialSelected = JSON.stringify([[v, ['Stale', '']]]);
+            const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
+            dd.dataset.selected = JSON.stringify([[v, 'Stale']]);
         }""",
         values[0],
     )
@@ -1118,19 +1053,19 @@ def test_multi_select_htmx_stale_echo_keeps_local_state(multi_select_page):
     # Confirming echo (matches local state): accepted, dirty flag cleared.
     multi_select_page.evaluate(
         """(vs) => {
-            const dd = document.querySelectorAll('details.dropdown.multiselect')[2];
-            dd.dataset.initialSelected = JSON.stringify(vs.map(v => [v, ['Confirmed', '']]));
+            const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
+            dd.dataset.selected = JSON.stringify(vs.map(v => [v, 'Confirmed']));
         }""",
         values,
     )
     multi_select_page.wait_for_timeout(100)
 
     # A genuine server-driven change is now accepted, and the checkboxes
-    # follow the Map (x-effect), so the visual state matches what submits.
+    # follow the selection, so the visual state matches what submits.
     multi_select_page.evaluate(
         """(v) => {
-            const dd = document.querySelectorAll('details.dropdown.multiselect')[2];
-            dd.dataset.initialSelected = JSON.stringify([[v, ['Server', '']]]);
+            const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
+            dd.dataset.selected = JSON.stringify([[v, 'Server']]);
         }""",
         values[0],
     )
@@ -1142,22 +1077,22 @@ def test_multi_select_htmx_stale_echo_keeps_local_state(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_wrapper_has_id_e2e(multi_select_page):
-    """The <details> wrapper has an id containing '_multiselect'."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+def test_select_multiple_wrapper_has_id_e2e(multi_select_page):
+    """The <details> wrapper has an id ending in '_wrapper'."""
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     wrapper_id = multi.get_attribute("id")
     assert wrapper_id is not None
-    assert "_multiselect" in wrapper_id
+    assert wrapper_id.endswith("_wrapper")
 
 
 @pytest.mark.e2e
-def test_multi_select_popover_survives_morph_attribute_strip(multi_select_page):
+def test_select_multiple_popover_survives_morph_attribute_strip(multi_select_page):
     """Morph swaps (htmx 4) sync attributes back to the server HTML, which
     carries no popover attribute or inline anchor styles; the widget must
     re-assert them and keep an open panel in the top layer."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     panel = multi.locator(".dropdown-content")
     multi.locator("summary").click()
     expect(panel).to_have_attribute("popover", "manual")
@@ -1165,7 +1100,7 @@ def test_multi_select_popover_survives_morph_attribute_strip(multi_select_page):
     # Strip the client-added plumbing exactly like a morph: one batch of
     # attribute mutations restoring the server-rendered state.
     multi_select_page.evaluate("""() => {
-        const root = document.querySelector('details.dropdown.multiselect');
+        const root = document.querySelector('details.dropdown.formwork-select-multiple');
         const panel = root.querySelector(':scope > .dropdown-content');
         panel.removeAttribute('popover');
         root.removeAttribute('style');
@@ -1174,7 +1109,7 @@ def test_multi_select_popover_survives_morph_attribute_strip(multi_select_page):
 
     expect(panel).to_have_attribute("popover", "manual")
     assert multi_select_page.evaluate("""() => {
-        const root = document.querySelector('details.dropdown.multiselect');
+        const root = document.querySelector('details.dropdown.formwork-select-multiple');
         const panel = root.querySelector(':scope > .dropdown-content');
         const anchored = !CSS.supports('anchor-name: --a') ||
             (root.style.anchorName !== '' &&
@@ -1183,15 +1118,15 @@ def test_multi_select_popover_survives_morph_attribute_strip(multi_select_page):
     }""")
 
 
-# ─── Level 5b: E2e, grouped MultiSelect ─────────────────────────────────
+# ─── Level 5b: E2e, grouped SelectMultiple ─────────────────────────────────
 #
-# cities_grouped is the 4th MultiSelect on the page (nth(3)).
+# cities_grouped is the 4th SelectMultiple on the page (nth(3)).
 
 
 @pytest.mark.e2e
-def test_multi_select_grouped_shows_headers(multi_select_page):
-    """Open the grouped MultiSelect; all three group headers are visible."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(3)
+def test_select_multiple_grouped_shows_headers(multi_select_page):
+    """Open the grouped SelectMultiple; all three group headers are visible."""
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(150)
     headers = [h.inner_text().strip() for h in multi.locator("li.menu-title").all() if h.is_visible()]
@@ -1199,12 +1134,12 @@ def test_multi_select_grouped_shows_headers(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_grouped_filter_hides_empty_groups(multi_select_page):
+def test_select_multiple_grouped_filter_hides_empty_groups(multi_select_page):
     """Typing 'lon' (matches only London in Europe) hides Asia and Americas headers."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(3)
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(150)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    search = multi.locator('.dropdown-content input[type="search"]')
     search.fill("lon")
     multi_select_page.wait_for_timeout(100)
     visible_headers = [h.inner_text().strip() for h in multi.locator("li.menu-title").all() if h.is_visible()]
@@ -1212,11 +1147,11 @@ def test_multi_select_grouped_filter_hides_empty_groups(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_grouped_pick_via_click(multi_select_page):
+def test_select_multiple_grouped_pick_via_click(multi_select_page):
     """Clicking a checkbox label inside a group toggles its checked state."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(3)
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
     multi.locator('label[data-value="ldn"]').click()
     expect(multi.locator('input[value="ldn"]')).to_be_checked()
@@ -1227,23 +1162,23 @@ def test_multi_select_grouped_pick_via_click(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_search_auto_focus_on_open(multi_select_page):
-    """Opening a MultiSelect with a search box auto-focuses the search input."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(3)
+def test_select_multiple_search_auto_focus_on_open(multi_select_page):
+    """Opening a SelectMultiple with a search box auto-focuses the search input."""
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(100)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    search = multi.locator('.dropdown-content input[type="search"]')
     from playwright.sync_api import expect
 
     expect(search).to_be_focused(timeout=2000)
 
 
 @pytest.mark.e2e
-def test_multi_select_search_refocus_on_reopen(multi_select_page):
+def test_select_multiple_search_refocus_on_reopen(multi_select_page):
     """Closing then reopening re-focuses the search input."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(3)
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(100)
     # Close
@@ -1252,17 +1187,17 @@ def test_multi_select_search_refocus_on_reopen(multi_select_page):
     # Reopen
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(100)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    search = multi.locator('.dropdown-content input[type="search"]')
     expect(search).to_be_focused(timeout=2000)
 
 
 @pytest.mark.e2e
-def test_multi_select_no_search_no_focus_error(multi_select_page):
-    """Opening a search-less MultiSelect does not raise any console error."""
+def test_select_multiple_no_search_no_focus_error(multi_select_page):
+    """Opening a search-less SelectMultiple does not raise any console error."""
     errors: list[str] = []
     multi_select_page.on("pageerror", lambda e: errors.append(str(e)))
 
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(150)
     assert errors == []
@@ -1270,16 +1205,16 @@ def test_multi_select_no_search_no_focus_error(multi_select_page):
 
 # ─── Level 5d: E2e, keyboard navigation ─────────────────────────────────
 #
-# Uses the grouped MultiSelect (nth(3)) which is fixed-size and searchable.
+# Uses the grouped SelectMultiple (nth(3)) which is fixed-size and searchable.
 # Keyboard handlers are on the <details> root; the search input naturally
 # has focus once the dropdown is open, so events bubble to the handlers.
 
 
 @pytest.mark.e2e
-def test_multi_select_keyboard_arrowdown_highlights_first(multi_select_page):
+def test_select_multiple_keyboard_arrowdown_highlights_first(multi_select_page):
     """ArrowDown from no highlight goes to the first visible option."""
-    multi = open_dropdown(multi_select_page, "multiselect", 3)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
     multi_select_page.wait_for_timeout(50)
     highlighted = multi.locator("[data-value].highlighted")
@@ -1288,10 +1223,10 @@ def test_multi_select_keyboard_arrowdown_highlights_first(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_keyboard_arrowdown_navigates(multi_select_page):
+def test_select_multiple_keyboard_arrowdown_navigates(multi_select_page):
     """Each ArrowDown moves to the next option, skipping group headers."""
-    multi = open_dropdown(multi_select_page, "multiselect", 3)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")  # ldn
     search.press("ArrowDown")  # par
     multi_select_page.wait_for_timeout(50)
@@ -1305,10 +1240,10 @@ def test_multi_select_keyboard_arrowdown_navigates(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_keyboard_arrowdown_wraps_to_first(multi_select_page):
+def test_select_multiple_keyboard_arrowdown_wraps_to_first(multi_select_page):
     """Pressing ArrowDown past the last option wraps to the first."""
-    multi = open_dropdown(multi_select_page, "multiselect", 3)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    search = multi.locator('.dropdown-content input[type="search"]')
     # 9 options total; 10 ArrowDowns from no-highlight = 9 to last + 1 wrap
     for _ in range(10):
         search.press("ArrowDown")
@@ -1317,20 +1252,20 @@ def test_multi_select_keyboard_arrowdown_wraps_to_first(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_keyboard_arrowup_wraps_to_last(multi_select_page):
+def test_select_multiple_keyboard_arrowup_wraps_to_last(multi_select_page):
     """ArrowUp from no highlight goes to the last visible option."""
-    multi = open_dropdown(multi_select_page, "multiselect", 3)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowUp")
     multi_select_page.wait_for_timeout(50)
     assert multi.locator("[data-value].highlighted").first.get_attribute("data-value") == "mex"
 
 
 @pytest.mark.e2e
-def test_multi_select_keyboard_filter_skips_hidden_options(multi_select_page):
+def test_select_multiple_keyboard_filter_skips_hidden_options(multi_select_page):
     """After filtering, ArrowDown only highlights visible (matching) options."""
-    multi = open_dropdown(multi_select_page, "multiselect", 3)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    search = multi.locator('.dropdown-content input[type="search"]')
     search.fill("lon")  # Matches only "London"
     multi_select_page.wait_for_timeout(150)
     search.press("ArrowDown")
@@ -1342,10 +1277,10 @@ def test_multi_select_keyboard_filter_skips_hidden_options(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_keyboard_enter_toggles_keeps_open(multi_select_page):
+def test_select_multiple_keyboard_enter_toggles_keeps_open(multi_select_page):
     """Enter toggles the highlighted checkbox; dropdown stays open."""
-    multi = open_dropdown(multi_select_page, "multiselect", 3)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")  # Highlight ldn
     search.press("Enter")
     multi_select_page.wait_for_timeout(150)
@@ -1359,10 +1294,10 @@ def test_multi_select_keyboard_enter_toggles_keeps_open(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_keyboard_enter_again_toggles_off(multi_select_page):
+def test_select_multiple_keyboard_enter_again_toggles_off(multi_select_page):
     """Pressing Enter twice on the same option toggles it off again."""
-    multi = open_dropdown(multi_select_page, "multiselect", 3)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
     search.press("Enter")
     multi_select_page.wait_for_timeout(100)
@@ -1373,20 +1308,20 @@ def test_multi_select_keyboard_enter_again_toggles_off(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_keyboard_enter_no_highlight_toggles_first(multi_select_page):
+def test_select_multiple_keyboard_enter_no_highlight_toggles_first(multi_select_page):
     """With no highlight, Enter toggles the first visible option."""
-    multi = open_dropdown(multi_select_page, "multiselect", 3)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    search = multi.locator('.dropdown-content input[type="search"]')
     search.press("Enter")
     multi_select_page.wait_for_timeout(100)
     assert multi.locator('input[type="checkbox"][value="ldn"]').is_checked()
 
 
 @pytest.mark.e2e
-def test_multi_select_keyboard_close_clears_highlight(multi_select_page):
+def test_select_multiple_keyboard_close_clears_highlight(multi_select_page):
     """Closing the dropdown clears the ``.highlighted`` class."""
-    multi = open_dropdown(multi_select_page, "multiselect", 3)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    multi = open_dropdown(multi_select_page, "formwork-select-multiple", 3)
+    search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")
     multi_select_page.wait_for_timeout(50)
     assert multi.locator("[data-value].highlighted").count() == 1
@@ -1403,6 +1338,19 @@ def test_multi_select_keyboard_close_clears_highlight(multi_select_page):
 # already listens for.
 
 
+def _type_search(page, index, text):
+    """Set the nth SelectMultiple's search input value, firing its input handlers."""
+    page.evaluate(
+        """([i, text]) => {
+            const search = document.querySelectorAll('details.dropdown.formwork-select-multiple')[i]
+                .querySelector('.dropdown-content input[type="search"]');
+            search.value = text;
+            search.dispatchEvent(new Event('input', {bubbles: true}));
+        }""",
+        [index, text],
+    )
+
+
 def _enable_dirty_tracking(page):
     page.evaluate("""() => {
         document.querySelector('form[hx-post]').setAttribute('data-formwork-dirty', '');
@@ -1413,7 +1361,7 @@ def _enable_dirty_tracking(page):
 def _toggle_checkbox(page, dropdown_index, value_selector):
     page.evaluate(
         """([index, selector]) => {
-            const dd = document.querySelectorAll('details.dropdown.multiselect')[index];
+            const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[index];
             const cb = dd.querySelector(selector);
             cb.checked = !cb.checked;
             cb.dispatchEvent(new Event('change', {bubbles: true}));
@@ -1423,7 +1371,7 @@ def _toggle_checkbox(page, dropdown_index, value_selector):
 
 
 @pytest.mark.e2e
-def test_multi_select_htmx_dirty_clears_on_revert(multi_select_page):
+def test_select_multiple_htmx_dirty_clears_on_revert(multi_select_page):
     """htmx-mode: selecting then unselecting an option leaves the fieldset clean."""
     import re
 
@@ -1438,7 +1386,7 @@ def test_multi_select_htmx_dirty_clears_on_revert(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_client_dirty_clears_on_revert(multi_select_page):
+def test_select_multiple_client_dirty_clears_on_revert(multi_select_page):
     """Client-mode: checking then unchecking a box leaves the fieldset clean."""
     import re
 
@@ -1454,7 +1402,7 @@ def test_multi_select_client_dirty_clears_on_revert(multi_select_page):
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
-# Needs a page with a required MultiSelect; all /multi-select/ fields are optional.
+# Needs a page with a required SelectMultiple; all /multi-select/ fields are optional.
 
 
 # ─── Level 6b: E2e, server-side search loading + failure UX ─────────────
@@ -1464,24 +1412,24 @@ def test_multi_select_client_dirty_clears_on_revert(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_prerenders_options_on_initial_load(multi_select_page):
-    """Real options render in every htmx-mode MultiSelect on first page load, with no
+def test_select_multiple_prerenders_options_on_initial_load(multi_select_page):
+    """Real options render in every htmx-mode SelectMultiple on first page load, with no
     skeleton flicker: the dropdown at index 2 wires ``search_choices_languages_htmx``
     against all 6 ``E2E_LANGUAGES`` entries, which fit under the default ``reg.max_results`` of 50."""
-    htmx_dropdown = multi_select_page.locator("details.dropdown.multiselect").nth(2)
+    htmx_dropdown = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     items = htmx_dropdown.locator("ul[role='listbox'] > li")
     assert items.count() == 6
 
 
 @pytest.mark.e2e
-def test_multi_select_options_refresh_on_first_focus(multi_select_page):
+def test_select_multiple_options_refresh_on_first_focus(multi_select_page):
     """First focus fires htmx; the swap replaces pre-rendered options with
     the fresh response: same count, same listbox."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(2)
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         dds[2].open = true;
         dds[2].dispatchEvent(new Event('toggle'));
     }""")
@@ -1489,23 +1437,18 @@ def test_multi_select_options_refresh_on_first_focus(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_failing_search_shows_error_alert(multi_select_page):
+def test_select_multiple_failing_search_shows_error_alert(multi_select_page):
     """When the search endpoint returns 500, the error alert replaces the listbox."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(4)
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(4)
     multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
     multi_select_page.wait_for_timeout(200)
-    multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
-        const search = dds[4].querySelector('.dropdown-content input[type="text"]');
-        search.focus();
-        search.dispatchEvent(new Event('focus'));
-    }""")
+    _type_search(multi_select_page, 4, "x")
     alert = multi.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
     assert "Search failed" in alert.text_content()
@@ -1513,51 +1456,46 @@ def test_multi_select_failing_search_shows_error_alert(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_search_input_works_after_error(multi_select_page):
+def test_select_multiple_search_input_works_after_error(multi_select_page):
     """The search input remains usable after a failure: typing fires a new
     request and the value lands in the input."""
     from playwright.sync_api import expect
 
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(4)
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(4)
     requests: list[str] = []
     multi_select_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
     multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
+        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         dds[4].open = true;
         dds[4].dispatchEvent(new Event('toggle'));
     }""")
+    _type_search(multi_select_page, 4, "x")
     alert = multi.locator('[role="alert"].alert-error')
     expect(alert).to_be_visible(timeout=10000)
     initial_count = len(requests)
-    multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
-        const search = dds[4].querySelector('.dropdown-content input[type="text"]');
-        search.focus();
-        search.value = 'x';
-        search.dispatchEvent(new Event('input', {bubbles: true}));
-    }""")
+    _type_search(multi_select_page, 4, "xy")
     # 300ms input-changed debounce + buffer for the request to fire.
     multi_select_page.wait_for_timeout(500)
     assert len(requests) > initial_count, "expected typing to fire a new search request"
     val = multi_select_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.multiselect');
-        return dds[4].querySelector('.dropdown-content input[type="text"]').value;
+        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
+        return dds[4].querySelector('.dropdown-content input[type="search"]').value;
     }""")
-    assert val == "x"
+    assert val == "xy"
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
 
 
 @pytest.mark.e2e
-def test_multi_select_morph_preserves_values(multi_select_page):
+def test_select_multiple_morph_preserves_values(multi_select_page):
     """Checked options survive an htmx form morph."""
     multi_select_page.evaluate("""
-        document.querySelector('details.dropdown.multiselect').open = true;
+        document.querySelector('details.dropdown.formwork-select-multiple').open = true;
     """)
     multi_select_page.wait_for_timeout(200)
     multi_select_page.evaluate("""
-        const dd = document.querySelector('details.dropdown.multiselect');
+        const dd = document.querySelector('details.dropdown.formwork-select-multiple');
         const cbs = dd.querySelectorAll('input[type="checkbox"]');
         cbs[0].checked = true;
         cbs[0].dispatchEvent(new Event('change', {bubbles: true}));
@@ -1566,12 +1504,12 @@ def test_multi_select_morph_preserves_values(multi_select_page):
     """)
     multi_select_page.wait_for_timeout(200)
     multi_select_page.evaluate("""
-        document.querySelector('details.dropdown.multiselect').open = false;
+        document.querySelector('details.dropdown.formwork-select-multiple').open = false;
     """)
     multi_select_page.wait_for_timeout(100)
     submit(multi_select_page)
     checked = multi_select_page.evaluate("""
-        [...document.querySelectorAll('details.dropdown.multiselect input[type="checkbox"]:checked')]
+        [...document.querySelectorAll('details.dropdown.formwork-select-multiple input[type="checkbox"]:checked')]
             .map(cb => cb.value)
     """)
     assert "py" in checked
@@ -1579,10 +1517,10 @@ def test_multi_select_morph_preserves_values(multi_select_page):
 
 
 @pytest.mark.e2e
-def test_multi_select_morph_preserves_dropdown_open(multi_select_page):
+def test_select_multiple_morph_preserves_dropdown_open(multi_select_page):
     """An open dropdown stays open after a morph."""
     multi_select_page.evaluate("""
-        document.querySelector('details.dropdown.multiselect').open = true;
+        document.querySelector('details.dropdown.formwork-select-multiple').open = true;
     """)
     multi_select_page.wait_for_timeout(200)
     multi_select_page.evaluate("""
@@ -1591,7 +1529,7 @@ def test_multi_select_morph_preserves_dropdown_open(multi_select_page):
         form.requestSubmit();
     """)
     multi_select_page.wait_for_timeout(500)
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     assert multi.get_attribute("open") is not None
 
 
@@ -1599,31 +1537,31 @@ def test_multi_select_morph_preserves_dropdown_open(multi_select_page):
 
 
 @pytest.mark.screenshot
-def test_multi_select_screenshot_default(multi_select_page, assert_screenshot):
-    """Visual snapshot: MultiSelect in default (closed) state."""
-    wrapper = multi_select_page.locator("details.dropdown.multiselect").first
+def test_select_multiple_screenshot_default(multi_select_page, assert_screenshot):
+    """Visual snapshot: SelectMultiple in default (closed) state."""
+    wrapper = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     assert_screenshot(wrapper, "multi-select-default.png")
 
 
 @pytest.mark.screenshot
-def test_multi_select_screenshot_open(multi_select_page, assert_screenshot):
-    """Visual snapshot: MultiSelect with dropdown open."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+def test_select_multiple_screenshot_open(multi_select_page, assert_screenshot):
+    """Visual snapshot: SelectMultiple with dropdown open."""
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     multi_select_page.evaluate("""
-        document.querySelector('details.dropdown.multiselect').open = true;
+        document.querySelector('details.dropdown.formwork-select-multiple').open = true;
     """)
     multi_select_page.wait_for_timeout(100)
     assert_screenshot(multi, "multi-select-open.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot
-def test_multi_select_screenshot_selected(multi_select_page, assert_screenshot):
-    """Visual snapshot: MultiSelect with at least 3 options selected."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").first
+def test_select_multiple_screenshot_selected(multi_select_page, assert_screenshot):
+    """Visual snapshot: SelectMultiple with at least 3 options selected."""
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").first
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(100)
     multi_select_page.evaluate("""() => {
-        const dd = document.querySelector('details.dropdown.multiselect');
+        const dd = document.querySelector('details.dropdown.formwork-select-multiple');
         ['py', 'js', 'go'].forEach(v => {
             const cb = dd.querySelector(`input[value="${v}"]`);
             if (cb) {
@@ -1637,21 +1575,21 @@ def test_multi_select_screenshot_selected(multi_select_page, assert_screenshot):
 
 
 @pytest.mark.screenshot
-def test_multi_select_screenshot_grouped_open(multi_select_page, assert_screenshot):
-    """Visual snapshot: grouped MultiSelect with dropdown open showing optgroup headers."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(3)
+def test_select_multiple_screenshot_grouped_open(multi_select_page, assert_screenshot):
+    """Visual snapshot: grouped SelectMultiple with dropdown open showing optgroup headers."""
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(150)
     assert_screenshot(multi, "multi-select-grouped-open.png", capture_dropdown=True)
 
 
 @pytest.mark.screenshot
-def test_multi_select_screenshot_keyboard_highlighted(multi_select_page, assert_screenshot):
-    """Visual snapshot: MultiSelect with an option highlighted via keyboard."""
-    multi = multi_select_page.locator("details.dropdown.multiselect").nth(3)
+def test_select_multiple_screenshot_keyboard_highlighted(multi_select_page, assert_screenshot):
+    """Visual snapshot: SelectMultiple with an option highlighted via keyboard."""
+    multi = multi_select_page.locator("details.dropdown.formwork-select-multiple").nth(3)
     multi.locator("summary").click()
     multi_select_page.wait_for_timeout(150)
-    search = multi.locator('.dropdown-content input[type="text"]')
+    search = multi.locator('.dropdown-content input[type="search"]')
     search.press("ArrowDown")  # Highlight first (ldn)
     multi_select_page.wait_for_timeout(50)
     assert_screenshot(multi, "multi-select-keyboard-highlighted.png", capture_dropdown=True)

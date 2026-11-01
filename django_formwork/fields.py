@@ -1,9 +1,7 @@
-"""Enriched choice fields for django-formwork.
+"""Model choice fields whose choices carry ``ChoiceLabel`` extras.
 
-``ChoiceLabel`` wraps a choice label with optional ``icon`` and
-``description``.  ``FormworkModelChoiceField`` uses it to produce enriched
-choices from a queryset via ``icon_from_instance`` and
-``description_from_instance`` callbacks.
+``FormworkModelChoiceField`` builds each label from the ``icon_from_instance``,
+``description_from_instance`` and ``selected_toggle_class_from_instance`` callbacks.
 """
 
 from __future__ import annotations
@@ -13,83 +11,17 @@ from typing import TYPE_CHECKING, Any
 from django.forms import ModelChoiceField, ModelMultipleChoiceField
 from django.forms.models import ModelChoiceIterator, ModelChoiceIteratorValue
 
+from django_formwork.widgets.select import ChoiceLabel
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from django.db.models import Model
 
 __all__ = [
-    "ChoiceLabel",
     "FormworkModelChoiceField",
     "FormworkModelMultipleChoiceField",
 ]
-
-
-class ChoiceLabel:
-    """A string-like choice label that carries optional icon and description.
-
-    Any code expecting a plain string (Django admin, built-in widgets,
-    templates) sees the label text via ``__str__``.  Widgets that understand
-    ``ChoiceLabel`` can read ``.icon``, ``.description`` and
-    ``.selected_toggle_class``.
-
-    ``selected_toggle_class`` is a free-form CSS class the ``SearchSelect``
-    widget moves onto its trigger while this option is selected (e.g. a
-    DaisyUI ``select-error`` to recolor the closed box).  It is relayed
-    verbatim: the library never interprets or validates it, and the consuming
-    app is responsible for making the class exist in its compiled CSS.
-
-    Usage::
-
-        choices = [
-            ("nyc", ChoiceLabel("New York", icon="building")),
-            ("ldn", ChoiceLabel("London", icon="landmark")),
-            ("high", ChoiceLabel("High", selected_toggle_class="select-error")),
-        ]
-    """
-
-    __slots__ = ("description", "icon", "label", "selected_toggle_class")
-
-    def __init__(
-        self,
-        label: str,
-        *,
-        icon: str = "",
-        description: str = "",
-        selected_toggle_class: str = "",
-    ) -> None:
-        self.label = label
-        self.icon = icon
-        self.description = description
-        self.selected_toggle_class = selected_toggle_class
-
-    def __str__(self) -> str:
-        return self.label
-
-    def __repr__(self) -> str:
-        parts = [repr(self.label)]
-        if self.icon:
-            parts.append(f"icon={self.icon!r}")
-        if self.description:
-            parts.append(f"description={self.description!r}")
-        if self.selected_toggle_class:
-            parts.append(f"selected_toggle_class={self.selected_toggle_class!r}")
-        return f"ChoiceLabel({', '.join(parts)})"
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, str):
-            return self.label == other
-        if isinstance(other, ChoiceLabel):
-            return (
-                self.label == other.label
-                and self.icon == other.icon
-                and self.description == other.description
-                and self.selected_toggle_class == other.selected_toggle_class
-            )
-        return NotImplemented
-
-    def __hash__(self) -> int:
-        return hash(self.label)
 
 
 class _ChoiceIterator(ModelChoiceIterator):

@@ -1,8 +1,5 @@
 """Tests for FormworkSearchView and FormworkValidateView."""
 
-import json
-import re
-
 import pytest
 from bs4 import BeautifulSoup
 from django.test import Client, RequestFactory
@@ -32,8 +29,8 @@ class CityComboBoxView(CitySearchView):
     widget_type = "combo_box"
 
 
-class CityMultiSelectView(CitySearchView):
-    """City search rendered with the MultiSelect template."""
+class CitySelectMultipleView(CitySearchView):
+    """City search rendered with the SelectMultiple template."""
 
     widget_type = "multi_select"
 
@@ -60,14 +57,14 @@ class HostileComboBoxView(HostileSearchView):
     widget_type = "combo_box"
 
 
-class HostileMultiSelectView(HostileSearchView):
+class HostileSelectMultipleView(HostileSearchView):
     widget_type = "multi_select"
 
 
 factory = RequestFactory()
 
 
-class TestFormworkSearchViewSearchSelect:
+class TestFormworkSearchViewSelect:
     def test_returns_html(self):
         request = factory.get("/search/", {"q": ""})
         response = CitySearchView.as_view()(request)
@@ -125,26 +122,18 @@ class TestFormworkSearchViewComboBox:
         buttons = soup.find_all("button")
         assert len(buttons) == 4
 
-    def test_data_suggestion_attr(self):
+    def test_label_is_the_suggested_text(self):
+        """A ComboBox inserts the row's data-label into the input."""
         request = factory.get("/search/", {"q": "par"})
         response = CityComboBoxView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
-        btn = soup.find("button")
-        assert btn["data-suggestion"] == "Paris"
-
-    def test_no_data_value_attr(self):
-        """ComboBox buttons have data-suggestion, not data-value."""
-        request = factory.get("/search/", {"q": ""})
-        response = CityComboBoxView.as_view()(request)
-        soup = BeautifulSoup(response.content, "html.parser")
-        btn = soup.find("button")
-        assert not btn.has_attr("data-value")
+        assert soup.find("button")["data-label"] == "Paris"
 
 
-class TestFormworkSearchViewMultiSelect:
+class TestFormworkSearchViewSelectMultiple:
     def test_returns_checkbox_options(self):
         request = factory.get("/search/", {"q": "", "name": "lang"})
-        response = CityMultiSelectView.as_view()(request)
+        response = CitySelectMultipleView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         checkboxes = soup.find_all("input", {"type": "checkbox"})
         assert len(checkboxes) == 4
@@ -152,37 +141,23 @@ class TestFormworkSearchViewMultiSelect:
     def test_checkboxes_have_no_name(self):
         """htmx mode: checkboxes are visual only, hidden inputs handle submission."""
         request = factory.get("/search/", {"q": "", "name": "lang"})
-        response = CityMultiSelectView.as_view()(request)
+        response = CitySelectMultipleView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         cb = soup.find("input", {"type": "checkbox"})
         assert not cb.has_attr("name")
 
-    def test_alpine_x_effect_on_checkboxes(self):
+    def test_checkboxes_carry_no_alpine_handlers(self):
+        """The listbox delegates change events, so a swapped-in row needs no handler of its own."""
         request = factory.get("/search/", {"q": "", "name": "lang"})
-        response = CityMultiSelectView.as_view()(request)
+        response = CitySelectMultipleView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         cb = soup.find("input", {"type": "checkbox"})
-        assert cb.has_attr("x-effect")
-        assert "selected.has" in cb["x-effect"]
-
-    def test_alpine_change_handler_on_checkboxes(self):
-        request = factory.get("/search/", {"q": "", "name": "lang"})
-        response = CityMultiSelectView.as_view()(request)
-        soup = BeautifulSoup(response.content, "html.parser")
-        cb = soup.find("input", {"type": "checkbox"})
-        assert cb.has_attr("@change")
-        assert "toggle(" in cb["@change"]
-
-    def test_multiselect_class_on_checkboxes(self):
-        request = factory.get("/search/", {"q": "", "name": "lang"})
-        response = CityMultiSelectView.as_view()(request)
-        soup = BeautifulSoup(response.content, "html.parser")
-        cb = soup.find("input", {"type": "checkbox"})
-        assert "multiselect" in cb.get("class", [])
+        assert not [attr for attr in cb.attrs if attr.startswith(("@", ":", "x-"))]
+        assert cb["data-value"] == cb["value"]
 
     def test_checkmark_span(self):
         request = factory.get("/search/", {"q": "", "name": "lang"})
-        response = CityMultiSelectView.as_view()(request)
+        response = CitySelectMultipleView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         check = soup.find("span", class_="formwork-check")
         assert check is not None
@@ -200,12 +175,11 @@ class TestFormworkSearchViewDefaults:
 
     def test_type_query_param_ignored(self):
         """SECURITY: a client-supplied type param must not switch templates."""
-        request = factory.get("/search/", {"q": "", "type": "combo_box"})
+        request = factory.get("/search/", {"q": "", "type": "multi_select"})
         response = CitySearchView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
-        btn = soup.find("button")
-        assert btn.has_attr("data-value")
-        assert not btn.has_attr("data-suggestion")
+        assert soup.find("button").has_attr("data-value")
+        assert soup.find("input", {"type": "checkbox"}) is None
 
     def test_empty_base_class_results(self):
         """Base class returns empty results."""
@@ -584,15 +558,17 @@ class TestFormworkSearchViewErrorHandling:
 
 
 class TestSearchViewEscaping:
-    """Alpine expressions are JS-escaped; dataset attributes rely on HTML autoescaping only."""
+    """Option data lives only in HTML-escaped attributes; no Alpine expression carries it."""
 
-    def test_search_select_value_escaped_in_alpine_expression(self):
+    def test_select_value_reaches_no_alpine_expression(self):
         request = factory.get("/search/", {"q": ""})
-        content = HostileSearchView.as_view()(request).content.decode()
-        assert "'); alert(1); ('" not in content
-        assert "\\u0027" in content
+        soup = BeautifulSoup(HostileSearchView.as_view()(request).content, "html.parser")
+        for el in soup.find_all(name=True):
+            for name, attr in el.attrs.items():
+                if name.startswith((":", "@", "x-")):
+                    assert "alert(1)" not in str(attr), name
 
-    def test_search_select_no_raw_script_tag(self):
+    def test_select_no_raw_script_tag(self):
         request = factory.get("/search/", {"q": ""})
         content = HostileSearchView.as_view()(request).content.decode()
         assert "<script>" not in content
@@ -602,15 +578,14 @@ class TestSearchViewEscaping:
         content = HostileComboBoxView.as_view()(request).content.decode()
         assert "<script>" not in content
         soup = BeautifulSoup(content, "html.parser")
-        assert soup.find("button")["data-suggestion"] == "</script><script>alert(1)</script>"
+        assert soup.find("button")["data-label"] == "</script><script>alert(1)</script>"
 
-    def test_multiselect_value_escaped_in_alpine_handlers(self):
+    def test_select_multiple_value_round_trips_in_checkbox(self):
         request = factory.get("/search/", {"q": "", "name": "x"})
-        response = HostileMultiSelectView.as_view()(request)
+        response = HostileSelectMultipleView.as_view()(request)
         soup = BeautifulSoup(response.content, "html.parser")
         cb = soup.find("input", {"type": "checkbox"})
-        assert "'); alert(1); ('" not in cb["@change"]
-        assert "\\u0027" in cb["@change"]
+        assert cb["value"] == "x'); alert(1); ('"
 
 
 class RoundTripSearchView(FormworkSearchView):
@@ -624,7 +599,7 @@ class RoundTripComboBoxView(RoundTripSearchView):
     widget_type = "combo_box"
 
 
-def test_search_select_data_attrs_round_trip_raw_value():
+def test_select_data_attrs_round_trip_raw_value():
     """Regression: escapejs on data-value made a picked uuid-1234 submit as uuid\\u002D1234."""
     request = factory.get("/search/", {"q": ""})
     response = RoundTripSearchView.as_view()(request)
@@ -634,33 +609,32 @@ def test_search_select_data_attrs_round_trip_raw_value():
     assert btn["data-label"] == "O'Brien & Sons"
 
 
-def test_search_select_checkmark_literal_decodes_to_data_value():
-    """The Alpine :class comparison literal decodes to the raw data-value string."""
+def test_select_checkmark_follows_aria_selected():
+    """The checkmark reads the row's aria-selected, which the component derives from data-value."""
     request = factory.get("/search/", {"q": ""})
     response = RoundTripSearchView.as_view()(request)
     soup = BeautifulSoup(response.content, "html.parser")
     btn = soup.find("button")
-    check = btn.find("span", class_="formwork-check")
-    literal = re.search(r"value === '(.*)' &&", check[":class"]).group(1)
-    assert json.loads(f'"{literal}"') == btn["data-value"]
+    assert btn[":aria-selected"] == "isSelected($el)"
+    assert "group-aria-selected/option:opacity-100" in btn.find("span", class_="formwork-check")["class"]
 
 
-def test_combo_box_data_suggestion_round_trips_raw_label():
-    """Regression: escapejs on data-suggestion displayed O'Brien & Sons as O\\u0027Brien \\u0026 Sons."""
+def test_combo_box_data_label_round_trips_raw_label():
+    """escapejs on the label would display O'Brien & Sons as O\\u0027Brien \\u0026 Sons."""
     request = factory.get("/search/", {"q": ""})
     response = RoundTripComboBoxView.as_view()(request)
     soup = BeautifulSoup(response.content, "html.parser")
-    assert soup.find("button")["data-suggestion"] == "O'Brien & Sons"
+    assert soup.find("button")["data-label"] == "O'Brien & Sons"
 
 
-class RoundTripMultiSelectView(RoundTripSearchView):
+class RoundTripSelectMultipleView(RoundTripSearchView):
     widget_type = "multi_select"
 
 
-def test_multi_select_data_value_round_trips_raw_value():
+def test_select_multiple_data_value_round_trips_raw_value():
     """Regression: escapejs on the option's data-value made uuid-1234 render as uuid\\u002D1234."""
     request = factory.get("/search/", {"q": "", "name": "x"})
-    response = RoundTripMultiSelectView.as_view()(request)
+    response = RoundTripSelectMultipleView.as_view()(request)
     soup = BeautifulSoup(response.content, "html.parser")
     label = soup.find("label", attrs={"data-value": True})
     assert label["data-value"] == "uuid-1234"

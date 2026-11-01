@@ -1,12 +1,13 @@
-"""Tests for the floating-label widgets (TextInput/Select/Textarea)."""
+"""Tests for the floating-label widgets (TextInput/Textarea, Select/SelectMultiple)."""
 
 from __future__ import annotations
 
 import pytest
 from django import forms
+from django.core.exceptions import ImproperlyConfigured
 
 from django_formwork.forms import FormworkForm
-from django_formwork.widgets import Select, Textarea, TextInput
+from django_formwork.widgets import Select, SelectMultiple, Textarea, TextInput
 
 from .conftest import render_form, render_widget
 
@@ -23,7 +24,7 @@ class FloatingForm(FormworkForm):
     role = forms.ChoiceField(
         required=False,
         choices=[("", ""), ("admin", "Admin"), ("user", "User")],
-        widget=Select(attrs={"placeholder": "Role"}, floating_label=True),
+        widget=Select(attrs={"placeholder": "Role"}, floating=True),
     )
     note = forms.CharField(
         required=False,
@@ -52,7 +53,7 @@ def test_floating_label_swaps_template():
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("cls", [TextInput, Select, Textarea])
+@pytest.mark.parametrize("cls", [TextInput, Textarea])
 def test_floating_widgets_accept_flag(cls):
     """Every floating widget accepts the flag alongside stock constructor args."""
     widget = cls(attrs={"placeholder": "X"}, floating_label=True)
@@ -62,10 +63,11 @@ def test_floating_widgets_accept_flag(cls):
 
 
 @pytest.mark.unit
-def test_select_forwards_choices():
-    """Select still forwards choices through the mixin's *args/**kwargs."""
-    widget = Select(choices=[("a", "A")], floating_label=True)
-    assert list(widget.choices) == [("a", "A")]
+@pytest.mark.parametrize("cls", [Select, SelectMultiple])
+def test_floating_select_requires_placeholder(cls):
+    """The placeholder is the floating label's text, so a floating select needs one."""
+    with pytest.raises(ImproperlyConfigured):
+        cls(choices=[("a", "A")], floating=True).render("f", None, attrs={"id": "id_f"})
 
 
 # ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
@@ -122,32 +124,37 @@ def test_textarea_floating_wraps():
 
 
 @pytest.mark.unit
-def test_select_floating_wraps_and_strips_placeholder():
-    """Select floating render wraps a <select>, keeps the span text, and drops
-    the placeholder attribute (invalid on <select>)."""
-    soup = render_widget(
-        Select(attrs={"placeholder": "Role"}, choices=[("", ""), ("a", "A")], floating_label=True),
-        name="role",
-        attrs={"id": "id_role"},
-    )
-    label = soup.find("label", class_="floating-label")
-    assert label is not None
-    select = label.find("select")
-    assert select is not None
-    assert select.get("placeholder") is None
-    assert label.find("span").get_text(strip=True) == "Role"
+@pytest.mark.parametrize("cls", [Select, SelectMultiple])
+def test_select_floating_label_names_the_trigger(cls):
+    """The floating label names the summary trigger, and the empty trigger shows no placeholder."""
+    field_cls = forms.MultipleChoiceField if cls is SelectMultiple else forms.ChoiceField
+
+    class _Form(FormworkForm):
+        fruit = field_cls(
+            label="",
+            required=False,
+            choices=[("a", "Apple"), ("b", "Banana")],
+            widget=cls(attrs={"placeholder": "Fruit"}, floating=True),
+        )
+
+    soup = render_form(_Form())
+    wrapper = soup.select_one(".floating-label.formwork-floating-select")
+    summary = wrapper.select_one("details > summary")
+    label_id, own_id = str(summary["aria-labelledby"]).split()
+    assert own_id == summary["id"] == "id_fruit"
+    assert soup.find(id=label_id).get_text(strip=True) == "Fruit"
+    assert "Fruit" not in summary.get_text()
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
     ("floating_cls", "stock_cls"),
-    [(TextInput, forms.TextInput), (Textarea, forms.Textarea), (Select, forms.Select)],
+    [(TextInput, forms.TextInput), (Textarea, forms.Textarea)],
 )
 def test_non_floating_identical_to_stock(floating_cls, stock_cls):
     """floating_label=False renders byte-for-byte identically to Django's widget."""
-    kwargs = {"choices": [("a", "A")]} if floating_cls is Select else {}
-    ours = floating_cls(attrs={"placeholder": "X"}, **kwargs)
-    stock = stock_cls(attrs={"placeholder": "X"}, **kwargs)
+    ours = floating_cls(attrs={"placeholder": "X"})
+    stock = stock_cls(attrs={"placeholder": "X"})
     assert ours.render("f", None, attrs={"id": "id_f"}) == stock.render("f", None, attrs={"id": "id_f"})
 
 
@@ -158,7 +165,7 @@ def test_non_floating_identical_to_stock(floating_cls, stock_cls):
 def test_floating_renders_via_form(renderer):
     """All three floating widgets render their wrapper inside a FormworkForm."""
     soup = render_form(FloatingForm(), renderer=renderer)
-    assert len(soup.find_all("label", class_="floating-label")) == 3
+    assert len(soup.find_all(class_="floating-label")) == 3
 
 
 @pytest.mark.integration
@@ -166,7 +173,7 @@ def test_floating_control_names_present(renderer):
     """The real controls render with their field names inside the wrappers."""
     soup = render_form(FloatingForm(), renderer=renderer)
     assert soup.find("input", attrs={"name": "nickname"}) is not None
-    assert soup.find("select", attrs={"name": "role"}) is not None
+    assert soup.select_one(".floating-label input[type=hidden][name=role]") is not None
     assert soup.find("textarea", attrs={"name": "note"}) is not None
 
 

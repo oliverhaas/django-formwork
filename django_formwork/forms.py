@@ -35,10 +35,13 @@ from django_formwork.renderers import FormworkRenderer
 from django_formwork.tables import RowRenderMixin
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from django.db.models import QuerySet
     from django.forms import Field
 
-    from django_formwork.widgets import ComboBox, MultiSelect, SearchSelect
+    from django_formwork.widgets import ComboBox
+    from django_formwork.widgets.select import SearchableSelectMixin
 
 __all__ = [
     "FormworkForm",
@@ -123,12 +126,12 @@ class _AutoSearchMixin:
             make_choices_key,
             register,
         )
-        from django_formwork.widgets import ComboBox, MultiSelect, SearchSelect
-        from django_formwork.widgets._base import _NOT_SET
+        from django_formwork.widgets import ComboBox
+        from django_formwork.widgets.select import SearchableSelectMixin, _UnsetDecorator
 
         for name, field in self.fields.items():
             widget = field.widget
-            if not isinstance(widget, (SearchSelect, MultiSelect, ComboBox)):
+            if not isinstance(widget, (SearchableSelectMixin, ComboBox)):
                 continue
 
             # Check whether this widget would be auto-registered.
@@ -142,8 +145,8 @@ class _AutoSearchMixin:
 
             # Enforce search_decorator: developer must make a conscious
             # choice about auth for auto-registered search endpoints.
-            raw_decorator = getattr(widget, "search_decorator", _NOT_SET)
-            if raw_decorator is _NOT_SET:
+            raw_decorator = widget.search_decorator
+            if isinstance(raw_decorator, _UnsetDecorator):
                 widget_cls = type(widget).__name__
                 msg = (
                     f"Field '{name}' uses {widget_cls} with server-side search but no "
@@ -162,7 +165,7 @@ class _AutoSearchMixin:
 
             # Path 1: model-backed (search_fields on widget + queryset on field).
             if has_model_search and search_fields is not None and queryset is not None:
-                self._register_model_search(name, widget, field, search_fields, queryset)
+                self._register_model_search(name, widget, field, search_fields, queryset, decorator=decorator)
                 continue
 
             # Path 2: choices-backed (search_choices_<name> method on form).
@@ -188,22 +191,23 @@ class _AutoSearchMixin:
                 register(key, registration)
                 widget._registry_key = key  # noqa: SLF001
 
-    def _register_model_search(
+    def _register_model_search(  # noqa: PLR0913
         self,
         field_name: str,
-        widget: SearchSelect | MultiSelect | ComboBox,
+        widget: SearchableSelectMixin | ComboBox,
         field: Field,
         search_fields: tuple[str, ...],
         queryset: QuerySet,
+        *,
+        decorator: Callable[..., Any] | None,
     ) -> None:
         from django_formwork._registry import SearchRegistration, make_key, register
-        from django_formwork.widgets import MultiSelect
 
         model_label = queryset.model._meta.label_lower  # noqa: SLF001
         to_field_name = getattr(field, "to_field_name", None) or "pk"
         key = make_key(type(self), field_name, model_label, search_fields, to_field_name)
 
-        widget_type = "multi_select" if isinstance(widget, MultiSelect) else "search_select"
+        widget_type = self._widget_type_for(widget)
         # Callbacks live on the field.  Formwork fields expose icon/description
         # callbacks; plain ModelChoiceField only exposes label_from_instance.
         label_func = getattr(field, "label_from_instance", None)
@@ -224,17 +228,17 @@ class _AutoSearchMixin:
             icon_from_instance=icon_func,
             description_from_instance=desc_func,
             selected_toggle_class_from_instance=selected_toggle_class_func,
-            search_decorator=widget.search_decorator,
+            search_decorator=decorator,
             widget_type=widget_type,
         )
         register(key, registration)
         widget._registry_key = key  # noqa: SLF001
 
     @staticmethod
-    def _widget_type_for(widget: SearchSelect | MultiSelect | ComboBox) -> str:
-        from django_formwork.widgets import ComboBox, MultiSelect
+    def _widget_type_for(widget: SearchableSelectMixin | ComboBox) -> str:
+        from django_formwork.widgets import ComboBox, SelectMultiple
 
-        if isinstance(widget, MultiSelect):
+        if isinstance(widget, SelectMultiple):
             return "multi_select"
         if isinstance(widget, ComboBox):
             return "combo_box"

@@ -16,14 +16,10 @@ def _fill_base_fields(page):
 
 
 def _pick_search_select(page, value, label):
-    """Open SearchSelect, load results via htmx, and pick an option."""
-    details = page.locator("details.search-select")
+    """Open the Select and pick one of its server-rendered options."""
+    details = page.locator("details.formwork-select")
     # Open the dropdown via JS (summary::before overlay blocks clicks)
-    page.evaluate("document.querySelector('details.search-select').open = true")
-    # Focus the search input to trigger the htmx options load
-    search = details.locator("input[type='text']")
-    search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
-    # click() auto-waits for the option button from the htmx response
+    page.evaluate("document.querySelector('details.formwork-select').open = true")
     details.locator(f'button[data-value="{value}"]').click()
     expect(details.locator("summary")).to_contain_text(label)
 
@@ -46,15 +42,12 @@ def _settle_auto_validate(page):
     page.wait_for_timeout(2500)
 
 
-def _toggle_multiselect_option(page, value, label):
-    """Open MultiSelect and toggle an option via Alpine data store."""
-    # Use Alpine's toggle method directly: it's more reliable than clicking
-    # checkboxes injected by htmx (avoids timing issues with Alpine init).
+def _toggle_multiselect_option(page, value):
+    """Click the hidden checkbox: it fires the row's input and change events without opening the panel."""
     page.evaluate(
         f"""(() => {{
-            const ms = document.querySelector('details.multiselect');
-            const data = Alpine.$data(ms);
-            data.toggle('{value}', '{label}', '');
+            const ms = document.querySelector('details.formwork-select-multiple');
+            ms.querySelector('input[type=checkbox][data-value="{value}"]').click();
         }})()""",
     )
     page.wait_for_timeout(200)
@@ -75,11 +68,11 @@ class TestComplexFormStructure:
         assert pw_labels.count() == 2
 
     def test_has_search_select(self, complex_page):
-        details = complex_page.locator("details.search-select")
+        details = complex_page.locator("details.formwork-select")
         assert details.count() == 1
 
     def test_has_multi_select(self, complex_page):
-        details = complex_page.locator("details.multiselect")
+        details = complex_page.locator("details.formwork-select-multiple")
         assert details.count() == 1
 
     def test_has_date_fields(self, complex_page):
@@ -158,7 +151,7 @@ class TestComplexFormValidation:
         """Selecting both country and languages passes cross-field validation."""
         _fill_base_fields(complex_page)
         _pick_search_select(complex_page, "us", "United States")
-        _toggle_multiselect_option(complex_page, "py", "Python")
+        _toggle_multiselect_option(complex_page, "py")
         submit(complex_page)
         errors = complex_page.locator("#id_languages_error")
         assert errors.count() == 0
@@ -168,19 +161,19 @@ class TestComplexFormMorphResilience:
     """Morph resilience tests: client-side state survives server-side morphing."""
 
     def test_search_select_value_survives_morph(self, complex_page):
-        """SearchSelect selected value persists through morph."""
+        """Select selected value persists through morph."""
         _pick_search_select(complex_page, "us", "United States")
-        summary = complex_page.locator("details.search-select summary")
+        summary = complex_page.locator("details.formwork-select summary")
         expect(summary).to_contain_text("United States", timeout=2000)
         submit(complex_page)
         hidden = complex_page.locator('input[name="country"]')
         assert hidden.input_value() == "us"
-        summary = complex_page.locator("details.search-select summary")
+        summary = complex_page.locator("details.formwork-select summary")
         expect(summary).to_contain_text("United States", timeout=2000)
 
     def test_multiselect_value_survives_morph(self, complex_page):
-        """MultiSelect selected values persist through morph."""
-        _toggle_multiselect_option(complex_page, "py", "Python")
+        """SelectMultiple selected values persist through morph."""
+        _toggle_multiselect_option(complex_page, "py")
         submit(complex_page)
         hidden = complex_page.locator('input[type="hidden"][name="languages"]')
         values = [hidden.nth(i).input_value() for i in range(hidden.count())]
@@ -205,11 +198,11 @@ class TestComplexFormMorphResilience:
         assert inp.evaluate("el => el.type") == "text"
 
     def test_search_select_dropdown_state_survives_morph(self, complex_page):
-        """Open SearchSelect dropdown stays open through morph."""
+        """Open Select dropdown stays open through morph."""
         page = complex_page
-        page.evaluate("document.querySelector('details.search-select').open = true")
+        page.evaluate("document.querySelector('details.formwork-select').open = true")
         page.wait_for_timeout(300)
-        assert page.evaluate("document.querySelector('details.search-select').open")
+        assert page.evaluate("document.querySelector('details.formwork-select').open")
         # Submit via requestSubmit(), not a click: an outside click now triggers
         # the global light-dismiss and closes the dropdown, which would mask the
         # morph-survival check.  A submit event reaches htmx without a click.
@@ -224,12 +217,12 @@ class TestComplexFormMorphResilience:
         )
         page.wait_for_function("window.__fwSubmitDone === true")
         # htmx 4 morph (with formwork's morphIgnore) preserves open attribute on <details>
-        assert page.evaluate("document.querySelector('details.search-select').open")
+        assert page.evaluate("document.querySelector('details.formwork-select').open")
 
     def test_auto_validate_shows_error_without_submit(self, complex_page):
         """Auto-validation shows cross-field errors without explicit submit."""
         page = complex_page
-        # Pick a country via SearchSelect (triggers change)
+        # Pick a country via Select (triggers change)
         _pick_search_select(page, "us", "United States")
         # Cross-field error: country without languages.  The timeout covers
         # the 1500ms auto-validate debounce plus the round trip.
@@ -240,11 +233,11 @@ class TestComplexFormMorphResilience:
 
 @pytest.mark.screenshot
 def test_search_select_open_screenshot(complex_page, assert_screenshot):
-    """Visual snapshot: SearchSelect dropdown open with server-loaded results."""
+    """Visual snapshot: Select dropdown open with server-loaded results."""
     page = complex_page
-    page.evaluate("document.querySelector('details.search-select').open = true")
+    page.evaluate("document.querySelector('details.formwork-select').open = true")
     page.wait_for_timeout(300)
-    search = page.locator("details.search-select input[type='text']")
+    search = page.locator("details.formwork-select input[type='search']")
     search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
     page.wait_for_timeout(800)
     assert_screenshot(
@@ -256,11 +249,11 @@ def test_search_select_open_screenshot(complex_page, assert_screenshot):
 
 @pytest.mark.screenshot
 def test_search_select_filtered_screenshot(complex_page, assert_screenshot):
-    """Visual snapshot: SearchSelect dropdown with search text filtering results."""
+    """Visual snapshot: Select dropdown with search text filtering results."""
     page = complex_page
-    page.evaluate("document.querySelector('details.search-select').open = true")
+    page.evaluate("document.querySelector('details.formwork-select').open = true")
     page.wait_for_timeout(300)
-    search = page.locator("details.search-select input[type='text']")
+    search = page.locator("details.formwork-select input[type='search']")
     search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
     page.wait_for_timeout(800)
     search.evaluate(
@@ -279,11 +272,11 @@ def test_search_select_filtered_screenshot(complex_page, assert_screenshot):
 
 @pytest.mark.screenshot
 def test_multiselect_open_screenshot(complex_page, assert_screenshot):
-    """Visual snapshot: MultiSelect dropdown open with server-loaded options."""
+    """Visual snapshot: SelectMultiple dropdown open with server-loaded options."""
     page = complex_page
-    page.evaluate("document.querySelector('details.multiselect').open = true")
+    page.evaluate("document.querySelector('details.formwork-select-multiple').open = true")
     page.wait_for_timeout(300)
-    search = page.locator("details.multiselect input[type='text']")
+    search = page.locator("details.formwork-select-multiple input[type='search']")
     search.evaluate("el => { el.focus(); el.dispatchEvent(new Event('focus')); }")
     page.wait_for_timeout(800)
     assert_screenshot(
@@ -295,11 +288,11 @@ def test_multiselect_open_screenshot(complex_page, assert_screenshot):
 
 @pytest.mark.screenshot
 def test_multiselect_selections_screenshot(complex_page, assert_screenshot):
-    """Visual snapshot: MultiSelect summary with three options toggled."""
+    """Visual snapshot: SelectMultiple summary with three options toggled."""
     page = complex_page
-    _toggle_multiselect_option(page, "py", "Python")
-    _toggle_multiselect_option(page, "rs", "Rust")
-    _toggle_multiselect_option(page, "go", "Go")
+    _toggle_multiselect_option(page, "py")
+    _toggle_multiselect_option(page, "rs")
+    _toggle_multiselect_option(page, "go")
     _settle_auto_validate(page)
     assert_screenshot(page.locator("#id_languages_field"), "complex-multiselect-selected.png")
 
@@ -309,10 +302,10 @@ def test_full_form_filled_screenshot(complex_page, assert_screenshot):
     """Visual snapshot: all fields filled, before explicit submit."""
     page = complex_page
     _pick_search_select(page, "de", "Germany")
-    _toggle_multiselect_option(page, "py", "Python")
-    _toggle_multiselect_option(page, "ts", "TypeScript")
+    _toggle_multiselect_option(page, "py")
+    _toggle_multiselect_option(page, "ts")
     _settle_auto_validate(page)
-    # The morph preserves the SearchSelect summary label now; the hidden
+    # The morph preserves the Select summary label now; the hidden
     # input carries the submitted key.
     expect(page.locator('input[name="country"]')).to_have_value("de")
     _fill_base_fields_silently(page)
@@ -324,8 +317,8 @@ def test_full_form_after_submit_screenshot(complex_page, assert_screenshot):
     """Visual snapshot: valid form submitted with no errors, morphed state."""
     page = complex_page
     _pick_search_select(page, "de", "Germany")
-    _toggle_multiselect_option(page, "py", "Python")
-    _toggle_multiselect_option(page, "ts", "TypeScript")
+    _toggle_multiselect_option(page, "py")
+    _toggle_multiselect_option(page, "ts")
     _settle_auto_validate(page)
     _fill_base_fields_silently(page)
     submit(page)
@@ -355,7 +348,7 @@ def test_auto_validate_error_then_fix_screenshot(complex_page, assert_screenshot
     errors = page.locator("#id_languages_error")
     expect(errors).to_have_count(1, timeout=3000)
     assert_screenshot(page.locator("#id_languages_field"), "complex-languages-error.png")
-    _toggle_multiselect_option(page, "py", "Python")
+    _toggle_multiselect_option(page, "py")
     _settle_auto_validate(page)
     expect(errors).to_have_count(0, timeout=3000)
     assert_screenshot(page.locator("#id_languages_field"), "complex-languages-fixed.png")

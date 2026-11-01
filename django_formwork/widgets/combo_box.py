@@ -1,73 +1,38 @@
-"""ComboBox widget."""
+"""Free-text combo boxes: a text input with a suggestion dropdown."""
 
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Concatenate
 
 from django import forms
+from django.core.exceptions import ImproperlyConfigured
+from django.urls import reverse
 
-from ._base import _NOT_SET, _ModuleScript, _resolve_initial_results
+from ._base import _ModuleScript, _resolve_initial_results
+from .select import _UNSET_DECORATOR, label_extras
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping, Sequence
 
+    from django.db.models import Model, QuerySet
+    from django.http import HttpRequest
 
-def _normalize_suggestions(
-    suggestions: list[str] | list[tuple[str, list[str]]] | None,
-) -> list[tuple[str, list[str]]]:
-    """Return suggestions in grouped form ``[(group, items), ...]``.
+    from .select import ChoiceLabel, _UnsetDecorator
 
-    Flat ``["a", "b"]`` is wrapped in a single empty-named group.
-    """
-    if not suggestions:
-        return []
-    # Grouped when the first entry is a (group, items) pair; otherwise flat.
-    if isinstance(suggestions[0], (tuple, list)):
-        groups: list[tuple[str, list[str]]] = []
-        for item in suggestions:
-            if isinstance(item, (tuple, list)) and len(item) == 2:  # noqa: PLR2004
-                group, items = item
-                groups.append((str(group), [str(s) for s in items]))
-            else:
-                # A stray non-pair among groups degrades to an ungrouped item
-                # rather than raising on the tuple unpack.
-                groups.append(("", [str(item)]))
-        return groups
-    return [("", [str(s) for s in suggestions])]
+    Suggestion = str | ChoiceLabel
+    Suggestions = Sequence[Suggestion] | Sequence[tuple[str, Sequence[Suggestion]]]
 
 
 class ComboBox(forms.TextInput):
-    """Text input with autocomplete suggestions.
+    """Text input with a suggestion dropdown; the submitted value is free text.
 
-    Renders a text input with a dropdown of suggestions that appear as the
-    user types.  The submitted value is whatever the user typed (free text),
-    not a key from a choices list.  Suggestions are just hints.
-
-    In multiple mode (``multiple=True``), accepts comma-separated values.
-    Suggestions appear for the segment currently being typed.
-
-    Server-side search auto-wires through the formwork registry: define a
-    ``search_choices_<fieldname>`` method on a
-    :class:`~django_formwork.forms.FormworkForm` returning ``(value, label)``
-    tuples or ``{"label": ..., "icon": ...}`` dicts.
-
-    Usage::
-
-        tags = forms.CharField(
-            widget=ComboBox(suggestions=["Python", "JavaScript", "Go"]),
-        )
-
-        # Multiple mode:
-        tags = forms.CharField(
-            widget=ComboBox(
-                suggestions=["pizza", "pasta", "sushi"],
-                multiple=True,
-            ),
-        )
+    ``suggestions`` are hints, flat or grouped as ``[(group, [...])]``.
     """
 
     template_name = "formwork/widgets/combo_box.html"
+    search_variant = "combo_box"
+    multiple = False
 
     class Media:
         js = (_ModuleScript("formwork/widgets/combo_box.js"),)
@@ -76,58 +41,63 @@ class ComboBox(forms.TextInput):
         self,
         attrs: dict[str, Any] | None = None,
         *,
-        suggestions: list[str] | list[tuple[str, list[str]]] | None = None,
-        multiple: bool = False,
-        search_decorator: Callable | None = _NOT_SET,
-        icons: dict[str, str] | None = None,
-        descriptions: dict[str, str] | None = None,
+        suggestions: Suggestions | None = None,
+        show_spinner: bool = True,
+        search_key: str | None = None,
+        search_params: Mapping[str, int | str] | None = None,
+        search_fields: Sequence[str] | None = None,
+        search_queryset: Callable[Concatenate[HttpRequest, ...], QuerySet[Any]] | None = None,
+        search_decorator: Callable[..., Any] | _UnsetDecorator | None = _UNSET_DECORATOR,
+        label_from_instance: Callable[[Model], object] | None = None,
     ) -> None:
+        if search_key is not None and search_fields:
+            msg = "Pass either search_key or search_fields, not both."
+            raise ImproperlyConfigured(msg)
         super().__init__(attrs)
-        self.suggestions = suggestions or []
-        self.multiple = multiple
+        self.suggestions = list(suggestions or [])
+        self.show_spinner = show_spinner
+        self.search_key = search_key
+        self.search_params = dict(search_params or {})
+        self.search_fields: tuple[str, ...] = tuple(search_fields) if search_fields else ()
+        self.search_queryset = search_queryset
         self.search_decorator = search_decorator
-        self.icons = icons or {}
-        self.descriptions = descriptions or {}
+        self.label_from_instance = label_from_instance
+        # Set by FormworkForm when it registers a search for this widget.
         self._registry_key: str | None = None
 
-    def _suggestion_groups(self) -> list[tuple[str, list[dict[str, str]]]]:
-        """Normalize ``suggestions`` to a list of ``(group, items)`` tuples.
+    def _options(self) -> list[dict[str, Any]]:
+        """The suggestions as option rows; a pick fills the input with the label."""
+        options: list[dict[str, Any]] = []
+        for entry in self.suggestions:
+            group, items = (str(entry[0]), entry[1]) if isinstance(entry, (tuple, list)) else ("", [entry])
+            options.extend(
+                {"value": str(item), "label": str(item), "group": group, **label_extras(item)} for item in items
+            )
+        return options
 
-        Flat ``["a", "b"]`` becomes ``[("", [...])]``; grouped
-        ``[("Group", ["a", "b"])]`` is preserved.
-        """
-
-        def _build(text: str) -> dict[str, str]:
-            return {
-                "text": text,
-                "icon": self.icons.get(text, ""),
-                "description": self.descriptions.get(text, ""),
-            }
-
-        groups = _normalize_suggestions(self.suggestions) or [("", [])]
-        return [(group, [_build(s) for s in items]) for group, items in groups]
-
-    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+    def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
-        groups = self._suggestion_groups()
-        flat_suggestions = [item for _g, items in groups for item in items]
-        context["widget"]["suggestion_groups"] = groups
-        context["widget"]["multiple"] = self.multiple
-        # Resolve search URL from the registry. No registration → client-side only.
-        search_url: str | None = None
-        if self._registry_key:
-            from django.urls import reverse
-
-            search_url = reverse("formwork:search", kwargs={"key": self._registry_key})
-        context["widget"]["search_url"] = search_url
-        # Build initial icon map from current value for unfocused display.
-        flat_texts = [item["text"] for item in flat_suggestions]
-        context["widget"]["icons_json"] = json.dumps(
-            {s: self.icons[s] for s in flat_texts if s in self.icons},
-            ensure_ascii=False,
-        )
-        # Pre-render the first ``max_results`` suggestions in the dropdown
-        # so it opens with real data; htmx replaces them on first focus.
-        _total, initial_options = _resolve_initial_results(self._registry_key)
-        context["widget"]["initial_options"] = initial_options if search_url else []
+        widget = context["widget"]
+        # The template merges `class` into its own class attribute.
+        widget["input_attrs"] = {key: val for key, val in widget["attrs"].items() if key != "class"}
+        widget["options"] = self._options()
+        widget["multiple"] = self.multiple
+        widget["show_spinner"] = self.show_spinner
+        widget["search_url"] = None
+        widget["truncated"] = False
+        widget["shown"] = None
+        widget["more_url"] = None
+        if self._registry_key is not None:
+            _total, rows = _resolve_initial_results(self._registry_key)
+            widget["options"] = [{**row, "label_html": "", "group": ""} for row in rows]
+            widget["search_url"] = reverse("formwork:search", kwargs={"key": self._registry_key})
+        # The closed input shows a picked suggestion's icon beside its text.
+        icons = {option["label"]: str(option["icon"]) for option in widget["options"] if option["icon"]}
+        widget["icons_json"] = json.dumps(icons)
         return context
+
+
+class ComboBoxMultiple(ComboBox):
+    """``ComboBox`` for comma-separated free text; suggestions apply to the segment being typed."""
+
+    multiple = True

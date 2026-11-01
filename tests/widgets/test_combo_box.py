@@ -7,8 +7,9 @@ from django import forms
 from django.http import QueryDict
 from django.utils.safestring import mark_safe
 
+from django_formwork import ChoiceLabel
 from django_formwork.forms import FormworkForm
-from django_formwork.widgets import ComboBox
+from django_formwork.widgets import ComboBox, ComboBoxMultiple
 
 from .conftest import make_server_widget, open_combo_box, render_form, render_widget, submit
 
@@ -42,32 +43,25 @@ def test_combo_box_instantiation_with_suggestions():
 
 @pytest.mark.unit
 def test_combo_box_instantiation_multiple():
-    """ComboBox stores multiple flag."""
-    widget = ComboBox(suggestions=["A"], multiple=True)
+    """ComboBoxMultiple is the comma-separated variant."""
+    widget = ComboBoxMultiple(suggestions=["A"])
     assert widget.multiple is True
 
 
 @pytest.mark.unit
-def test_combo_box_instantiation_icons():
-    """ComboBox stores icons dict."""
-    widget = ComboBox(suggestions=["A"], icons={"A": "<svg/>"})
-    assert widget.icons == {"A": "<svg/>"}
-
-
-@pytest.mark.unit
-def test_combo_box_get_context_suggestions_as_dicts():
-    """get_context() converts suggestion strings to dicts with text/icon/description."""
-    widget = ComboBox(suggestions=["A", "B"], icons={"A": mark_safe("<svg/>")})
+def test_combo_box_get_context_suggestions_as_options():
+    """Each suggestion becomes an option row; a pick fills the input with its label."""
+    widget = ComboBox(suggestions=[ChoiceLabel("A", icon=mark_safe("<svg/>")), "B"])
     ctx = widget.get_context("test", "", {})
-    _name, sugs = ctx["widget"]["suggestion_groups"][0]
-    assert sugs[0] == {"text": "A", "icon": mark_safe("<svg/>"), "description": ""}
-    assert sugs[1] == {"text": "B", "icon": "", "description": ""}
+    a, b = ctx["widget"]["options"]
+    assert (a["value"], a["label"], a["icon"], a["group"]) == ("A", "A", "<svg/>", "")
+    assert (b["value"], b["label"], b["icon"], b["description"]) == ("B", "B", "", "")
 
 
 @pytest.mark.unit
 def test_combo_box_get_context_multiple_mode():
-    """multiple=True is passed through to the widget context."""
-    widget = ComboBox(suggestions=["A", "B"], multiple=True)
+    """ComboBoxMultiple sets multiple in the widget context."""
+    widget = ComboBoxMultiple(suggestions=["A", "B"])
     ctx = widget.get_context("test", "", {})
     assert ctx["widget"]["multiple"] is True
 
@@ -117,10 +111,10 @@ def test_combo_box_value_from_datadict_empty():
 
 @pytest.mark.unit
 def test_combo_box_empty_suggestions_get_context():
-    """ComboBox with no suggestions produces a single empty group in context."""
+    """ComboBox with no suggestions has no option rows."""
     widget = ComboBox()
     ctx = widget.get_context("test", "", {})
-    assert ctx["widget"]["suggestion_groups"] == [("", [])]
+    assert ctx["widget"]["options"] == []
 
 
 @pytest.mark.unit
@@ -135,59 +129,37 @@ def test_combo_box_get_context_with_value_none():
 
 
 @pytest.mark.unit
-def test_combo_box_suggestion_groups_flat_input():
-    """A flat list of strings is wrapped in a single unnamed group."""
+def test_combo_box_flat_suggestions_have_no_group():
+    """A flat list of strings yields rows without a group heading."""
     widget = ComboBox(suggestions=["A", "B"])
-    groups = widget._suggestion_groups()
-    assert len(groups) == 1
-    name, items = groups[0]
-    assert name == ""
-    assert [it["text"] for it in items] == ["A", "B"]
+    options = widget.get_context("test", "", {})["widget"]["options"]
+    assert [(o["group"], o["label"]) for o in options] == [("", "A"), ("", "B")]
 
 
 @pytest.mark.unit
-def test_combo_box_suggestion_groups_grouped_input():
-    """Grouped suggestions ``[(name, [items])]`` are preserved as-is."""
+def test_combo_box_grouped_suggestions_keep_their_group():
+    """Grouped suggestions ``[(name, [items])]`` keep their order and group name."""
     widget = ComboBox(suggestions=[("Italian", ["Pizza", "Pasta"]), ("Asian", ["Sushi"])])
-    groups = widget._suggestion_groups()
-    assert [g[0] for g in groups] == ["Italian", "Asian"]
-    assert [it["text"] for it in groups[0][1]] == ["Pizza", "Pasta"]
-    assert [it["text"] for it in groups[1][1]] == ["Sushi"]
+    options = widget.get_context("test", "", {})["widget"]["options"]
+    assert [(o["group"], o["label"]) for o in options] == [
+        ("Italian", "Pizza"),
+        ("Italian", "Pasta"),
+        ("Asian", "Sushi"),
+    ]
 
 
 @pytest.mark.unit
-def test_combo_box_suggestion_groups_empty():
-    """No suggestions produces a single empty group."""
-    widget = ComboBox()
-    groups = widget._suggestion_groups()
-    assert groups == [("", [])]
-
-
-@pytest.mark.unit
-def test_combo_box_suggestion_groups_icons_descriptions_attached():
-    """Icons and descriptions populate per-item across groups."""
+def test_combo_box_grouped_choice_labels_keep_icons_and_descriptions():
+    """A ChoiceLabel inside a group carries its icon and description to the row."""
     widget = ComboBox(
-        suggestions=[("G1", ["A"]), ("G2", ["B"])],
-        icons={"A": mark_safe("<svg/>"), "B": mark_safe("<svg2/>")},
-        descriptions={"A": "alpha", "B": "beta"},
+        suggestions=[
+            ("G1", [ChoiceLabel("A", icon=mark_safe("<svg/>"), description="alpha")]),
+            ("G2", [ChoiceLabel("B", icon=mark_safe("<svg2/>"), description="beta")]),
+        ],
     )
-    groups = widget._suggestion_groups()
-    assert groups[0][1][0]["icon"] == "<svg/>"
-    assert groups[0][1][0]["description"] == "alpha"
-    assert groups[1][1][0]["icon"] == "<svg2/>"
-    assert groups[1][1][0]["description"] == "beta"
-
-
-@pytest.mark.unit
-def test_combo_box_get_context_grouped_populates_suggestion_groups():
-    """get_context exposes the grouped structure under ``suggestion_groups``."""
-    widget = ComboBox(suggestions=[("Cuisine", ["Pizza", "Sushi"])])
-    ctx = widget.get_context("test", "", {})
-    groups = ctx["widget"]["suggestion_groups"]
-    assert len(groups) == 1
-    name, items = groups[0]
-    assert name == "Cuisine"
-    assert [it["text"] for it in items] == ["Pizza", "Sushi"]
+    a, b = widget.get_context("test", "", {})["widget"]["options"]
+    assert (a["icon"], a["description"]) == ("<svg/>", "alpha")
+    assert (b["icon"], b["description"]) == ("<svg2/>", "beta")
 
 
 @pytest.mark.unit
@@ -196,8 +168,7 @@ def test_combo_box_get_context_grouped_icons_json_includes_all_groups():
     import json as _json
 
     widget = ComboBox(
-        suggestions=[("G1", ["A"]), ("G2", ["B"])],
-        icons={"A": "🍕", "B": "🍣"},
+        suggestions=[("G1", [ChoiceLabel("A", icon="🍕")]), ("G2", [ChoiceLabel("B", icon="🍣")])],
     )
     ctx = widget.get_context("test", "", {})
     icon_map = _json.loads(ctx["widget"]["icons_json"])
@@ -212,7 +183,7 @@ def test_combo_box_renders_without_id():
     """Widget renders without an id attribute."""
     widget = ComboBox(suggestions=["a", "b"])
     soup = render_widget(widget, name="field", attrs={})
-    div = soup.find("div", class_="combobox")
+    div = soup.find("div", class_="formwork-combobox")
     assert div is not None
 
 
@@ -230,10 +201,10 @@ def test_combo_box_renders_dropdown_wrapper():
 
 @pytest.mark.unit
 def test_combo_box_class_on_wrapper():
-    """render() produces a div with class 'combobox'."""
+    """render() produces a div with class 'formwork-combobox'."""
     widget = ComboBox(suggestions=["Alpha"])
     soup = render_widget(widget, name="test")
-    wrapper = soup.find("div", class_="combobox")
+    wrapper = soup.find("div", class_="formwork-combobox")
     assert wrapper is not None
 
 
@@ -322,7 +293,7 @@ def test_combo_box_no_results_alert():
     """A DaisyUI alert-info alert-soft is rendered for client-side mode."""
     widget = ComboBox(suggestions=["Alpha"])
     soup = render_widget(widget, name="test")
-    alert = soup.find("div", attrs={"role": "status"})
+    alert = soup.find("div", attrs={"x-show": "noResults"}).find("div", attrs={"role": "status"})
     assert alert is not None
     assert "alert" in alert["class"]
     assert "alert-info" in alert["class"]
@@ -372,8 +343,8 @@ def test_combo_box_htmx_attrs_when_registered():
     soup = render_widget(widget, name="tags", attrs={"id": "id_tags"})
     trigger = soup.find("input", class_="combobox-input")
     assert trigger["hx-get"].startswith("/__formwork__/search/")
-    assert "input changed delay:300ms" in trigger["hx-trigger"]
-    assert trigger["hx-target"] == "#id_tags_listbox"
+    assert trigger["hx-trigger"] == "input changed delay:300ms, focus"
+    assert trigger["hx-target"] == "next ul"
     assert trigger["hx-swap"] == "innerHTML"
 
 
@@ -430,7 +401,7 @@ def test_combo_box_prerenders_initial_options_when_registered():
     items = listbox.find_all("li", attrs={"role": "option"})
     assert len(items) == 3
     first = items[0].find("button")
-    assert first["data-suggestion"] == "Item 0"
+    assert first["data-label"] == "Item 0"
 
 
 @pytest.mark.unit
@@ -453,11 +424,12 @@ def test_combo_box_prerendered_options_include_descriptions_when_registry_has_de
 
 
 @pytest.mark.unit
-def test_combo_box_no_prerendered_options_without_search_url():
-    """No server-search → no pre-rendered options (the listbox shows static suggestions instead)."""
-    widget = ComboBox(suggestions=["Alpha"])
-    ctx = widget.get_context("test", "", {"id": "id_test"})
-    assert ctx["widget"]["initial_options"] == []
+def test_combo_box_client_mode_renders_every_suggestion():
+    """Without server search the browser filters, so every suggestion is a row."""
+    widget = ComboBox(suggestions=["Alpha", "Beta"])
+    soup = render_widget(widget, name="test", attrs={"id": "id_test"})
+    listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
+    assert [li["data-label"] for li in listbox.find_all("li", attrs={"role": "option"})] == ["Alpha", "Beta"]
 
 
 @pytest.mark.unit
@@ -475,27 +447,25 @@ def test_combo_box_renders_error_alert_when_search_url():
 
 
 @pytest.mark.unit
-def test_combo_box_no_error_alert_without_search_url():
-    """No error alert without server-side search."""
+def test_combo_box_error_alert_hidden_until_a_search_fails():
+    """The error alert waits on ``hasError``, which only a failed search sets."""
     widget = ComboBox(suggestions=["Alpha"])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    assert soup.find("div", attrs={"role": "alert"}) is None
+    alert = soup.find("div", attrs={"role": "alert"})
+    assert alert["x-show"] == "hasError"
+    assert alert.has_attr("x-cloak")
 
 
 @pytest.mark.unit
 def test_combo_box_input_wires_error_handlers():
-    """``hasError`` clears in ``before:swap`` on success and sets on
-    error events.  The ``before:request`` reset was removed to avoid
-    briefly re-showing the prerendered listbox between request and
-    failed response."""
+    """``hasError`` follows the response only; resetting it on request would flash the old list."""
     widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="tags", attrs={"id": "id_tags"})
     trigger = soup.find("input", class_="combobox-input")
-    assert "hx-on::before:request" not in trigger.attrs
-    assert "preventDefault" in trigger["hx-on::before:swap"]
-    assert "hasError = false" in trigger["hx-on::before:swap"]
-    assert "hasError = true" in trigger["hx-on::response:error"]
-    assert "hasError = true" in trigger["hx-on::error"]
+    assert "@htmx:before:request" not in trigger.attrs
+    assert trigger["@htmx:before:swap"] == "onSearchBeforeSwap($event)"
+    assert trigger["@htmx:response:error"] == "onSearchError()"
+    assert trigger["@htmx:error"] == "onSearchError()"
 
 
 @pytest.mark.unit
@@ -513,17 +483,14 @@ def test_combo_box_binds_alpine_component_when_search_url():
     hasError state lives in the component, not the markup."""
     widget = make_server_widget(ComboBox)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    wrapper = soup.find("div", class_="combobox")
+    wrapper = soup.find("div", class_="formwork-combobox")
     assert wrapper["x-data"] == "formworkComboBox"
 
 
 @pytest.mark.unit
 def test_combo_box_icon_rendering():
     """Icons are rendered inline in suggestion buttons."""
-    widget = ComboBox(
-        suggestions=["Python", "Go"],
-        icons={"Python": mark_safe('<img src="py.svg">')},
-    )
+    widget = ComboBox(suggestions=[ChoiceLabel("Python", icon=mark_safe('<img src="py.svg">')), "Go"])
     soup = render_widget(widget, name="test")
     icon = soup.find("img", {"src": "py.svg"})
     assert icon is not None
@@ -531,7 +498,7 @@ def test_combo_box_icon_rendering():
 
 @pytest.mark.unit
 def test_combo_box_no_icon_when_not_provided():
-    """No icon elements appear when icons dict is empty."""
+    """No icon elements appear for plain suggestions."""
     widget = ComboBox(suggestions=["Alpha"])
     soup = render_widget(widget, name="test")
     icons = soup.find_all("img")
@@ -540,11 +507,12 @@ def test_combo_box_no_icon_when_not_provided():
 
 @pytest.mark.unit
 def test_combo_box_event_delegation_data_attrs():
-    """Suggestion buttons carry data-suggestion for event delegation."""
+    """Suggestion buttons carry data-value and data-label for event delegation."""
     widget = ComboBox(suggestions=["Alpha"])
     soup = render_widget(widget, name="test")
     btn = soup.find("button", {"type": "button"})
-    assert btn["data-suggestion"] == "Alpha"
+    assert btn["data-value"] == "Alpha"
+    assert btn["data-label"] == "Alpha"
 
 
 @pytest.mark.unit
@@ -552,8 +520,8 @@ def test_combo_box_wrapper_has_id():
     """Combobox wrapper div gets an id derived from the field id."""
     widget = ComboBox(suggestions=["A"])
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
-    wrapper = soup.find("div", class_="combobox")
-    assert wrapper["id"] == "id_test_combobox"
+    wrapper = soup.find("div", class_="formwork-combobox")
+    assert wrapper["id"] == "id_test_wrapper"
 
 
 @pytest.mark.unit
@@ -561,7 +529,7 @@ def test_combo_box_no_wrapper_id_without_id():
     """Combobox wrapper div has no id when no field id is provided."""
     widget = ComboBox(suggestions=["A"])
     soup = render_widget(widget, name="test")
-    wrapper = soup.find("div", class_="combobox")
+    wrapper = soup.find("div", class_="formwork-combobox")
     assert not wrapper.has_attr("id")
 
 
@@ -601,26 +569,26 @@ def test_combo_box_no_group_headers_for_flat_suggestions():
 def test_combo_box_grouped_options_keep_icons():
     """Each option inside a group still renders its icon."""
     widget = ComboBox(
-        suggestions=[("G1", ["Pizza"]), ("G2", ["Sushi"])],
-        icons={"Pizza": mark_safe("<svg>p</svg>"), "Sushi": mark_safe("<svg>s</svg>")},
+        suggestions=[
+            ("G1", [ChoiceLabel("Pizza", icon=mark_safe("<svg>p</svg>"))]),
+            ("G2", [ChoiceLabel("Sushi", icon=mark_safe("<svg>s</svg>"))]),
+        ],
     )
     soup = render_widget(widget, name="food")
-    buttons = soup.find_all("button", {"data-suggestion": True})
-    assert {b["data-suggestion"] for b in buttons} == {"Pizza", "Sushi"}
-    # Icons appear as data-icon attribute
+    buttons = soup.find_all("button", {"data-label": True})
+    assert {b["data-label"] for b in buttons} == {"Pizza", "Sushi"}
     assert {b.get("data-icon", "") for b in buttons} == {"<svg>p</svg>", "<svg>s</svg>"}
 
 
 @pytest.mark.unit
-def test_combo_box_grouped_group_header_xshow_includes_child_labels():
-    """Group ``<li>`` ``x-show`` lists the child labels for matching."""
+def test_combo_box_group_header_precedes_its_rows():
+    """A group heading is filtered by the rows after it, so its labels stay in the DOM."""
     widget = ComboBox(suggestions=[("Italian", ["Pizza", "Pasta"])])
     soup = render_widget(widget, name="food")
     header = soup.find("li", class_="menu-title")
-    xshow = header["x-show"]
-    assert "'Pizza'" in xshow
-    assert "'Pasta'" in xshow
-    assert "matches(l)" in xshow
+    assert header["x-show"] == "matches($el)"
+    assert header.has_attr("data-group")
+    assert [li["data-label"] for li in header.find_next_siblings("li")] == ["Pizza", "Pasta"]
 
 
 @pytest.mark.unit
@@ -630,8 +598,8 @@ def test_combo_box_grouped_renders_all_suggestion_buttons():
         suggestions=[("G1", ["A", "B"]), ("G2", ["C"])],
     )
     soup = render_widget(widget, name="test")
-    buttons = soup.find_all("button", {"data-suggestion": True})
-    assert {b["data-suggestion"] for b in buttons} == {"A", "B", "C"}
+    buttons = soup.find_all("button", {"data-label": True})
+    assert {b["data-label"] for b in buttons} == {"A", "B", "C"}
 
 
 # ─── Level 2c: Keyboard navigation scaffolding ───────────────────────────
@@ -650,12 +618,12 @@ def test_combo_box_keydown_handlers_on_wrapper():
 
 @pytest.mark.unit
 def test_combo_box_keydown_invokes_nav_methods():
-    """Inline keydown handlers reference the nav/confirm methods on the component."""
+    """Keydown handlers call the component's nav and enter methods."""
     widget = ComboBox(suggestions=["A"])
     html = widget.render("test", "")
-    assert "nav(1)" in html
-    assert "nav(-1)" in html
-    assert "confirm()" in html
+    assert "onNav($event, 1)" in html
+    assert "onNav($event, -1)" in html
+    assert "onEnter($event)" in html
 
 
 @pytest.mark.unit
@@ -734,15 +702,16 @@ def test_combo_box_form_prefix_handling(renderer):
 
 
 @pytest.mark.integration
-def test_combo_box_data_suggestion_round_trips_raw(renderer):
-    """Regression: escapejs on data-suggestion displayed O'Brien & Sons as O\\u0027Brien \\u0026 Sons."""
+def test_combo_box_data_label_round_trips_raw(renderer):
+    """Regression: escapejs on the suggestion displayed O'Brien & Sons as O\\u0027Brien \\u0026 Sons."""
 
     class SupplierForm(FormworkForm):
         supplier = forms.CharField(widget=ComboBox(suggestions=["O'Brien & Sons"]), required=False)
 
     soup = render_form(SupplierForm(), renderer=renderer)
-    btn = soup.find("button", attrs={"data-suggestion": True})
-    assert btn["data-suggestion"] == "O'Brien & Sons"
+    btn = soup.find("button", attrs={"data-label": True})
+    assert btn["data-label"] == "O'Brien & Sons"
+    assert btn["data-value"] == "O'Brien & Sons"
 
 
 @pytest.mark.integration
@@ -752,25 +721,25 @@ def test_combo_box_data_icon_escapes_safe_markup(renderer):
 
     class IconComboBoxForm(FormworkForm):
         lang = forms.CharField(
-            widget=ComboBox(suggestions=["Python"], icons={"Python": mark_safe(icon)}),  # noqa: S308
+            widget=ComboBox(suggestions=[ChoiceLabel("Python", icon=mark_safe(icon))]),  # noqa: S308
             required=False,
         )
 
     soup = render_form(IconComboBoxForm(), renderer=renderer)
-    btn = soup.find("button", attrs={"data-suggestion": "Python"})
+    btn = soup.find("button", attrs={"data-label": "Python"})
     assert btn["data-icon"] == icon
 
 
 @pytest.mark.integration
-def test_combo_box_multiple_formdata_listener_added_once_per_form(renderer):
-    """Regression: every innerHTML swap re-ran x-init and stacked formdata listeners on the form."""
+def test_combo_box_multiple_has_no_inline_init(renderer):
+    """Regression: an inline x-init re-ran on every swap and stacked formdata listeners on the form."""
 
     class TagsForm(FormworkForm):
-        tags = forms.CharField(widget=ComboBox(suggestions=["a"], multiple=True), required=False)
+        tags = forms.CharField(widget=ComboBoxMultiple(suggestions=["a"]), required=False)
 
     soup = render_form(TagsForm(), renderer=renderer)
-    inp = soup.find("input", class_="combobox-input")
-    assert "formworkComboFormdata" in inp["x-init"]
+    assert soup.find("div", class_="formwork-combobox")["data-multiple"] == "true"
+    assert soup.find(attrs={"x-init": True}) is None
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
@@ -779,7 +748,7 @@ def test_combo_box_multiple_formdata_listener_added_once_per_form(renderer):
 @pytest.mark.e2e
 def test_combo_box_renders_on_page(combobox_page):
     """ComboBox is visible on the /combobox/ page."""
-    combo = combobox_page.locator(".dropdown.combobox").first
+    combo = combobox_page.locator(".dropdown.formwork-combobox").first
     assert combo.is_visible()
 
 
@@ -790,7 +759,7 @@ def test_combo_box_typing_shows_filtered_suggestions(combobox_page):
     inp.click()
     inp.fill("Py")
     combobox_page.wait_for_timeout(150)
-    combo = combobox_page.locator(".dropdown.combobox").first
+    combo = combobox_page.locator(".dropdown.formwork-combobox").first
     assert combo.locator("button", has_text="Python").is_visible()
     assert not combo.locator("button", has_text="Go").is_visible()
 
@@ -802,7 +771,7 @@ def test_combo_box_pick_suggestion(combobox_page):
     inp.click()
     inp.fill("Ru")
     combobox_page.wait_for_timeout(150)
-    combo = combobox_page.locator(".dropdown.combobox").first
+    combo = combobox_page.locator(".dropdown.formwork-combobox").first
     combo.locator("button", has_text="Rust").click()
     combobox_page.wait_for_timeout(100)
     assert inp.input_value() == "Rust"
@@ -823,14 +792,14 @@ def test_combo_box_single_pick_dispatches_change_event(combobox_page):
                 if (e.target.name === 'language_single') window._comboChangeEvents++;
             });
     }""")
-    combo = combobox_page.locator(".dropdown.combobox").first
+    combo = combobox_page.locator(".dropdown.formwork-combobox").first
     combo.locator("button", has_text="Rust").click()
     combobox_page.wait_for_timeout(100)
     assert inp.input_value() == "Rust"
     assert combobox_page.evaluate("() => window._comboChangeEvents") >= 1
     assert (
         combobox_page.evaluate(
-            "() => Alpine.$data(document.querySelector('.dropdown.combobox')).open",
+            "() => Alpine.$data(document.querySelector('.dropdown.formwork-combobox')).open",
         )
         is False
     )
@@ -847,7 +816,7 @@ def test_combo_box_free_text_allowed(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_multiple_pick_adds_value(combobox_page):
     """In multiple mode, clicking a suggestion appends it."""
-    combo = combobox_page.locator(".dropdown.combobox").nth(1)
+    combo = combobox_page.locator(".dropdown.formwork-combobox").nth(1)
     inp = combobox_page.locator('input[name="toppings_multi"]')
     inp.click()
     combobox_page.wait_for_timeout(150)
@@ -859,7 +828,7 @@ def test_combo_box_multiple_pick_adds_value(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_multiple_pick_second_appends(combobox_page):
     """In multiple mode, a second pick appends to the comma-separated list."""
-    combo = combobox_page.locator(".dropdown.combobox").nth(1)
+    combo = combobox_page.locator(".dropdown.formwork-combobox").nth(1)
     inp = combobox_page.locator('input[name="toppings_multi"]')
     inp.click()
     combobox_page.wait_for_timeout(150)
@@ -875,7 +844,7 @@ def test_combo_box_multiple_pick_second_appends(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_multiple_toggle_off(combobox_page):
     """In multiple mode, clicking a selected suggestion removes it."""
-    combo = combobox_page.locator(".dropdown.combobox").nth(1)
+    combo = combobox_page.locator(".dropdown.formwork-combobox").nth(1)
     inp = combobox_page.locator('input[name="toppings_multi"]')
     inp.click()
     combobox_page.wait_for_timeout(150)
@@ -895,7 +864,7 @@ def test_combo_box_multiple_toggle_off(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_grouped_shows_headers(combobox_page):
     """Grouped ComboBox shows ``menu-title`` headers for each cuisine."""
-    combo = combobox_page.locator(".dropdown.combobox").nth(7)
+    combo = combobox_page.locator(".dropdown.formwork-combobox").nth(7)
     inp = combobox_page.locator('input[name="food_grouped"]')
     inp.click()
     combobox_page.wait_for_timeout(150)
@@ -906,7 +875,7 @@ def test_combo_box_grouped_shows_headers(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_grouped_filter_hides_empty_groups(combobox_page):
     """Typing 'pi' (matches only 'Pizza') hides Japanese and Mexican headers."""
-    combo = combobox_page.locator(".dropdown.combobox").nth(7)
+    combo = combobox_page.locator(".dropdown.formwork-combobox").nth(7)
     inp = combobox_page.locator('input[name="food_grouped"]')
     inp.click()
     inp.fill("pi")
@@ -918,11 +887,11 @@ def test_combo_box_grouped_filter_hides_empty_groups(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_grouped_pick_from_group(combobox_page):
     """Picking a suggestion inside a group sets the input value."""
-    combo = combobox_page.locator(".dropdown.combobox").nth(7)
+    combo = combobox_page.locator(".dropdown.formwork-combobox").nth(7)
     inp = combobox_page.locator('input[name="food_grouped"]')
     inp.click()
     combobox_page.wait_for_timeout(150)
-    combo.locator("button[data-suggestion='Sushi']").click()
+    combo.locator("button[data-label='Sushi']").click()
     combobox_page.wait_for_timeout(100)
     assert inp.input_value() == "Sushi"
 
@@ -939,9 +908,9 @@ def test_combo_box_keyboard_arrowdown_highlights_first(combobox_page):
     inp = open_combo_box(combobox_page, "language_single")
     inp.press("ArrowDown")
     combobox_page.wait_for_timeout(100)
-    highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
+    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("[data-label].highlighted")
     assert highlighted.count() == 1
-    assert highlighted.first.get_attribute("data-suggestion") == "Python"
+    assert highlighted.first.get_attribute("data-label") == "Python"
 
 
 @pytest.mark.e2e
@@ -951,8 +920,8 @@ def test_combo_box_keyboard_arrowdown_navigates(combobox_page):
     inp.press("ArrowDown")
     inp.press("ArrowDown")
     combobox_page.wait_for_timeout(50)
-    highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
-    assert highlighted.first.get_attribute("data-suggestion") == "JavaScript"
+    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("[data-label].highlighted")
+    assert highlighted.first.get_attribute("data-label") == "JavaScript"
 
 
 @pytest.mark.e2e
@@ -963,8 +932,8 @@ def test_combo_box_keyboard_arrowdown_wraps_to_first(combobox_page):
     for _ in range(7):
         inp.press("ArrowDown")
     combobox_page.wait_for_timeout(50)
-    highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
-    assert highlighted.first.get_attribute("data-suggestion") == "Python"
+    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("[data-label].highlighted")
+    assert highlighted.first.get_attribute("data-label") == "Python"
 
 
 @pytest.mark.e2e
@@ -973,8 +942,8 @@ def test_combo_box_keyboard_arrowup_wraps_to_last(combobox_page):
     inp = open_combo_box(combobox_page, "language_single")
     inp.press("ArrowUp")
     combobox_page.wait_for_timeout(50)
-    highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
-    assert highlighted.first.get_attribute("data-suggestion") == "Ruby"
+    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("[data-label].highlighted")
+    assert highlighted.first.get_attribute("data-label") == "Ruby"
 
 
 @pytest.mark.e2e
@@ -989,8 +958,8 @@ def test_combo_box_keyboard_filter_skips_hidden_options(combobox_page):
     combobox_page.wait_for_timeout(50)
     inp.press("ArrowDown")  # Should wrap back to Rust
     combobox_page.wait_for_timeout(50)
-    highlighted = combobox_page.locator(".dropdown.combobox").first.locator("[data-suggestion].highlighted")
-    val = highlighted.first.get_attribute("data-suggestion")
+    highlighted = combobox_page.locator(".dropdown.formwork-combobox").first.locator("[data-label].highlighted")
+    val = highlighted.first.get_attribute("data-label")
     assert val == "Rust"
 
 
@@ -1006,7 +975,7 @@ def test_combo_box_single_keyboard_enter_picks_and_closes(combobox_page):
     assert inp.input_value() == "JavaScript"
     # Dropdown should be closed (open=false)
     is_open = combobox_page.evaluate(
-        "() => Alpine.$data(document.querySelectorAll('.dropdown.combobox')[0]).open",
+        "() => Alpine.$data(document.querySelectorAll('.dropdown.formwork-combobox')[0]).open",
     )
     assert is_open is False
 
@@ -1033,7 +1002,7 @@ def test_combo_box_multiple_keyboard_enter_toggles_keeps_open(combobox_page):
     val = inp.input_value()
     assert "Pizza" in val
     is_open = combobox_page.evaluate(
-        "() => Alpine.$data(document.querySelectorAll('.dropdown.combobox')[1]).open",
+        "() => Alpine.$data(document.querySelectorAll('.dropdown.formwork-combobox')[1]).open",
     )
     assert is_open is True
 
@@ -1061,11 +1030,11 @@ def test_combo_box_keyboard_close_clears_highlight(combobox_page):
     inp = open_combo_box(combobox_page, "language_single")
     inp.press("ArrowDown")
     combobox_page.wait_for_timeout(50)
-    combo = combobox_page.locator(".dropdown.combobox").first
-    assert combo.locator("[data-suggestion].highlighted").count() == 1
+    combo = combobox_page.locator(".dropdown.formwork-combobox").first
+    assert combo.locator("[data-label].highlighted").count() == 1
     inp.press("Escape")
     combobox_page.wait_for_timeout(150)
-    assert combo.locator("[data-suggestion].highlighted").count() == 0
+    assert combo.locator("[data-label].highlighted").count() == 0
 
 
 @pytest.mark.e2e
@@ -1075,7 +1044,7 @@ def test_combo_box_keyboard_escape_closes_dropdown(combobox_page):
     inp.press("Escape")
     combobox_page.wait_for_timeout(150)
     is_open = combobox_page.evaluate(
-        "() => Alpine.$data(document.querySelectorAll('.dropdown.combobox')[0]).open",
+        "() => Alpine.$data(document.querySelectorAll('.dropdown.formwork-combobox')[0]).open",
     )
     assert is_open is False
 
@@ -1096,7 +1065,7 @@ def test_combo_box_prerenders_options_on_initial_load(combobox_page):
     """Real options render in every htmx-mode ComboBox on first page load, before any user interaction, with no
     skeleton flicker. The combobox at index 4 wires ``search_choices_language_htmx`` against ``E2E_LANGUAGES`` (6
     entries), all baked in since the default ``reg.max_results`` is 50."""
-    htmx_combo = combobox_page.locator(".dropdown.combobox").nth(4)
+    htmx_combo = combobox_page.locator(".dropdown.formwork-combobox").nth(4)
     items = htmx_combo.locator("ul[role='listbox'] > li[role='option']")
     assert items.count() == 6
 
@@ -1107,7 +1076,7 @@ def test_combo_box_options_refresh_on_first_focus(combobox_page):
     the fresh response: same count, same listbox."""
     from playwright.sync_api import expect
 
-    combo = combobox_page.locator(".dropdown.combobox").nth(4)
+    combo = combobox_page.locator(".dropdown.formwork-combobox").nth(4)
     inp = combobox_page.locator('input[name="language_htmx"]')
     inp.click()
     expect(combo.locator("ul button")).to_have_count(6, timeout=10000)
@@ -1118,7 +1087,7 @@ def test_combo_box_failing_search_shows_error_alert(combobox_page):
     """When the search endpoint returns 500, the error alert replaces the listbox."""
     from playwright.sync_api import expect
 
-    combo = combobox_page.locator(".dropdown.combobox").nth(8)
+    combo = combobox_page.locator(".dropdown.formwork-combobox").nth(8)
     inp = combobox_page.locator('input[name="language_failing"]')
     inp.click()
     alert = combo.locator('[role="alert"].alert-error')
@@ -1133,7 +1102,7 @@ def test_combo_box_input_works_after_error(combobox_page):
     new request and the value lands in the input."""
     from playwright.sync_api import expect
 
-    combo = combobox_page.locator(".dropdown.combobox").nth(8)
+    combo = combobox_page.locator(".dropdown.formwork-combobox").nth(8)
     inp = combobox_page.locator('input[name="language_failing"]')
     requests: list[str] = []
     combobox_page.on("request", lambda r: requests.append(r.url) if "search/" in r.url else None)
@@ -1163,7 +1132,7 @@ def test_combo_box_morph_preserves_typed_value(combobox_page):
 @pytest.mark.e2e
 def test_combo_box_morph_preserves_multiple_selected(combobox_page):
     """Comma-separated multiple selections survive an htmx form morph."""
-    combo = combobox_page.locator(".dropdown.combobox").nth(1)
+    combo = combobox_page.locator(".dropdown.formwork-combobox").nth(1)
     inp = combobox_page.locator('input[name="toppings_multi"]')
     inp.click()
     combobox_page.wait_for_timeout(150)
@@ -1187,7 +1156,7 @@ def test_combo_box_morph_preserves_multiple_selected(combobox_page):
 @pytest.mark.screenshot
 def test_combo_box_screenshot_default(combobox_page, assert_screenshot):
     """Visual snapshot: ComboBox in default (empty) state."""
-    wrapper = combobox_page.locator(".dropdown.combobox").first
+    wrapper = combobox_page.locator(".dropdown.formwork-combobox").first
     assert_screenshot(wrapper, "combobox-default.png")
 
 
@@ -1198,7 +1167,7 @@ def test_combo_box_screenshot_open_dropdown(combobox_page, assert_screenshot):
     inp.click()
     inp.fill("P")
     combobox_page.wait_for_timeout(150)
-    wrapper = combobox_page.locator(".dropdown.combobox").first
+    wrapper = combobox_page.locator(".dropdown.formwork-combobox").first
     assert_screenshot(wrapper, "combobox-open.png", capture_dropdown=True)
 
 
@@ -1208,7 +1177,7 @@ def test_combo_box_screenshot_grouped_open(combobox_page, assert_screenshot):
     inp = combobox_page.locator('input[name="food_grouped"]')
     inp.click()
     combobox_page.wait_for_timeout(150)
-    wrapper = combobox_page.locator("#id_food_grouped_combobox")
+    wrapper = combobox_page.locator("#id_food_grouped_wrapper")
     assert_screenshot(wrapper, "combobox-grouped-open.png", capture_dropdown=True)
 
 
@@ -1218,7 +1187,7 @@ def test_combo_box_screenshot_multiple_selected_open(combobox_page, assert_scree
     inp = combobox_page.locator('input[name="language_icons_multi"]')
     inp.click()
     combobox_page.wait_for_timeout(150)
-    wrapper = combobox_page.locator("#id_language_icons_multi_combobox")
+    wrapper = combobox_page.locator("#id_language_icons_multi_wrapper")
     wrapper.locator("button", has_text="Python").click()
     combobox_page.wait_for_timeout(100)
     assert_screenshot(wrapper, "combobox-multiple-selected-open.png", capture_dropdown=True)
@@ -1233,7 +1202,7 @@ def test_combo_box_screenshot_keyboard_highlighted(combobox_page, assert_screens
     inp.press("ArrowDown")  # Highlight first option
     inp.press("ArrowDown")  # JavaScript
     combobox_page.wait_for_timeout(50)
-    wrapper = combobox_page.locator(".dropdown.combobox").first
+    wrapper = combobox_page.locator(".dropdown.formwork-combobox").first
     assert_screenshot(wrapper, "combobox-keyboard-highlighted.png", capture_dropdown=True)
 
 
@@ -1244,7 +1213,7 @@ def test_combo_box_screenshot_suggestion_selected(combobox_page, assert_screensh
     inp.click()
     inp.fill("Py")
     combobox_page.wait_for_timeout(150)
-    combobox_page.locator(".dropdown.combobox").first.locator("button", has_text="Python").click()
+    combobox_page.locator(".dropdown.formwork-combobox").first.locator("button", has_text="Python").click()
     combobox_page.wait_for_timeout(100)
-    wrapper = combobox_page.locator(".dropdown.combobox").first
+    wrapper = combobox_page.locator(".dropdown.formwork-combobox").first
     assert_screenshot(wrapper, "combobox-selected.png")

@@ -1,9 +1,50 @@
 // Shared helpers for the formwork dropdown Alpine.data components
-// (formworkSearchSelect, formworkMultiSelect, formworkComboBox).
+// (formworkSelect, formworkSelectMultiple, formworkComboBox).
 
 export const visibleOptions = (component, selector) =>
   [...component.$refs.options.querySelectorAll(selector)]
     .filter((b) => b.offsetParent !== null);
+
+// Reset that also notifies x-model and any htmx trigger bound to `input`.
+export const clearInput = (input) => {
+  input.value = "";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.focus();
+};
+
+const labelMatches = (el, query) => (el.dataset.label || "").toLowerCase().includes(query);
+
+// Client filter for a row or an optgroup heading. Reads the row's own label,
+// so no option value is interpolated into JS. A heading shows while any row
+// of its group does.
+export const matchesQuery = (el, query) => {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  if (!("group" in el.dataset)) return labelMatches(el, q);
+  for (let row = el.nextElementSibling; row && !("group" in row.dataset); row = row.nextElementSibling) {
+    if (labelMatches(row, q)) return true;
+  }
+  return false;
+};
+
+// htmx 4 builds the GET query from the request body. The search box has no
+// name, so the form never posts it.
+export const searchConfig = (component, event, query) => {
+  const body = event.detail.ctx.request.body;
+  body.set("q", query);
+  body.set("name", component.$root.dataset.name);
+};
+
+// An error response must not replace the list. Returns whether the swap
+// carries a real response, which clears a previous error.
+export const searchSwapAllowed = (event) => {
+  const status = event.detail.ctx?.response?.status;
+  if (status >= 400) {
+    event.preventDefault();
+    return false;
+  }
+  return Boolean(status);
+};
 
 // --- Top-layer dropdown panels -----------------------------------------
 // popover="manual" (not "auto"): the details toggle / Alpine `open` state

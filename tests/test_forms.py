@@ -241,10 +241,10 @@ def test_choices_search_instance_method_raises_improperly_configured():
     # Regression: it registered unbound and blew up with TypeError at request time.
     from django.core.exceptions import ImproperlyConfigured
 
-    from django_formwork.widgets import SearchSelect
+    from django_formwork.widgets import Select
 
     class _Form(FormworkForm):
-        city = forms.ChoiceField(choices=[("a", "A")], widget=SearchSelect(search_decorator=None))
+        city = forms.ChoiceField(choices=[("a", "A")], widget=Select(search_decorator=None))
 
         def search_choices_city(self, query, request=None):
             return []
@@ -256,10 +256,10 @@ def test_choices_search_instance_method_raises_improperly_configured():
 def test_choices_search_staticmethod_registers():
     """A @staticmethod search_choices_<name> registers without error."""
     from django_formwork._registry import get_registration, make_choices_key
-    from django_formwork.widgets import SearchSelect
+    from django_formwork.widgets import Select
 
     class _Form(FormworkForm):
-        city = forms.ChoiceField(choices=[("a", "A")], widget=SearchSelect(search_decorator=None))
+        city = forms.ChoiceField(choices=[("a", "A")], widget=Select(search_decorator=None))
 
         @staticmethod
         def search_choices_city(query, request=None):
@@ -274,12 +274,12 @@ def test_non_callable_search_decorator_raises_improperly_configured():
     # Regression: a typo like search_decorator="login_required" silently became None.
     from django.core.exceptions import ImproperlyConfigured
 
-    from django_formwork.widgets import SearchSelect
+    from django_formwork.widgets import Select
 
     class _Form(FormworkForm):
         city = forms.ChoiceField(
             choices=[("a", "A")],
-            widget=SearchSelect(search_decorator="login_required"),
+            widget=Select(search_decorator="login_required"),
         )
 
         @staticmethod

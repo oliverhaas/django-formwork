@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
     from django_formwork.boundfield import FormworkBoundField
     from django_formwork.fields import (
-        ChoiceLabel,
         FormworkModelChoiceField,
         FormworkModelMultipleChoiceField,
     )
@@ -38,12 +37,13 @@ if TYPE_CHECKING:
         FormworkSearchView,
         FormworkValidateView,
     )
+    from django_formwork.widgets.select import ChoiceLabel
 
 #: Public name -> defining submodule, resolved lazily by ``__getattr__``.
 _EXPORTS = {
     "AsyncFormMixin": "django_formwork.async_forms",
     "AsyncModelFormMixin": "django_formwork.async_forms",
-    "ChoiceLabel": "django_formwork.fields",
+    "ChoiceLabel": "django_formwork.widgets.select",
     "FormworkAutoSearchView": "django_formwork.views",
     "FormworkBaseInlineFormSet": "django_formwork.formsets",
     "FormworkBaseModelFormSet": "django_formwork.formsets",

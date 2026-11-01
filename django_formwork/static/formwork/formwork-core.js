@@ -48,22 +48,25 @@ const getFieldValue = (el) => {
   return el.value;
 };
 
-// MultiSelect dispatches change events from its <details> root (htmx mode)
-// or from name-less checkboxes inside it; neither carries a comparable
-// .value.  Derive one: the sorted set of selected option values, read from
-// the Alpine-rendered hidden inputs plus the checked boxes.
+// SelectMultiple dispatches change events from its <details> root (htmx mode)
+// or from the checkboxes inside it; neither carries a comparable .value.
+// Derive one: the sorted set of selected option values, read from the
+// Alpine-rendered hidden inputs plus the checked boxes.  The empty hidden
+// input only marks the field as submitted.
 const getMultiSelectValue = (details) => {
   const values = new Set();
-  for (const el of details.querySelectorAll("input[type=hidden][name]")) values.add(el.value);
+  for (const el of details.querySelectorAll("input[type=hidden][name]")) {
+    if (el.value) values.add(el.value);
+  }
   for (const el of details.querySelectorAll("input[type=checkbox]:checked")) values.add(el.value);
   return [...values].sort().join(",");
 };
 
-// Baseline for an htmx-mode MultiSelect comes from data-initial-selected:
+// Baseline for an htmx-mode SelectMultiple comes from data-selected:
 // Alpine renders the hidden inputs only after its own init, which may run
 // after the snapshot.
 const getMultiSelectBaseline = (details) => {
-  const json = details.dataset.initialSelected;
+  const json = details.dataset.selected;
   if (json === undefined) return getMultiSelectValue(details);
   try {
     return JSON.parse(json).map(([value]) => String(value)).sort().join(",");
@@ -78,10 +81,10 @@ const initDirtyTracking = (form) => {
   const snapshot = () => {
     baseline.clear();
     for (const el of form.elements) {
-      // Hidden inputs stay tracked: widgets (SearchSelect, OTPInput,
-      // InputMask) hold their real value in a hidden input and dispatch
-      // events on it.  MultiSelect internals are tracked as one unit below.
-      if (!el.name || el.closest("details.multiselect")) continue;
+      // Hidden inputs stay tracked: widgets (Select, OTPInput, InputMask)
+      // hold their real value in a hidden input and dispatch events on it.
+      // SelectMultiple internals are tracked as one unit below.
+      if (!el.name || el.closest("details.formwork-select-multiple")) continue;
       // Radio groups: track the checked value under the group name.
       if (el.type === "radio") {
         if (el.checked) baseline.set(el.name, el.value);
@@ -90,13 +93,13 @@ const initDirtyTracking = (form) => {
         baseline.set(el.id || el.name, getFieldValue(el));
       }
     }
-    for (const details of form.querySelectorAll("details.multiselect")) {
+    for (const details of form.querySelectorAll("details.formwork-select-multiple")) {
       baseline.set(details, getMultiSelectBaseline(details));
     }
   };
 
   const check = (el) => {
-    const multiselect = el.closest?.("details.multiselect");
+    const multiselect = el.closest?.("details.formwork-select-multiple");
     const target = multiselect || el;
     const fieldset = target.closest("fieldset.fieldset");
     if (!fieldset) return;
@@ -368,14 +371,14 @@ if (typeof htmx !== "undefined") {
         }
       }
 
-      // Preserve `checked` on user-toggled checkboxes inside MultiSelect.
+      // Preserve `checked` on user-toggled checkboxes inside SelectMultiple.
       // The Alpine `selected` Map is the source of truth; the server
       // doesn't know which boxes the user has just ticked, so don't let
       // the morph reset them.
       if (
         oldNode instanceof HTMLInputElement &&
         oldNode.type === "checkbox" &&
-        oldNode.closest("details.multiselect")
+        oldNode.closest("details.formwork-select-multiple")
       ) {
         if (oldNode.checked) {
           newNode.setAttribute("checked", "");

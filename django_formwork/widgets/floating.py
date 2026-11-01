@@ -1,4 +1,4 @@
-"""Floating-label variants of the native text, select, and textarea widgets."""
+"""Floating-label variants of the native text and textarea widgets."""
 
 from __future__ import annotations
 
@@ -39,13 +39,3 @@ class TextInput(FloatingLabelMixin, forms.TextInput):
 
 class Textarea(FloatingLabelMixin, forms.Textarea):
     """``forms.Textarea`` with an optional DaisyUI floating label."""
-
-
-class Select(FloatingLabelMixin, forms.Select):
-    """``forms.Select`` with an optional DaisyUI floating label (placeholder used only as label text)."""
-
-    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
-        context = super().get_context(name, value, attrs)
-        if self.floating_label:
-            context["widget"]["attrs"].pop("placeholder", None)
-        return context

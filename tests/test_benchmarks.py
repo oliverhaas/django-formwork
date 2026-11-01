@@ -11,11 +11,11 @@ from django_formwork.widgets import (
     ComboBox,
     DataList,
     FileDropZone,
-    MultiSelect,
     PasswordReveal,
     Range,
     Rating,
-    SearchSelect,
+    Select,
+    SelectMultiple,
     Toggle,
 )
 
@@ -52,10 +52,10 @@ class LargeForm(FormworkForm):
     message = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), help_text="Message body")
     password = forms.CharField(widget=PasswordReveal, help_text="Password")
     url = forms.URLField(required=False, help_text="Website URL")
-    country = forms.ChoiceField(choices=COUNTRY_CHOICES, widget=SearchSelect, help_text="Country")
+    country = forms.ChoiceField(choices=COUNTRY_CHOICES, widget=Select, help_text="Country")
     languages = forms.MultipleChoiceField(
         choices=LANGUAGE_CHOICES,
-        widget=MultiSelect,
+        widget=SelectMultiple,
         required=False,
         help_text="Languages",
     )

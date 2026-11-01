@@ -11,16 +11,13 @@ from html import escape as html_escape
 from typing import TYPE_CHECKING, Any
 
 from django.http import HttpRequest, HttpResponse, HttpResponseBase
-from django.template import Context
-from django.template.engine import Engine
+from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    from django.template.base import Template
 
     from django_formwork._registry import SearchRegistration
 
@@ -36,94 +33,32 @@ class FormworkSearchView(View):
 
     :class:`FormworkAutoSearchView` (below) is the dispatch view that backs
     every auto-registered widget; most users never subclass this directly.
-    Subclass :class:`FormworkSearchView` only to render the formwork
-    response templates (the ``<li>`` fragments htmx swaps in) from a custom
-    endpoint of your own, e.g. for a non-formwork widget that reuses the
-    same look.
+    Subclass :class:`FormworkSearchView` only to render a widget's
+    ``#option_list`` partial (the ``<li>`` rows htmx swaps in) from a custom
+    endpoint of your own.
 
     Results dict keys:
 
     - ``label`` (required): display text
-    - ``value`` (optional): key value for SearchSelect, not used for ComboBox
+    - ``value`` (optional): the posted key for ``Select``; ``ComboBox`` posts the label
     - ``icon`` (optional): icon markup wrapped in ``mark_safe()``
       (plain strings are auto-escaped)
     """
 
-    #: ``<li>``-wrapped DaisyUI alert used as the "no results" row in all three
-    #: response templates.  Wrapped in ``<li>`` so it remains a valid child of
-    #: the swap target ``<ul>``; ``role="status"`` announces non-urgent state.
-    #:
-    #: ``m-0.5`` (not ``m-1.5``) compensates for the listbox's ``p-1`` so the
-    #: alert lands at the same offset from the dropdown edge as the sibling
-    #: ``role="alert"`` error alert (which sits directly in ``dropdown-content``).
-    _NO_RESULTS_HTML = '<li><div role="status" class="alert alert-info alert-soft m-0.5">No results.</div></li>'
-
-    #: Template for SearchSelect results (value + label, for select-style).
-    #: SECURITY: ``escapejs`` only on values embedded in Alpine expressions
-    #: (``:class``), where Alpine evaluates the entity-decoded attribute as a
-    #: JS string literal.  ``data-*`` attributes get plain HTML autoescaping:
-    #: the JS reads them raw via ``dataset`` (no JS-string decoding), so
-    #: ``escapejs`` there would submit literal ``\\uXXXX`` text.
-    SEARCH_SELECT_TEMPLATE = (
-        """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-1.5 px-2 py-1.5 rounded-field cursor-pointer hover:bg-base-200 text-left" data-value="{{ item.value }}" data-label="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}{% if item.selected_toggle_class %} data-selected-toggle-class="{{ item.selected_toggle_class }}"{% endif %}>
-  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-current/50">{{ item.description }}</span>{% endif %}</span><span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" :class="value === '{{ item.value|escapejs }}' && 'opacity-100'" aria-hidden="true"></span>
-</button></li>{% endfor %}
-{% if not results %}"""
-        + _NO_RESULTS_HTML
-        + "{% endif %}"
-    )
-
-    #: Template for ComboBox results (label only, for autocomplete-style)
-    COMBO_BOX_TEMPLATE = (
-        """{% for item in results %}
-<li role="option"><button type="button" class="flex w-full items-center gap-1.5 px-2 py-1.5 rounded-field cursor-pointer hover:bg-base-200 text-left" data-suggestion="{{ item.label }}"{% if item.icon %} data-icon="{{ item.icon|force_escape }}"{% endif %}>
-  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="flex flex-col"><span class="select-none">{{ item.label }}</span>{% if item.description %}<span class="text-xs text-current/50">{{ item.description }}</span>{% endif %}</span>
-</button></li>{% endfor %}
-{% if not results %}"""
-        + _NO_RESULTS_HTML
-        + "{% endif %}"
-    )
-
-    #: Template for MultiSelect results (checkbox options).
-    #: Checkboxes have no ``name``; hidden inputs in the widget template
-    #: handle form submission.  Alpine directives sync checked state with
-    #: the parent ``x-data`` scope (the widget wrapper).
-    MULTI_SELECT_TEMPLATE = (
-        """{% for item in results %}
-<li><label class="flex items-center gap-1.5 px-2 py-1.5 rounded-field cursor-pointer hover:bg-base-200" data-value="{{ item.value }}">
-  <input type="checkbox" value="{{ item.value }}" class="multiselect hidden" x-effect="$el.checked = selected.has('{{ item.value|escapejs }}')" @change="toggle('{{ item.value|escapejs }}', '{{ item.label|escapejs }}', '{{ item.icon|escapejs }}')">
-  {% if item.icon %}<span class="shrink-0">{{ item.icon }}</span>{% endif %}<span class="select-none">{{ item.label }}</span>
-  <span class="formwork-check ml-auto pl-3 shrink-0 opacity-0" aria-hidden="true"></span>
-</label></li>{% endfor %}
-{% if not results %}"""
-        + _NO_RESULTS_HTML
-        + "{% endif %}"
-    )
-
-    #: Which template to use.  Set by the widget type or override in subclass.
+    #: Which widget's ``#option_list`` renders the rows.  Set from the
+    #: registration, or override in a subclass.
     widget_type: str = "search_select"
 
-    #: Cached template engine and compiled templates (class-level, shared).
-    _engine: Engine | None = None
-    _compiled_templates: dict[str, Template] | None = None
+    @staticmethod
+    def _option_list_template(widget_type: str) -> str:
+        from django_formwork.widgets import ComboBox, Select, SelectMultiple
 
-    @classmethod
-    def _get_template(cls, widget_type: str) -> Template:
-        """Return a compiled template for the given widget type, using cache."""
-        if cls._engine is None:
-            cls._engine = Engine()
-        # cls.__dict__, not inherited: a subclass overriding a *_TEMPLATE must
-        # compile its own copy, not serve the base's cached dict.
-        compiled = cls.__dict__.get("_compiled_templates")
-        if compiled is None:
-            compiled = {
-                "search_select": cls._engine.from_string(cls.SEARCH_SELECT_TEMPLATE),
-                "combo_box": cls._engine.from_string(cls.COMBO_BOX_TEMPLATE),
-                "multi_select": cls._engine.from_string(cls.MULTI_SELECT_TEMPLATE),
-            }
-            cls._compiled_templates = compiled
-        return compiled[widget_type]
+        templates = {
+            "search_select": Select.template_name,
+            "multi_select": SelectMultiple.template_name,
+            "combo_box": ComboBox.template_name,
+        }
+        return f"{templates[widget_type]}#option_list"
 
     def get_results(self, query: str, **kwargs: Any) -> list[dict[str, str]]:  # noqa: ARG002
         """Return search results for the given query.
@@ -155,8 +90,11 @@ class FormworkSearchView(View):
         # callers cannot render results through a template the registration
         # never intended.
         results = self.get_results(query, request=request)
-        template = self._get_template(self.widget_type)
-        html = template.render(Context({"results": results}))
+        html = render_to_string(
+            self._option_list_template(self.widget_type),
+            {"options": results, "truncated": False, "shown": None, "more_url": None},
+            request=request,
+        )
         return HttpResponse(html.strip())
 
 
@@ -170,8 +108,7 @@ class FormworkAutoSearchView(FormworkSearchView):
         path("__formwork__/", include("django_formwork.urls"))
 
     The view looks up the registration by key, filters the queryset, and
-    returns results using the appropriate template (search_select, multi_select,
-    or combo_box).
+    renders the rows through the registered widget's ``#option_list``.
     """
 
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:

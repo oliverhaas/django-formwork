@@ -30,7 +30,7 @@
 }
 
 /* Safelist DaisyUI's form-control color modifiers: applied at render time via
-   widget attrs (e.g. SearchSelect(attrs={"class": "select-accent"})), so
+   widget attrs (e.g. Select(attrs={"class": "select-accent"})), so
    Tailwind's static scan never sees them and would otherwise purge them. */
 @source inline("{select,input,textarea}-{primary,secondary,accent,neutral,info,success,warning,error}");
 
@@ -298,9 +298,9 @@ fieldset.fieldset > .tooltip:has(> select + select + select) {
    MUST be unlayered: the templates set bg-base-100 (@layer utilities) on the
    panel, which @layer components would lose to.  The ::picker(select) rule
    routes the same var to the native customizable select. */
-details.dropdown.search-select:has(> summary.select-soft) > .dropdown-content,
-details.dropdown.multiselect:has(> summary.select-soft) > .dropdown-content,
-.dropdown.combobox:has(.combobox-input.input-soft) > .dropdown-content {
+details.dropdown.formwork-select:has(> summary.select-soft) > .dropdown-content,
+details.dropdown.formwork-select-multiple:has(> summary.select-soft) > .dropdown-content,
+.dropdown.formwork-combobox:has(.combobox-input.input-soft) > .dropdown-content {
     background-color: var(--select-soft-dropdown-bg, var(--color-base-100));
 }
 
@@ -365,12 +365,12 @@ option::checkmark {
 /* Keep a fake-select trigger's placeholder muted while it's focused/open.
    DaisyUI's .select-ghost sets a full-strength color on :focus/:focus-within
    (in @layer utilities), so this MUST be unlayered to win. */
-details.multiselect > summary.formwork-placeholder:focus,
-details.multiselect > summary.formwork-placeholder:focus-within,
-details.multiselect[open] > summary.formwork-placeholder,
-details.search-select > summary.formwork-placeholder:focus,
-details.search-select > summary.formwork-placeholder:focus-within,
-details.search-select[open] > summary.formwork-placeholder {
+details.formwork-select-multiple > summary.formwork-placeholder:focus,
+details.formwork-select-multiple > summary.formwork-placeholder:focus-within,
+details.formwork-select-multiple[open] > summary.formwork-placeholder,
+details.formwork-select > summary.formwork-placeholder:focus,
+details.formwork-select > summary.formwork-placeholder:focus-within,
+details.formwork-select[open] > summary.formwork-placeholder {
     color: rgba(0, 0, 0, 0.5); /* fallback for browsers without color-mix() */
     color: color-mix(in oklab, currentColor 50%, transparent);
 }
@@ -572,16 +572,16 @@ select {
     @apply select w-full;
 }
 
-/* MultiSelect / SearchSelect summary triggers — DaisyUI .select
+/* SelectMultiple / Select summary triggers — DaisyUI .select
    applied via @apply to avoid @layer utilities conflict. */
-details.search-select > summary,
-details.multiselect > summary {
+details.formwork-select > summary,
+details.formwork-select-multiple > summary {
     @apply select w-full text-left;
 }
 
 /* Show placeholder-style color when no value is selected.
    Native <select>: detected via the empty-value option being :checked.
-   SearchSelect / MultiSelect: Alpine toggles .formwork-placeholder on the summary. */
+   Select / SelectMultiple: Alpine toggles .formwork-placeholder on the summary. */
 select:has(> option[value=""]:checked),
 .formwork-placeholder {
     color: rgba(0, 0, 0, 0.5); /* fallback for browsers without color-mix() */
@@ -831,10 +831,10 @@ input[type="hidden"] {
     @apply hidden;
 }
 
-/* SearchSelect / MultiSelect / ComboBox keyboard navigation: highlight focused option. */
-details.search-select [data-value].highlighted,
-details.multiselect [data-value].highlighted,
-.dropdown.combobox [data-suggestion].highlighted {
+/* Select / SelectMultiple / ComboBox keyboard navigation: highlight focused option. */
+details.formwork-select [data-value].highlighted,
+details.formwork-select-multiple [data-value].highlighted,
+.dropdown.formwork-combobox [data-value].highlighted {
     @apply bg-base-200;
 }
 
@@ -857,11 +857,29 @@ details.dropdown[open] > summary::before {
     @apply absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none z-1;
 }
 
+/* Shown while idle, hidden while its request runs: the search icon and the
+   "Load more" text give way to the spinner in the same slot. */
+.htmx-indicator-inverse {
+    opacity: 1;
+    transition: opacity 200ms ease-in;
+}
+
+.htmx-request .htmx-indicator-inverse,
+.htmx-request.htmx-indicator-inverse {
+    opacity: 0;
+}
+
+/* The dropdown search box draws its own clear button. */
+:where(.clearable-search)::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
 /* Panels: never narrower than the trigger, grow to the widest option,
    capped so a long label cannot push past the viewport. */
-details.dropdown.multiselect > .dropdown-content,
-details.dropdown.search-select > .dropdown-content,
-.dropdown.combobox > .dropdown-content {
+details.dropdown.formwork-select-multiple > .dropdown-content,
+details.dropdown.formwork-select > .dropdown-content,
+.dropdown.formwork-combobox > .dropdown-content {
     min-width: 100%;
     width: max-content;
     max-width: min(26rem, calc(100vw - 2rem));
@@ -870,21 +888,21 @@ details.dropdown.search-select > .dropdown-content,
 /* ComboBox: position the dropdown below the input.
    DaisyUI's .dropdown class sets position:relative on the wrapper.
    The .dropdown-content inside uses absolute positioning. */
-.dropdown.combobox {
+.dropdown.formwork-combobox {
     @apply relative;
 }
 
-.dropdown.combobox > .dropdown-content {
+.dropdown.formwork-combobox > .dropdown-content {
     @apply absolute z-1;
 }
 
-/* MultiSelect / SearchSelect: dropdown-content must be above summary::before overlay. */
-details.dropdown.multiselect > .dropdown-content,
-details.dropdown.search-select > .dropdown-content {
+/* SelectMultiple / Select: dropdown-content must be above summary::before overlay. */
+details.dropdown.formwork-select-multiple > .dropdown-content,
+details.dropdown.formwork-select > .dropdown-content {
     @apply absolute z-1;
 }
 
-/* MultiSelect checkmark visibility rule is unlayered (after the closing brace)
+/* SelectMultiple checkmark visibility rule is unlayered (after the closing brace)
    so it beats the opacity-0 utility in HTML. */
 
 
@@ -1083,8 +1101,8 @@ fieldset.formwork-dirty input.toggle {
     @apply toggle-accent;
 }
 
-fieldset.formwork-dirty details.search-select > summary,
-fieldset.formwork-dirty details.multiselect > summary {
+fieldset.formwork-dirty details.formwork-select > summary,
+fieldset.formwork-dirty details.formwork-select-multiple > summary {
     @apply border-accent;
 }
 
@@ -1139,8 +1157,8 @@ fieldset.formwork-dirty label.password-reveal {
    MUST be unlayered: a mousedown inside the panel moves focus off the summary,
    dropping the unlayered :focus rules (.select-soft:focus, DaisyUI's), and a
    layered pin loses border-color to the unlayered .select-soft tint. */
-details.search-select[open] > summary,
-details.multiselect[open] > summary {
+details.formwork-select[open] > summary,
+details.formwork-select-multiple[open] > summary {
     border-color: oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
     outline: 2px solid oklch(from var(--input-color, var(--color-base-content)) l c h / 1);
     outline-offset: 2px;
@@ -1149,9 +1167,9 @@ details.multiselect[open] > summary {
 /* Option rows: mirror DaisyUI's native option:active press feedback (invert
    to neutral).  MUST be unlayered: mousedown implies hover, and the rows'
    hover:bg-base-200 utility would beat a layered background-color. */
-details.search-select [data-value]:active,
-details.multiselect [data-value]:active,
-.dropdown.combobox [data-suggestion]:active {
+details.formwork-select [data-value]:active,
+details.formwork-select-multiple [data-value]:active,
+.dropdown.formwork-combobox [data-value]:active {
     background-color: var(--color-neutral);
     color: var(--color-neutral-content);
     box-shadow: 0 2px calc(var(--depth) * 3px) -2px var(--color-neutral);
@@ -1172,18 +1190,18 @@ details.multiselect [data-value]:active,
    and the mt-1 utility (wrong side after a flip).
    ================================================================ */
 
-details.dropdown.multiselect > .dropdown-content[popover],
-details.dropdown.search-select > .dropdown-content[popover],
-.dropdown.combobox > .dropdown-content[popover] {
+details.dropdown.formwork-select-multiple > .dropdown-content[popover],
+details.dropdown.formwork-select > .dropdown-content[popover],
+.dropdown.formwork-combobox > .dropdown-content[popover] {
     position: fixed;
     min-width: 0;
     margin: 0;
 }
 
 @supports (anchor-name: --a) {
-    details.dropdown.multiselect > .dropdown-content[popover],
-    details.dropdown.search-select > .dropdown-content[popover],
-    .dropdown.combobox > .dropdown-content[popover] {
+    details.dropdown.formwork-select-multiple > .dropdown-content[popover],
+    details.dropdown.formwork-select > .dropdown-content[popover],
+    .dropdown.formwork-combobox > .dropdown-content[popover] {
         position-area: block-end span-inline-end;
         position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
         /* Open toward whichever side has the most room (like a native
@@ -1253,9 +1271,9 @@ label.password-reveal:has(> input[aria-invalid="true"]) {
     @apply input-error;
 }
 
-/* MultiSelect / SearchSelect: aria-invalid is rendered on the <summary> trigger. */
-details.search-select > summary[aria-invalid="true"],
-details.multiselect > summary[aria-invalid="true"] {
+/* SelectMultiple / Select: aria-invalid is rendered on the <summary> trigger. */
+details.formwork-select > summary[aria-invalid="true"],
+details.formwork-select-multiple > summary[aria-invalid="true"] {
     @apply select-error;
 }
 
@@ -1269,9 +1287,9 @@ input.combobox-input[aria-invalid="true"] {
    content-derived minimum measured through .formwork-autowidth below.
    Layered so user width utilities (w-*, min-w-*) win by layer order. */
 @layer components {
-    details.dropdown.multiselect,
-    details.dropdown.search-select,
-    .dropdown.combobox {
+    details.dropdown.formwork-select-multiple,
+    details.dropdown.formwork-select,
+    .dropdown.formwork-combobox {
         width: 100%;
         min-width: fit-content;
         max-width: 100%;
@@ -1327,7 +1345,7 @@ input.combobox-input[aria-invalid="true"] {
 
 /* ComboBox: the copy is a plain sibling of the input, not an overlay
    stack; zero height so it adds no vertical space below the input. */
-.dropdown.combobox > .formwork-autowidth {
+.dropdown.formwork-combobox > .formwork-autowidth {
     height: 0;
 }
 
@@ -1444,7 +1462,7 @@ input.combobox-input[aria-invalid="true"] {
 .btn-loading-bars:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-bars; }
 .btn-loading-infinity:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-infinity; }
 
-/* MultiSelect: show checkmark when option is selected.
+/* SelectMultiple: show checkmark when option is selected.
    Outside @layer so it beats the opacity-0 utility class in HTML. */
 label:has(> input.hidden:checked) > .formwork-check {
     opacity: 1;
@@ -1453,8 +1471,8 @@ label:has(> input.hidden:checked) > .formwork-check {
 /* Grouped dropdowns: indent options so they sit visually under the optgroup
    header.  Unlayered + !important so it beats Tailwind's px-2 utility, which
    lives in @layer utilities (higher precedence than unlayered styles). */
-details.search-select ul:has(li.menu-title) li:not(.menu-title) > button,
-details.multiselect ul:has(li.menu-title) li:not(.menu-title) > label,
-.dropdown.combobox ul:has(li.menu-title) li:not(.menu-title) > button {
+details.formwork-select ul:has(li.menu-title) li:not(.menu-title) > button,
+details.formwork-select-multiple ul:has(li.menu-title) li:not(.menu-title) > label,
+.dropdown.formwork-combobox ul:has(li.menu-title) li:not(.menu-title) > button {
     padding-left: 1.25rem !important;
 }

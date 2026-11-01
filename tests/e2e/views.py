@@ -6,24 +6,24 @@ from django.http import HttpRequest, HttpResponse
 from django.template import engines
 from e2e.models import AutoSaveFormData, BasicFormData, City, Region
 
-from django_formwork.fields import ChoiceLabel
+from django_formwork import ChoiceLabel
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkValidateView
 from django_formwork.widgets import (
     ComboBox,
+    ComboBoxMultiple,
     DataList,
     DatePicker,
     FileDropZone,
     ImageDropZone,
     InputMask,
     InputNumber,
-    MultiSelect,
     OTPInput,
     PasswordReveal,
     Range,
     Rating,
-    SearchSelect,
     Select,
+    SelectMultiple,
     Textarea,
     TextInput,
     Toggle,
@@ -267,7 +267,7 @@ class TightForm(FormworkForm):
     role = forms.ChoiceField(
         required=False,
         choices=[("", ""), ("admin", "Admin"), ("user", "User")],
-        widget=Select(attrs={"placeholder": "Role"}, floating_label=True),
+        widget=Select(attrs={"placeholder": "Role"}, floating=True),
     )
     note = forms.CharField(
         required=False,
@@ -498,8 +498,8 @@ E2E_COUNTRIES_SEARCH = [
 ]
 
 
-class SearchSelectForm(FormworkForm):
-    """SearchSelect. few options (no search), many options (auto-search), icons, server-side."""
+class SelectForm(FormworkForm):
+    """Select. few options (no search), many options (auto-search), icons, server-side."""
 
     city_plain = forms.ChoiceField(
         choices=[
@@ -510,13 +510,13 @@ class SearchSelectForm(FormworkForm):
             ("par", "Paris"),
             ("syd", "Sydney"),
         ],
-        widget=SearchSelect,
+        widget=Select,
         required=False,
         label="City (plain, few options)",
     )
     country_many = forms.ChoiceField(
         choices=[("", "")] + [(c, ChoiceLabel(n, icon=flag)) for c, flag, n in _COUNTRIES],
-        widget=SearchSelect(),
+        widget=Select(),
         required=False,
         label="Country (many options, auto-search)",
     )
@@ -528,22 +528,22 @@ class SearchSelectForm(FormworkForm):
             ("tyo", ChoiceLabel("Tokyo", icon="\U0001f5fc", description="Capital of Japan")),
             ("par", ChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7", description="City of Light")),
         ],
-        widget=SearchSelect(),
+        widget=Select(),
         required=False,
         label="City (icons + descriptions)",
     )
     city_htmx = forms.ChoiceField(
-        widget=SearchSelect(search_decorator=None),
+        widget=Select(search_decorator=None),
         required=False,
         label="City (server search, few, no search input)",
     )
     city_htmx_many = forms.ChoiceField(
-        widget=SearchSelect(search_decorator=None),
+        widget=Select(search_decorator=None),
         required=False,
         label="City (server search, many, auto search input)",
     )
     country_htmx_icons = forms.ChoiceField(
-        widget=SearchSelect(search_decorator=None),
+        widget=Select(search_decorator=None),
         required=False,
         label="Country (server search, icons + descriptions)",
     )
@@ -582,16 +582,16 @@ class SearchSelectForm(FormworkForm):
                 ],
             ),
         ],
-        widget=SearchSelect(show_search=True),
+        widget=Select(show_search=True),
         required=False,
         label="City by region (grouped)",
         help_text=(
-            "Grouped SearchSelect, optgroup headers shown as section titles, "
+            "Grouped Select, optgroup headers shown as section titles, "
             "auto-hide when search filters out their children."
         ),
     )
     city_failing = forms.ChoiceField(
-        widget=SearchSelect(search_decorator=None),
+        widget=Select(search_decorator=None),
         required=False,
         label="City (server search, always fails)",
         help_text="Endpoint always raises, exercises the error UX.",
@@ -608,7 +608,7 @@ class SearchSelectForm(FormworkForm):
             ("mid", ChoiceLabel("Medium", selected_toggle_class="select-warning")),
             ("high", ChoiceLabel("High", selected_toggle_class="select-error")),
         ],
-        widget=SearchSelect,
+        widget=Select,
         required=False,
         label="Priority (trigger recolors by selection)",
         help_text="Selecting an option applies its class to the closed select box.",
@@ -631,8 +631,8 @@ class SearchSelectForm(FormworkForm):
         _raise_failure()
 
 
-class MultiSelectForm(FormworkForm):
-    """MultiSelect, plain, with icons (auto-search), and server-side search."""
+class SelectMultipleForm(FormworkForm):
+    """SelectMultiple, plain, with icons (auto-search), and server-side search."""
 
     languages_plain = forms.MultipleChoiceField(
         choices=[
@@ -641,18 +641,18 @@ class MultiSelectForm(FormworkForm):
             ("go", "Go"),
             ("rs", "Rust"),
         ],
-        widget=MultiSelect,
+        widget=SelectMultiple,
         required=False,
         label="Languages (plain)",
     )
     countries_icons = forms.MultipleChoiceField(
         choices=[(code, ChoiceLabel(name, icon=flag)) for code, flag, name in _COUNTRIES],
-        widget=MultiSelect(),
+        widget=SelectMultiple(),
         required=False,
         label="Countries (icons, auto-search)",
     )
     languages_htmx = forms.MultipleChoiceField(
-        widget=MultiSelect(search_decorator=None),
+        widget=SelectMultiple(search_decorator=None),
         required=False,
         label="Languages (server-side search)",
     )
@@ -683,13 +683,13 @@ class MultiSelectForm(FormworkForm):
                 ],
             ),
         ],
-        widget=MultiSelect(show_search=True),
+        widget=SelectMultiple(show_search=True),
         required=False,
         label="Cities by region (grouped)",
-        help_text="Grouped MultiSelect, optgroup headers, keyboard nav, Enter toggles without closing.",
+        help_text="Grouped SelectMultiple, optgroup headers, keyboard nav, Enter toggles without closing.",
     )
     languages_failing = forms.MultipleChoiceField(
-        widget=MultiSelect(search_decorator=None),
+        widget=SelectMultiple(search_decorator=None),
         required=False,
         label="Languages (server search, always fails)",
         help_text="Endpoint always raises, exercises the error UX.",
@@ -704,6 +704,14 @@ class MultiSelectForm(FormworkForm):
         _raise_failure()
 
 
+_LANGUAGE_ICONS = [
+    ChoiceLabel("Python", icon="\U0001f40d"),
+    ChoiceLabel("JavaScript", icon="\U0001f7e8"),
+    ChoiceLabel("Go", icon="\U0001f439"),
+    ChoiceLabel("Rust", icon="\U0001f980"),
+]
+
+
 class ComboBoxForm(FormworkForm):
     """ComboBox, single, multiple, with icons, and server-side search."""
 
@@ -716,9 +724,8 @@ class ComboBoxForm(FormworkForm):
         label="Language (single)",
     )
     toppings_multi = forms.CharField(
-        widget=ComboBox(
+        widget=ComboBoxMultiple(
             suggestions=["Pizza", "Pasta", "Sushi", "Tacos", "Curry"],
-            multiple=True,
             attrs={"placeholder": "Comma-separated"},
         ),
         required=False,
@@ -726,28 +733,15 @@ class ComboBoxForm(FormworkForm):
     )
     language_icons = forms.CharField(
         widget=ComboBox(
-            suggestions=["Python", "JavaScript", "Go", "Rust"],
-            icons={
-                "Python": "\U0001f40d",
-                "JavaScript": "\U0001f7e8",
-                "Go": "\U0001f439",
-                "Rust": "\U0001f980",
-            },
+            suggestions=_LANGUAGE_ICONS,
             attrs={"placeholder": "Language with icons"},
         ),
         required=False,
         label="Language (with icons)",
     )
     language_icons_multi = forms.CharField(
-        widget=ComboBox(
-            suggestions=["Python", "JavaScript", "Go", "Rust"],
-            icons={
-                "Python": "\U0001f40d",
-                "JavaScript": "\U0001f7e8",
-                "Go": "\U0001f439",
-                "Rust": "\U0001f980",
-            },
-            multiple=True,
+        widget=ComboBoxMultiple(
+            suggestions=_LANGUAGE_ICONS,
             attrs={"placeholder": "Languages with icons"},
         ),
         required=False,
@@ -771,21 +765,13 @@ class ComboBoxForm(FormworkForm):
     )
     food_descriptions = forms.CharField(
         widget=ComboBox(
-            suggestions=["Pizza", "Sushi", "Tacos", "Curry", "Ramen"],
-            icons={
-                "Pizza": "\U0001f355",
-                "Sushi": "\U0001f363",
-                "Tacos": "\U0001f32e",
-                "Curry": "\U0001f35b",
-                "Ramen": "\U0001f35c",
-            },
-            descriptions={
-                "Pizza": "Italian classic",
-                "Sushi": "Japanese delicacy",
-                "Tacos": "Mexican street food",
-                "Curry": "Indian comfort food",
-                "Ramen": "Japanese noodle soup",
-            },
+            suggestions=[
+                ChoiceLabel("Pizza", icon="\U0001f355", description="Italian classic"),
+                ChoiceLabel("Sushi", icon="\U0001f363", description="Japanese delicacy"),
+                ChoiceLabel("Tacos", icon="\U0001f32e", description="Mexican street food"),
+                ChoiceLabel("Curry", icon="\U0001f35b", description="Indian comfort food"),
+                ChoiceLabel("Ramen", icon="\U0001f35c", description="Japanese noodle soup"),
+            ],
             attrs={"placeholder": "Pick a food"},
         ),
         required=False,
@@ -794,18 +780,19 @@ class ComboBoxForm(FormworkForm):
     food_grouped = forms.CharField(
         widget=ComboBox(
             suggestions=[
-                ("Italian", ["Pizza", "Pasta", "Risotto"]),
-                ("Japanese", ["Sushi", "Ramen", "Tempura"]),
-                ("Mexican", ["Tacos", "Burrito", "Enchilada"]),
+                (
+                    "Italian",
+                    [ChoiceLabel("Pizza", icon="\U0001f355"), ChoiceLabel("Pasta", icon="\U0001f35d"), "Risotto"],
+                ),
+                (
+                    "Japanese",
+                    [ChoiceLabel("Sushi", icon="\U0001f363"), ChoiceLabel("Ramen", icon="\U0001f35c"), "Tempura"],
+                ),
+                (
+                    "Mexican",
+                    [ChoiceLabel("Tacos", icon="\U0001f32e"), ChoiceLabel("Burrito", icon="\U0001f32f"), "Enchilada"],
+                ),
             ],
-            icons={
-                "Pizza": "\U0001f355",
-                "Pasta": "\U0001f35d",
-                "Sushi": "\U0001f363",
-                "Ramen": "\U0001f35c",
-                "Tacos": "\U0001f32e",
-                "Burrito": "\U0001f32f",
-            },
             attrs={"placeholder": "Pick a dish (grouped)"},
         ),
         required=False,
@@ -908,7 +895,7 @@ class NewWidgetsForm(FormworkForm):
     )
     country = forms.ChoiceField(
         choices=[("", "")] + [(c, ChoiceLabel(n, icon=flag)) for c, flag, n in _COUNTRIES],
-        widget=SearchSelect(),
+        widget=Select(),
         required=False,
         help_text="Searchable country selector with flag emojis.",
     )
@@ -935,7 +922,7 @@ class ComplexForm(FormworkForm):
         widget=PasswordReveal(attrs={"placeholder": "Confirm password"}),
     )
     country = forms.CharField(
-        widget=SearchSelect(search_decorator=None),
+        widget=Select(search_decorator=None),
         required=False,
         label="Country",
     )
@@ -948,7 +935,7 @@ class ComplexForm(FormworkForm):
             ("ts", "TypeScript"),
             ("rb", "Ruby"),
         ],
-        widget=MultiSelect(search_decorator=None),
+        widget=SelectMultiple(search_decorator=None),
         required=False,
         label="Languages",
     )
@@ -1399,13 +1386,13 @@ _PAGES = [
     (
         "search-select",
         "/search-select/",
-        "SearchSelect",
+        "Select",
         "Searchable dropdown, static, with icons, and server-side search via htmx",
     ),
     (
         "multi-select",
         "/multi-select/",
-        "MultiSelect",
+        "SelectMultiple",
         "Multi-select dropdown, plain, with icons and auto-search, and server-side via htmx",
     ),
     (
@@ -1426,7 +1413,7 @@ _PAGES = [
         "complex",
         "/complex/",
         "Complex Form",
-        "Auto-validated cross-field form, passwords, dates, SearchSelect, MultiSelect with morph resilience",
+        "Auto-validated cross-field form, passwords, dates, Select, SelectMultiple with morph resilience",
     ),
     (
         "autosave",
@@ -1665,11 +1652,11 @@ def builtin_view(request: HttpRequest) -> HttpResponse:
 
 
 def search_select_view(request: HttpRequest) -> HttpResponse:
-    return _form_view(request, SearchSelectForm, "search-select")
+    return _form_view(request, SelectForm, "search-select")
 
 
 def multi_select_view(request: HttpRequest) -> HttpResponse:
-    return _form_view(request, MultiSelectForm, "multi-select")
+    return _form_view(request, SelectMultipleForm, "multi-select")
 
 
 def combobox_view(request: HttpRequest) -> HttpResponse:
