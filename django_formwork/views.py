@@ -18,7 +18,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from django_formwork.search import SEARCH_PAGE_SIZE, declared_params, get_field
+from django_formwork.search import SEARCH_PAGE_SIZE, declared_params, get_field, ranked_search
 from django_formwork.widgets import ComboBox, Select, SelectMultiple
 from django_formwork.widgets.select import label_extras
 
@@ -77,7 +77,7 @@ class FormworkSearchView(View):
         return super().dispatch(request, *args, **kwargs)
 
     def search(self, queryset: QuerySet[Any], *, widget: forms.Widget, query: str) -> QuerySet[Any]:
-        """Narrow ``queryset`` to the rows matching ``query``.
+        """Narrow ``queryset`` to the rows matching ``query``, best match first when ``search_ranked``.
 
         Without ``search_fields`` the ``search_queryset`` reads ``q`` itself
         and returns its rows best-first.
@@ -85,6 +85,8 @@ class FormworkSearchView(View):
         search_fields = getattr(widget, "search_fields", ())
         if not query or not search_fields:
             return queryset
+        if getattr(widget, "search_ranked", False):
+            return ranked_search(queryset, search_fields, query)
         condition = Q()
         for field_name in search_fields:
             condition |= Q(**{f"{field_name}__icontains": query})

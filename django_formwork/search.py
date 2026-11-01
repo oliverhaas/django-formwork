@@ -1,6 +1,7 @@
 """Process-wide registry mapping a stable key to one form field's server-side search.
 
 Forms register at class creation; ``FormworkSearchView`` serves every key.
+``ranked_search`` orders a search by match quality on PostgreSQL.
 """
 
 from __future__ import annotations
@@ -14,12 +15,15 @@ from urllib.parse import urlencode
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
+from django.db.models import Case, Func, Q, TextField, Value, When
+from django.db.models.functions import Cast, Upper
 from django.urls import reverse
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
 
     from django import forms
+    from django.db.models import QuerySet
 
 __all__ = [
     "RESERVED_PARAMS",
@@ -27,6 +31,7 @@ __all__ = [
     "check_search_params",
     "declared_params",
     "get_field",
+    "ranked_search",
     "register_form_searches",
     "search_url",
 ]
@@ -38,6 +43,8 @@ RESERVED_PARAMS = frozenset({"allow_clear", "exclude", "offset", "q", "widget"})
 _PARAM_TYPES: dict[str, type] = {"int": int, "str": str}
 # Rows per search page; a searchable select renders the first page itself.
 SEARCH_PAGE_SIZE = 20
+# Shorter queries give pg_trgm too few trigrams to rank by, so they rank by prefix.
+_TRIGRAM_MIN_QUERY_LENGTH = 3
 
 
 @cache
@@ -97,6 +104,40 @@ def get_field(key: str) -> forms.Field | None:
     return _registry.get(key)
 
 
+def _any_field(fields: Sequence[str], lookup: str, query: str) -> Q:
+    return Q.create([(f"{name}__{lookup}", query) for name in fields], connector=Q.OR)
+
+
+def ranked_search(queryset: QuerySet[Any], fields: Sequence[str], query: str) -> QuerySet[Any]:
+    """The rows with ``query`` in one of ``fields``, best match first; typos match too.
+
+    Needs PostgreSQL with the pg_trgm extension. A trigram index on
+    ``UPPER(field::text)`` per field serves every lookup used here.
+    """
+    # Deferred: django.contrib.postgres imports the PostgreSQL driver.
+    from django.contrib.postgres.lookups import TrigramWordSimilar
+    from django.contrib.postgres.search import TrigramSimilarity, TrigramStrictWordSimilarity
+
+    contains = _any_field(fields, "icontains", query)
+    order = queryset.query.order_by or queryset.model._meta.ordering  # noqa: SLF001
+    if len(query) < _TRIGRAM_MIN_QUERY_LENGTH:
+        rank = Case(
+            When(_any_field(fields, "iexact", query), then=Value(0)),
+            When(_any_field(fields, "istartswith", query), then=Value(1)),
+            default=Value(2),
+        )
+        return queryset.filter(contains).order_by(rank, *order)
+    # The shape __icontains compiles to, so the trigram index serves both.
+    uppers = [Upper(Cast(name, output_field=TextField())) for name in fields]
+    similar = Q.create([Q(TrigramWordSimilar(upper, query)) for upper in uppers], connector=Q.OR)
+    # Values that contain the query before typo matches, then whole-word matches,
+    # then the closest value. Unlike Greatest(), GREATEST takes a single field.
+    typo = Case(When(contains, then=Value(0)), default=Value(1))
+    word_score = Func(*(TrigramStrictWordSimilarity(query, upper) for upper in uppers), function="GREATEST")
+    score = Func(*(TrigramSimilarity(upper, query) for upper in uppers), function="GREATEST")
+    return queryset.filter(contains | similar).order_by(typo, word_score.desc(), score.desc(), *order)
+
+
 def register_form_searches(form_cls: type) -> None:
     """Register the search of each widget that declares a ``search_queryset``.
 
@@ -140,8 +181,15 @@ def register_form_searches(form_cls: type) -> None:
             )
             raise ImproperlyConfigured(msg)
 
+        if widget.search_ranked and not widget.search_fields:
+            msg = f"{form_cls.__name__}.{name}: search_ranked ranks the search_fields, and none are set."
+            raise ImproperlyConfigured(msg)
+
         if widget.search_ranked and connection.vendor != "postgresql":
-            msg = f"{form_cls.__name__}.{name}: search_ranked needs PostgreSQL, got {connection.vendor}."
+            msg = (
+                f"{form_cls.__name__}.{name}: search_ranked needs PostgreSQL with the pg_trgm "
+                f"extension, but the default database is {connection.vendor}."
+            )
             raise ImproperlyConfigured(msg)
 
         # Fails at import, not on the first search.

@@ -15,6 +15,7 @@ from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ImproperlyConfigured
+from django.db import connection
 from django.test import Client
 from django.urls import reverse
 
@@ -133,14 +134,34 @@ def test_search_queryset_without_search_decorator_is_rejected(widget_class: type
             user = forms.CharField(widget=widget_class(search_queryset=_users))
 
 
-def test_ranked_search_needs_postgresql() -> None:
-    with pytest.raises(ImproperlyConfigured, match="PostgreSQL"):
+def _groups(request: HttpRequest) -> QuerySet[Group]:
+    return Group.objects.order_by("name")
+
+
+def _ranked_form() -> type[FormworkForm]:
+    class _RankedGroupForm(FormworkForm):
+        group = forms.ModelChoiceField(
+            queryset=Group.objects.all(),
+            widget=Select(search_fields=["name"], search_queryset=_groups, search_decorator=None, search_ranked=True),
+        )
+
+    return _RankedGroupForm
+
+
+@pytest.mark.skipif(connection.vendor == "postgresql", reason="the ranked search runs on PostgreSQL")
+def test_ranked_search_is_refused_on_other_databases() -> None:
+    with pytest.raises(ImproperlyConfigured, match=f"needs PostgreSQL.*{connection.vendor}"):
+        _ranked_form()
+
+
+def test_ranked_search_needs_search_fields() -> None:
+    with pytest.raises(ImproperlyConfigured, match="search_fields"):
 
         class _F(FormworkModelForm):
             class Meta:
                 model = Group
                 fields = ["name"]
-                widgets = {"name": ComboBox(search_queryset=_users, search_decorator=None, search_ranked=True)}
+                widgets = {"name": ComboBox(search_queryset=_groups, search_decorator=None, search_ranked=True)}
 
 
 def _positional(request: HttpRequest, group: int) -> QuerySet[User]:
@@ -475,3 +496,25 @@ def test_combo_box_rows_take_the_widget_label() -> None:
 
     soup = BeautifulSoup(response.content.decode(), "html.parser")
     assert [li["data-label"] for li in soup.select("li[role=option]")] == ["Ada"]
+
+
+@pytest.mark.django_db
+@pytest.mark.skipif(connection.vendor != "postgresql", reason="the ranked search needs PostgreSQL")
+@pytest.mark.parametrize(
+    ("names", "query", "best"),
+    [
+        (["10/L", "104/L", "XL", "L"], "l", "L"),
+        (["Baumwollmischung", "Bio-Baumwolle"], "baumwole", "Bio-Baumwolle"),
+        (["Black", "Dunkelblau"], "blau", "Dunkelblau"),
+        (["Rote", "Bordeaux Rot"], "rot", "Bordeaux Rot"),
+    ],
+)
+def test_ranked_search_puts_the_best_match_first(names: list[str], query: str, best: str) -> None:
+    Group.objects.bulk_create(Group(name=name) for name in names)
+    url = search_url(_key(_ranked_form(), "group"), {}, widget="select")
+
+    response = Client().get(f"{url}&q={query}")
+
+    row = BeautifulSoup(response.content.decode(), "html.parser").select_one("[data-value]")
+    assert row is not None
+    assert row["data-label"] == best
