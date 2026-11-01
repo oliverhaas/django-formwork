@@ -2,7 +2,7 @@
   <input type="hidden" name="{{ widget.clear_name }}" value="" x-ref="clear">
   {% if widget.preview_url %}<div class="relative flex h-64 items-center justify-center rounded-box border border-dashed border-base-300 bg-base-100 p-8" x-show="!cleared">
     <button type="button"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_clear"{% endif %} class="btn btn-square btn-sm absolute end-2 top-2 z-10" @click="clear()" aria-label="{% translate 'Remove image' %}" title="{% translate 'Remove image' %}"><i class="icon icon-trash" aria-hidden="true"></i></button>
-    <img src="{{ widget.preview_url }}" alt="" class="h-auto max-h-full w-auto max-w-full rounded-box object-contain">
+    <img src="{{ widget.preview_url }}" alt="" class="h-auto max-h-full w-auto max-w-full rounded-box object-contain bg-transparency-checkerboard">
   </div>
   {% else %}<label{% if widget.attrs.id %} for="{{ widget.attrs.id }}"{% endif %} class="group flex h-64 cursor-pointer flex-col items-center justify-center rounded-box border border-dashed border-base-300 p-8 text-center transition-colors hover:border-primary hover:bg-base-100 has-focus-visible:outline-2 has-focus-visible:outline-primary" :class="dragClass" x-show="!preview" @dragover.prevent="onDragOver()" @dragleave.prevent="onDragLeave()" @drop.prevent="drop($event)">
     <i class="icon icon-image-up text-4xl group-hover:text-primary" aria-hidden="true"></i>
@@ -14,7 +14,7 @@
   </label>
   <div class="relative flex h-64 items-center justify-center rounded-box border border-dashed border-base-300 bg-base-100 p-8" x-show="preview" x-cloak>
     <button type="button" class="btn btn-square btn-sm absolute end-2 top-2 z-10" @click="discard()" aria-label="{% translate 'Remove image' %}" title="{% translate 'Remove image' %}"><i class="icon icon-trash" aria-hidden="true"></i></button>
-    <template x-if="preview"><img :src="preview" alt="" class="h-auto max-h-full w-auto max-w-full rounded-box object-contain"></template>
+    <template x-if="preview"><img :src="preview" alt="" class="h-auto max-h-full w-auto max-w-full rounded-box object-contain bg-transparency-checkerboard"></template>
   </div>
   {% endif %}<p class="mt-1 text-sm text-error" role="alert" x-show="error" x-text="error" x-cloak></p>
 </div>

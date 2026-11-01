@@ -78,6 +78,25 @@ class TestTightFormFloatingLabels:
             assert legend.count() == 1
             assert not legend.is_visible()
 
+    def test_select_label_floats_while_empty(self, tight_page):
+        """The trigger always shows a value or "Select...", so the label never sits on it."""
+        span = tight_page.locator("#id_role_field .floating-label > span")
+        assert span.evaluate("el => getComputedStyle(el).opacity") == "1"
+        assert span.evaluate("el => getComputedStyle(el).scale") == "0.75"
+
+    def test_focused_label_takes_the_primary_colour(self, tight_page):
+        tight_page.locator("#id_nickname").fill("Ada")
+        span = tight_page.locator("#id_nickname_field .floating-label > span")
+        primary = tight_page.evaluate(
+            """() => {
+                const probe = document.createElement("span");
+                probe.style.color = "var(--color-primary)";
+                document.body.append(probe);
+                return getComputedStyle(probe).color;
+            }"""
+        )
+        assert span.evaluate("el => getComputedStyle(el).color") == primary
+
     def test_floating_wraps_the_control(self, tight_page):
         """The real control sits inside the floating-label wrapper (accessible name)."""
         assert tight_page.locator("#tight-form .floating-label > input[name='nickname']").count() == 1
