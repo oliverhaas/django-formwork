@@ -678,7 +678,7 @@ input[type="radio"]:not(.mask):not(.rating-hidden) {
     margin-left: calc(-0.25rem * 2);
 }
 
-/* File inputs.  Excludes the upload widgets' inputs: DropZone hides its
+/* File inputs.  Excludes the upload widgets' inputs: FileDropzoneInput hides its
    input, ImageDropzoneInput keeps an sr-only input inside its drop label. */
 input[type="file"]:not(.dropzone *):not(.sr-only) {
     @apply file-input w-full;
@@ -776,7 +776,7 @@ input.combobox-input {
     @apply text-primary underline cursor-pointer;
 }
 
-/* DropZone file preview — shown after file selection. */
+/* Dropzone file preview, shown after file selection. */
 .dropzone-preview-area {
     @apply relative flex items-center justify-center h-full w-full;
 }

@@ -7,14 +7,14 @@ from typing import Any
 from django import forms
 from django.utils.translation import ngettext
 
-from ._base import _DropZoneMixin, _ModuleScript, _plural_forms
+from ._base import _DropzoneMixin, _ModuleScript, _plural_forms
 
 
 def _files_selected_text(count: int) -> str:
     return ngettext("%(count)s file selected", "%(count)s files selected", count)
 
 
-class FileDropzoneInput(_DropZoneMixin, forms.FileInput):
+class FileDropzoneInput(_DropzoneMixin, forms.FileInput):
     """Dashed drop area for one file, or for several with ``multiple`` in ``attrs``.
 
     Several files need a list-aware field, as in Django's "Uploading multiple files" topic.

@@ -74,7 +74,7 @@ def _format_accept(accept: str) -> str:
     return ", ".join(labels)
 
 
-class _DropZoneMixin:
+class _DropzoneMixin:
     """Shared get_context logic for FileDropzoneInput and ImageDropzoneInput."""
 
     max_size: int | None

@@ -58,7 +58,7 @@ const getFieldValue = (el) => {
 // Derive one: the sorted set of selected option values, read from the
 // Alpine-rendered hidden inputs plus the checked boxes.  The empty hidden
 // input only marks the field as submitted.
-const getMultiSelectValue = (details) => {
+const getSelectMultipleValue = (details) => {
   const values = new Set();
   for (const el of details.querySelectorAll("input[type=hidden][name]")) {
     if (el.value) values.add(el.value);
@@ -70,9 +70,9 @@ const getMultiSelectValue = (details) => {
 // Baseline for an htmx-mode SelectMultiple comes from data-selected:
 // Alpine renders the hidden inputs only after its own init, which may run
 // after the snapshot.
-const getMultiSelectBaseline = (details) => {
+const getSelectMultipleBaseline = (details) => {
   const json = details.dataset.selected;
-  if (json === undefined) return getMultiSelectValue(details);
+  if (json === undefined) return getSelectMultipleValue(details);
   try {
     return JSON.parse(json).map(([value]) => String(value)).sort().join(",");
   } catch {
@@ -86,7 +86,7 @@ const initDirtyTracking = (form) => {
   const snapshot = () => {
     baseline.clear();
     for (const el of form.elements) {
-      // Hidden inputs stay tracked: widgets (Select, OTPInput, InputMask)
+      // Hidden inputs stay tracked: widgets (Select, InputMask)
       // hold their real value in a hidden input and dispatch events on it.
       // SelectMultiple internals are tracked as one unit below.
       if (!el.name || el.closest("details.formwork-select-multiple")) continue;
@@ -99,20 +99,20 @@ const initDirtyTracking = (form) => {
       }
     }
     for (const details of form.querySelectorAll("details.formwork-select-multiple")) {
-      baseline.set(details, getMultiSelectBaseline(details));
+      baseline.set(details, getSelectMultipleBaseline(details));
     }
   };
 
   const check = (el) => {
-    const multiselect = el.closest?.("details.formwork-select-multiple");
-    const target = multiselect || el;
+    const selectMultiple = el.closest?.("details.formwork-select-multiple");
+    const target = selectMultiple || el;
     const fieldset = target.closest("fieldset.fieldset");
     if (!fieldset) return;
     let key;
     let current;
-    if (multiselect) {
-      key = multiselect;
-      current = getMultiSelectValue(multiselect);
+    if (selectMultiple) {
+      key = selectMultiple;
+      current = getSelectMultipleValue(selectMultiple);
     } else if (el.type === "radio") {
       key = el.name;
       current = form.querySelector(`input[name="${el.name}"]:checked`)?.value ?? "";

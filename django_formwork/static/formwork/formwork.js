@@ -27,7 +27,10 @@
  *   - htmx 4.x
  *   - htmx's alpine-compat extension (`dist/ext/hx-alpine-compat.js`),
  *     after htmx
- *   - Alpine.js 3.x (if using Alpine-powered widgets)
+ *
+ * Alpine.js 3.x loads after this script, with `defer`. Module and defer
+ * scripts run in document order, so the `alpine:init` listeners exist
+ * when Alpine starts.
  */
 
 import "./formwork-core.js";
