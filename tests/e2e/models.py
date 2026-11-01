@@ -328,3 +328,18 @@ class SearchOption(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SectionRecord(FormworkModel):
+    """One row that the section-forms page saves from two forms."""
+
+    name = models.CharField(max_length=100)
+    city = models.CharField(max_length=10, blank=True, default="")
+    note = models.CharField(max_length=100, blank=True, default="")
+    color = models.CharField(max_length=20)
+
+    class Meta:
+        app_label = "e2e"
+
+    def __str__(self):
+        return self.name

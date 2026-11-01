@@ -188,3 +188,9 @@ def autosave_page(page, live_server):
 def autosave_dropdowns_page(page, live_server):
     """Navigate to the auto-saving form with a Select."""
     return _navigate(page, live_server, "/autosave-dropdowns/")
+
+
+@pytest.fixture
+def sections_page(page, live_server):
+    """Navigate to the section-forms page."""
+    return _navigate(page, live_server, "/sections/")

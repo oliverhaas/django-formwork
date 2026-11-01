@@ -510,3 +510,15 @@ class TestTemplateTags:
         html = template.render(Context())
         assert "<script" in html
         assert "formwork/formwork.js" in html
+
+    def test_formwork_sections_js_tag(self):
+        html = Template("{% load formwork %}{% formwork_sections_js %}").render(Context())
+        assert html == '<script type="module" src="/static/formwork/sections.js"></script>'
+
+    def test_formwork_section_tag(self):
+        html = Template('{% load formwork %}{% formwork_section "general" %}').render(Context())
+        assert html == '<input type="hidden" name="_formwork_section" value="general">'
+
+    def test_formwork_section_tag_escapes_the_name(self):
+        html = Template("{% load formwork %}{% formwork_section name %}").render(Context({"name": '"x'}))
+        assert 'value="&quot;x"' in html

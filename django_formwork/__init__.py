@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     )
     from django_formwork.models import FormworkModel
     from django_formwork.renderers import FormworkRenderer
+    from django_formwork.sections import section_forms
     from django_formwork.tables import FormworkRowSaveMixin
     from django_formwork.views import (
         FormworkSearchView,
@@ -54,6 +55,7 @@ _EXPORTS = {
     "FormworkValidateView": "django_formwork.views",
     "formwork_inlineformset_factory": "django_formwork.formsets",
     "formwork_modelformset_factory": "django_formwork.formsets",
+    "section_forms": "django_formwork.sections",
 }
 
 __all__ = [
@@ -75,6 +77,7 @@ __all__ = [
     "__version__",
     "formwork_inlineformset_factory",
     "formwork_modelformset_factory",
+    "section_forms",
 ]
 
 

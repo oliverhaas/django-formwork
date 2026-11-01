@@ -5,9 +5,9 @@ from django.db.models import QuerySet
 from django.forms.models import construct_instance
 from django.http import HttpRequest, HttpResponse
 from django.template import engines
-from e2e.models import AutoSaveFormData, BasicFormData, City, Region, SearchOption
+from e2e.models import AutoSaveFormData, BasicFormData, City, Region, SearchOption, SectionRecord
 
-from django_formwork import ChoiceLabel
+from django_formwork import ChoiceLabel, section_forms
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkValidateView
 from django_formwork.widgets import (
@@ -962,6 +962,30 @@ class AutoSaveDropdownForm(FormworkForm):
     )
 
 
+class SectionGeneralForm(FormworkModelForm):
+    """The first section of the section-forms page."""
+
+    city = forms.ChoiceField(
+        choices=[("", ""), ("nyc", "New York"), ("ldn", "London"), ("tyo", "Tokyo")],
+        widget=Select(),
+        required=False,
+        label="City",
+    )
+
+    class Meta:
+        model = SectionRecord
+        fields = ["name", "city"]
+
+
+class SectionExtrasForm(FormworkModelForm):
+    """The second section: it posts only its changed fields."""
+
+    class Meta:
+        model = SectionRecord
+        fields = ["note", "color"]
+        validate_dirty_only = True
+
+
 class UploadsForm(FormworkForm):
     """File upload widgets with variations."""
 
@@ -1603,6 +1627,38 @@ _ELEMENTS_CARD = _card_body(
 )
 _ELEMENTS_HTML = _page_html("Standalone Elements", _ELEMENTS_BODY)
 
+_SECTION_FORM_ATTRS = (
+    'data-section-form novalidate hx-post="/sections/" hx-trigger="change delay:300ms" '
+    'hx-swap="outerMorph" hx-sync="closest [data-section-forms]:queue all"'
+)
+
+_SECTIONS_INNER = (
+    "{% load formwork %}\n"
+    '<div id="sections" class="flex flex-col gap-6" data-section-forms>\n'
+    "  {% if tab == '2' %}\n"
+    '  <p id="second_tab">Second tab</p>\n'
+    "  {% else %}\n"
+    f'  <form id="general_form" hx-select="#general_form" {_SECTION_FORM_ATTRS}>\n'
+    '    {% csrf_token %}{% formwork_section "general" %}\n'
+    "    {{ sections.general }}\n"
+    "  </form>\n"
+    f'  <form id="extras_form" hx-select="#extras_form" data-send-changed {_SECTION_FORM_ATTRS}>\n'
+    '    {% csrf_token %}{% formwork_section "extras" %}\n'
+    '    <div data-section-indicator="#extras_indicator">{{ sections.extras.note.as_field_group }}</div>\n'
+    "    {{ sections.extras.color.as_field_group }}\n"
+    "  </form>\n"
+    '  <span id="extras_indicator" class="loading loading-spinner loading-sm htmx-indicator" aria-hidden="true">'
+    "</span>\n"
+    "  {% endif %}\n"
+    "</div>\n"
+    '<button id="second_tab_button" type="button" class="btn mt-4" hx-get="/sections/?tab=2" '
+    'hx-target="#sections" hx-select="#sections" hx-swap="outerHTML">Second tab</button>'
+)
+
+_SECTIONS_HTML = _page_html("Section Forms", _card_body("Section Forms", _SECTIONS_INNER)).replace(
+    "</head>", "  {% load formwork %}{% formwork_sections_js %}\n</head>"
+)
+
 _FORM_HTML_FNS = {
     "complex": _complex_form_html,
     "autosave": _autosave_form_html,
@@ -1829,3 +1885,14 @@ def complex_view(request: HttpRequest) -> HttpResponse:
     ctx = {"form": form, "saved": bool(saved)}
     template = engine.from_string(card_tmpl if is_htmx else page_tmpl)
     return HttpResponse(template.render(ctx, request))
+
+
+def sections_view(request: HttpRequest) -> HttpResponse:
+    """Two section forms that save one SectionRecord, and a tab that replaces them."""
+    record = SectionRecord.objects.first() or SectionRecord.objects.create(name="Lamp", city="nyc", color="red")
+    sections = section_forms(request, {"general": SectionGeneralForm, "extras": SectionExtrasForm}, instance=record)
+    for form in sections.values():
+        if form.is_bound and form.is_valid():
+            form.save()
+    template = engines["django"].from_string(_SECTIONS_HTML)
+    return HttpResponse(template.render({"sections": sections, "tab": request.GET.get("tab")}, request))
