@@ -55,11 +55,11 @@ def _format_accept(accept: str) -> str:
 
 
 class _DropZoneMixin:
-    """Shared get_context logic for FileDropZone and ImageDropZone."""
+    """Shared get_context logic for FileDropzoneInput and ImageDropzoneInput."""
 
     max_size: int | None
 
-    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+    def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)  # type: ignore[misc]
         accept = context["widget"]["attrs"].get("accept", "")
         if accept:

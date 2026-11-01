@@ -15,19 +15,19 @@ from django_formwork.widgets import (
     ComboBoxMultiple,
     DataList,
     DatePicker,
-    FileDropZone,
-    ImageDropZone,
+    FileDropzoneInput,
+    ImageDropzoneInput,
     InputMask,
-    InputNumber,
     OTPInput,
-    PasswordReveal,
+    PasswordInput,
     Range,
     Rating,
     Select,
     SelectMultiple,
+    StepperNumberInput,
     Textarea,
     TextInput,
-    Toggle,
+    ToggleInput,
     ValidatedTextarea,
 )
 
@@ -190,14 +190,14 @@ class AutoSaveForm(FormworkModelForm):
 
 
 class SimpleForm(FormworkForm):
-    """Toggle, range slider, password reveal, datalist, rating."""
+    """Toggle switch, range slider, password reveal, datalist, rating."""
 
-    toggle = forms.BooleanField(widget=Toggle, required=False)
+    toggle = forms.BooleanField(widget=ToggleInput, required=False)
     volume = forms.IntegerField(
         widget=Range(attrs={"min": "0", "max": "100", "step": "10"}),
     )
     password = forms.CharField(
-        widget=PasswordReveal(attrs={"placeholder": "Enter password"}),
+        widget=PasswordInput(attrs={"placeholder": "Enter password"}),
     )
     browser = forms.CharField(
         widget=DataList(
@@ -263,7 +263,7 @@ class TightForm(FormworkForm):
     # errors to the tooltip showcase above.
     nickname = forms.CharField(
         required=False,
-        widget=TextInput(attrs={"placeholder": "Nickname"}, floating_label=True),
+        widget=TextInput(attrs={"placeholder": "Nickname"}, floating=True),
     )
     role = forms.ChoiceField(
         required=False,
@@ -272,7 +272,7 @@ class TightForm(FormworkForm):
     )
     note = forms.CharField(
         required=False,
-        widget=Textarea(attrs={"placeholder": "Note"}, floating_label=True),
+        widget=Textarea(attrs={"placeholder": "Note"}, floating=True),
     )
 
     def clean_username(self):
@@ -948,12 +948,12 @@ class UploadsForm(FormworkForm):
     """File upload widgets with variations."""
 
     dropzone = forms.FileField(
-        widget=FileDropZone(attrs={"multiple": True}),
+        widget=FileDropzoneInput(attrs={"multiple": True}),
         required=False,
         label="Drop zone (multi)",
     )
     dropzone_restricted = forms.FileField(
-        widget=FileDropZone(
+        widget=FileDropzoneInput(
             attrs={"accept": ".pdf"},
             max_size=5 * 1024 * 1024,
         ),
@@ -961,11 +961,11 @@ class UploadsForm(FormworkForm):
         label="Drop zone (PDF only, 5 MB max)",
     )
     avatar = forms.ImageField(
-        widget=ImageDropZone,
+        widget=ImageDropzoneInput,
         required=False,
     )
     avatar_restricted = forms.ImageField(
-        widget=ImageDropZone(
+        widget=ImageDropzoneInput(
             attrs={"accept": ".png,.jpg,.jpeg"},
             max_size=2 * 1024 * 1024,
         ),
@@ -992,7 +992,7 @@ class TextareaForm(FormworkForm):
 
 
 class NewWidgetsForm(FormworkForm):
-    """DatePicker, InputNumber, OTP, Country, InputMask."""
+    """DatePicker, StepperNumberInput, OTP, Country, InputMask."""
 
     due_date = forms.DateField(
         widget=DatePicker,
@@ -1000,12 +1000,12 @@ class NewWidgetsForm(FormworkForm):
         help_text="Calendar date picker with month navigation.",
     )
     quantity = forms.IntegerField(
-        widget=InputNumber(attrs={"min": "1", "max": "99", "step": "1"}),
+        widget=StepperNumberInput(attrs={"min": "1", "max": "99", "step": "1"}),
         initial=1,
         help_text="Number input with +/- stepper buttons.",
     )
     price = forms.FloatField(
-        widget=InputNumber(attrs={"min": "0", "max": "10", "step": "0.1"}),
+        widget=StepperNumberInput(attrs={"min": "0", "max": "10", "step": "0.1"}),
         initial=0.2,
         required=False,
         help_text="Float stepper: 0.1 increments round to step precision.",
@@ -1013,7 +1013,7 @@ class NewWidgetsForm(FormworkForm):
     otp_code = forms.CharField(
         widget=OTPInput(length=6),
         required=False,
-        help_text="One-time password with auto-advance between digits.",
+        help_text="One-time password, one box per digit.",
     )
     country = forms.ChoiceField(
         choices=[("", "")] + [(c, ChoiceLabel(n, icon=flag)) for c, flag, n in _COUNTRIES],
@@ -1038,10 +1038,10 @@ class ComplexForm(FormworkForm):
     """Cross-field validation with dropdowns, auto-validated on every change."""
 
     password = forms.CharField(
-        widget=PasswordReveal(attrs={"placeholder": "Password"}),
+        widget=PasswordInput(attrs={"placeholder": "Password"}),
     )
     confirm_password = forms.CharField(
-        widget=PasswordReveal(attrs={"placeholder": "Confirm password"}),
+        widget=PasswordInput(attrs={"placeholder": "Confirm password"}),
     )
     country = forms.ChoiceField(
         choices=[
@@ -1425,7 +1425,12 @@ _PAGES = [
         "Standalone Elements",
         "Raw HTML inputs without a Django form, auto-styled by formwork.css",
     ),
-    ("simple", "/simple/", "Simple Custom Widgets", "Toggle, range slider, password reveal, datalist, and star rating"),
+    (
+        "simple",
+        "/simple/",
+        "Simple Custom Widgets",
+        "Toggle switch, range slider, password reveal, datalist, and star rating",
+    ),
     (
         "inline-errors",
         "/inline-errors/",
@@ -1480,7 +1485,7 @@ _PAGES = [
         "new-widgets",
         "/new-widgets/",
         "New Widgets",
-        "DatePicker, InputNumber, OTP, Country, InputMask",
+        "DatePicker, StepperNumberInput, OTP, Country, InputMask",
     ),
     (
         "complex",

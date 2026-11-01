@@ -57,3 +57,10 @@ def test_checkbox_with_text_error_wraps_box_and_text_in_tooltip(renderer):
     tooltip = soup.find("div", class_="tooltip")
     assert tooltip.find("label", class_="checkbox-single") is not None
     assert "required" in tooltip.find(id="id_terms_error").get_text().lower()
+
+
+@pytest.mark.integration
+def test_checkbox_text_is_not_a_placeholder(renderer):
+    """HTML allows no placeholder on a checkbox, so the text renders only as the visible span."""
+    soup = render_form(NewsletterForm(), renderer=renderer)
+    assert not soup.find("input", attrs={"name": "newsletter"}).has_attr("placeholder")

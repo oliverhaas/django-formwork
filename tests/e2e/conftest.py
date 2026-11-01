@@ -108,7 +108,7 @@ def tight_page(page, live_server):
 
 @pytest.fixture
 def toggle_page(page, live_server):
-    """Navigate to a page containing the Toggle widget."""
+    """Navigate to a page containing the ToggleInput widget."""
     return _navigate(page, live_server, "/simple/")
 
 
@@ -156,7 +156,7 @@ def textarea_page(page, live_server):
 
 @pytest.fixture
 def new_widgets_page(page, live_server):
-    """Navigate to the new-widgets page (DatePicker, InputNumber, OTP, InputMask)."""
+    """Navigate to the new-widgets page (DatePicker, StepperNumberInput, OTP, InputMask)."""
     return _navigate(page, live_server, "/new-widgets/")
 
 

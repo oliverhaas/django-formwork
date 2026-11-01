@@ -30,6 +30,19 @@ document.addEventListener("alpine:init", () => {
       });
     },
 
+    show() {
+      this.open = true;
+    },
+    close() {
+      this.open = false;
+    },
+    toggle() {
+      this.open = !this.open;
+    },
+    onInput() {
+      this.value = this.$refs.input.value;
+    },
+
     buildDays() {
       const first = new Date(this.year, this.month, 1);
       const last = new Date(this.year, this.month + 1, 0);
@@ -75,8 +88,13 @@ document.addEventListener("alpine:init", () => {
       const t = new Date();
       return day === t.getDate() && this.month === t.getMonth() && this.year === t.getFullYear();
     },
-    monthName() {
-      return new Date(this.year, this.month).toLocaleString("default", { month: "long" });
+    dayClass(day) {
+      return { "btn-primary": this.isSelected(day), "font-bold": this.isToday(day) };
+    },
+    // Month and year in the page's language, so they match the translated labels.
+    get title() {
+      const lang = document.documentElement.lang || undefined;
+      return new Date(this.year, this.month).toLocaleString(lang, { month: "long", year: "numeric" });
     },
   }));
 });

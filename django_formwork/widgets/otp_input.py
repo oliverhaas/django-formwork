@@ -1,42 +1,30 @@
-"""OTPInput widget."""
+"""One-time code input."""
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from django import forms
 
-from ._base import _ModuleScript
-
 
 class OTPInput(forms.TextInput):
-    """One-time password / PIN code input.
+    """One-time code of ``length`` digits in a single input, drawn as one box per digit.
 
-    Renders N single-character inputs that auto-advance on typing.
-    The submitted value is the concatenated string.  Uses Alpine.js.
-
-    Usage::
-
-        code = forms.CharField(widget=OTPInput(length=6))
+    One real input keeps SMS autofill and paste working.
     """
 
     template_name = "formwork/widgets/otp_input.html"
-
-    class Media:
-        js = (_ModuleScript("formwork/widgets/otp_input.js"),)
 
     def __init__(self, attrs: dict[str, Any] | None = None, *, length: int = 6) -> None:
         super().__init__(attrs)
         self.length = length
 
-    def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+    def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
-        context["widget"]["length"] = self.length
-        context["widget"]["digits"] = list(range(self.length))
-        # Pre-fill individual digits from current value.  Coerce to str:
-        # CharField.prepare_value passes non-str initials (e.g. ints) through.
-        val = "" if value is None else str(value)
-        context["widget"]["initial_digits"] = [val[i] if i < len(val) else "" for i in range(self.length)]
-        context["widget"]["initial_digits_json"] = json.dumps(context["widget"]["initial_digits"])
+        widget = context["widget"]
+        widget["attrs"].setdefault("inputmode", "numeric")
+        widget["attrs"].setdefault("autocomplete", "one-time-code")
+        widget["attrs"]["maxlength"] = self.length
+        widget["attrs"]["pattern"] = f"[0-9]{{{self.length}}}"
+        widget["slots"] = range(self.length)
         return context

@@ -10,13 +10,13 @@ from django_formwork.renderers import FormworkRenderer
 from django_formwork.widgets import (
     ComboBox,
     DataList,
-    FileDropZone,
-    PasswordReveal,
+    FileDropzoneInput,
+    PasswordInput,
     Range,
     Rating,
     Select,
     SelectMultiple,
-    Toggle,
+    ToggleInput,
 )
 
 COUNTRY_CHOICES = [
@@ -50,7 +50,7 @@ class LargeForm(FormworkForm):
     name = forms.CharField(max_length=100, help_text="Your full name")
     email = forms.EmailField(help_text="Email address")
     message = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), help_text="Message body")
-    password = forms.CharField(widget=PasswordReveal, help_text="Password")
+    password = forms.CharField(widget=PasswordInput, help_text="Password")
     url = forms.URLField(required=False, help_text="Website URL")
     country = forms.ChoiceField(choices=COUNTRY_CHOICES, widget=Select, help_text="Country")
     languages = forms.MultipleChoiceField(
@@ -80,13 +80,13 @@ class LargeForm(FormworkForm):
         widget=Rating,
         help_text="Rating",
     )
-    dark_mode = forms.BooleanField(widget=Toggle, required=False, help_text="Dark mode")
+    dark_mode = forms.BooleanField(widget=ToggleInput, required=False, help_text="Dark mode")
     priority = forms.ChoiceField(
         choices=[("low", "Low"), ("med", "Medium"), ("high", "High")],
         widget=forms.RadioSelect,
         help_text="Priority",
     )
-    attachment = forms.FileField(widget=FileDropZone, required=False, help_text="Attachment")
+    attachment = forms.FileField(widget=FileDropzoneInput, required=False, help_text="Attachment")
     agree = forms.BooleanField(help_text="I agree to the terms")
 
 

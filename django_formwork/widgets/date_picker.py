@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from django import forms
+from django.utils.dates import WEEKDAYS_ABBR
 
 from ._base import _ModuleScript
 
@@ -24,14 +25,9 @@ _PLACEHOLDER_TOKENS = {
 
 
 class DatePicker(forms.DateInput):
-    """Date input with an Alpine.js calendar dropdown.
+    """Text date input with a calendar dropdown, opt-in where the native ``DateInput`` does not fit.
 
-    Renders a text input with a popover calendar panel for date selection.
-    The submitted value is a date string in ``YYYY-MM-DD`` format.
-
-    Usage::
-
-        due_date = forms.DateField(widget=DatePicker)
+    The calendar writes ``YYYY-MM-DD``; ``format`` sets how the server renders the value.
     """
 
     template_name = "formwork/widgets/date_picker.html"
@@ -55,4 +51,6 @@ class DatePicker(forms.DateInput):
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
         widget["extra_class"] = widget["attrs"].pop("class", "")
+        # Sunday first, like Date.getDay() in the calendar grid.
+        widget["weekdays"] = [WEEKDAYS_ABBR[day] for day in (6, 0, 1, 2, 3, 4, 5)]
         return context

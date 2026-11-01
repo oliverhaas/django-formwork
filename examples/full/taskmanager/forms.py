@@ -11,15 +11,15 @@ from django_formwork import ChoiceLabel, FormworkForm, FormworkModelForm
 from django_formwork.widgets import (
     ComboBox,
     DatePicker,
-    FileDropZone,
-    ImageDropZone,
+    FileDropzoneInput,
+    ImageDropzoneInput,
     OTPInput,
-    PasswordReveal,
+    PasswordInput,
     Range,
     Rating,
     Select,
     SelectMultiple,
-    Toggle,
+    ToggleInput,
     ValidatedTextarea,
 )
 
@@ -131,13 +131,13 @@ class TaskEditForm(FormworkModelForm):
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
             "due_date": DatePicker,
-            "cover_image": ImageDropZone(max_size=5 * 1024 * 1024),
-            "attachment": FileDropZone(max_size=10 * 1024 * 1024),
+            "cover_image": ImageDropzoneInput(max_size=5 * 1024 * 1024),
+            "attachment": FileDropzoneInput(max_size=10 * 1024 * 1024),
         }
         help_texts = {
             "due_date": "DatePicker with a calendar dropdown.",
-            "cover_image": "Shown as a thumbnail in the task list (ImageDropZone, ≤5 MB).",
-            "attachment": "Any single file (FileDropZone, ≤10 MB).",
+            "cover_image": "Shown as a thumbnail in the task list (ImageDropzoneInput, ≤5 MB).",
+            "attachment": "Any single file (FileDropzoneInput, ≤10 MB).",
         }
 
 
@@ -216,7 +216,7 @@ class WizardConfigForm(FormworkForm):
     """Step 2: configuration."""
 
     enable_notifications = forms.BooleanField(
-        widget=Toggle,
+        widget=ToggleInput,
         required=False,
         initial=True,
         help_text="Email updates when tasks change.",
@@ -273,10 +273,10 @@ class SettingsForm(FormworkModelForm):
         help_text="Where you're based.",
     )
     new_password = forms.CharField(
-        widget=PasswordReveal,
+        widget=PasswordInput,
         required=False,
         help_text=(
-            "Leave blank to keep your current password. The eye button (PasswordReveal) "
+            "Leave blank to keep your current password. The eye button (PasswordInput) "
             "shows what you typed. If you do change it, use at "
             "least 12 characters and avoid reusing a password from another site. A "
             "passphrase of a few unrelated words is easy to remember and hard to guess."
@@ -313,7 +313,7 @@ class SettingsForm(FormworkModelForm):
         fields = ["full_name", "email", "phone", "country", "avatar", "favourite_food", "satisfaction"]
         widgets = {
             "phone": PhoneInput,
-            "avatar": ImageDropZone(max_size=2 * 1024 * 1024),
+            "avatar": ImageDropzoneInput(max_size=2 * 1024 * 1024),
             "favourite_food": ComboBox(
                 suggestions=["Pizza", "Pasta", "Sushi", "Tacos", "Curry", "Ramen", "Salad"],
             ),
@@ -321,7 +321,7 @@ class SettingsForm(FormworkModelForm):
         help_texts = {
             "phone": "Country code + number (custom PhoneInput multi-widget).",
             "avatar": (
-                "Square-ish PNG or JPG, ≤2 MB (ImageDropZone). The picture is shown at small sizes "
+                "Square-ish PNG or JPG, ≤2 MB (ImageDropzoneInput). The picture is shown at small sizes "
                 "throughout the app, so pick something that stays recognizable as a "
                 "tiny thumbnail. A close-up works better than a wide shot."
             ),

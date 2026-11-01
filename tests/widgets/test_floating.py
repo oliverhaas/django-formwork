@@ -7,11 +7,9 @@ from django import forms
 from django.core.exceptions import ImproperlyConfigured
 
 from django_formwork.forms import FormworkForm
-from django_formwork.widgets import Select, SelectMultiple, Textarea, TextInput
+from django_formwork.widgets import PasswordInput, Select, SelectMultiple, Textarea, TextInput
 
 from .conftest import render_form, render_widget
-
-WRAPPER_TEMPLATE = "formwork/widgets/floating_label.html"
 
 
 class FloatingForm(FormworkForm):
@@ -19,7 +17,7 @@ class FloatingForm(FormworkForm):
 
     nickname = forms.CharField(
         required=False,
-        widget=TextInput(attrs={"placeholder": "Nickname"}, floating_label=True),
+        widget=TextInput(attrs={"placeholder": "Nickname"}, floating=True),
     )
     role = forms.ChoiceField(
         required=False,
@@ -28,38 +26,16 @@ class FloatingForm(FormworkForm):
     )
     note = forms.CharField(
         required=False,
-        widget=Textarea(attrs={"placeholder": "Note"}, floating_label=True),
+        widget=Textarea(attrs={"placeholder": "Note"}, floating=True),
     )
-
-
-# ─── Level 1: Widget object (pure Python) ────────────────────────────────
-
-
-@pytest.mark.unit
-def test_floating_label_defaults_off():
-    """floating_label defaults to False and leaves template_name untouched."""
-    widget = TextInput()
-    assert widget.floating_label is False
-    assert widget.template_name == forms.TextInput.template_name
-
-
-@pytest.mark.unit
-def test_floating_label_swaps_template():
-    """floating_label=True points rendering at the wrapper template."""
-    widget = TextInput(floating_label=True)
-    assert widget.floating_label is True
-    assert widget.template_name == WRAPPER_TEMPLATE
-    assert widget._inner_template_name == forms.TextInput.template_name
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("cls", [TextInput, Textarea])
-def test_floating_widgets_accept_flag(cls):
-    """Every floating widget accepts the flag alongside stock constructor args."""
-    widget = cls(attrs={"placeholder": "X"}, floating_label=True)
-    assert widget.floating_label is True
-    assert widget.attrs["placeholder"] == "X"
-    assert widget.template_name == WRAPPER_TEMPLATE
+def test_floating_text_requires_placeholder(cls):
+    """The placeholder is the floating label's text, so a floating text widget needs one."""
+    with pytest.raises(ImproperlyConfigured):
+        cls(floating=True).render("f", None, attrs={"id": "id_f"})
 
 
 @pytest.mark.unit
@@ -70,14 +46,11 @@ def test_floating_select_requires_placeholder(cls):
         cls(choices=[("a", "A")], floating=True).render("f", None, attrs={"id": "id_f"})
 
 
-# ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
-
-
 @pytest.mark.unit
 def test_floating_render_wraps_input():
     """Floating render wraps the <input> in <label class="floating-label">."""
     soup = render_widget(
-        TextInput(attrs={"placeholder": "Nickname"}, floating_label=True),
+        TextInput(attrs={"placeholder": "Nickname"}, floating=True),
         name="nickname",
         attrs={"id": "id_nickname"},
     )
@@ -90,7 +63,7 @@ def test_floating_render_wraps_input():
 def test_floating_span_equals_placeholder():
     """The floating <span> text is the placeholder."""
     soup = render_widget(
-        TextInput(attrs={"placeholder": "Nickname"}, floating_label=True),
+        TextInput(attrs={"placeholder": "Nickname"}, floating=True),
         name="nickname",
         attrs={"id": "id_nickname"},
     )
@@ -102,7 +75,7 @@ def test_floating_span_equals_placeholder():
 def test_floating_input_keeps_placeholder_attr():
     """A text <input> keeps its native placeholder attribute as well."""
     soup = render_widget(
-        TextInput(attrs={"placeholder": "Nickname"}, floating_label=True),
+        TextInput(attrs={"placeholder": "Nickname"}, floating=True),
         name="nickname",
         attrs={"id": "id_nickname"},
     )
@@ -113,7 +86,7 @@ def test_floating_input_keeps_placeholder_attr():
 def test_textarea_floating_wraps():
     """Textarea floating render wraps a <textarea>, span carries the text."""
     soup = render_widget(
-        Textarea(attrs={"placeholder": "Note"}, floating_label=True),
+        Textarea(attrs={"placeholder": "Note"}, floating=True),
         name="note",
         attrs={"id": "id_note"},
     )
@@ -152,13 +125,10 @@ def test_select_floating_label_names_the_trigger(cls):
     [(TextInput, forms.TextInput), (Textarea, forms.Textarea)],
 )
 def test_non_floating_identical_to_stock(floating_cls, stock_cls):
-    """floating_label=False renders byte-for-byte identically to Django's widget."""
+    """Without ``floating`` the widgets render byte-for-byte like Django's own."""
     ours = floating_cls(attrs={"placeholder": "X"})
     stock = stock_cls(attrs={"placeholder": "X"})
     assert ours.render("f", None, attrs={"id": "id_f"}) == stock.render("f", None, attrs={"id": "id_f"})
-
-
-# ─── Level 3: Form integration ───────────────────────────────────────────
 
 
 @pytest.mark.integration
@@ -185,7 +155,24 @@ def test_floating_wraps_control_in_form(renderer):
     assert label.find("input", attrs={"name": "nickname"}) is not None
 
 
-# ─── Level 5+: E2e, morph, screenshot ────────────────────────────────────
-#
-# No e2e page renders Floating widgets yet, so the e2e, morph-resilience,
-# and screenshot levels are missing entirely.
+@pytest.mark.unit
+def test_floating_password_input_keeps_the_reveal_toggle():
+    """The wrapper includes the widget's own template, so a templated widget floats unchanged."""
+    soup = render_widget(PasswordInput(attrs={"placeholder": "Password"}, floating=True), name="pw")
+    label = soup.find("label", class_="floating-label")
+    assert label.select_one('[x-data="formworkPasswordInput"] button') is not None
+
+
+@pytest.mark.unit
+def test_floating_pattern_hint_sits_outside_the_label():
+    """The pattern hint follows the floating label, so the label keeps only the control and its text."""
+
+    class CodeInput(TextInput):
+        pattern_hint = "Use three digits."
+
+    soup = render_widget(CodeInput(attrs={"placeholder": "Code", "pattern": "[0-9]{3}"}, floating=True), name="code")
+    group = soup.select_one("div.group\\/pattern")
+    label = group.find("label", class_="floating-label", recursive=False)
+    assert label.find("span").get_text() == "Code"
+    assert "Use three digits." not in label.get_text()
+    assert group.select_one("[role=alert]").get_text() == "Use three digits."

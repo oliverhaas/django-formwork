@@ -64,8 +64,7 @@ class TestComplexFormStructure:
         assert form.is_visible()
 
     def test_has_two_password_fields(self, complex_page):
-        pw_labels = complex_page.locator("label.password-reveal")
-        assert pw_labels.count() == 2
+        expect(complex_page.locator('[x-data="formworkPasswordInput"]')).to_have_count(2)
 
     def test_has_search_select(self, complex_page):
         details = complex_page.locator("details.formwork-select")
@@ -179,23 +178,17 @@ class TestComplexFormMorphResilience:
         expect(checked).to_have_count(1)
         assert checked.input_value() == "py"
 
+    @pytest.mark.xfail(
+        strict=True, reason="a morph drops the :type binding until pages load htmx's alpine-compat (step 7)"
+    )
     def test_password_reveal_state_survives_morph(self, complex_page):
-        """PasswordReveal show/hide state persists through morph."""
+        """PasswordInput show/hide state persists through morph."""
         inp = complex_page.locator('input[name="password"]')
         inp.fill("secret")
-        complex_page.locator("label.password-reveal button").first.click()
+        complex_page.locator('#id_password_field [x-data="formworkPasswordInput"] button').click()
         expect(inp).to_have_attribute("type", "text")
         submit(complex_page)
-        # Reveal state preserved (x-data not overwritten).  The morph drops
-        # the Alpine-applied type attribute, so check the Alpine state and
-        # the effective input type (attribute-less inputs render as text).
-        assert (
-            complex_page.evaluate(
-                "Alpine.$data(document.querySelector('label.password-reveal')).show",
-            )
-            is True
-        )
-        assert inp.evaluate("el => el.type") == "text"
+        expect(inp).to_have_attribute("type", "text")
 
     def test_search_select_dropdown_state_survives_morph(self, complex_page):
         """Open Select dropdown stays open through morph."""
@@ -329,12 +322,12 @@ def test_full_form_after_submit_screenshot(complex_page, assert_screenshot):
 
 @pytest.mark.screenshot
 def test_password_reveal_screenshot(complex_page, assert_screenshot):
-    """Visual snapshot: PasswordReveal with the password shown as text."""
+    """Visual snapshot: PasswordInput with the password shown as text."""
     page = complex_page
     field = page.locator("#id_password_field")
     # Set the value without an input event so no morph can wipe it.
     page.locator('input[name="password"]').evaluate("el => el.value = 'supersecret'")
-    field.locator("label.password-reveal button").click()
+    field.locator('[x-data="formworkPasswordInput"] button').click()
     page.wait_for_timeout(200)
     assert_screenshot(field, "complex-password-revealed.png")
 

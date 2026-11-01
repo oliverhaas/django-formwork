@@ -1,11 +1,28 @@
-// The shared base of the formwork dropdown Alpine.data components
-// (formworkSelect, formworkSelectMultiple, formworkComboBox).
+// Helpers shared by the formwork Alpine.data components, and the base of the
+// dropdowns (formworkSelect, formworkSelectMultiple, formworkComboBox).
 
 // Reset that also notifies x-model and any htmx trigger bound to `input`.
-const clearInput = (input) => {
+export const clearInput = (input) => {
   input.value = "";
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.focus();
+};
+
+// Mirrors the file input's `accept` list: MIME types, `type/*` and extensions.
+export const acceptsFile = (file, accept) =>
+  !accept ||
+  accept.split(",").some((part) => {
+    const pattern = part.trim().toLowerCase();
+    if (pattern.endsWith("/*")) return file.type.startsWith(pattern.slice(0, -1));
+    if (pattern.startsWith(".")) return file.name.toLowerCase().endsWith(pattern);
+    return file.type === pattern;
+  });
+
+// A FileList, the only type a file input's `files` accepts.
+export const fileList = (files) => {
+  const transfer = new DataTransfer();
+  for (const file of files) transfer.items.add(file);
+  return transfer.files;
 };
 
 const visibleOptions = (component) =>

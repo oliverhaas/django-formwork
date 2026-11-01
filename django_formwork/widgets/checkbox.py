@@ -25,3 +25,8 @@ class CheckboxInput(forms.CheckboxInput):
     ) -> None:
         super().__init__(attrs, check_test)
         self.text = text
+
+    def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        context["widget"]["text"] = self.text
+        return context
