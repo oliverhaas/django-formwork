@@ -10,12 +10,15 @@ from bs4 import BeautifulSoup
 from django import forms
 from django.contrib.auth.models import User
 from django.test import Client
+from django.utils.safestring import mark_safe
 
 import django_formwork
+from django_formwork import ChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import ComboBox, ComboBoxMultiple, Select, SelectMultiple
 
 FRUITS = [("a", "Apples"), ("b", "Bananas"), ("c", "Cherries"), ("d", "Dates")]
+ICON_FRUITS = [("a", ChoiceLabel("Apples", icon=mark_safe('<i class="icon icon-apple"></i>'))), *FRUITS[1:]]
 MANY = [(str(i), f"Option {i}") for i in range(200)]
 SELECTED = "150"
 FIRST_PAGE = [str(i) for i in range(20)]
@@ -29,9 +32,9 @@ def _users(request):
 class _ToggleForm(FormworkForm):
     """One field the browser filters, one the search endpoint feeds."""
 
-    client = forms.MultipleChoiceField(choices=FRUITS, widget=SelectMultiple)
+    client = forms.MultipleChoiceField(choices=ICON_FRUITS, widget=SelectMultiple)
     served = forms.MultipleChoiceField(
-        choices=[*FRUITS, *MANY],
+        choices=[*ICON_FRUITS, *MANY],
         widget=SelectMultiple(search_fields=["email"], search_queryset=_users, search_decorator=None),
     )
 
@@ -71,23 +74,23 @@ class _FamilyForm(FormworkForm):
     floating = forms.ChoiceField(choices=FRUITS, widget=Select(attrs={"placeholder": "Fruit"}, floating=True))
 
 
-def _toggle_text(field: str, selected: list[str]) -> str:
+def _toggle_html(field: str, selected: list[str]) -> str:
     html = str(_ToggleForm(initial={field: selected})[field])
-    span = BeautifulSoup(html, "html.parser").select_one("summary [x-text]")
+    span = BeautifulSoup(html, "html.parser").select_one("summary [x-html]")
     assert span is not None
-    return " ".join(span.get_text().split())
+    return span.decode_contents().strip()
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("field", ["client", "served"])
-def test_toggle_names_the_selected_options(field: str) -> None:
-    assert _toggle_text(field, ["a", "b"]) == "Apples, Bananas"
+def test_toggle_names_the_selected_options_with_their_icons(field: str) -> None:
+    assert _toggle_html(field, ["a", "b"]) == '<i class="icon icon-apple"></i> Apples, Bananas'
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("field", ["client", "served"])
 def test_toggle_counts_selections_past_the_summary_threshold(field: str) -> None:
-    assert _toggle_text(field, ["a", "b", "c", "d"]) == "4 selected"
+    assert _toggle_html(field, ["a", "b", "c", "d"]) == "4 selected"
 
 
 def _values(form: forms.Form, field: str) -> list[str]:

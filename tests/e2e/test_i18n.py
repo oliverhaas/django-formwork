@@ -4,7 +4,7 @@ from playwright.sync_api import expect
 
 
 def test_select_multiple_count_stays_translated_when_the_selection_changes(translated_page):
-    text = translated_page.locator("summary#id_colors [x-text]")
+    text = translated_page.locator("summary#id_colors [x-html]")
     expect(text).to_have_text("⟦4 selected⟧")
     translated_page.locator("summary#id_colors").click()
     translated_page.locator('#id_colors_wrapper input[value="black"]').dispatch_event("click")

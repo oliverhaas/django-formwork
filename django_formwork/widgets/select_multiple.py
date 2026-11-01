@@ -6,6 +6,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from django import forms
+from django.utils.html import conditional_escape, format_html
 from django.utils.translation import ngettext
 
 from ._base import _ModuleScript, _plural_forms
@@ -16,10 +17,17 @@ if TYPE_CHECKING:
 
     from django.core.files.uploadedfile import UploadedFile
     from django.utils.datastructures import MultiValueDict
+    from django.utils.safestring import SafeString
 
 
 def _selected_text(count: int) -> str:
     return ngettext("%(count)s selected", "%(count)s selected", count)
+
+
+def _pick_html(option: Mapping[str, Any]) -> SafeString:
+    """What the toggle shows for one selected option, as the row does: icon, then rich label or text."""
+    text = option["label_html"] or option["label"]
+    return format_html("{} {}", option["icon"], text) if option["icon"] else conditional_escape(text)
 
 
 class SelectMultiple(SearchableSelectMixin, forms.SelectMultiple):
@@ -50,8 +58,11 @@ class SelectMultiple(SearchableSelectMixin, forms.SelectMultiple):
         # a negated guard would name them.
         widget["option_name"] = "" if widget["search_url"] else name
         selected = widget["selected_options"]
-        widget["selected_labels"] = [option["label"] for option in selected]
-        widget["selected_json"] = json.dumps([[str(option["value"]), option["label"]] for option in selected])
+        picks = [_pick_html(option) for option in selected]
+        widget["selected_picks"] = picks
+        widget["selected_json"] = json.dumps(
+            [[str(option["value"]), pick] for option, pick in zip(selected, picks, strict=True)]
+        )
         widget["selected_count_text"] = _selected_text(len(selected)) % {"count": len(selected)}
         widget["count_text"] = _plural_forms(_selected_text)
         return context

@@ -125,7 +125,7 @@ def test_select_multiple_selected_json_empty_list():
 
 @pytest.mark.unit
 def test_select_multiple_selected_json_with_value():
-    """selected_json pairs each selected value with its label."""
+    """selected_json pairs each selected value with what the toggle shows for it."""
     widget = server_widget(SelectMultiple)
     ctx = widget.get_context("test", ["1", "22"], {"id": "id_test"})
     assert json.loads(ctx["widget"]["selected_json"]) == [["1", "Item 1"], ["22", "Item 22"]]
@@ -457,16 +457,6 @@ def test_select_multiple_no_results_alert_for_many_choices():
 
 
 @pytest.mark.unit
-def test_select_multiple_summary_renders_selection_as_text():
-    """The toggle binds the joined labels with x-text, so a label never parses as markup."""
-    widget = SelectMultiple(choices=[("a", "A")])
-    soup = render_widget(widget, name="test")
-    span = soup.select_one("summary [x-text]")
-    assert span["x-text"] == "displayText || placeholder"
-    assert soup.select_one("summary [x-html]") is None
-
-
-@pytest.mark.unit
 def test_select_multiple_summary_static_placeholder_class_tracks_selection():
     """The placeholder class is server-rendered only while nothing is selected."""
     widget = SelectMultiple(choices=[("a", "A"), ("b", "B")])
@@ -481,7 +471,7 @@ def test_select_multiple_summary_server_renders_selected_labels():
     """Selected labels appear in the summary at first paint, before Alpine."""
     widget = SelectMultiple(choices=[("a", "Alpha"), ("b", "Beta"), ("c", "Gamma")])
     soup = render_widget(widget, name="test", value=["a", "b"])
-    span = soup.select_one("summary [x-text]")
+    span = soup.select_one("summary [x-html]")
     assert span.get_text(strip=True) == "Alpha, Beta"
 
 
@@ -490,7 +480,7 @@ def test_select_multiple_summary_server_escapes_label_text():
     """HTML in labels is escaped in the server-rendered summary."""
     widget = SelectMultiple(choices=[("a", "<b>Bold</b>")])
     soup = render_widget(widget, name="test", value=["a"])
-    span = soup.select_one("summary [x-text]")
+    span = soup.select_one("summary [x-html]")
     assert span.find("b") is None
     assert span.get_text(strip=True) == "<b>Bold</b>"
 
@@ -501,7 +491,7 @@ def test_select_multiple_summary_server_renders_count_above_cutoff():
     choices = [(str(i), f"Option {i}") for i in range(5)]
     widget = SelectMultiple(choices=choices)
     soup = render_widget(widget, name="test", value=["0", "1", "2", "3"])
-    span = soup.select_one("summary [x-text]")
+    span = soup.select_one("summary [x-html]")
     assert span.get_text(strip=True) == "4 selected"
 
 
@@ -512,7 +502,7 @@ def test_select_multiple_count_is_translated_on_server_and_client():
     widget = SelectMultiple(choices=[(str(i), f"Option {i}") for i in range(5)])
     with translation.override("de"):
         soup = render_widget(widget, name="test", value=["0", "1", "2", "3"])
-    assert soup.select_one("summary [x-text]").get_text(strip=True) == "⟦4 selected⟧"
+    assert soup.select_one("summary [x-html]").get_text(strip=True) == "⟦4 selected⟧"
     assert json.loads(soup.select_one("details")["data-count-text"]) == {"other": "⟦%(count)s selected⟧"}
 
 
@@ -521,7 +511,7 @@ def test_select_multiple_summary_server_renders_selection_in_search_mode():
     """htmx-mode widgets derive the summary from the initial selected pairs."""
     widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="test", value=["1"], attrs={"id": "id_test"})
-    span = soup.select_one("summary [x-text]")
+    span = soup.select_one("summary [x-html]")
     assert span.get_text(strip=True) == "Item 1"
 
 
@@ -897,6 +887,25 @@ def test_select_multiple_summary_shows_selection(multi_select_page):
     multi_select_page.wait_for_timeout(100)
     summary_text = summary.text_content()
     assert "Python" in summary_text or "1" in summary_text
+
+
+@pytest.mark.e2e
+def test_select_multiple_summary_shows_picked_icons_and_escapes_labels(multi_select_page):
+    """Each pick shows its icon in the closed toggle, and its label stays text."""
+    from playwright.sync_api import expect
+
+    multi = multi_select_page.locator("#id_countries_icons_wrapper")
+    toggle = multi.locator("summary [x-html]")
+    multi.locator("summary").click()
+    multi.locator('input[value="ar"]').dispatch_event("click")
+    multi.locator('input[value="br"]').dispatch_event("click")
+    expect(toggle).to_have_text("\U0001f1e6\U0001f1f7 Argentina, \U0001f1e7\U0001f1f7 Brazil")
+
+    canada = multi.locator('input[value="ca"]')
+    canada.evaluate("cb => { cb.dataset.label = '<b>Canada</b>'; }")
+    canada.dispatch_event("click")
+    expect(toggle).to_contain_text("\U0001f1e8\U0001f1e6 <b>Canada</b>")
+    expect(toggle.locator("b")).to_have_count(0)
 
 
 @pytest.mark.e2e
