@@ -7,21 +7,32 @@ from typing import Any
 
 from django import forms
 from django.utils.dates import WEEKDAYS_ABBR
+from django.utils.functional import lazy
+from django.utils.translation import pgettext_lazy
 
 from ._base import _ModuleScript
 
 #: strftime code -> human placeholder token, for turning a date format into a
 #: hint like ``DD/MM/YYYY``.  Unmapped codes are left as-is.
 _PLACEHOLDER_TOKENS = {
-    "Y": "YYYY",
-    "y": "YY",
-    "m": "MM",
-    "d": "DD",
-    "B": "Month",
-    "b": "Mon",
-    "A": "Weekday",
-    "a": "Day",
+    "Y": pgettext_lazy("date format placeholder", "YYYY"),
+    "y": pgettext_lazy("date format placeholder", "YY"),
+    "m": pgettext_lazy("date format placeholder", "MM"),
+    "d": pgettext_lazy("date format placeholder", "DD"),
+    "B": pgettext_lazy("date format placeholder", "Month"),
+    "b": pgettext_lazy("date format placeholder: abbreviated month name", "Mon"),
+    "A": pgettext_lazy("date format placeholder", "Weekday"),
+    "a": pgettext_lazy("date format placeholder: abbreviated weekday name", "Day"),
 }
+
+
+def _format_placeholder(date_format: str) -> str:
+    """Turn a strftime format into a human placeholder (``%d/%m/%Y`` -> ``DD/MM/YYYY``)."""
+    return re.sub(r"%(.)", lambda m: str(_PLACEHOLDER_TOKENS.get(m[1], m[0])), date_format)
+
+
+# The widget is built at import time, before a language is active.
+_lazy_format_placeholder = lazy(_format_placeholder, str)
 
 
 class DatePicker(forms.DateInput):
@@ -38,9 +49,7 @@ class DatePicker(forms.DateInput):
 
     def __init__(self, attrs: dict[str, Any] | None = None, *, format: str | None = None) -> None:  # noqa: A002
         resolved_format = format or "%Y-%m-%d"
-        # Turn the strftime format into a human placeholder (%d/%m/%Y -> DD/MM/YYYY).
-        placeholder = re.sub(r"%(.)", lambda m: _PLACEHOLDER_TOKENS.get(m[1], m[0]), resolved_format)
-        defaults: dict[str, Any] = {"placeholder": placeholder}
+        defaults: dict[str, Any] = {"placeholder": _lazy_format_placeholder(resolved_format)}
         if attrs:
             defaults.update(attrs)
         super().__init__(attrs=defaults, format=resolved_format)

@@ -5,6 +5,7 @@ from django.db.models import QuerySet
 from django.forms.models import construct_instance
 from django.http import HttpRequest, HttpResponse
 from django.template import engines
+from django.utils import translation
 from e2e.models import AutoSaveFormData, BasicFormData, City, Region, SearchOption, SectionRecord
 
 from django_formwork import ChoiceLabel, section_forms
@@ -1016,6 +1017,18 @@ class UploadsForm(FormworkForm):
     )
 
 
+class TranslatedForm(FormworkForm):
+    """Widgets whose JavaScript counts things, for the translated page."""
+
+    colors = forms.MultipleChoiceField(
+        choices=[(c, c.title()) for c in ("red", "green", "blue", "black", "white")],
+        widget=SelectMultiple,
+        initial=["red", "green", "blue", "black"],
+        required=False,
+    )
+    files = forms.FileField(widget=FileDropzoneInput(attrs={"multiple": True}), required=False)
+
+
 class TextareaForm(FormworkForm):
     """ValidatedTextarea with server-side validation."""
 
@@ -1659,6 +1672,8 @@ _SECTIONS_HTML = _page_html("Section Forms", _card_body("Section Forms", _SECTIO
     "</head>", "  {% load formwork %}{% formwork_sections_js %}\n</head>"
 )
 
+_TRANSLATED_HTML = _page_html("Deutsch", _card_body("Deutsch", "{{ form }}")).replace('lang="en"', 'lang="de"')
+
 _FORM_HTML_FNS = {
     "complex": _complex_form_html,
     "autosave": _autosave_form_html,
@@ -1885,6 +1900,12 @@ def complex_view(request: HttpRequest) -> HttpResponse:
     ctx = {"form": form, "saved": bool(saved)}
     template = engine.from_string(card_tmpl if is_htmx else page_tmpl)
     return HttpResponse(template.render(ctx, request))
+
+
+def translated_view(request: HttpRequest) -> HttpResponse:
+    with translation.override("de"):
+        template = engines["django"].from_string(_TRANSLATED_HTML)
+        return HttpResponse(template.render({"form": TranslatedForm()}, request))
 
 
 def sections_view(request: HttpRequest) -> HttpResponse:

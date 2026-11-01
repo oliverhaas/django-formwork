@@ -191,6 +191,12 @@ def autosave_dropdowns_page(page, live_server):
 
 
 @pytest.fixture
+def translated_page(page, live_server, pseudo_catalog):
+    """Navigate to the page rendered in German, with formwork's strings from the ⟦⟧ catalog."""
+    return _navigate(page, live_server, "/translated/")
+
+
+@pytest.fixture
 def sections_page(page, live_server):
     """Navigate to the section-forms page."""
     return _navigate(page, live_server, "/sections/")

@@ -5,6 +5,16 @@ from __future__ import annotations
 from typing import Any
 
 from django import forms
+from django.utils.functional import lazy
+from django.utils.translation import ngettext
+
+
+def _star_label(count: int) -> str:
+    return ngettext("%(count)d star", "%(count)d stars", count) % {"count": count}
+
+
+# Choices are built at import time, before a language is active.
+_lazy_star_label = lazy(_star_label, str)
 
 
 class Rating(forms.RadioSelect):
@@ -39,7 +49,7 @@ class Rating(forms.RadioSelect):
     @staticmethod
     def make_choices(max_stars: int = 5) -> list[tuple[str, str]]:
         """Return a choices list for 1..max_stars."""
-        return [(str(i), f"{i} star{'s' if i != 1 else ''}") for i in range(1, max_stars + 1)]
+        return [(str(i), _lazy_star_label(i)) for i in range(1, max_stars + 1)]
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)

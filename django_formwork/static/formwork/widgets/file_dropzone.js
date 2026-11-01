@@ -1,12 +1,12 @@
 // Alpine.data component for the formwork FileDropzoneInput widget.
 // Loaded as an ES module via Media.js or imported by formwork.js.
 
-import { acceptsFile, fileList } from "./_helpers.js";
+import { acceptsFile, countText, fileList, pageLang } from "./_helpers.js";
 
 const formatSize = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1048576).toFixed(1)} MB`;
+  const [value, unit] = bytes < 1048576 ? [bytes / 1024, "KB"] : [bytes / 1048576, "MB"];
+  return `${value.toLocaleString(pageLang(), { maximumFractionDigits: 1, useGrouping: false })} ${unit}`;
 };
 
 document.addEventListener("alpine:init", () => {
@@ -22,7 +22,7 @@ document.addEventListener("alpine:init", () => {
     // One file shows its name, several their count.
     get summary() {
       if (this.files.length === 1) return this.files[0].name;
-      return `${this.files.length} ${this.$root.dataset.filesSelected}`;
+      return countText(this.$root, this.files.length);
     },
 
     get details() {

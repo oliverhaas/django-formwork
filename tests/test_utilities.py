@@ -1,6 +1,7 @@
 """Tests for internal utility functions in django_formwork.widgets."""
 
 import pytest
+from django.utils import translation
 
 from django_formwork.widgets._base import _format_accept, _format_size
 
@@ -29,6 +30,12 @@ def test_format_size(size, expected):
     assert _format_size(size) == expected
 
 
+@pytest.mark.unit
+def test_format_size_uses_the_active_locale():
+    with translation.override("de"):
+        assert _format_size(1536) == "1,5 KB"
+
+
 # ─── _format_accept ─────────────────────────────────────────────────────
 
 
@@ -38,7 +45,8 @@ def test_format_size(size, expected):
     [
         ("image/*", "Images"),
         ("video/*", "Videos"),
-        ("audio/*", "Audios"),
+        ("audio/*", "Audio files"),
+        ("text/*", "text/*"),
         (".png", "PNG"),
         (".png,.jpg,.jpeg", "PNG, JPG, JPEG"),
         ("application/pdf", "PDF"),

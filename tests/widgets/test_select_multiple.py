@@ -7,6 +7,7 @@ import json
 import pytest
 from django import forms
 from django.http import QueryDict
+from django.utils import translation
 from django.utils.safestring import mark_safe
 
 from django_formwork import ChoiceLabel
@@ -502,6 +503,17 @@ def test_select_multiple_summary_server_renders_count_above_cutoff():
     soup = render_widget(widget, name="test", value=["0", "1", "2", "3"])
     span = soup.select_one("summary [x-text]")
     assert span.get_text(strip=True) == "4 selected"
+
+
+@pytest.mark.unit
+@pytest.mark.usefixtures("pseudo_catalog")
+def test_select_multiple_count_is_translated_on_server_and_client():
+    """The server count and the plural forms the component counts with share the active language."""
+    widget = SelectMultiple(choices=[(str(i), f"Option {i}") for i in range(5)])
+    with translation.override("de"):
+        soup = render_widget(widget, name="test", value=["0", "1", "2", "3"])
+    assert soup.select_one("summary [x-text]").get_text(strip=True) == "⟦4 selected⟧"
+    assert json.loads(soup.select_one("details")["data-count-text"]) == {"other": "⟦%(count)s selected⟧"}
 
 
 @pytest.mark.unit

@@ -5,8 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from django import forms
+from django.utils.translation import ngettext
 
-from ._base import _DropZoneMixin, _ModuleScript
+from ._base import _DropZoneMixin, _ModuleScript, _plural_forms
+
+
+def _files_selected_text(count: int) -> str:
+    return ngettext("%(count)s file selected", "%(count)s files selected", count)
 
 
 class FileDropzoneInput(_DropZoneMixin, forms.FileInput):
@@ -30,3 +35,8 @@ class FileDropzoneInput(_DropZoneMixin, forms.FileInput):
         self.allow_multiple_selected = bool(attrs and attrs.get("multiple"))
         super().__init__(attrs)
         self.max_size = max_size
+
+    def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        context["widget"]["count_text"] = _plural_forms(_files_selected_text)
+        return context

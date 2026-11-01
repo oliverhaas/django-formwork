@@ -25,6 +25,17 @@ export const fileList = (files) => {
   return transfer.files;
 };
 
+// The page's language, so numbers and plurals match the translated text.
+export const pageLang = () => document.documentElement.lang || undefined;
+
+// The text for `count` from the plural forms in `data-count-text`, which the
+// widget keys by CLDR plural category.
+export const countText = (el, count) => {
+  const forms = JSON.parse(el.dataset.countText || "{}");
+  const form = forms[new Intl.PluralRules(pageLang()).select(count)] ?? forms.other ?? "";
+  return form.replace("%(count)s", count);
+};
+
 const visibleOptions = (component) =>
   [...component.$refs.options.querySelectorAll("[data-value]")].filter((el) => el.offsetParent !== null);
 

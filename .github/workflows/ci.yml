@@ -58,6 +58,9 @@ jobs:
       - name: Install Playwright browsers
         run: uv run playwright install --with-deps chromium
 
+      - name: Install gettext
+        run: sudo apt-get install -y gettext
+
       - name: Generate iconx CSS
         env:
           DJANGO_SETTINGS_MODULE: settings.base

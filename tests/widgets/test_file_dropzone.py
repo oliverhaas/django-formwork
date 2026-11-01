@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 from django import forms
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -57,7 +59,10 @@ def test_file_dropzone_messages_come_from_the_template():
     root = _root(render_widget(FileDropzoneInput(), name="upload"))
     assert root["data-type-error"] == "File type not accepted"
     assert root["data-size-error"] == "File too large"
-    assert root["data-files-selected"] == "files selected"
+    assert json.loads(root["data-count-text"]) == {
+        "one": "%(count)s file selected",
+        "other": "%(count)s files selected",
+    }
 
 
 @pytest.mark.unit

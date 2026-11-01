@@ -24,5 +24,6 @@ urlpatterns = [
     path("autosave/", views.autosave_view),
     path("autosave-dropdowns/", views.autosave_dropdowns_view),
     path("sections/", views.sections_view),
+    path("translated/", views.translated_view),
     path("e2e/validate/bio/", views.E2EBioValidateView.as_view(), name="e2e-validate-bio"),
 ]

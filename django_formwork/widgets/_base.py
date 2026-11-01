@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
-from typing import Any
+import json
+from typing import TYPE_CHECKING, Any
+
+from django.utils.formats import number_format
+from django.utils.translation import gettext_lazy as _
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _KB = 1024
 _MB = 1024 * 1024
+
+# A count in each CLDR plural category, in every language that uses the category.
+_PLURAL_SAMPLES = {"zero": 0, "one": 1, "two": 2, "few": 3, "many": 11, "other": 100}
+
+_ACCEPT_WILDCARDS = {"audio": _("Audio files"), "image": _("Images"), "video": _("Videos")}
 
 
 class _ModuleScript(str):
@@ -27,15 +39,22 @@ class _ModuleScript(str):
         return format_html('<script type="module" src="{}"></script>', static(self))
 
 
+def _plural_forms(text_for: Callable[[int], str]) -> str:
+    """The ``ngettext`` forms of ``text_for`` as JSON keyed by CLDR plural category.
+
+    The browser picks one with ``Intl.PluralRules``. Forms equal to ``other`` are left out.
+    """
+    other = text_for(_PLURAL_SAMPLES["other"])
+    forms = {category: text for category, count in _PLURAL_SAMPLES.items() if (text := text_for(count)) != other}
+    return json.dumps({**forms, "other": other}, ensure_ascii=False)
+
+
 def _format_size(size: int) -> str:
-    """Format a byte count for human-readable display."""
+    """Format a byte count for human-readable display, in the active locale."""
     if size < _KB:
         return f"{size} B"
-    if size < _MB:
-        kb = size / _KB
-        return f"{kb:.0f} KB" if kb == int(kb) else f"{kb:.1f} KB"
-    mb = size / _MB
-    return f"{mb:.0f} MB" if mb == int(mb) else f"{mb:.1f} MB"
+    value, unit = (size / _KB, "KB") if size < _MB else (size / _MB, "MB")
+    return f"{number_format(value, decimal_pos=0 if value == int(value) else 1)} {unit}"
 
 
 def _format_accept(accept: str) -> str:
@@ -44,7 +63,8 @@ def _format_accept(accept: str) -> str:
     labels: list[str] = []
     for part in parts:
         if part.endswith("/*"):
-            labels.append(part.split("/")[0].capitalize() + "s")
+            kind = part.split("/")[0].lower()
+            labels.append(str(_ACCEPT_WILDCARDS[kind]) if kind in _ACCEPT_WILDCARDS else part)
         elif part.startswith("."):
             labels.append(part[1:].upper())
         elif "/" in part:

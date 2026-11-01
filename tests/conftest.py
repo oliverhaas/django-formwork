@@ -1,15 +1,28 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import re
+import shutil
+import subprocess
+from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from django.core.management import call_command
+
+import django_formwork
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from playwright.sync_api import Locator
+
+PACKAGE = Path(django_formwork.__file__).parent
+MSGEN = shutil.which("msgen")
+
+_MSGSTR = re.compile(r'^(msgstr(?:\[\d+\])?) "(.+)"$', re.MULTILINE)
 
 _DIFF_OUTPUT_DIR = Path("test-results")
 _PER_PIXEL_TOLERANCE = 10  # per-channel tolerance (out of 255)
@@ -33,6 +46,37 @@ def django_db_setup(django_db_setup, django_db_blocker):
     yield
     with django_db_blocker.unblock():
         asyncio.run(sync_to_async(connections.close_all)())
+
+
+def extract_messages(package: Path) -> str:
+    """Run ``makemessages -l de`` on a copy of the package; returns the command's output."""
+    shutil.copytree(PACKAGE, package, ignore=shutil.ignore_patterns("static", "__pycache__"))
+    (package / "locale").mkdir()
+    out = StringIO()
+    with contextlib.chdir(package):
+        call_command("makemessages", locale=["de"], no_wrap=True, stdout=out, stderr=out)
+    return out.getvalue()
+
+
+@pytest.fixture(scope="session")
+def _pseudo_locale(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A German catalog that translates each extracted msgid to itself wrapped in ⟦⟧."""
+    if not (shutil.which("xgettext") and MSGEN):
+        pytest.skip("gettext is not installed")
+    package = tmp_path_factory.mktemp("pseudo") / "django_formwork"
+    extract_messages(package)
+    po = package / "locale" / "de" / "LC_MESSAGES" / "django.po"
+    english = subprocess.run([MSGEN, "--no-wrap", str(po)], capture_output=True, text=True, check=True).stdout  # noqa: S603
+    po.write_text(_MSGSTR.sub(r'\1 "⟦\2⟧"', english))
+    with contextlib.chdir(package):
+        call_command("compilemessages", locale=["de"], use_fuzzy=True, verbosity=0)
+    return package / "locale"
+
+
+@pytest.fixture
+def pseudo_catalog(_pseudo_locale: Path, settings) -> None:
+    """Install the ⟦⟧ catalog for German, the way a project adds its own translations."""
+    settings.LOCALE_PATHS = [str(_pseudo_locale)]
 
 
 def pytest_addoption(parser):

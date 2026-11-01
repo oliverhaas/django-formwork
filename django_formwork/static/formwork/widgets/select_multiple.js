@@ -3,7 +3,7 @@
 // for the toggle text: a searched list holds only one page of rows, so the
 // checked rows in the DOM cannot name the whole selection.
 
-import { dropdownBase } from "./_helpers.js";
+import { countText, dropdownBase } from "./_helpers.js";
 
 const sameKeys = (a, b) => {
   const keys = Object.keys(a);
@@ -16,7 +16,6 @@ document.addEventListener("alpine:init", () => {
   Alpine.data("formworkSelectMultiple", () =>
     dropdownBase({
       selected: {},
-      selectedSuffix: "",
       summaryThreshold: 0,
 
       init() {
@@ -25,7 +24,6 @@ document.addEventListener("alpine:init", () => {
         this.anchorPanel();
         this.showSearch = el.dataset.showSearch === "true";
         this.placeholder = el.dataset.placeholder || "";
-        this.selectedSuffix = el.dataset.selectedSuffix || "";
         this.summaryThreshold = Number(el.dataset.summaryThreshold);
         // The template server-renders the placeholder class on the summary so
         // it is styled at first paint, before Alpine loads. Strip it here, in
@@ -60,7 +58,7 @@ document.addEventListener("alpine:init", () => {
       // Reads the selection map, not the checked rows: a swap replaces them.
       get displayText() {
         const labels = Object.values(this.selected);
-        if (labels.length > this.summaryThreshold) return `${labels.length} ${this.selectedSuffix}`;
+        if (labels.length > this.summaryThreshold) return countText(this.$root, labels.length);
         return labels.join(", ");
       },
 

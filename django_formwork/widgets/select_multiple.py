@@ -6,8 +6,9 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from django import forms
+from django.utils.translation import ngettext
 
-from ._base import _ModuleScript
+from ._base import _ModuleScript, _plural_forms
 from .select import SearchableSelectMixin
 
 if TYPE_CHECKING:
@@ -15,6 +16,10 @@ if TYPE_CHECKING:
 
     from django.core.files.uploadedfile import UploadedFile
     from django.utils.datastructures import MultiValueDict
+
+
+def _selected_text(count: int) -> str:
+    return ngettext("%(count)s selected", "%(count)s selected", count)
 
 
 class SelectMultiple(SearchableSelectMixin, forms.SelectMultiple):
@@ -47,6 +52,8 @@ class SelectMultiple(SearchableSelectMixin, forms.SelectMultiple):
         selected = widget["selected_options"]
         widget["selected_labels"] = [option["label"] for option in selected]
         widget["selected_json"] = json.dumps([[str(option["value"]), option["label"]] for option in selected])
+        widget["selected_count_text"] = _selected_text(len(selected)) % {"count": len(selected)}
+        widget["count_text"] = _plural_forms(_selected_text)
         return context
 
     def value_from_datadict(
