@@ -916,6 +916,34 @@ class ComboBoxForm(FormworkForm):
         _ensure_search_options()
 
 
+class DropdownForm(FormworkForm):
+    """A short static menu, and server-searched lists whose selection lies past the first page."""
+
+    brand = forms.ChoiceField(
+        choices=[("acme", "Acme"), ("globex", "Globex"), ("initech", "Initech")],
+        widget=Select,
+        label="Brand (three options)",
+    )
+    city = OptionChoiceField(
+        "city_many",
+        widget=Select(search_fields=["name"], search_queryset=_cities_many, search_decorator=None),
+        initial="sel",
+        required=False,
+        label="City (selected past the first page)",
+    )
+    cities = OptionMultipleChoiceField(
+        "city_many",
+        widget=SelectMultiple(search_fields=["name"], search_queryset=_cities_many, search_decorator=None),
+        initial=["sel"],
+        required=False,
+        label="Cities (selected past the first page)",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _ensure_search_options()
+
+
 class UploadsForm(FormworkForm):
     """File upload widgets with variations."""
 
@@ -1182,6 +1210,15 @@ def _form_html(url, form_id):
     )
 
 
+def _read_only_form_html(url, form_id):
+    return (
+        f'<form id="{form_id}" method="post" hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}">\n'
+        "  {% csrf_token %}\n"
+        "  <fieldset disabled>{{ form }}</fieldset>\n"
+        "</form>"
+    )
+
+
 def _complex_form_html(url, form_id):
     return (
         f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate '
@@ -1425,6 +1462,18 @@ _PAGES = [
         "ComboBox",
         "Filterable text input, single, multiple, with icons, and server-side via htmx",
     ),
+    (
+        "dropdowns",
+        "/dropdowns/",
+        "Dropdowns",
+        "Drop direction, short menus, and a selection past the first page of a server search",
+    ),
+    (
+        "read-only",
+        "/read-only/",
+        "Read-only Dropdowns",
+        "The dropdowns inside a disabled fieldset",
+    ),
     ("uploads", "/uploads/", "File Uploads", "Drag-and-drop file and image uploads with size and type restrictions"),
     ("textarea", "/textarea/", "ValidatedTextarea", "Server-side validation with inline word highlighting via htmx"),
     (
@@ -1524,7 +1573,11 @@ _ELEMENTS_CARD = _card_body(
 )
 _ELEMENTS_HTML = _page_html("Standalone Elements", _ELEMENTS_BODY)
 
-_FORM_HTML_FNS = {"complex": _complex_form_html, "autosave": _autosave_form_html}
+_FORM_HTML_FNS = {
+    "complex": _complex_form_html,
+    "autosave": _autosave_form_html,
+    "read-only": _read_only_form_html,
+}
 
 _TEMPLATES = {
     key: _build_templates(key, url, title, desc, _FORM_HTML_FNS.get(key))
@@ -1685,6 +1738,14 @@ def multi_select_view(request: HttpRequest) -> HttpResponse:
 
 def combobox_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, ComboBoxForm, "combobox")
+
+
+def dropdowns_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, DropdownForm, "dropdowns")
+
+
+def read_only_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, DropdownForm, "read-only")
 
 
 def uploads_view(request: HttpRequest) -> HttpResponse:

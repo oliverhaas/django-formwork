@@ -131,6 +131,18 @@ def combobox_page(page, live_server):
 
 
 @pytest.fixture
+def dropdowns_page(page, live_server):
+    """Navigate to the dropdown behaviour page."""
+    return _navigate(page, live_server, "/dropdowns/")
+
+
+@pytest.fixture
+def read_only_page(page, live_server):
+    """Navigate to the dropdowns inside a disabled fieldset."""
+    return _navigate(page, live_server, "/read-only/")
+
+
+@pytest.fixture
 def uploads_page(page, live_server):
     """Navigate to the file uploads page."""
     return _navigate(page, live_server, "/uploads/")

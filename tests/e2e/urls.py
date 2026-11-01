@@ -14,6 +14,8 @@ urlpatterns = [
     path("search-select/", views.search_select_view),
     path("multi-select/", views.multi_select_view),
     path("combobox/", views.combobox_view),
+    path("dropdowns/", views.dropdowns_view),
+    path("read-only/", views.read_only_view),
     path("uploads/", views.uploads_view),
     path("textarea/", views.textarea_view),
     path("new-widgets/", views.new_widgets_view),
