@@ -4,9 +4,10 @@
  * This file holds the non-widget logic that runs once per page,
  * regardless of which widgets are on the page:
  *
- *   1. htmx 4 morph extension (`formwork-morph`) that preserves Alpine
- *      reactive state, focused input values, <details> open state, and
- *      Alpine-template-generated DOM nodes during full-form morphs.
+ *   1. htmx 4 morph extension (`formwork-morph`) that preserves focused
+ *      input values, <details> open state, unconfirmed dropdown picks, and
+ *      Alpine-template-generated DOM nodes during full-form morphs.  Alpine
+ *      bindings survive the morph through htmx's alpine-compat extension.
  *   2. Native browser validation disabling on forms with formwork error
  *      tooltips (CSP-safe replacement for an inline <script>).
  *   3. Dirty-field highlighting (opt-in via data-formwork-dirty) that
@@ -18,6 +19,10 @@
  *
  * Prerequisites (loaded by the user, BEFORE this script):
  *   - htmx 4.x
+ *   - htmx's alpine-compat extension (`dist/ext/hx-alpine-compat.js` in
+ *     the htmx release), after htmx.  Without it a morph strips what
+ *     Alpine bindings (x-show, x-text, :class, :aria-selected, ...) wrote
+ *     into the DOM.
  */
 
 // --- Disable native validation on forms with formwork error tooltips ---
@@ -308,11 +313,11 @@ document.addEventListener("htmx:after:settle", (e) => {
 
 if (typeof htmx !== "undefined") {
   // Globally ignored attributes during morph:
-  //   x-data — re-applying it makes Alpine re-init the component and lose
-  //            reactive state.
-  //   open   — on <details>, the open attribute reflects user UI state, not
-  //            server state, so server HTML must never close an opened
-  //            dropdown.
+  //   x-data: re-applying it makes Alpine re-init the component and lose
+  //           reactive state.
+  //   open:   on <details> and <dialog>, the open attribute is the user's
+  //           UI state, not server state.  A morph never closes an open
+  //           dropdown, and server HTML cannot open or close one either.
   htmx.config.morphIgnore = [
     ...(htmx.config.morphIgnore || []),
     "x-data",
@@ -398,44 +403,6 @@ if (typeof htmx !== "undefined") {
           newNode.removeAttribute("checked");
         }
         newNode.checked = oldNode.checked;
-      }
-
-      // Preserve Alpine-managed text content (x-text directive).  Alpine
-      // sets .textContent reactively but won't re-evaluate after morph
-      // since no reactive data changed.  Without this, morph would
-      // overwrite with the server-rendered fallback text.
-      if (oldNode.hasAttribute("x-text")) {
-        newNode.textContent = oldNode.textContent;
-      }
-
-      // Preserve Alpine-applied classes (:class bindings).  Server HTML
-      // carries only the static class attribute, so a morph would strip
-      // classes Alpine added (formwork-placeholder, a selected option's
-      // toggle class, dropdown-open).  When the swap changes no reactive
-      // state (e.g. re-saving an unchanged value), nothing ever re-applies
-      // them.  Union old into new: the server can still add classes, and
-      // classes Alpine no longer wants are removed by its own undo pass
-      // the next time the binding evaluates.
-      if (oldNode.hasAttribute(":class") || oldNode.hasAttribute("x-bind:class")) {
-        for (const cls of oldNode.classList) {
-          newNode.classList.add(cls);
-        }
-      }
-
-      // Preserve Alpine-managed HTML content (x-html directive).
-      if (oldNode.hasAttribute("x-html")) {
-        newNode.innerHTML = oldNode.innerHTML;
-      }
-
-      // Preserve Alpine x-show display state.  Alpine toggles display via
-      // inline style; without this, morph clears the inline style and
-      // Alpine doesn't re-evaluate.
-      if (oldNode.hasAttribute("x-show")) {
-        if (oldNode.style.display) {
-          newNode.style.display = oldNode.style.display;
-        } else {
-          newNode.style.removeProperty("display");
-        }
       }
 
       return true;

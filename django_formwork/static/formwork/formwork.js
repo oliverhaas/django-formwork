@@ -25,6 +25,8 @@
  *
  * Prerequisites (loaded by the user, BEFORE this script):
  *   - htmx 4.x
+ *   - htmx's alpine-compat extension (`dist/ext/hx-alpine-compat.js`),
+ *     after htmx
  *   - Alpine.js 3.x (if using Alpine-powered widgets)
  */
 

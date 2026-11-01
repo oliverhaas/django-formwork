@@ -944,6 +944,24 @@ class DropdownForm(FormworkForm):
         _ensure_search_options()
 
 
+class AutoSaveDropdownForm(FormworkForm):
+    """A searchable Select on an auto-saving form: a pick or a search keystroke morphs the form."""
+
+    city = forms.ChoiceField(
+        choices=[
+            ("", ""),
+            ("nyc", "New York"),
+            ("ldn", "London"),
+            ("tyo", "Tokyo"),
+            ("par", "Paris"),
+            ("syd", "Sydney"),
+        ],
+        widget=Select(show_search=True),
+        required=False,
+        label="City",
+    )
+
+
 class UploadsForm(FormworkForm):
     """File upload widgets with variations."""
 
@@ -1154,6 +1172,7 @@ _HEAD = """\
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/formwork/formwork-dist.css">
 <script src="https://unpkg.com/htmx.org@4.0.0/dist/htmx.min.js"></script>
+<script src="https://unpkg.com/htmx.org@4.0.0/dist/ext/hx-alpine-compat.min.js"></script>
 <script type="module" src="/static/formwork/formwork.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>"""
 
@@ -1500,6 +1519,12 @@ _PAGES = [
         "Auto-saves on every field change, server-side validation with htmx morph swap",
     ),
     (
+        "autosave-dropdowns",
+        "/autosave-dropdowns/",
+        "Auto-Save Dropdowns",
+        "A Select on an auto-saving form, morphed while it is open or holds an unsaved pick",
+    ),
+    (
         "icon-modifiers",
         "/icon-modifiers/",
         "Icon Modifiers",
@@ -1581,6 +1606,7 @@ _ELEMENTS_HTML = _page_html("Standalone Elements", _ELEMENTS_BODY)
 _FORM_HTML_FNS = {
     "complex": _complex_form_html,
     "autosave": _autosave_form_html,
+    "autosave-dropdowns": _autosave_form_html,
     "read-only": _read_only_form_html,
 }
 
@@ -1751,6 +1777,10 @@ def dropdowns_view(request: HttpRequest) -> HttpResponse:
 
 def read_only_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, DropdownForm, "read-only")
+
+
+def autosave_dropdowns_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, AutoSaveDropdownForm, "autosave-dropdowns")
 
 
 def uploads_view(request: HttpRequest) -> HttpResponse:

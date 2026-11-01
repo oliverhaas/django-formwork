@@ -1,13 +1,36 @@
 """E2e tests for the Auto-Save Form page.
 
-Tests auto-save via htmx morph, caret/selection preservation,
-required error suppression, and explicit submit behavior.
+Tests auto-save via htmx morph, caret/selection preservation, required error
+suppression, explicit submit behavior, and the dropdown state a morph keeps.
 """
+
+from contextlib import contextmanager
 
 import pytest
 from playwright.sync_api import expect
 
 from .conftest import submit
+
+
+@contextmanager
+def _morph(page):
+    """Wait for the auto-save morph that the block triggers."""
+    page.evaluate(
+        """() => {
+            window.__fwMorphed = false;
+            document.querySelector('form[hx-post]')
+                .addEventListener('htmx:after:swap', () => { window.__fwMorphed = true; }, {once: true});
+        }""",
+    )
+    yield
+    page.wait_for_function("window.__fwMorphed === true")
+
+
+def _open_city(page):
+    page.locator("summary#id_city").click()
+    panel = page.locator("#id_city_wrapper [x-ref=panel]")
+    expect(panel).to_be_visible()
+    return panel
 
 
 def _wait_for_autosave(page, timeout=1000):
@@ -286,6 +309,53 @@ def test_multiple_fields_persist_after_reload(autosave_page):
     assert page.locator('input[name="email"]').input_value() == "persist@test.com"
     assert page.locator('select[name="priority"]').input_value() == "medium"
     assert page.locator('input[name="agree"]').is_checked()
+
+
+def test_picked_option_keeps_check_mark_after_autosave(autosave_dropdowns_page):
+    page = autosave_dropdowns_page
+    panel = _open_city(page)
+
+    with _morph(page):
+        panel.locator('button[data-value="ldn"]').click()
+
+    expect(page.locator('#id_city_wrapper button[data-value="ldn"]')).to_have_attribute("aria-selected", "true")
+    expect(page.locator('#id_city_wrapper button[data-value="par"]')).to_have_attribute("aria-selected", "false")
+
+
+def test_open_dropdown_keeps_search_filter_through_autosave(autosave_dropdowns_page):
+    page = autosave_dropdowns_page
+    panel = _open_city(page)
+    search = panel.locator("input[type=search]")
+
+    with _morph(page):
+        search.press_sequentially("par")
+
+    expect(panel).to_be_visible()
+    expect(search).to_have_value("par")
+    expect(panel.locator("li[role=option]:visible")).to_have_count(1)
+    expect(panel.locator("li[role=option]:visible")).to_have_text("Paris")
+    expect(panel.get_by_role("button", name="Clear search")).to_be_visible()
+
+
+def test_pick_made_during_a_save_survives_the_older_response(autosave_dropdowns_page):
+    page = autosave_dropdowns_page
+    held = []
+
+    def hold(route):
+        held.append(route)
+
+    page.route("**/autosave-dropdowns/", hold)
+
+    with page.expect_request(lambda request: request.method == "POST"):
+        _open_city(page).locator('button[data-value="ldn"]').click()
+    _open_city(page).locator('button[data-value="par"]').click()
+    expect(page.locator("#id_city_value")).to_have_value("par")
+
+    with _morph(page):
+        held.pop(0).continue_()
+
+    expect(page.locator("#id_city_value")).to_have_value("par")
+    expect(page.locator("summary#id_city span[x-text]")).to_have_text("Paris")
 
 
 @pytest.mark.screenshot
