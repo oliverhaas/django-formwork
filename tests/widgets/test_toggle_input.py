@@ -52,14 +52,12 @@ def test_toggle_input_label_sits_beside_the_switch(renderer):
 
 
 @pytest.mark.integration
-def test_toggle_input_has_no_optional_badge(renderer):
-    """An optional switch carries no "optional" badge, like a single checkbox."""
+def test_required_toggle_input_label_shows_the_asterisk(renderer):
+    class RequiredToggleForm(FormworkForm):
+        enabled = forms.BooleanField(widget=ToggleInput)
 
-    class OptionalToggleForm(FormworkForm):
-        enabled = forms.BooleanField(widget=ToggleInput, required=False)
-
-    soup = render_form(OptionalToggleForm(), renderer=renderer)
-    assert soup.find(class_="badge") is None
+    soup = render_form(RequiredToggleForm(), renderer=renderer)
+    assert soup.find("label").find(class_="text-error").get_text() == "*"
 
 
 @pytest.mark.integration

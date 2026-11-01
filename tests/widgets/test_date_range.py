@@ -87,7 +87,7 @@ def test_both_inputs_render_from_one_value():
 def test_the_pair_renders_as_one_labelled_group():
     """The field label is the group's one legend; neither input gets a <label>."""
     soup = BeautifulSoup(str(_Form()["period"].as_field_group()), "html.parser")
-    assert [legend.get_text(strip=True) for legend in soup.select("legend")] == ["Period"]
+    assert [legend.get_text(strip=True) for legend in soup.select("legend")] == ["Period*"]
     assert soup.select("label") == []
 
 

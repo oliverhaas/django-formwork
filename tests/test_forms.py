@@ -128,8 +128,8 @@ class TestFormworkRenderer:
         assert 'class="label"' in html
 
     @override_settings(FORM_RENDERER="django_formwork.FormworkRenderer")
-    def test_as_field_group_badges_optional_field(self):
-        """A plain Form marks the optional field, not the required one."""
+    def test_as_field_group_marks_required_field(self):
+        """A plain Form marks the required field, not the optional one."""
 
         class F(forms.Form):
             name = forms.CharField()
@@ -138,8 +138,8 @@ class TestFormworkRenderer:
         form = F()
         name_html = form["name"].as_field_group()
         optional_html = form["optional"].as_field_group()
-        assert "badge" not in name_html
-        assert ">optional</span>" in optional_html
+        assert '<span class="text-error" aria-hidden="true">*</span>' in name_html
+        assert "text-error" not in optional_html
 
     @override_settings(FORM_RENDERER="django_formwork.FormworkRenderer")
     def test_plain_form_gets_formwork_bound_field(self):

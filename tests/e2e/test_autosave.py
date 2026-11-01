@@ -74,10 +74,10 @@ class TestAutoSaveStructure:
         email_input = autosave_page.locator('input[name="email"]')
         assert email_input.get_attribute("required") is None
 
-    def test_required_fields_have_no_optional_badge(self, autosave_page):
-        """Required fields stay unbadged despite no HTML required."""
-        expect(autosave_page.locator("#id_name_field .badge")).to_have_count(0)
-        expect(autosave_page.locator("#id_message_field .badge")).to_have_text("optional")
+    def test_required_fields_show_the_asterisk(self, autosave_page):
+        """Required fields keep the asterisk despite no HTML required."""
+        expect(autosave_page.locator("#id_name_label .text-error")).to_have_text("*")
+        expect(autosave_page.locator("#id_message_label .text-error")).to_have_count(0)
 
 
 class TestAutoSaveBehavior:

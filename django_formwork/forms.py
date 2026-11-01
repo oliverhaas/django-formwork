@@ -379,9 +379,9 @@ class FormworkForm(
     help text and in a DaisyUI tooltip when it does not; ``"inline"`` and
     ``"tooltip"`` force one placement.
 
-    Optional fields carry an "optional" badge.  ``Meta.mandatory`` names
-    fields that a save accepts empty but a later step needs: they get no badge
-    and announce ``aria-required``.
+    Required fields carry a red asterisk.  ``Meta.mandatory`` names fields
+    that a save accepts empty but a later step needs: they get the asterisk
+    too and announce ``aria-required``.
     """
 
     default_renderer = FormworkRenderer

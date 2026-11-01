@@ -45,6 +45,6 @@ def test_card_choice_group_is_a_fieldset_with_an_error_border(renderer):
     form.is_valid()
     soup = render_form(form, renderer=renderer)
     fieldset = soup.find("fieldset", id="id_plan_field")
-    assert fieldset.find("legend").get_text(strip=True) == "Plan"
+    assert fieldset.find("legend").get_text(strip=True) == "Plan*"
     cards = fieldset.select("#id_plan > label")
     assert all("border-error" in card["class"] for card in cards)

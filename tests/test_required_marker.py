@@ -1,7 +1,4 @@
-"""field.html badges the fields a user can leave empty, not demanded or disabled ones.
-
-An unticked single checkbox is an answer, so it carries no badge.
-"""
+"""field.html marks the fields a user must fill with a red asterisk, unless they are disabled."""
 
 from __future__ import annotations
 
@@ -11,7 +8,6 @@ from django import forms
 
 from django_formwork.forms import FormworkForm
 
-BADGE = "span.badge"
 CHOICES = [("a", "Apples"), ("b", "Bananas")]
 
 
@@ -22,7 +18,7 @@ class _Form(FormworkForm):
     newsletter = forms.BooleanField(required=False, widget=forms.CheckboxInput)
     fruit = forms.MultipleChoiceField(choices=CHOICES, widget=forms.CheckboxSelectMultiple)
     extras = forms.MultipleChoiceField(choices=CHOICES, required=False, widget=forms.CheckboxSelectMultiple)
-    readonly = forms.CharField(required=False, disabled=True)
+    locked = forms.CharField(disabled=True)
     street = forms.CharField(required=False)
 
     class Meta:
@@ -34,24 +30,25 @@ def _render(field: str) -> BeautifulSoup:
 
 
 @pytest.mark.parametrize(
-    ("field", "badged"),
+    ("field", "marked"),
     [
-        ("name", False),
-        ("nickname", True),
-        ("agreed", False),
+        ("name", True),
+        ("nickname", False),
+        ("agreed", True),
         ("newsletter", False),
-        ("fruit", False),
-        ("extras", True),
-        ("readonly", False),
-        ("street", False),
+        ("fruit", True),
+        ("extras", False),
+        ("locked", False),
+        ("street", True),
     ],
 )
-def test_only_the_optional_field_carries_the_badge(field: str, badged: bool) -> None:  # noqa: FBT001
-    badge = _render(field).select_one(BADGE)
+def test_only_a_field_the_user_must_fill_carries_the_asterisk(field: str, marked: bool) -> None:  # noqa: FBT001
+    marker = _render(field).select_one(".fieldset-legend .text-error")
 
-    assert (badge is not None) == badged
-    if badge is not None:
-        assert badge.get_text(strip=True) == "optional"
+    assert (marker is not None) == marked
+    if marker is not None:
+        assert marker.get_text() == "*"
+        assert marker["aria-hidden"] == "true"
 
 
 def test_a_mandatory_field_is_announced_as_required() -> None:

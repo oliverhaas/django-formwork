@@ -138,7 +138,7 @@ class AutoSaveForm(FormworkModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Model has blank=True (allows partial saves) but visually these
-        # fields are required. set required=True to drop the optional badge.
+        # fields are required. set required=True to show the asterisk.
         self.fields["name"].required = True
         self.fields["email"].required = True
         # Strip the HTML required attribute so native validation doesn't
