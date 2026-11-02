@@ -588,10 +588,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#search-endpoint-registration" class="md-nav__link">
+  <a href="#search-registration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Search endpoint registration
+        Search registration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#required-and-mandatory-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required and mandatory fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#help-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Help text
       
     </span>
   </a>
@@ -625,6 +647,17 @@
     <span class="md-ellipsis">
       
         Async validation and saving
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#section-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section forms
       
     </span>
   </a>
@@ -808,10 +841,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#search-endpoint-registration" class="md-nav__link">
+  <a href="#search-registration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Search endpoint registration
+        Search registration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#required-and-mandatory-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required and mandatory fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#help-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Help text
       
     </span>
   </a>
@@ -852,6 +907,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#section-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section forms
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#formworkmodel" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -883,103 +949,147 @@
 
 
 <h1 id="forms">Forms<a class="headerlink" href="#forms" title="Permanent link">&para;</a></h1>
-<p><code>FormworkForm</code> and <code>FormworkModelForm</code> bundle the DaisyUI renderer with three
-behaviours plain Django forms do not have: automatic search-endpoint
-registration, dirty-only validation, and async validation and saving.</p>
+<p><code>FormworkForm</code> and <code>FormworkModelForm</code> bundle the DaisyUI renderer with
+behaviours plain Django forms do not have: search registration, a choice of
+error placement, mandatory fields, dirty-only validation, and async validation
+and saving. <code>section_forms()</code> builds the forms of a page that saves one row in
+several sections.</p>
 <p>With <code>FORM_RENDERER = "django_formwork.FormworkRenderer"</code> set, every form in
 the project renders styled, including plain <code>forms.Form</code>. Reach for the base
 classes when you want the behaviours below, or formwork styling on individual
 forms without the global renderer.</p>
 <p>Everything documented here is importable from the package root:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span><span class="p">,</span> <span class="n">FormworkModel</span><span class="p">,</span> <span class="n">FormworkModelForm</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span><span class="p">,</span> <span class="n">FormworkModel</span><span class="p">,</span> <span class="n">FormworkModelForm</span><span class="p">,</span> <span class="n">section_forms</span>
 </span></code></pre></div>
 <h2 id="base-classes">Base classes<a class="headerlink" href="#base-classes" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>Class</th>
-<th>Renderer</th>
 <th>Use with</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>FormworkForm</code></td>
-<td><code>FormworkRenderer</code></td>
-<td>Django templates</td>
+<td>any data</td>
 </tr>
 <tr>
 <td><code>FormworkModelForm</code></td>
-<td><code>FormworkRenderer</code></td>
-<td>Django templates, model-backed</td>
-</tr>
-<tr>
-<td><code>FormworkJinja2Form</code></td>
-<td><code>FormworkJinja2Renderer</code></td>
-<td>Jinja2 templates</td>
-</tr>
-<tr>
-<td><code>FormworkJinja2ModelForm</code></td>
-<td><code>FormworkJinja2Renderer</code></td>
-<td>Jinja2 templates, model-backed</td>
+<td>a model; subscript it for typed <code>instance</code> and <code>save()</code>: <code>FormworkModelForm[Book]</code></td>
 </tr>
 </tbody>
 </table>
-<p>The ModelForm variants upgrade auto-generated <code>ModelChoiceField</code> and
-<code>ModelMultipleChoiceField</code> instances to their Formwork equivalents, so
-<code>icon_from_instance</code> and <code>description_from_instance</code> callbacks can be attached
-to fields that come from <code>Meta.fields</code>. Explicitly declared fields, including
-custom subclasses, are left alone.</p>
-<h2 id="search-endpoint-registration">Search endpoint registration<a class="headerlink" href="#search-endpoint-registration" title="Permanent link">&para;</a></h2>
-<p>Fields rendered with <code>SearchSelect</code>, <code>MultiSelect</code>, or <code>ComboBox</code> register
-their server-side search automatically when the form is instantiated; a single
-<code>include("django_formwork.urls")</code> serves them all. Model-backed search needs
-<code>search_fields</code> on the widget and a queryset on the field; choices-backed
-search needs a <code>search_choices_&lt;fieldname&gt;(query, request)</code> method on the
-form. Both require <code>search_decorator</code>: pass an auth decorator such as
-<code>login_required</code>, or <code>None</code> for a public endpoint. See
-<a href="../views/">Views</a> for the endpoint machinery and the
-<a href="../../getting-started/quickstart/#server-side-search">quickstart</a> for worked
-examples.</p>
-<h2 id="error_display">error_display<a class="headerlink" href="#error_display" title="Permanent link">&para;</a></h2>
-<p>Field errors render inline by default: the same visual pattern already used
-for help text, a small icon below the widget, in error color, with the error
-message truncated to one line and a <code>[more]</code> toggle when it overflows.
-<code>error_display = "tooltip"</code> switches every field on the form to a DaisyUI
-tooltip instead, which is more compact but easy to miss in a dense layout
-like a table row, and leaves no room for the help text once an error
-appears. Set it on the Meta class or per instantiation:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ContactForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        <span class="n">error_display</span> <span class="o">=</span> <span class="s2">&quot;tooltip&quot;</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># or</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">form</span> <span class="o">=</span> <span class="n">ContactForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">,</span> <span class="n">error_display</span><span class="o">=</span><span class="s2">&quot;tooltip&quot;</span><span class="p">)</span>
+<p>Both render with <code>FormworkRenderer</code> and use <code>FormworkBoundField</code>. It adds
+<code>aria-required</code> to a <a href="#required-and-mandatory-fields">mandatory field</a>, and
+<code>aria-labelledby</code> to a dropdown trigger that <code>&lt;label for&gt;</code> cannot target.</p>
+<p>For icons, descriptions or a trigger class on model choices, return a
+<a href="../widgets/#choicelabel"><code>ChoiceLabel</code></a> from <code>label_from_instance</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChoiceLabel</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">MemberChoiceField</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">):</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">label_from_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="k">return</span> <span class="n">ChoiceLabel</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">obj</span><span class="o">.</span><span class="n">email</span><span class="p">)</span>
 </span></code></pre></div>
-<p>Collapsed, only the truncated error shows, and the help text (if any) is
-present for screen readers but visually hidden. Clicking <code>[more]</code> reveals
-the full error message and the help text together; <code>[less]</code> collapses both
-again. Errors and help text always share one expand/collapse state per
-field.</p>
-<p>Use <code>"inline"</code> (the default) for inline table-row editing, dense
-multi-column layouts, or forms where the help text should stay reachable
-even while an error is showing, and <code>"tooltip"</code> for fields with breathing
-room where a compact tooltip is preferred.</p>
+<h2 id="search-registration">Search registration<a class="headerlink" href="#search-registration" title="Permanent link">&para;</a></h2>
+<p>A field whose widget (<code>Select</code>, <code>SelectMultiple</code>, <code>ComboBox</code>) has a
+<code>search_queryset</code> registers its search when the form class is created.
+Formwork imports the <code>forms</code> module of every installed app at startup, so the
+search exists in every worker before the first request. A single
+<code>include("django_formwork.urls")</code> serves all of them. Registration raises
+<code>ImproperlyConfigured</code> for a widget without <code>search_decorator</code>: pass an auth
+decorator such as <code>login_required</code>, or <code>None</code> for a public endpoint. See
+<a href="../views/#server-side-search">Views</a> for the endpoint and the
+<a href="../../getting-started/quickstart/#server-side-search">quickstart</a> for a worked
+example.</p>
+<h2 id="required-and-mandatory-fields">Required and mandatory fields<a class="headerlink" href="#required-and-mandatory-fields" title="Permanent link">&para;</a></h2>
+<p>A required field shows a red <code>*</code> after its label, and the widget carries
+<code>aria-required="true"</code>. A disabled field shows no asterisk. Formwork marks no
+optional field.</p>
+<p><code>Meta.mandatory</code> names fields that a save accepts empty but a later step needs,
+for example a draft that the user publishes later. They get the asterisk and
+<code>aria-required</code> too, and they still validate as optional:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ListingForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">Listing</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;price&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">]</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="n">mandatory</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">]</span>
+</span></code></pre></div>
+<p><code>Meta.mandatory</code> seeds the set <code>self.mandatory</code>. Add a name that depends on the
+data after <code>super().__init__()</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">category</span> <span class="o">==</span> <span class="s2">&quot;vehicle&quot;</span><span class="p">:</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">mandatory</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;mileage&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="help-text">Help text<a class="headerlink" href="#help-text" title="Permanent link">&para;</a></h2>
+<p>Formwork escapes help text. Django's own templates render it as HTML, so a
+plain string with tags that showed as markup there shows the tags as text here.
+Build markup with <code>format_html()</code> or <code>mark_safe()</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.html</span><span class="w"> </span><span class="kn">import</span> <span class="n">format_html</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">email</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">EmailField</span><span class="p">(</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">help_text</span><span class="o">=</span><span class="n">format_html</span><span class="p">(</span><span class="s1">&#39;See the &lt;a href=&quot;</span><span class="si">{}</span><span class="s1">&quot;&gt;privacy policy&lt;/a&gt;.&#39;</span><span class="p">,</span> <span class="s2">&quot;/privacy/&quot;</span><span class="p">),</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="error_display">error_display<a class="headerlink" href="#error_display" title="Permanent link">&para;</a></h2>
+<p><code>error_display</code> picks where field errors render:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Placement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"auto"</code> (default)</td>
+<td>inline when the field has help text, in a tooltip when it has none</td>
+</tr>
+<tr>
+<td><code>"inline"</code></td>
+<td>inline under every field</td>
+</tr>
+<tr>
+<td><code>"tooltip"</code></td>
+<td>in a DaisyUI tooltip on every field</td>
+</tr>
+</tbody>
+</table>
+<p>Set it on the Meta class or per instantiation:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ContactForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="n">error_display</span> <span class="o">=</span> <span class="s2">&quot;tooltip&quot;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># or</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">form</span> <span class="o">=</span> <span class="n">ContactForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">,</span> <span class="n">error_display</span><span class="o">=</span><span class="s2">&quot;tooltip&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>An inline error uses the pattern of the help text: a small icon below the
+widget, in error color, with the message truncated to one line and a <code>[more]</code>
+toggle when it overflows. <code>[more]</code> reveals the full error and the help text
+together; <code>[less]</code> collapses both. Collapsed, the help text is
+present for screen readers but visually hidden. A tooltip error is more
+compact, but it is easy to miss in a dense layout like a table row.</p>
+<p>Use <code>"inline"</code> for inline table-row editing, dense multi-column layouts, or
+forms where the help text must stay reachable while an error shows, and
+<code>"tooltip"</code> for fields with room around them. A plain <code>forms.Form</code> rendered by
+<code>FormworkRenderer</code> uses <code>"auto"</code>.</p>
 <h2 id="validate_dirty_only">validate_dirty_only<a class="headerlink" href="#validate_dirty_only" title="Permanent link">&para;</a></h2>
 <p>On an edit form, validators added after a record was saved can reject stored
 values the user never touched. <code>validate_dirty_only</code> skips validation for
 fields the submission did not change. Enable it on the Meta class or per
 instantiation:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketEditForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">Ticket</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;priority&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">]</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="n">validate_dirty_only</span> <span class="o">=</span> <span class="kc">True</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># or</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">form</span> <span class="o">=</span> <span class="n">TicketEditForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">ticket</span><span class="p">,</span> <span class="n">validate_dirty_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketEditForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">Ticket</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;priority&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">]</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>        <span class="n">validate_dirty_only</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># or</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">form</span> <span class="o">=</span> <span class="n">TicketEditForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">ticket</span><span class="p">,</span> <span class="n">validate_dirty_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span></code></pre></div>
 <p>For a field the user did not change:</p>
 <ul>
@@ -988,8 +1098,10 @@ instantiation:</p>
 <li>the stored value is carried into <code>cleaned_data</code> and left untouched on the
   instance, so an unchanged relation is never re-assigned</li>
 </ul>
-<p>Changed fields validate as usual, and the form-wide <code>clean()</code> method always
-runs. Whether a field counts as changed is decided by the machinery behind
+<p>A field that the post leaves out counts as unchanged, so a form that posts
+only its changed fields (a section form with <code>data-send-changed</code>) validates
+only those. Changed fields validate as usual, and the form-wide <code>clean()</code>
+method always runs. Whether a field counts as changed is decided by the machinery behind
 <code>Form.changed_data</code>, comparing the posted value against the form's initial
 data; with <code>instance=</code> bound, initial data is what the database holds. The
 model-level exclusions only apply to existing instances. On create, the
@@ -1006,21 +1118,21 @@ walks through a legacy-data example.</p>
 Django's sync methods. <code>clean_&lt;field&gt;()</code> and <code>clean()</code> may be sync or async in
 the same form; async ones are detected and awaited, so the async ORM works in
 validation without <code>sync_to_async</code> wrappers.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">SignupForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">email</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">EmailField</span><span class="p">()</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">clean_email</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>        <span class="n">email</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s2">&quot;email&quot;</span><span class="p">]</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>        <span class="k">if</span> <span class="k">await</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">email__iexact</span><span class="o">=</span><span class="n">email</span><span class="p">)</span><span class="o">.</span><span class="n">aexists</span><span class="p">():</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Already registered.&quot;</span><span class="p">)</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="k">return</span> <span class="n">email</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">signup</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>        <span class="n">form</span> <span class="o">=</span> <span class="n">SignupForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>        <span class="k">if</span> <span class="k">await</span> <span class="n">form</span><span class="o">.</span><span class="n">ais_valid</span><span class="p">():</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>            <span class="o">...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">SignupForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">email</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">EmailField</span><span class="p">()</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">clean_email</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>        <span class="n">email</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s2">&quot;email&quot;</span><span class="p">]</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>        <span class="k">if</span> <span class="k">await</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">email__iexact</span><span class="o">=</span><span class="n">email</span><span class="p">)</span><span class="o">.</span><span class="n">aexists</span><span class="p">():</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Already registered.&quot;</span><span class="p">)</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="k">return</span> <span class="n">email</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">signup</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>        <span class="n">form</span> <span class="o">=</span> <span class="n">SignupForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>        <span class="k">if</span> <span class="k">await</span> <span class="n">form</span><span class="o">.</span><span class="n">ais_valid</span><span class="p">():</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>            <span class="o">...</span>
 </span></code></pre></div>
 <p><code>asave(commit=True)</code> mirrors <code>ModelForm.save()</code>: it awaits the instance's
 <code>asave()</code> and then saves many-to-many relations. With <code>commit=False</code> it
@@ -1037,17 +1149,78 @@ the un-awaited coroutine in <code>cleaned_data</code> instead of running the che
 validation is skipped. Enable <code>FORMWORK_FORCE_ASYNC</code> in any project that defines
 async validators and touches forms from sync code (including templates that read
 <code>form.errors</code>) so the mistake fails loudly.</p>
+<h2 id="section-forms">Section forms<a class="headerlink" href="#section-forms" title="Permanent link">&para;</a></h2>
+<p>A section form saves its own fields of one row, without a submit button: it
+posts on every change and morphs itself back from the response. Several
+section forms on one page share a request queue, so their saves run in order.</p>
+<p><code>section_forms(request, sections, **kwargs)</code> builds every section's form and
+binds only the one that the POST names. The keyword arguments go to each form,
+for example <code>instance=</code>. A POST that names no known section raises
+<code>BadRequest</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">section_forms</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">edit_product</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="p">):</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">product</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Product</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">sections</span> <span class="o">=</span> <span class="n">section_forms</span><span class="p">(</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        <span class="n">request</span><span class="p">,</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="p">{</span><span class="s2">&quot;general&quot;</span><span class="p">:</span> <span class="n">ProductGeneralForm</span><span class="p">,</span> <span class="s2">&quot;extras&quot;</span><span class="p">:</span> <span class="n">ProductExtrasForm</span><span class="p">},</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="n">instance</span><span class="o">=</span><span class="n">product</span><span class="p">,</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="p">)</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="k">for</span> <span class="n">form</span> <span class="ow">in</span> <span class="n">sections</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_bound</span> <span class="ow">and</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>            <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">&quot;product_edit.html&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;sections&quot;</span><span class="p">:</span> <span class="n">sections</span><span class="p">})</span>
+</span></code></pre></div>
+<div class="language-html highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>{% load formwork %}
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="p">&lt;</span><span class="nt">div</span> <span class="na">data-section-forms</span><span class="p">&gt;</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>  <span class="p">&lt;</span><span class="nt">form</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;general_form&quot;</span> <span class="na">data-section-form</span> <span class="na">novalidate</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>        <span class="na">hx-post</span><span class="o">=</span><span class="s">&quot;{{ request.path }}&quot;</span> <span class="na">hx-trigger</span><span class="o">=</span><span class="s">&quot;change delay:300ms&quot;</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>        <span class="na">hx-select</span><span class="o">=</span><span class="s">&quot;#general_form&quot;</span> <span class="na">hx-swap</span><span class="o">=</span><span class="s">&quot;outerMorph&quot;</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>        <span class="na">hx-sync</span><span class="o">=</span><span class="s">&quot;closest [data-section-forms]:queue all&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    {% csrf_token %}{% formwork_section &quot;general&quot; %}
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>    {{ sections.general }}
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>  <span class="p">&lt;/</span><span class="nt">form</span><span class="p">&gt;</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>  <span class="p">&lt;</span><span class="nt">form</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;extras_form&quot;</span> <span class="na">data-section-form</span> <span class="na">data-send-changed</span> <span class="na">novalidate</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>        <span class="na">hx-post</span><span class="o">=</span><span class="s">&quot;{{ request.path }}&quot;</span> <span class="na">hx-trigger</span><span class="o">=</span><span class="s">&quot;change delay:300ms&quot;</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>        <span class="na">hx-select</span><span class="o">=</span><span class="s">&quot;#extras_form&quot;</span> <span class="na">hx-swap</span><span class="o">=</span><span class="s">&quot;outerMorph&quot;</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>        <span class="na">hx-sync</span><span class="o">=</span><span class="s">&quot;closest [data-section-forms]:queue all&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>    {% csrf_token %}{% formwork_section &quot;extras&quot; %}
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>    {{ sections.extras }}
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>  <span class="p">&lt;/</span><span class="nt">form</span><span class="p">&gt;</span>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span></code></pre></div>
+<p>Load <code>{% formwork_sections_js %}</code> after htmx. The formwork bundle leaves it
+out, and it does not need Alpine.</p>
+<ul>
+<li><code>{% formwork_section "name" %}</code> writes the hidden <code>_formwork_section</code> input
+  that names the section.</li>
+<li>Every section form needs <code>hx-sync="closest [data-section-forms]:queue all"</code>.
+  A dropped or replaced save leaves its change unsent, and a request that
+  waits for that save then never runs.</li>
+<li>A response to a save that is older than the latest change leaves the form
+  alone; the queued request after it carries that change.</li>
+<li>A request that replaces section forms (a tab switch, for example) waits
+  until their saves are answered. Leaving the page during a save asks for
+  confirmation.</li>
+<li><code>data-send-changed</code> on a form posts only the fields that differ from the last
+  valid render, plus <code>csrfmiddlewaretoken</code> and <code>_formwork_section</code>. Pair it
+  with <code>validate_dirty_only</code>, so the fields the post leaves out keep their
+  stored values.</li>
+<li><code>data-section-indicator="&lt;selector&gt;"</code> on a field wrapper shows that indicator
+  while a save the field started runs.</li>
+</ul>
 <h2 id="formworkmodel">FormworkModel<a class="headerlink" href="#formworkmodel" title="Permanent link">&para;</a></h2>
 <p><code>FormworkModel</code> is an abstract model base that mixes in
 <code>filthyfields.DirtyFieldsMixin</code>, providing the <code>get_dirty_fields()</code> that
 <code>validate_dirty_only</code> needs, and adds one helper for <code>clean()</code> rules:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Ticket</span><span class="p">(</span><span class="n">FormworkModel</span><span class="p">):</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">status</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">closed_at</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields_dirty</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;closed&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed_at</span><span class="p">:</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Closing a ticket requires closed_at.&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Ticket</span><span class="p">(</span><span class="n">FormworkModel</span><span class="p">):</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">status</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">closed_at</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields_dirty</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;closed&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed_at</span><span class="p">:</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;Closing a ticket requires closed_at.&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>fields_dirty(*names)</code> is <code>True</code> if any of the named fields changed since the
 instance was loaded from the database. New instances always return <code>True</code>, so

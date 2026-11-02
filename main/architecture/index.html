@@ -559,6 +559,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rendering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#widget-design-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Widget design rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#widget-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Widget names
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-widget" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a widget
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -752,6 +796,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rendering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#widget-design-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Widget design rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#widget-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Widget names
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-widget" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a widget
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -791,6 +879,147 @@
    DaisyUI styling without needing <code>{{ form }}</code>.</li>
 <li>CSS must be easily overridable: use <code>@layer components</code> so users
    can override with utility classes or unlayered CSS.</li>
+</ol>
+<h2 id="rendering">Rendering<a class="headerlink" href="#rendering" title="Permanent link">&para;</a></h2>
+<p><code>FormworkRenderer</code> is a <code>TemplatesSetting</code> renderer. It renders <code>{{ form }}</code>
+with <code>formwork/forms/div.html</code> and each field group with
+<code>formwork/forms/field.html</code>, and it loads every template through the project's
+<code>TEMPLATES</code>. A full render and an htmx swap of the search results therefore
+resolve the same template, and a project overrides any formwork template from
+its own template directories. Formwork uses its own template paths: shadowing
+<code>django/forms/div.html</code> from inside an app would change every form in every
+project that installs formwork.</p>
+<h2 id="widget-design-rules">Widget design rules<a class="headerlink" href="#widget-design-rules" title="Permanent link">&para;</a></h2>
+<p>These rules keep each widget in one place and each fix in one file. Follow
+them for a new widget and for a change to an existing one.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Rule</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td>A widget has one class, one template, and at most one Alpine component. Add no fourth place.</td>
+<td>Python builds the context, the template holds the markup, and the JS module holds the behaviour.</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>Check <code>field.widget_type</code> in no template except <code>field.html</code>. Add a branch there only when the widget cannot do the work.</td>
+<td>Django takes the field wrapper from <code>Field.template_name</code> or the renderer, never from the widget. So only the wrapper can branch (single checkbox, toggle).</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>A widget template has no <code>&lt;script&gt;</code>, not even a small one. Register the behaviour with <code>Alpine.data(name, …)</code> in an <code>alpine:init</code> listener, import the module in <code>formwork.js</code>, and list it in the widget's <code>Media</code>. The template only names it: <code>x-data="formworkSelect"</code>.</td>
+<td>A template that needs <code>document.currentScript</code>, a <code>window.load</code> listener, or a global from another library has its behaviour in the wrong file.</td>
+</tr>
+<tr>
+<td>R4</td>
+<td>Follow Django's hierarchy. Subclass for the data contract, share the template, and override only the block that differs. <code>SelectMultiple</code> is a thin subclass over the shared <code>SearchableSelectMixin</code>. A domain variant, such as a project's own country select, subclasses <code>Select</code> and changes only the choices. When only the look of an option differs, return a <code>ChoiceLabel</code> and add no widget.</td>
+<td>Django's own <code>SelectMultiple</code> is three lines over <code>Select</code>.</td>
+</tr>
+<tr>
+<td>R5</td>
+<td>Declare a widget by class, never with a <code>multiple=True</code> kwarg.</td>
+<td><code>Meta.widgets</code> and <code>ModelMultipleChoiceField.widget</code> name a class, so the class is the contract.</td>
+</tr>
+<tr>
+<td>R6</td>
+<td>Factor out shared behaviour and markup. Do not copy it. A variant extends the base template and overrides one block. The shared dropdown mechanics live once in <code>dropdownBase()</code> in <code>widgets/_helpers.js</code>.</td>
+<td>Each fix then goes in one place.</td>
+</tr>
+<tr>
+<td>R7</td>
+<td>An inline Alpine attribute is one call: <code>onToggle()</code>, <code>onNav($event, 1)</code>, <code>matches($el)</code>. Move the value into the module if it contains <code>;</code>, <code>const</code>, <code>new …</code>, or a JS literal built from <code>{{ }}</code>. Put a repeated attribute block in one <code>x-bind</code> object on the shared base. Pass values through <code>data-*</code> attributes.</td>
+<td><code>'{{ v\|escapejs }}'</code> inside an expression parses only if escapejs escaped every quote. Bad: <code>x-show="!search \|\| '{{ option.label\|escapejs }}'.toLowerCase()…"</code>. Good: <code>x-show="matches($el)" data-label="{{ option.label }}"</code>.</td>
+</tr>
+<tr>
+<td>R8</td>
+<td>Use native HTML first, Alpine second, and a library last: <code>&lt;details&gt;</code>/<code>&lt;summary&gt;</code> for a dropdown, <code>&lt;input type=search&gt;</code> for a filter, <code>&lt;button&gt;</code> for an action.</td>
+<td>The browser gives keyboard support and accessibility.</td>
+</tr>
+<tr>
+<td>R9</td>
+<td>Put the <code>id</code> on the focusable control. A hidden input that has the field <code>id</code> is a bug.</td>
+<td><code>&lt;label for&gt;</code> must point to an element that the user can click.</td>
+</tr>
+<tr>
+<td>R10</td>
+<td>Keep server concerns in Python. A template builds no URL and no query parameter. Option markup goes through the <code>#option_list</code> partial.</td>
+<td>htmx swaps and full renders then use one code path.</td>
+</tr>
+<tr>
+<td>R11</td>
+<td>The look of a widget is in its template, not in the Python class. A caller's <code>attrs={"class": …}</code> is only for a one-off variant. Add a CSS component class only after the same variant appears on a third page, and restate every hover and focus state in it.</td>
+<td>DaisyUI state rules win over a plain component class.</td>
+</tr>
+<tr>
+<td>R12</td>
+<td>Name a widget after the primitive. Use Django's name for a drop-in replacement. Add a prefix only when two widgets coexist for one primitive. Do not name the library, the look, or a behaviour that is automatic.</td>
+<td>See <a href="#widget-names">Widget names</a>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="widget-names">Widget names<a class="headerlink" href="#widget-names" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Select</code>, <code>SelectMultiple</code></td>
+<td>Django's names. Search appears past <code>search_threshold</code>, so it is not part of the name.</td>
+</tr>
+<tr>
+<td><code>TextInput</code>, <code>PasswordInput</code>, <code>DateInput</code></td>
+<td>Drop-in replacements, so no prefix.</td>
+</tr>
+<tr>
+<td><code>StepperNumberInput</code>, <code>SuffixNumberInput</code></td>
+<td>Two number inputs coexist, so both have a prefix.</td>
+</tr>
+<tr>
+<td><code>CardRadioSelect</code>, <code>CardCheckboxSelectMultiple</code></td>
+<td>The form is a card. "Big" would be subjective.</td>
+</tr>
+<tr>
+<td><code>ToggleInput</code></td>
+<td>The semantic. "Pill" would name the skin.</td>
+</tr>
+<tr>
+<td><code>SearchInput</code>, <code>ComboBox</code></td>
+<td><code>input type=search</code> and the ARIA term.</td>
+</tr>
+<tr>
+<td><code>CountrySelect</code></td>
+<td>A domain choice set, not a rendering variant. Formwork ships no domain widgets; a project builds one from <code>Select</code>.</td>
+</tr>
+<tr>
+<td>~~<code>CalendarDateInput</code>~~</td>
+<td>Rejected: names the calendar library.</td>
+</tr>
+<tr>
+<td>~~<code>ComponentCheckboxSelectMultiple</code>~~</td>
+<td>Rejected: "Component" says nothing.</td>
+</tr>
+</tbody>
+</table>
+<p>The names shadow <code>django.forms</code> on purpose. Widget modules write
+<code>forms.Select</code>, and callers write <code>from django_formwork import widgets</code> and
+<code>widgets.Select</code>.</p>
+<h2 id="adding-a-widget">Adding a widget<a class="headerlink" href="#adding-a-widget" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Subclass the closest Django widget and set <code>template_name</code>.</li>
+<li>Compute the context in <code>get_context</code>. Keep the classes and the copy in the template.</li>
+<li>If the widget needs behaviour, add one <code>Alpine.data</code> module.</li>
+<li>For a variant, extend the base template and override one block.</li>
+<li>For server search, build on <code>SearchableSelectMixin</code>, so the form registers the search and <code>FormworkSearchView</code> serves it. Write no URL and no view.</li>
 </ol>
 
 
