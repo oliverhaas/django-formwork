@@ -124,6 +124,11 @@
   tooltip; `"auto"` picks inline when the field has help text and the tooltip otherwise.
   Collapsed shows the truncated error only; the `[more]` toggle expands both the full
   error and the help text together. See [Forms](forms.md#error_display).
+- **`ImageDropzoneInput` shows the stored image.** The widget previews the field's
+  stored file, or `preview_url` when set. On an optional field its remove button posts
+  `clear_<name>`, so the field cleans to `False` and a model form empties it, as with
+  `ClearableFileInput`. After a remove the drop area comes back, and a file picked there
+  replaces the stored one. See [Widgets](widgets.md#imagedropzoneinput).
 - **Uniform top-level import surface.** Every documented public name now resolves lazily
   from the package root: form and formset base classes and factories, fields, view base
   classes, renderers, the async mixins, and `FormworkModel` (whose documented

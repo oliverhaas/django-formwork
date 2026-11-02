@@ -47,7 +47,6 @@ def test_preview_url_overrides_the_stored_file(value, attrs, src):
     soup = render_widget(ImageDropzoneInput(), name="logo", value=value, attrs=attrs)
     img = soup.select_one("img[src]")
     assert (img["src"] if img else None) == src
-    assert (soup.select_one('input[type="file"]') is None) == (src is not None)
 
 
 @pytest.mark.unit
@@ -260,6 +259,26 @@ def test_image_dropzone_oversize_pick_clears_stale_preview(uploads_page):
     error = field.locator("p[role='alert'][x-text='error']")
     expect(error).to_have_text("File too large")
     expect(preview).not_to_be_attached()
+
+
+@pytest.mark.e2e
+def test_image_dropzone_stored_image_can_be_replaced(uploads_page):
+    """After the stored image is removed, a new pick uploads in its place instead of contradicting the clear."""
+    from playwright.sync_api import expect
+
+    field = uploads_page.locator("#id_avatar_stored_field")
+    stored = field.locator("img[src^='data:image/gif']")
+    drop_area = field.get_by_text("Drag your image here")
+    clear = field.locator('input[name="clear_avatar_stored"]')
+    expect(stored).to_be_visible()
+    expect(drop_area).to_be_hidden()
+    field.get_by_role("button", name="Remove image").click()
+    expect(stored).to_be_hidden()
+    expect(drop_area).to_be_visible()
+    expect(clear).to_have_value("true")
+    _pick(uploads_page, "avatar_stored")
+    expect(field.locator("img[src^='data:image/png']")).to_be_visible()
+    expect(clear).to_have_value("")
 
 
 @pytest.mark.screenshot

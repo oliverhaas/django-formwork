@@ -586,6 +586,8 @@ Drop area that previews the stored image, with a button that clears it.
 
 On an optional field, the clear button posts `clear_<name>`, and the field
 cleans to `False`, which clears the stored file, as with `ClearableFileInput`.
+After the clear, the drop area comes back, and a file picked there replaces the
+stored one.
 
 !!! note "Server-side validation"
     `accept` and `max_size` only guide the browser. Validate the file type and

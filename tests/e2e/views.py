@@ -1015,6 +1015,13 @@ class UploadsForm(FormworkForm):
         required=False,
         label="Avatar (PNG/JPEG, 2 MB max)",
     )
+    avatar_stored = forms.ImageField(
+        widget=ImageDropzoneInput(
+            preview_url="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        ),
+        required=False,
+        label="Avatar (stored)",
+    )
 
 
 class TranslatedForm(FormworkForm):

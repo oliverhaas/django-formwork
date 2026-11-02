@@ -14,6 +14,15 @@ document.addEventListener("alpine:init", () => {
       return { "border-primary bg-base-100": this.dragging };
     },
 
+    // The stored image shows until the user clears it or picks a new one.
+    get stored() {
+      return "stored" in this.$root.dataset && !this.cleared && !this.preview;
+    },
+
+    get empty() {
+      return !this.preview && !this.stored;
+    },
+
     onDragOver() {
       this.dragging = true;
     },
@@ -39,6 +48,8 @@ document.addEventListener("alpine:init", () => {
         input.value = "";
         return;
       }
+      // A new upload replaces the stored file; with the clear flag Django would reject it.
+      this.$refs.clear.value = "";
       const reader = new FileReader();
       reader.onload = () => {
         this.preview = reader.result;
@@ -57,6 +68,7 @@ document.addEventListener("alpine:init", () => {
 
     discard() {
       this.$refs.input.value = "";
+      this.$refs.clear.value = this.cleared ? "true" : "";
       this.preview = null;
       this.fire(this.$refs.input);
     },

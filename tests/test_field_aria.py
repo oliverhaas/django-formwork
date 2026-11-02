@@ -124,6 +124,7 @@ class _EveryWidgetForm(FormworkForm):
     enabled = forms.BooleanField(widget=ToggleInput, help_text=HELP_TEXT)
     upload = forms.FileField(widget=FileDropzoneInput, help_text=HELP_TEXT)
     avatar = forms.ImageField(widget=ImageDropzoneInput, help_text=HELP_TEXT)
+    logo = forms.ImageField(widget=ImageDropzoneInput(preview_url="/media/logo.png"), help_text=HELP_TEXT)
     owner = forms.CharField(widget=Display, disabled=True, required=False, initial="Ada", help_text=HELP_TEXT)
 
 
