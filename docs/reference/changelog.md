@@ -107,6 +107,10 @@
   `SearchRegistration` are removed. The public surface is the `search_queryset` argument
   of the widgets, the `django_formwork.search` module and `include("django_formwork.urls")`
   (see the rework above).
+- **Help text is escaped.** A plain `help_text` string with HTML tags now shows the tags
+  as text, where formwork and Django's own templates rendered it as HTML. Build help text
+  that needs markup with `format_html()` or `mark_safe()`. A help text built from user
+  data can no longer inject markup. See [Forms](forms.md#help-text).
 
 ### Added
 

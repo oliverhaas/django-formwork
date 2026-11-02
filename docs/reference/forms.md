@@ -81,6 +81,20 @@ data after `super().__init__()`:
             self.mandatory.add("mileage")
 ```
 
+## Help text
+
+Formwork escapes help text. Django's own templates render it as HTML, so a
+plain string with tags that showed as markup there shows the tags as text here.
+Build markup with `format_html()` or `mark_safe()`:
+
+```python
+from django.utils.html import format_html
+
+email = forms.EmailField(
+    help_text=format_html('See the <a href="{}">privacy policy</a>.', "/privacy/"),
+)
+```
+
 ## error_display
 
 `error_display` picks where field errors render:
