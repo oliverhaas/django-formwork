@@ -6,7 +6,7 @@
 [![Django](https://img.shields.io/badge/django-6.0-blue.svg)](https://www.djangoproject.com/)
 [![License](https://img.shields.io/pypi/l/django-formwork.svg)](https://github.com/oliverhaas/django-formwork/blob/main/LICENSE)
 
-django-formwork is an opinionated UI framework for Django, built on Django forms. Forms are the central building block of most Django apps (CRUD pages, admin, search filters, sign-ups, content editors), so formwork treats the form as the primary UI surface. Define a `Form` or `ModelForm` and you get DaisyUI styling, widgets that go beyond Django's built-ins (dropdowns with server-side search, drop zones, OTP, date range, date picker, server-validated textarea, and more), and the htmx + Alpine wiring that makes them dynamic without bespoke per-page JS. Set `FORM_RENDERER` once, include the CSS and JS template tags, and `{{ form }}` produces the full DaisyUI markup. The admin is unaffected; it renders widgets directly, never `{{ form }}` or `as_field_group()`.
+django-formwork is an opinionated UI framework for Django, built on Django forms. Forms are the central building block of most Django apps (CRUD pages, admin, search filters, sign-ups, content editors), so formwork treats the form as the primary UI surface. Define a `Form` or `ModelForm` and you get DaisyUI styling, widgets that go beyond Django's built-ins (dropdowns with server-side search, drop zones, OTP, date range, date picker, server-validated textarea, and more), and the htmx + Alpine wiring that makes them dynamic without bespoke per-page JS. Set `FORM_RENDERER` once, build the CSS, include the JS template tag, and `{{ form }}` produces the full DaisyUI markup. The admin is unaffected; it renders widgets directly, never `{{ form }}` or `as_field_group()`.
 
 ## Quick start
 
@@ -23,9 +23,9 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 `"django.forms"` gives the renderer Django's own widget templates. The `DjangoTemplates` backend must find app templates (`APP_DIRS=True` or the `app_directories` loader).
 
 ```html
-{% load formwork %}
+{% load formwork static %}
 <head>
-  {% formwork_css %}
+  <link rel="stylesheet" href="{% static 'dist.css' %}">
   <script src="https://unpkg.com/htmx.org@4.0.0/dist/htmx.min.js"></script>
   <script src="https://unpkg.com/htmx.org@4.0.0/dist/ext/hx-alpine-compat.min.js"></script>
   {% formwork_js %}
@@ -34,6 +34,8 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 ...
 {{ form }}
 ```
+
+`dist.css` is your Tailwind build of formwork's `formwork.css`. The package ships only that Tailwind source, and the installation docs show the build entry point.
 
 Keep the scripts in this order. htmx's alpine-compat extension is required: without it a morph strips what Alpine wrote into the DOM. `{% formwork_js %}` must run before Alpine, so that its `alpine:init` listeners exist when Alpine starts.
 

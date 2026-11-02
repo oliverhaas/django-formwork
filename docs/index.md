@@ -24,9 +24,9 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 
 ```html
 <!-- base.html -->
-{% load formwork %}
+{% load formwork static %}
 <head>
-  {% formwork_css %}
+  <link rel="stylesheet" href="{% static 'dist.css' %}">  <!-- your Tailwind build of formwork.css -->
   <script src="https://unpkg.com/htmx.org@4.0.0/dist/htmx.min.js"></script>
   <script src="https://unpkg.com/htmx.org@4.0.0/dist/ext/hx-alpine-compat.min.js"></script>
   {% formwork_js %}

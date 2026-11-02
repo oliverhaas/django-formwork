@@ -182,9 +182,6 @@ The form registers the search when its class is created. Formwork imports the `f
 ```html
 {% load formwork %}
 
-<!-- CSS link tag -->
-{% formwork_css %}
-
 <!-- JS module: core plus every widget component; load it after htmx and before Alpine -->
 {% formwork_js %}
 
