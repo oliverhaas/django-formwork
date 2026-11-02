@@ -36,8 +36,8 @@
       the rows. `search_fields` names the columns to match, and `search_decorator` (an
       auth decorator, or `None` for a public search) is required. A `FormworkForm` or
       `FormworkModelForm` class registers the search when Python creates it, and the app
-      imports the `forms` module of every installed app at startup. The endpoint returns 20 rows, the dropdown adds a "Load more"
-      button, and no `COUNT` query runs. `search_ranked=True` orders matches by quality on
+      imports the `forms` module of every installed app at startup. The endpoint returns
+      20 rows, the dropdown adds a "Load more" button, and no `COUNT` query runs. `search_ranked=True` orders matches by quality on
       PostgreSQL (pg_trgm) and raises `ImproperlyConfigured` on other databases.
       `search_key` with `search_params` reuses one registered search for fields built in
       `__init__`. `FormworkSearchView` is final, and an anonymous request for an unknown
@@ -79,14 +79,18 @@
     - **What looks different:** `error_display = "auto"` is the default, so a field with
       help text shows its error inline and a field without help text shows it in a
       tooltip; set `"inline"` or `"tooltip"` in `Meta` or pass `error_display=` to keep
-      one style. Checkbox and radio groups render as a plain stacked list, each label as
-      wide as its text. A disabled dropdown trigger is greyed out, and the open panel is
-      at most 288px high. `OTPInput` is one `<input>` drawn as digit slots, in place of
-      one input per digit.
+      one style. `ToggleInput` puts its label beside the switch, dimmed while off.
+      Checkbox and radio groups render as a plain stacked list, each label as wide as its
+      text. A disabled dropdown trigger is greyed out. The open panel is at most 288px
+      high and shrinks to stay inside the viewport, and the caret points up while it is
+      open. The dropdown search box has a magnifier and a clear button, and shows from 10
+      options instead of 20. The password button shows the current state: an open eye
+      while the password is visible. `ImageDropzoneInput` shows the field label and an
+      "Upload Image" button. `OTPInput` is one `<input>` drawn as digit slots, in place
+      of one input per digit.
     - **What looks the same:** required fields keep the red `*` and optional fields get
-      no marker. `ToggleInput` keeps its label beside the switch, with no background.
-      The dropdowns keep their caret, compact rows and "Select…" placeholder, and the
-      closed `SelectMultiple` keeps the option icons.
+      no marker. The dropdowns keep their caret, compact rows and "Select…" placeholder,
+      and the closed `SelectMultiple` keeps the option icons.
 
 - **Widget-type tokens are snake_case everywhere.** The tokens carried by
   `SearchRegistration.widget_type` and `FormworkSearchView.widget_type` renamed:
