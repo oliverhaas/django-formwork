@@ -83,8 +83,8 @@
       Checkbox and radio groups render as a plain stacked list, each label as wide as its
       text. A disabled dropdown trigger is greyed out. The open panel is at most 288px
       high and shrinks to stay inside the viewport, and the caret points up while it is
-      open. The dropdown search box has a magnifier and a clear button, and shows from 10
-      options instead of 20. The password button shows the current state: an open eye
+      open. The dropdown search box has a magnifier and a clear button, and shows past 10
+      options instead of from 20. The password button shows the current state: an open eye
       while the password is visible. `ImageDropzoneInput` shows the field label and an
       "Upload Image" button. `OTPInput` is one `<input>` drawn as digit slots, in place
       of one input per digit.
