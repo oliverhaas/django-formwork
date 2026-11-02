@@ -64,8 +64,8 @@ def test_select_multiple_get_context_show_search_false_for_few():
 
 @pytest.mark.unit
 def test_select_multiple_get_context_show_search_true_for_many():
-    """show_search is True when choices >= search_threshold (20)."""
-    choices = [(str(i), f"Option {i}") for i in range(21)]
+    """show_search is True when choices > search_threshold (10)."""
+    choices = [(str(i), f"Option {i}") for i in range(11)]
     widget = SelectMultiple(choices=choices)
     ctx = widget.get_context("test", [], {"id": "id_test"})
     assert ctx["widget"]["show_search"] is True

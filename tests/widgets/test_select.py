@@ -66,7 +66,7 @@ def test_select_show_search_explicit_false():
 
 @pytest.mark.unit
 def test_select_get_context_selected_label():
-    """get_context returns the label for the currently selected value."""
+    """get_context returns the label for the selected value."""
     widget = Select(choices=[("a", "Alpha"), ("b", "Beta")])
     ctx = widget.get_context("test", "a", {})
     assert ctx["widget"]["selected_label"] == "Alpha"
@@ -106,17 +106,17 @@ def test_select_get_context_search_url_none_when_unregistered():
 
 
 @pytest.mark.unit
-def test_select_get_context_show_search_false_below_threshold():
-    """show_search is False when choice count is below search_threshold."""
-    widget = Select(choices=[("a", "Alpha"), ("b", "Beta")])
+def test_select_get_context_show_search_false_at_threshold():
+    """show_search is False when choice count equals search_threshold (10)."""
+    widget = Select(choices=[(str(i), f"Option {i}") for i in range(10)])
     ctx = widget.get_context("test", "", {})
     assert ctx["widget"]["show_search"] is False
 
 
 @pytest.mark.unit
-def test_select_get_context_show_search_true_at_threshold():
-    """show_search is True when choice count >= search_threshold (20)."""
-    choices = [(str(i), f"Option {i}") for i in range(20)]
+def test_select_get_context_show_search_true_past_threshold():
+    """show_search is True when choice count > search_threshold (10)."""
+    choices = [(str(i), f"Option {i}") for i in range(11)]
     widget = Select(choices=choices)
     ctx = widget.get_context("test", "", {})
     assert ctx["widget"]["show_search"] is True
@@ -1452,7 +1452,7 @@ def test_select_grouped_search_hides_empty_groups(select_page):
 # ─── Level 5c: E2e, search auto-focus ───────────────────────────────────
 #
 # The second Select (city_many) has 21 choices, above the default
-# search threshold of 20, so it shows a search input.
+# search threshold of 10, so it shows a search input.
 
 
 @pytest.mark.e2e
