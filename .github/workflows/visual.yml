@@ -13,7 +13,8 @@ permissions:
 
 jobs:
   screenshots:
-    runs-on: ubuntu-latest
+    # Playwright 1.58 cannot install Chromium on Ubuntu 26.04 (ubuntu-latest).
+    runs-on: ubuntu-24.04
     # Skip runs on the bot's own auto-update branches to prevent loops.
     # `pull_request.branches-ignore` filters the BASE branch, not the head,
     # so we use a job-level if: instead.
