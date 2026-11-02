@@ -1,6 +1,6 @@
 {% load i18n %}<div class="dropzone"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_dropzone"{% endif %} x-data="formworkFileDropzone"{% if widget.max_size %} data-max-size="{{ widget.max_size }}"{% endif %} data-type-error="{% translate 'File type not accepted' %}" data-size-error="{% translate 'File too large' %}" data-count-text="{{ widget.count_text }}" @dragover.prevent="onDragOver()" @dragleave.prevent="onDragLeave()" @drop.prevent="drop($event)">
-  <div class="dropzone-area" :class="dragClass" tabindex="0" role="button" aria-label="{% translate 'Choose files' %}" @keydown.enter.prevent="browse()" @keydown.space.prevent="browse()">
-    <input x-ref="input" type="file" name="{{ widget.name }}" @change="onChange()"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
+  <div class="dropzone-area" :class="dragClass">
+    <input x-ref="input" type="file" name="{{ widget.name }}" class="sr-only" @change="onChange()"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
     <div x-show="!files.length" @click="browse()">
       <i class="icon icon-cloud-upload dropzone-prompt-icon" aria-hidden="true"></i>
       <p class="dropzone-prompt-text">{% translate "Drag and drop files here" %} <span class="dropzone-browse">{% translate "or browse" %}</span></p>

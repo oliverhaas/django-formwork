@@ -238,6 +238,10 @@
 - **`ValidatedTextarea` posts only its text to the validate endpoint.** htmx 4 has no
   `hx-params`, so each check while typing posted every field of the enclosing form,
   with any files picked in it. It now posts `text`, `field_name` and `errors_id` only.
+- **Screen readers name the `FileDropzoneInput` by its field label.** The keyboard
+  focus went to a drop area named only "Choose files", while the field label, help text
+  and error state sat on a hidden file input. The file input now takes the focus, and
+  the drop area shows the focus ring.
 - **Dropdowns close on any click outside.** `SearchSelect` and `MultiSelect` dismiss
   when a click lands anywhere outside the open panel, including another dropdown's
   trigger. Previously the top-layer popover stayed open, so opening a second dropdown

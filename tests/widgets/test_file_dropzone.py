@@ -66,17 +66,6 @@ def test_file_dropzone_messages_come_from_the_template():
 
 
 @pytest.mark.unit
-def test_file_dropzone_drop_area_is_keyboard_operable():
-    """The drop area is a named button that opens the file picker on Enter and Space."""
-    area = render_widget(FileDropzoneInput(), name="upload").select_one(".dropzone-area")
-    assert area["role"] == "button"
-    assert area["tabindex"] == "0"
-    assert area["aria-label"] == "Choose files"
-    assert area["@keydown.enter.prevent"] == "browse()"
-    assert area["@keydown.space.prevent"] == "browse()"
-
-
-@pytest.mark.unit
 def test_file_dropzone_file_input_keeps_id_and_attrs_but_not_class():
     """The file input carries the id and the caller's attributes; the template owns the class."""
     widget = FileDropzoneInput(attrs={"multiple": True, "accept": ".pdf", "class": "x"})
@@ -86,7 +75,7 @@ def test_file_dropzone_file_input_keeps_id_and_attrs_but_not_class():
     assert inp["name"] == "upload"
     assert inp["accept"] == ".pdf"
     assert inp.has_attr("multiple")
-    assert not inp.has_attr("class")
+    assert "x" not in inp["class"]
     assert soup.select_one(".dropzone")["id"] == "id_upload_dropzone"
 
 
@@ -184,6 +173,18 @@ def test_file_dropzone_selecting_file_shows_preview(uploads_page):
     zone.locator(".dropzone-remove").click()
     expect(zone.locator(".dropzone-browse")).to_be_visible()
     assert inp.evaluate("el => el.files.length") == 0
+
+
+@pytest.mark.e2e
+def test_file_dropzone_field_label_names_a_focusable_input(uploads_page):
+    """The field label targets the file input, which takes the focus and opens the picker (R9)."""
+    from playwright.sync_api import expect
+
+    inp = uploads_page.get_by_label("Drop zone (multi)")
+    inp.focus()
+    expect(inp).to_be_focused()
+    with uploads_page.expect_file_chooser(timeout=3000):
+        uploads_page.keyboard.press("Space")
 
 
 @pytest.mark.e2e

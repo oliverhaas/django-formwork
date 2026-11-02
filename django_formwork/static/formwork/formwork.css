@@ -739,15 +739,15 @@ input.combobox-input {
     @apply w-full;
 }
 
-/* FileDropzoneInput opens its hidden file input from JS. */
-.dropzone input[type="file"] {
-    @apply hidden;
-}
-
 /* Drop area: dashed border, centered content, fixed height to prevent layout
    shift when a preview loads. position:relative anchors the remove button. */
 .dropzone-area {
     @apply rounded-box border-2 border-dashed border-base-300 p-6 text-center cursor-pointer transition-colors duration-150 h-40 flex items-center justify-center relative;
+}
+
+/* The visually hidden file input takes the keyboard focus; the area shows it. */
+.dropzone-area:has(input:focus-visible) {
+    @apply outline-2 outline-primary;
 }
 
 .dropzone-area:hover {
