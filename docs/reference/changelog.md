@@ -235,6 +235,9 @@
 
 ### Fixed
 
+- **`ValidatedTextarea` posts only its text to the validate endpoint.** htmx 4 has no
+  `hx-params`, so each check while typing posted every field of the enclosing form,
+  with any files picked in it. It now posts `text`, `field_name` and `errors_id` only.
 - **Dropdowns close on any click outside.** `SearchSelect` and `MultiSelect` dismiss
   when a click lands anywhere outside the open panel, including another dropdown's
   trigger. Previously the top-layer popover stayed open, so opening a second dropdown

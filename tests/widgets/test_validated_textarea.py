@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 from django import forms
 from django.http import QueryDict
@@ -183,45 +185,6 @@ def test_htmx_attrs_hx_swap():
 
 
 @pytest.mark.unit
-def test_htmx_params_none():
-    """Textarea hx-params is 'none' so only manually-injected params are sent."""
-    widget = ValidatedTextarea(validate_url="/validate/")
-    soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    textarea = soup.find("textarea")
-    assert textarea["hx-params"] == "none"
-
-
-@pytest.mark.unit
-def test_htmx_config_request_text_param():
-    """hx-on::config:request injects text=this.value."""
-    widget = ValidatedTextarea(validate_url="/validate/")
-    soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    textarea = soup.find("textarea")
-    config = textarea["hx-on::config:request"]
-    assert "event.detail.ctx.request.body.set('text', this.value)" in config
-
-
-@pytest.mark.unit
-def test_htmx_config_request_field_name():
-    """hx-on::config:request injects field_name param."""
-    widget = ValidatedTextarea(validate_url="/validate/")
-    soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    textarea = soup.find("textarea")
-    config = textarea["hx-on::config:request"]
-    assert "event.detail.ctx.request.body.set('field_name', 'content')" in config
-
-
-@pytest.mark.unit
-def test_htmx_config_request_errors_id():
-    """hx-on::config:request injects errors_id param."""
-    widget = ValidatedTextarea(validate_url="/validate/")
-    soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    textarea = soup.find("textarea")
-    config = textarea["hx-on::config:request"]
-    assert "event.detail.ctx.request.body.set('errors_id', 'id_content_live_error')" in config
-
-
-@pytest.mark.unit
 def test_alpine_x_data_present():
     """With validate_url, the wrapper binds to the formworkValidatedTextarea component."""
     widget = ValidatedTextarea(validate_url="/validate/")
@@ -328,20 +291,6 @@ def test_aria_invalid_alpine_binding_present():
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
     textarea = soup.find("textarea")
     assert textarea.has_attr(":aria-invalid")
-
-
-@pytest.mark.unit
-def test_textarea_has_after_swap_handler():
-    """Textarea carries hx-on::after:swap to update hasErrors after htmx response.
-
-    htmx 4 fires after:swap on the source (textarea) once all main+OOB swaps
-    have completed, so the handler reads the up-to-date errors div content.
-    """
-    widget = ValidatedTextarea(validate_url="/validate/")
-    soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    textarea = soup.find("textarea")
-    assert textarea.has_attr("hx-on::after:swap")
-    assert "hasErrors" in textarea["hx-on::after:swap"]
 
 
 # ─── Level 3: Form integration ───────────────────────────────────────────────
@@ -553,6 +502,15 @@ def test_aria_invalid_clears_when_errors_resolve(textarea_page):
     # Errors should be gone and aria-invalid="false" on textarea.
     expect(errors.locator("p")).to_have_count(0, timeout=3000)
     expect(ta).to_have_attribute("aria-invalid", "false")
+
+
+@pytest.mark.e2e
+def test_validation_request_posts_only_the_text(textarea_page):
+    """The debounced check posts the text and its two ids, not the rest of the form."""
+    with textarea_page.expect_request(lambda r: "/e2e/validate/bio/" in r.url) as request:
+        textarea_page.locator('textarea[name="bio"]').fill("spam")
+    names = re.findall(r'form-data; name="([^"]+)"', request.value.post_data)
+    assert sorted(names) == ["errors_id", "field_name", "text"]
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────────
