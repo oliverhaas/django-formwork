@@ -1,4 +1,4 @@
-"""Django's built-in CheckboxSelectMultiple under formwork styling."""
+"""Django's built-in CheckboxSelectMultiple under formwork styling, and formwork's column layout."""
 
 from __future__ import annotations
 
@@ -7,8 +7,9 @@ from django import forms
 from django.http import QueryDict
 
 from django_formwork.forms import FormworkForm
+from django_formwork.widgets import CheckboxSelectMultiple
 
-from .conftest import assert_html_equivalent, render_form, render_widget, submit
+from .conftest import render_form, render_widget, submit
 
 TOPPING_CHOICES = [
     ("cheese", "Cheese"),
@@ -39,6 +40,28 @@ class CheckboxSelectMultipleRequiredForm(FormworkForm):
 
 
 # ─── Level 1: Widget object (pure Python) ────────────────────────────────
+
+
+FRUIT_CHOICES = [("a", "Apples"), ("b", "Bananas")]
+
+
+def _render_fruit(**kwargs):
+    return CheckboxSelectMultiple(choices=FRUIT_CHOICES, **kwargs).render("fruit", ["a"], attrs={"id": "id_fruit"})
+
+
+@pytest.mark.unit
+def test_formwork_checkbox_group_renders_like_django_without_columns():
+    """Without ``columns`` the formwork widget renders exactly like Django's own."""
+    stock = forms.CheckboxSelectMultiple(choices=FRUIT_CHOICES).render("fruit", ["a"], attrs={"id": "id_fruit"})
+    assert _render_fruit() == stock
+
+
+@pytest.mark.unit
+def test_columns_lay_out_the_group_without_reaching_the_checkboxes():
+    """``columns=2`` puts the grid on the group, not on the inputs."""
+    html = _render_fruit(columns=2)
+    assert '<div id="id_fruit" class="!grid grid-cols-2 gap-x-1">' in html
+    assert "grid" not in html.split("<label", 1)[1]
 
 
 @pytest.mark.unit
@@ -174,7 +197,7 @@ def test_checkbox_select_multiple_error_state(renderer):
     checkboxes = soup.find_all("input", attrs={"name": "toppings"})
     assert len(checkboxes) == 4
     assert all(cb.get("aria-invalid") == "true" for cb in checkboxes)
-    tooltip = soup.find(id="id_toppings_tooltip")
+    tooltip = soup.find(id="id_toppings_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -186,17 +209,6 @@ def test_checkbox_select_multiple_form_prefix(renderer):
     soup = render_form(form, renderer=renderer)
     checkboxes = soup.find_all("input", attrs={"type": "checkbox", "name": "order-toppings"})
     assert len(checkboxes) == 4
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_checkbox_select_multiple_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """CheckboxSelectMultiple produces equivalent HTML via DTL and Jinja2."""
-    soup_dtl = render_form(CheckboxSelectMultipleForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(CheckboxSelectMultipleForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

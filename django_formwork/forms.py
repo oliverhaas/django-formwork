@@ -10,247 +10,90 @@ Using ``FORM_RENDERER = "django_formwork.FormworkRenderer"`` in settings
 is preferred over these base classes (it applies to *all* forms), but
 these are useful when you want formwork styling on specific forms only.
 
-Search endpoints are automatically registered so that a single
-``include("django_formwork.urls")`` serves all search views:
-
-- **Model-backed**: widget has ``search_fields`` and field provides a queryset.
-- **Choices-backed**: form defines ``search_choices_<fieldname>(query, request)``.
+Both classes register the server search of each field whose widget takes a
+``search_queryset`` when the class is created, so a single
+``include("django_formwork.urls")`` serves every search.
 """
 
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.db.models import UniqueConstraint
-from django.forms import Form, ModelChoiceField, ModelForm, ModelMultipleChoiceField
+from django.db.models import Model, UniqueConstraint
+from django.forms import Form, ModelForm
+from django.forms.forms import DeclarativeFieldsMetaclass
 from django.forms.models import InlineForeignKeyField, ModelFormMetaclass, construct_instance
 
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
-from django_formwork.fields import FormworkModelChoiceField, FormworkModelMultipleChoiceField
-from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
+from django_formwork.boundfield import FormworkBoundField
+from django_formwork.renderers import FormworkRenderer
+from django_formwork.search import register_form_searches
 from django_formwork.tables import RowRenderMixin
 
 if TYPE_CHECKING:
-    from django.db.models import QuerySet
-    from django.forms import Field
-
-    from django_formwork.widgets import ComboBox, MultiSelect, SearchSelect
+    from django.forms import BoundField
 
 __all__ = [
     "FormworkForm",
-    "FormworkJinja2Form",
-    "FormworkJinja2ModelForm",
+    "FormworkFormMetaclass",
     "FormworkModelForm",
     "FormworkModelFormMetaclass",
 ]
 
+_M = TypeVar("_M", bound=Model)
 
-class FormworkModelFormMetaclass(ModelFormMetaclass):
-    """Metaclass that auto-upgrades ``ModelChoiceField`` to ``FormworkModelChoiceField``.
+_ERROR_DISPLAY_CHOICES = ("auto", "inline", "tooltip")
 
-    Auto-generated ``ModelChoiceField`` / ``ModelMultipleChoiceField`` instances
-    (from ``Meta.model`` / ``Meta.fields``) are swapped for their Formwork
-    equivalents so icon/description callbacks can be attached to the field.
-    Explicit field declarations, including custom subclasses, are left alone.
-    """
 
-    def __new__(
-        mcs,
-        name: str,
-        bases: tuple[type, ...],
-        namespace: dict[str, Any],
-        **kwargs: Any,
-    ) -> type:
-        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
-        if not hasattr(cls, "base_fields"):
-            return cls
-        declared = getattr(cls, "declared_fields", {})
-        for field_name, field in cls.base_fields.items():
-            if field_name in declared:
-                continue
-            if type(field) is ModelChoiceField:
-                cls.base_fields[field_name] = FormworkModelChoiceField.from_field(field)
-            elif type(field) is ModelMultipleChoiceField:
-                cls.base_fields[field_name] = FormworkModelMultipleChoiceField.from_field(field)
+class FormworkFormMetaclass(DeclarativeFieldsMetaclass):
+    """Registers each field's server search at class creation."""
+
+    def __new__(mcs, name: str, bases: tuple[type, ...], attrs: dict[str, Any], **kwargs: Any) -> type:
+        cls = super().__new__(mcs, name, bases, attrs, **kwargs)
+        register_form_searches(cls)
         return cls
 
 
-class _AutoSearchMixin:
-    """Mixin that auto-registers search endpoints.
+class FormworkModelFormMetaclass(ModelFormMetaclass):
+    """Registers each field's server search at class creation."""
 
-    Two paths:
-
-    1. **Model-backed**: widget has ``search_fields`` and the field
-       provides a queryset (``ModelChoiceField``).
-    2. **Choices-backed**: the form defines a
-       ``search_choices_<fieldname>(query, request)`` method that returns
-       results directly (list of dicts or ``(value, label)`` tuples).
-       It is called without the form instance, so declare it
-       ``@staticmethod``.
-
-    Caveats:
-
-    - The registry is per-process and populated when the form is
-      instantiated.  In a multi-worker deployment a search request can land
-      on a worker that has not instantiated the form yet (e.g. right after
-      a deploy) and return 404.  If that matters, instantiate the form once
-      at startup (``AppConfig.ready``).
-    - Model-backed registration captures the field's queryset at form
-      construction time.  Assigning ``form.fields["x"].queryset`` afterwards
-      changes the rendered choices only; the search endpoint keeps serving
-      (and labelling) the originally captured queryset.  Do not rely on
-      post-construction assignment for per-user scoping: bake visibility
-      rules into the class-level queryset and use ``search_decorator`` for
-      access control.
-    """
-
-    if TYPE_CHECKING:
-        fields: dict[str, Any]
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._auto_register_search()
-
-    def _auto_register_search(self) -> None:
-        from django_formwork._registry import (
-            SearchRegistration,
-            make_choices_key,
-            register,
-        )
-        from django_formwork.widgets import ComboBox, MultiSelect, SearchSelect
-        from django_formwork.widgets._base import _NOT_SET
-
-        for name, field in self.fields.items():
-            widget = field.widget
-            if not isinstance(widget, (SearchSelect, MultiSelect, ComboBox)):
-                continue
-
-            # Check whether this widget would be auto-registered.
-            search_fields = getattr(widget, "search_fields", None)
-            queryset = getattr(field, "queryset", None)
-            has_model_search = bool(search_fields) and queryset is not None
-            has_choices_search = getattr(self.__class__, f"search_choices_{name}", None) is not None
-
-            if not has_model_search and not has_choices_search:
-                continue
-
-            # Enforce search_decorator: developer must make a conscious
-            # choice about auth for auto-registered search endpoints.
-            raw_decorator = getattr(widget, "search_decorator", _NOT_SET)
-            if raw_decorator is _NOT_SET:
-                widget_cls = type(widget).__name__
-                msg = (
-                    f"Field '{name}' uses {widget_cls} with server-side search but no "
-                    f"search_decorator was provided. Pass a decorator (e.g. login_required) "
-                    f"or None for public access."
-                )
-                raise ImproperlyConfigured(msg)
-            if raw_decorator is not None and not callable(raw_decorator):
-                msg = (
-                    f"Field '{name}' has a non-callable search_decorator "
-                    f"({raw_decorator!r}). Pass a decorator (e.g. login_required) "
-                    f"or None for public access."
-                )
-                raise ImproperlyConfigured(msg)
-            decorator = raw_decorator
-
-            # Path 1: model-backed (search_fields on widget + queryset on field).
-            if has_model_search and search_fields is not None and queryset is not None:
-                self._register_model_search(name, widget, field, search_fields, queryset)
-                continue
-
-            # Path 2: choices-backed (search_choices_<name> method on form).
-            method = getattr(self.__class__, f"search_choices_{name}", None)
-            if method is not None:
-                raw_attr = inspect.getattr_static(self.__class__, f"search_choices_{name}", None)
-                if inspect.isfunction(raw_attr):
-                    params = list(inspect.signature(raw_attr).parameters)
-                    if params and params[0] == "self":
-                        msg = (
-                            f"{type(self).__name__}.search_choices_{name} is an instance "
-                            f"method; the search endpoint calls it as (query, request) "
-                            f"without the form instance. Declare it with @staticmethod."
-                        )
-                        raise ImproperlyConfigured(msg)
-                widget_type = self._widget_type_for(widget)
-                key = make_choices_key(self.__class__, name)
-                registration = SearchRegistration(
-                    search_func=method,
-                    search_decorator=decorator,
-                    widget_type=widget_type,
-                )
-                register(key, registration)
-                widget._registry_key = key  # noqa: SLF001
-
-    def _register_model_search(
-        self,
-        field_name: str,
-        widget: SearchSelect | MultiSelect | ComboBox,
-        field: Field,
-        search_fields: tuple[str, ...],
-        queryset: QuerySet,
-    ) -> None:
-        from django_formwork._registry import SearchRegistration, make_key, register
-        from django_formwork.widgets import MultiSelect
-
-        model_label = queryset.model._meta.label_lower  # noqa: SLF001
-        to_field_name = getattr(field, "to_field_name", None) or "pk"
-        key = make_key(type(self), field_name, model_label, search_fields, to_field_name)
-
-        widget_type = "multi_select" if isinstance(widget, MultiSelect) else "search_select"
-        # Callbacks live on the field.  Formwork fields expose icon/description
-        # callbacks; plain ModelChoiceField only exposes label_from_instance.
-        label_func = getattr(field, "label_from_instance", None)
-        icon_func = None
-        desc_func = None
-        selected_toggle_class_func = None
-        if isinstance(field, (FormworkModelChoiceField, FormworkModelMultipleChoiceField)):
-            icon_func = field.icon_from_instance
-            desc_func = field.description_from_instance
-            selected_toggle_class_func = field.selected_toggle_class_from_instance
-        base_qs = queryset
-
-        registration = SearchRegistration(
-            queryset_factory=lambda qs=base_qs: qs.all(),  # type: ignore[misc]
-            search_fields=tuple(search_fields),
-            to_field_name=to_field_name,
-            label_from_instance=label_func,
-            icon_from_instance=icon_func,
-            description_from_instance=desc_func,
-            selected_toggle_class_from_instance=selected_toggle_class_func,
-            search_decorator=widget.search_decorator,
-            widget_type=widget_type,
-        )
-        register(key, registration)
-        widget._registry_key = key  # noqa: SLF001
-
-    @staticmethod
-    def _widget_type_for(widget: SearchSelect | MultiSelect | ComboBox) -> str:
-        from django_formwork.widgets import ComboBox, MultiSelect
-
-        if isinstance(widget, MultiSelect):
-            return "multi_select"
-        if isinstance(widget, ComboBox):
-            return "combo_box"
-        return "search_select"
+    def __new__(mcs, name: str, bases: tuple[type, ...], attrs: dict[str, Any], **kwargs: Any) -> type:
+        cls = super().__new__(mcs, name, bases, attrs, **kwargs)
+        register_form_searches(cls)
+        return cls
 
 
 class _ErrorDisplayFormMixin:
-    """Choose how field errors render: DaisyUI tooltip or inline (help-text style).
+    """Form-level choice of how field errors render: ``auto``, ``inline`` or ``tooltip``.
 
-    ``error_display`` is ``"inline"`` (default) or ``"tooltip"``, set via
-    ``Meta.error_display`` or the matching ``__init__`` kwarg.  Read by
-    ``formwork_field.html`` as ``field.form.error_display``.
+    ``auto`` resolves per field in ``formwork/forms/field.html``: inline when
+    the field has help text, a tooltip when it does not.
     """
 
     def __init__(self, *args: Any, error_display: str | None = None, **kwargs: Any) -> None:
         if error_display is None:
             meta = getattr(type(self), "Meta", None)
-            error_display = getattr(meta, "error_display", "inline")
+            error_display = getattr(meta, "error_display", "auto")
+        if error_display not in _ERROR_DISPLAY_CHOICES:
+            msg = f"error_display must be one of {_ERROR_DISPLAY_CHOICES}, got {error_display!r}"
+            raise ImproperlyConfigured(msg)
         self.error_display: str = error_display
+        super().__init__(*args, **kwargs)
+
+
+class _MandatoryFormMixin:
+    """Fields a later step such as publish needs, though a save takes them empty.
+
+    ``Meta.mandatory`` seeds ``self.mandatory`` before ``Form.__init__``, so a
+    subclass adds data-dependent names after its own ``super().__init__()``.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        meta = getattr(type(self), "Meta", None)
+        self.mandatory: set[str] = set(getattr(meta, "mandatory", ()))
         super().__init__(*args, **kwargs)
 
 
@@ -262,7 +105,10 @@ class _DirtyOnlyFormMixin:
     fields where ``BoundField._has_changed()`` returns False (the per-field
     machinery behind ``Form.changed_data``) and carry the bound field's
     ``initial`` value through to ``cleaned_data``.  ``clean_<name>`` methods
-    are skipped for those fields too.
+    are skipped for those fields too.  A field the post leaves out (the
+    widget's ``value_omitted_from_data()``) counts as unchanged, because a
+    ``data-send-changed`` form posts only the fields that differ from the
+    render.
 
     One consequence to know about: for an unchanged field, ``cleaned_data``
     holds ``BoundField.initial`` rather than the field's cleaned Python value.
@@ -280,6 +126,8 @@ class _DirtyOnlyFormMixin:
         _bound_items: Any
         cleaned_data: dict[str, Any]
         add_error: Any
+        data: Any
+        files: Any
 
     def __init__(self, *args: Any, validate_dirty_only: bool | None = None, **kwargs: Any) -> None:
         if validate_dirty_only is None:
@@ -288,13 +136,17 @@ class _DirtyOnlyFormMixin:
         self._validate_dirty_only: bool = validate_dirty_only
         super().__init__(*args, **kwargs)
 
+    def _unchanged(self, bf: BoundField) -> bool:
+        omitted = bf.field.widget.value_omitted_from_data(self.data, self.files, bf.html_name)
+        return omitted or not bf._has_changed()  # type: ignore[attr-defined]  # noqa: SLF001
+
     def _clean_fields(self) -> None:
         if not self._validate_dirty_only:
             super()._clean_fields()  # type: ignore[misc]
             return
         for name, bf in self._bound_items():
             field = bf.field
-            if not bf._has_changed():  # noqa: SLF001
+            if self._unchanged(bf):
                 self.cleaned_data[name] = bf.initial
                 continue
             try:
@@ -311,7 +163,7 @@ class _DirtyOnlyFormMixin:
             return
         for name, bf in self._bound_items():
             field = bf.field
-            if not bf._has_changed():  # noqa: SLF001
+            if self._unchanged(bf):
                 self.cleaned_data[name] = bf.initial
                 continue
             try:
@@ -409,7 +261,7 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
         exclude: set[str] = set(self._meta.exclude or ())
         if self._validate_dirty_only and not self.instance._state.adding:  # noqa: SLF001
             for name, bf in self._bound_items():
-                if not bf._has_changed():  # noqa: SLF001
+                if self._unchanged(bf):
                     exclude.add(name)
         return exclude
 
@@ -478,7 +330,26 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
                 await self.avalidate_constraints()
 
 
-class FormworkForm(RowRenderMixin, _ErrorDisplayFormMixin, _DirtyOnlyFormMixin, AsyncFormMixin, _AutoSearchMixin, Form):
+if TYPE_CHECKING:
+    from django.forms import ModelForm as _GenericModelForm
+else:
+
+    class _GenericModelForm:
+        """``ModelForm[_M]`` for the type checker, plain ``ModelForm`` at runtime."""
+
+        def __class_getitem__(cls, item: object) -> type[ModelForm]:
+            return ModelForm
+
+
+class FormworkForm(
+    RowRenderMixin,
+    _MandatoryFormMixin,
+    _ErrorDisplayFormMixin,
+    _DirtyOnlyFormMixin,
+    AsyncFormMixin,
+    Form,
+    metaclass=FormworkFormMetaclass,
+):
     """Form base class with DaisyUI styling and async support.
 
     Usage::
@@ -503,24 +374,33 @@ class FormworkForm(RowRenderMixin, _ErrorDisplayFormMixin, _DirtyOnlyFormMixin, 
     Pass ``validate_dirty_only=True`` (or set ``Meta.validate_dirty_only = True``)
     to skip field validators on fields the user did not change.
 
-    Field errors render inline (below the widget, help-text style) by default.
-    Pass ``error_display="tooltip"`` (or set ``Meta.error_display = "tooltip"``)
-    to render them in a DaisyUI tooltip instead.
+    ``Meta.error_display`` (or the ``error_display`` kwarg) picks where field
+    errors render: ``"auto"`` (default) puts them inline when the field has
+    help text and in a DaisyUI tooltip when it does not; ``"inline"`` and
+    ``"tooltip"`` force one placement.
+
+    Required fields carry a red asterisk.  ``Meta.mandatory`` names fields
+    that a save accepts empty but a later step needs: they get the asterisk
+    too and announce ``aria-required``.
     """
 
     default_renderer = FormworkRenderer
+    bound_field_class = FormworkBoundField
 
 
 class FormworkModelForm(
     RowRenderMixin,
+    _MandatoryFormMixin,
     _ErrorDisplayFormMixin,
     _DirtyOnlyModelFormMixin,
     AsyncModelFormMixin,
-    _AutoSearchMixin,
-    ModelForm,
+    _GenericModelForm[_M],
     metaclass=FormworkModelFormMetaclass,
 ):
     """ModelForm base class with DaisyUI styling and async support.
+
+    Subscript it with the model for typed ``instance`` and ``save()``:
+    ``class BookForm(FormworkModelForm[Book])``.
 
     With ``Meta.validate_dirty_only = True`` (or the matching ``__init__``
     kwarg), field validation, model field validation, unique checks and
@@ -530,41 +410,18 @@ class FormworkModelForm(
     with a changed field stays validated, so the compound check still runs.
     Requires the bound model to inherit :class:`~django_formwork.FormworkModel`.
 
-    Field errors render inline (below the widget, help-text style) by default.
-    Pass ``error_display="tooltip"`` (or set ``Meta.error_display = "tooltip"``)
-    to render them in a DaisyUI tooltip instead.
+    ``Meta.error_display`` and ``Meta.mandatory`` work as on
+    :class:`FormworkForm`.
     """
 
     default_renderer = FormworkRenderer
+    bound_field_class = FormworkBoundField
 
+    if TYPE_CHECKING:
+        # The mixins above declare these as Any, which hides ModelForm[_M]'s types.
+        instance: _M
 
-class FormworkJinja2Form(
-    RowRenderMixin,
-    _ErrorDisplayFormMixin,
-    _DirtyOnlyFormMixin,
-    AsyncFormMixin,
-    _AutoSearchMixin,
-    Form,
-):
-    """Form base class with DaisyUI styling (Jinja2 renderer) and async support.
+        def save(self, commit: bool = True) -> _M: ...  # noqa: FBT001, FBT002
 
-    Use this when your project uses Jinja2 templates.  Equivalent to
-    :class:`FormworkForm` but renders via
-    :class:`~django_formwork.renderers.FormworkJinja2Renderer`.
-    """
-
-    default_renderer = FormworkJinja2Renderer
-
-
-class FormworkJinja2ModelForm(
-    RowRenderMixin,
-    _ErrorDisplayFormMixin,
-    _DirtyOnlyModelFormMixin,
-    AsyncModelFormMixin,
-    _AutoSearchMixin,
-    ModelForm,
-    metaclass=FormworkModelFormMetaclass,
-):
-    """ModelForm base class with DaisyUI styling (Jinja2 renderer) and async support."""
-
-    default_renderer = FormworkJinja2Renderer
+    def __class_getitem__(cls, item: object) -> type[Self]:
+        return cls

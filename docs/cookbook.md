@@ -20,25 +20,25 @@ class TicketTitleForm(forms.Form):
 
 ```html
 <!-- template.html -->
-{% load formwork %}
 <form method="post">
   {% csrf_token %}
   {{ form }}
   <button type="submit" class="btn btn-primary">Create</button>
 </form>
-{% formwork_js %}
 ```
 
 ![A single styled title field](img/cookbook/step-1.png)
 
-`{% formwork_js %}` does nothing for a plain text field yet. It loads the
-JavaScript behind the richer widgets and the htmx integration that the later
-steps use, so it belongs in the base template from the start.
+A plain text field needs no JavaScript. The richer widgets and the htmx
+integration in the later steps do, so put the scripts from
+[installation step 5](getting-started/installation.md#5-htmx-and-alpinejs) in
+the base template's `<head>` from the start: htmx, its alpine-compat extension,
+`{% formwork_js %}`, then Alpine.
 
 ## Step 2: richer widgets
 
 Formwork ships widgets with extra styling and more modern behaviour, like
-dropdowns with search. Here the assignee is a `SearchSelect` backed by a model,
+dropdowns with search. Here the assignee is a `Select` backed by a model,
 with an initials badge and the person's email shown for each option. The
 priority stays a plain `ChoiceField`; standard fields and Formwork widgets mix
 freely in one form.
@@ -47,22 +47,28 @@ freely in one form.
 # forms.py
 from django.utils.html import format_html
 
-from django_formwork import FormworkForm, FormworkModelChoiceField
-from django_formwork.widgets import SearchSelect
+from django_formwork import ChoiceLabel, FormworkForm, widgets
 
 
-def assignee_icon(person):
-    initials = "".join(part[0] for part in person.name.split()[:2]).upper()
-    return format_html("<span class='badge badge-neutral badge-sm'>{}</span>", initials)
+class PersonChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, person):
+        initials = "".join(part[0] for part in person.name.split()[:2]).upper()
+        return ChoiceLabel(
+            person.name,
+            icon=format_html("<span class='badge badge-neutral badge-sm'>{}</span>", initials),
+            description=person.email,
+        )
+
+
+def people(request):
+    return Person.objects.all()
 
 
 class TicketWidgetsForm(FormworkForm):
     title = forms.CharField(max_length=200)
-    assignee = FormworkModelChoiceField(
+    assignee = PersonChoiceField(
         queryset=Person.objects.all(),
-        widget=SearchSelect(search_fields=["name", "email"], search_decorator=None),
-        icon_from_instance=assignee_icon,
-        description_from_instance=lambda person: person.email,
+        widget=widgets.Select(search_queryset=people, search_fields=["name", "email"], search_decorator=None),
         required=False,
     )
     priority = forms.ChoiceField(choices=PRIORITY_CHOICES)
@@ -79,10 +85,11 @@ urlpatterns = [
 
 ![A searchable assignee dropdown with initials and emails](img/cookbook/step-2.png)
 
-`search_decorator` is required. Pass an auth decorator such as `login_required`
-to protect the endpoint, or `None` for a public one. `icon_from_instance`
-returns safe HTML; keep its attributes single-quoted so they nest inside the
-widget's markup.
+`search_queryset` returns the rows to search; the endpoint calls it with the
+request. `search_decorator` is required. Pass an auth decorator such as
+`login_required` to protect the endpoint, or `None` for a public one. The
+`ChoiceLabel` icon is safe HTML; keep its attributes single-quoted so they nest
+inside the widget's markup.
 
 ## Step 3: server-side validation, still MPA
 
@@ -132,6 +139,8 @@ def cookbook_step3(request):
 
 `{% formwork_js %}` registers the `formwork-morph` htmx extension, so the error
 tooltip appears without a full page reload and in-progress input is preserved.
+The title has no help text, so its error shows in a tooltip; a field with help
+text shows it inline.
 No `hx-ext` attribute is needed. The non-htmx branch keeps the plain form post
 working when JavaScript is unavailable. `data-formwork-dirty` highlights fields
 you have changed since the page loaded; it becomes useful on the edit form in
@@ -155,11 +164,9 @@ from django_formwork import FormworkModelForm
 
 
 class TicketCreateForm(FormworkModelForm):
-    assignee = FormworkModelChoiceField(
+    assignee = PersonChoiceField(
         queryset=Person.objects.all(),
-        widget=SearchSelect(search_fields=["name", "email"], search_decorator=None),
-        icon_from_instance=assignee_icon,
-        description_from_instance=lambda person: person.email,
+        widget=widgets.Select(search_queryset=people, search_fields=["name", "email"], search_decorator=None),
         required=False,
     )
 
@@ -213,13 +220,10 @@ class Ticket(FormworkModel):
 
 ```python
 # forms.py
-from django_formwork.widgets import ImageDropZone
-
-
 class TicketUploadForm(TicketCreateForm):
     class Meta(TicketCreateForm.Meta):
         fields = [*TicketCreateForm.Meta.fields, "screenshot"]
-        widgets = {"screenshot": ImageDropZone(max_size=5 * 1024 * 1024)}
+        widgets = {"screenshot": widgets.ImageDropzoneInput(max_size=5 * 1024 * 1024)}
 ```
 
 Uploads change two things outside the form class. The form tag gains the
@@ -319,11 +323,14 @@ loaded instance, and it works the same without the attribute.
   and `clean` methods; async views call `await form.ais_valid()` and
   `await form.asave()`. See
   [async validation](reference/forms.md#async-validation-and-saving).
-- Search does not need a model. A `search_choices_<field>(query, request)`
-  method on the form serves any `SearchSelect`, `MultiSelect`, or `ComboBox`.
-  See [server-side search](getting-started/quickstart.md#server-side-search).
+- Search does not need `search_fields`. Without them, `search_queryset` reads
+  `request.GET["q"]` itself and returns its rows best first, for example from
+  full-text search. On PostgreSQL, `search_ranked=True` ranks the matches and
+  forgives typos. See [server-side search](reference/views.md#server-side-search).
+- Several forms on one page can each autosave their own fields of one row. See
+  [section forms](reference/forms.md#section-forms).
 - The [full example](https://github.com/oliverhaas/django-formwork/tree/main/examples/full)
-  is a small task manager that combines these patterns with `MultiSelect`,
+  is a small task manager that combines these patterns with `SelectMultiple`,
   `DatePicker`, and a multi-step wizard.
 
 The [Forms](reference/forms.md), [Widgets](reference/widgets.md), and

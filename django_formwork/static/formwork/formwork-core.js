@@ -4,9 +4,10 @@
  * This file holds the non-widget logic that runs once per page,
  * regardless of which widgets are on the page:
  *
- *   1. htmx 4 morph extension (`formwork-morph`) that preserves Alpine
- *      reactive state, focused input values, <details> open state, and
- *      Alpine-template-generated DOM nodes during full-form morphs.
+ *   1. htmx 4 morph extension (`formwork-morph`) that preserves focused
+ *      input values, <details> open state, unconfirmed dropdown picks, and
+ *      Alpine-template-generated DOM nodes during full-form morphs.  Alpine
+ *      bindings survive the morph through htmx's alpine-compat extension.
  *   2. Native browser validation disabling on forms with formwork error
  *      tooltips (CSP-safe replacement for an inline <script>).
  *   3. Dirty-field highlighting (opt-in via data-formwork-dirty) that
@@ -18,6 +19,10 @@
  *
  * Prerequisites (loaded by the user, BEFORE this script):
  *   - htmx 4.x
+ *   - htmx's alpine-compat extension (`dist/ext/hx-alpine-compat.js` in
+ *     the htmx release), after htmx.  Without it a morph strips what
+ *     Alpine bindings (x-show, x-text, :class, :aria-selected, ...) wrote
+ *     into the DOM.
  */
 
 // --- Disable native validation on forms with formwork error tooltips ---
@@ -48,23 +53,26 @@ const getFieldValue = (el) => {
   return el.value;
 };
 
-// MultiSelect dispatches change events from its <details> root (htmx mode)
-// or from name-less checkboxes inside it; neither carries a comparable
-// .value.  Derive one: the sorted set of selected option values, read from
-// the Alpine-rendered hidden inputs plus the checked boxes.
-const getMultiSelectValue = (details) => {
+// SelectMultiple dispatches change events from its <details> root (htmx mode)
+// or from the checkboxes inside it; neither carries a comparable .value.
+// Derive one: the sorted set of selected option values, read from the
+// Alpine-rendered hidden inputs plus the checked boxes.  The empty hidden
+// input only marks the field as submitted.
+const getSelectMultipleValue = (details) => {
   const values = new Set();
-  for (const el of details.querySelectorAll("input[type=hidden][name]")) values.add(el.value);
+  for (const el of details.querySelectorAll("input[type=hidden][name]")) {
+    if (el.value) values.add(el.value);
+  }
   for (const el of details.querySelectorAll("input[type=checkbox]:checked")) values.add(el.value);
   return [...values].sort().join(",");
 };
 
-// Baseline for an htmx-mode MultiSelect comes from data-initial-selected:
+// Baseline for an htmx-mode SelectMultiple comes from data-selected:
 // Alpine renders the hidden inputs only after its own init, which may run
 // after the snapshot.
-const getMultiSelectBaseline = (details) => {
-  const json = details.dataset.initialSelected;
-  if (json === undefined) return getMultiSelectValue(details);
+const getSelectMultipleBaseline = (details) => {
+  const json = details.dataset.selected;
+  if (json === undefined) return getSelectMultipleValue(details);
   try {
     return JSON.parse(json).map(([value]) => String(value)).sort().join(",");
   } catch {
@@ -78,10 +86,10 @@ const initDirtyTracking = (form) => {
   const snapshot = () => {
     baseline.clear();
     for (const el of form.elements) {
-      // Hidden inputs stay tracked: widgets (SearchSelect, OTPInput,
-      // InputMask) hold their real value in a hidden input and dispatch
-      // events on it.  MultiSelect internals are tracked as one unit below.
-      if (!el.name || el.closest("details.multiselect")) continue;
+      // Hidden inputs stay tracked: widgets (Select, InputMask)
+      // hold their real value in a hidden input and dispatch events on it.
+      // SelectMultiple internals are tracked as one unit below.
+      if (!el.name || el.closest("details.formwork-select-multiple")) continue;
       // Radio groups: track the checked value under the group name.
       if (el.type === "radio") {
         if (el.checked) baseline.set(el.name, el.value);
@@ -90,21 +98,21 @@ const initDirtyTracking = (form) => {
         baseline.set(el.id || el.name, getFieldValue(el));
       }
     }
-    for (const details of form.querySelectorAll("details.multiselect")) {
-      baseline.set(details, getMultiSelectBaseline(details));
+    for (const details of form.querySelectorAll("details.formwork-select-multiple")) {
+      baseline.set(details, getSelectMultipleBaseline(details));
     }
   };
 
   const check = (el) => {
-    const multiselect = el.closest?.("details.multiselect");
-    const target = multiselect || el;
+    const selectMultiple = el.closest?.("details.formwork-select-multiple");
+    const target = selectMultiple || el;
     const fieldset = target.closest("fieldset.fieldset");
     if (!fieldset) return;
     let key;
     let current;
-    if (multiselect) {
-      key = multiselect;
-      current = getMultiSelectValue(multiselect);
+    if (selectMultiple) {
+      key = selectMultiple;
+      current = getSelectMultipleValue(selectMultiple);
     } else if (el.type === "radio") {
       key = el.name;
       current = form.querySelector(`input[name="${el.name}"]:checked`)?.value ?? "";
@@ -120,8 +128,13 @@ const initDirtyTracking = (form) => {
   form.addEventListener("input", (e) => check(e.target));
   form.addEventListener("change", (e) => check(e.target));
 
-  // Re-snapshot after successful morph (new server-rendered values = new baseline).
-  form.addEventListener("htmx:after:swap", () => requestAnimationFrame(snapshot));
+  // Re-snapshot after a successful morph of the form (new server-rendered
+  // values = new baseline), not after a dropdown search swaps rows into it.
+  form.addEventListener("htmx:after:swap", (e) => {
+    const target = e.detail?.ctx?.target;
+    if (target instanceof Element && !target.contains(form)) return;
+    requestAnimationFrame(snapshot);
+  });
 
   // Expose snapshot for programmatic reset.
   form._formworkDirtySnapshot = snapshot;
@@ -151,11 +164,13 @@ document.addEventListener("htmx:after:swap", initAllDirtyForms);
 //
 // Overflow depends on text metrics, which move under the widget's feet:
 // web fonts load after first paint (a row that fit the fallback font can
-// overflow the real one) and the viewport resizes.  So this reruns on
-// initial load, once document.fonts settles, on window resize, and after
-// every htmx settle.  <details open> state is preserved across morphs (open
-// is in htmx.config.morphIgnore) and no Alpine :class binding fights it, so
-// an expanded row stays open; this pass only re-derives expandability.
+// overflow the real one), a container narrows without a window resize (a
+// sidebar or modal opens), and a morph or Alpine rewrites the row's text.
+// So this reruns on initial load, once document.fonts settles, after every
+// htmx settle, and whenever a disclosure changes size or text.  <details
+// open> state is preserved across morphs (open is in htmx.config.morphIgnore)
+// and no Alpine :class binding fights it, so an expanded row stays open; this
+// pass only re-derives expandability.
 
 const measureDisclosures = (target) => {
   const root = target instanceof Element ? target : document;
@@ -198,32 +213,61 @@ const measureDisclosures = (target) => {
   }
 };
 
+// The first callback for a newly observed row runs after layout and before
+// the first paint, so a new row is painted with its measured state.
+const disclosureSizes = new ResizeObserver((entries) => {
+  for (const { target } of entries) {
+    if (target.isConnected) {
+      measureDisclosures(target);
+    } else {
+      disclosureSizes.unobserve(target);
+      delete target._formworkObserved;
+    }
+  }
+});
+const disclosureTexts = new MutationObserver((records) => {
+  const changed = new Set();
+  for (const record of records) {
+    const node = record.target instanceof Element ? record.target : record.target.parentElement;
+    const d = node && node.closest("details.formwork-disclosure");
+    if (d) changed.add(d);
+  }
+  for (const d of changed) measureDisclosures(d);
+});
+
+const observeDisclosures = (target) => {
+  const root = target instanceof Element ? target : document;
+  const list = [...root.querySelectorAll("details.formwork-disclosure")];
+  if (target instanceof Element && target.matches("details.formwork-disclosure")) list.push(target);
+  for (const d of list) {
+    if (d._formworkObserved) continue;
+    d._formworkObserved = true;
+    disclosureSizes.observe(d);
+    disclosureTexts.observe(d, { characterData: true, childList: true, subtree: true });
+  }
+};
+
 // Defer to the next frame so layout is settled before measuring.
 const scheduleMeasureDisclosures = (target) =>
   requestAnimationFrame(() => measureDisclosures(target));
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => scheduleMeasureDisclosures(document));
+  document.addEventListener("DOMContentLoaded", () => {
+    observeDisclosures(document);
+    scheduleMeasureDisclosures(document);
+  });
 } else {
+  observeDisclosures(document);
   scheduleMeasureDisclosures(document);
 }
-// Web fonts change glyph widths after first paint; re-derive once they load.
+// Web fonts change glyph widths without resizing any box, so no observer fires.
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => measureDisclosures(document));
 }
-// Viewport width drives one-line overflow; re-derive on resize, coalesced to
-// one measurement per frame.
-let resizeScheduled = false;
-window.addEventListener("resize", () => {
-  if (resizeScheduled) return;
-  resizeScheduled = true;
-  requestAnimationFrame(() => {
-    resizeScheduled = false;
-    measureDisclosures(document);
-  });
-});
 document.addEventListener("htmx:after:settle", (e) => {
-  scheduleMeasureDisclosures(e.detail && e.detail.target ? e.detail.target : document);
+  const target = e.detail && e.detail.target ? e.detail.target : document;
+  observeDisclosures(target);
+  scheduleMeasureDisclosures(target);
 });
 
 // --- Alpine initialization for htmx-swapped content ---
@@ -269,11 +313,11 @@ document.addEventListener("htmx:after:settle", (e) => {
 
 if (typeof htmx !== "undefined") {
   // Globally ignored attributes during morph:
-  //   x-data — re-applying it makes Alpine re-init the component and lose
-  //            reactive state.
-  //   open   — on <details>, the open attribute reflects user UI state, not
-  //            server state, so server HTML must never close an opened
-  //            dropdown.
+  //   x-data: re-applying it makes Alpine re-init the component and lose
+  //           reactive state.
+  //   open:   on <details> and <dialog>, the open attribute is the user's
+  //           UI state, not server state.  A morph never closes an open
+  //           dropdown, and server HTML cannot open or close one either.
   htmx.config.morphIgnore = [
     ...(htmx.config.morphIgnore || []),
     "x-data",
@@ -304,6 +348,13 @@ if (typeof htmx !== "undefined") {
 
       if (!(oldNode instanceof Element) || !(newNode instanceof Element)) {
         return true;
+      }
+
+      // A dropdown holding a pick the server has not confirmed yet skips a
+      // stale echo whole: its hidden inputs would otherwise post the older
+      // choice.
+      if (oldNode._formworkAcceptMorph && !oldNode._formworkAcceptMorph(newNode)) {
+        return false;
       }
 
       // Sync input `.value` property to match the new server-rendered
@@ -337,14 +388,14 @@ if (typeof htmx !== "undefined") {
         }
       }
 
-      // Preserve `checked` on user-toggled checkboxes inside MultiSelect.
+      // Preserve `checked` on user-toggled checkboxes inside SelectMultiple.
       // The Alpine `selected` Map is the source of truth; the server
       // doesn't know which boxes the user has just ticked, so don't let
       // the morph reset them.
       if (
         oldNode instanceof HTMLInputElement &&
         oldNode.type === "checkbox" &&
-        oldNode.closest("details.multiselect")
+        oldNode.closest("details.formwork-select-multiple")
       ) {
         if (oldNode.checked) {
           newNode.setAttribute("checked", "");
@@ -352,44 +403,6 @@ if (typeof htmx !== "undefined") {
           newNode.removeAttribute("checked");
         }
         newNode.checked = oldNode.checked;
-      }
-
-      // Preserve Alpine-managed text content (x-text directive).  Alpine
-      // sets .textContent reactively but won't re-evaluate after morph
-      // since no reactive data changed.  Without this, morph would
-      // overwrite with the server-rendered fallback text.
-      if (oldNode.hasAttribute("x-text")) {
-        newNode.textContent = oldNode.textContent;
-      }
-
-      // Preserve Alpine-applied classes (:class bindings).  Server HTML
-      // carries only the static class attribute, so a morph would strip
-      // classes Alpine added (formwork-placeholder, a selected option's
-      // toggle class, dropdown-open).  When the swap changes no reactive
-      // state (e.g. re-saving an unchanged value), nothing ever re-applies
-      // them.  Union old into new: the server can still add classes, and
-      // classes Alpine no longer wants are removed by its own undo pass
-      // the next time the binding evaluates.
-      if (oldNode.hasAttribute(":class") || oldNode.hasAttribute("x-bind:class")) {
-        for (const cls of oldNode.classList) {
-          newNode.classList.add(cls);
-        }
-      }
-
-      // Preserve Alpine-managed HTML content (x-html directive).
-      if (oldNode.hasAttribute("x-html")) {
-        newNode.innerHTML = oldNode.innerHTML;
-      }
-
-      // Preserve Alpine x-show display state.  Alpine toggles display via
-      // inline style; without this, morph clears the inline style and
-      // Alpine doesn't re-evaluate.
-      if (oldNode.hasAttribute("x-show")) {
-        if (oldNode.style.display) {
-          newNode.style.display = oldNode.style.display;
-        } else {
-          newNode.style.removeProperty("display");
-        }
       }
 
       return true;

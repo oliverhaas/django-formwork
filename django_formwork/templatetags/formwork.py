@@ -2,6 +2,8 @@ from django import template
 from django.templatetags.static import static
 from django.utils.html import format_html
 
+from django_formwork.sections import SECTION_INPUT_NAME
+
 register = template.Library()
 
 
@@ -61,6 +63,21 @@ def formwork_core_js() -> str:
     return format_html('<script type="module" src="{}"></script>', static("formwork/formwork-core.js"))
 
 
+@register.simple_tag
+def formwork_sections_js() -> str:
+    """Output a ``<script type="module">`` tag for section forms (``data-section-form``).
+
+    Load it after htmx; the bundle leaves it out.
+    """
+    return format_html('<script type="module" src="{}"></script>', static("formwork/sections.js"))
+
+
+@register.simple_tag
+def formwork_section(name: str) -> str:
+    """Output the hidden input that names the section a ``<form data-section-form>`` saves."""
+    return format_html('<input type="hidden" name="{}" value="{}">', SECTION_INPUT_NAME, name)
+
+
 @register.filter
 def attr(attrs: dict, key: str) -> str:
     """Look up a widget attr by its literal (possibly hyphenated) key.
@@ -69,6 +86,6 @@ def attr(attrs: dict, key: str) -> str:
     (``widget.attrs.aria-invalid`` is a syntax error) and has no
     subscript form, so this filter bridges the gap for keys like
     ``aria-invalid`` / ``aria-describedby`` that Django writes onto a
-    widget's attrs.  Jinja2 templates use native subscription instead.
+    widget's attrs.
     """
     return attrs.get(key, "")

@@ -1,1 +1,1 @@
-<label class="floating-label">{% include widget.inner_template_name %}<span>{{ widget.floating_label_text }}</span></label>
+{% load i18n %}{% if widget.pattern_hint %}<div class="group/pattern">{% endif %}<label class="floating-label">{% include widget.inner_template_name %}<span>{{ widget.floating_label_text }}</span></label>{% if widget.pattern_hint %}{% include "formwork/widgets/partials/pattern_hint.html" %}</div>{% endif %}

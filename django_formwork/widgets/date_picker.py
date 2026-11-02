@@ -6,32 +6,39 @@ import re
 from typing import Any
 
 from django import forms
+from django.utils.dates import WEEKDAYS_ABBR
+from django.utils.functional import lazy
+from django.utils.translation import pgettext_lazy
 
 from ._base import _ModuleScript
 
 #: strftime code -> human placeholder token, for turning a date format into a
 #: hint like ``DD/MM/YYYY``.  Unmapped codes are left as-is.
 _PLACEHOLDER_TOKENS = {
-    "Y": "YYYY",
-    "y": "YY",
-    "m": "MM",
-    "d": "DD",
-    "B": "Month",
-    "b": "Mon",
-    "A": "Weekday",
-    "a": "Day",
+    "Y": pgettext_lazy("date format placeholder", "YYYY"),
+    "y": pgettext_lazy("date format placeholder", "YY"),
+    "m": pgettext_lazy("date format placeholder", "MM"),
+    "d": pgettext_lazy("date format placeholder", "DD"),
+    "B": pgettext_lazy("date format placeholder", "Month"),
+    "b": pgettext_lazy("date format placeholder: abbreviated month name", "Mon"),
+    "A": pgettext_lazy("date format placeholder", "Weekday"),
+    "a": pgettext_lazy("date format placeholder: abbreviated weekday name", "Day"),
 }
 
 
+def _format_placeholder(date_format: str) -> str:
+    """Turn a strftime format into a human placeholder (``%d/%m/%Y`` -> ``DD/MM/YYYY``)."""
+    return re.sub(r"%(.)", lambda m: str(_PLACEHOLDER_TOKENS.get(m[1], m[0])), date_format)
+
+
+# The widget is built at import time, before a language is active.
+_lazy_format_placeholder = lazy(_format_placeholder, str)
+
+
 class DatePicker(forms.DateInput):
-    """Date input with an Alpine.js calendar dropdown.
+    """Text date input with a calendar dropdown, opt-in where the native ``DateInput`` does not fit.
 
-    Renders a text input with a popover calendar panel for date selection.
-    The submitted value is a date string in ``YYYY-MM-DD`` format.
-
-    Usage::
-
-        due_date = forms.DateField(widget=DatePicker)
+    The calendar writes ``YYYY-MM-DD``; ``format`` sets how the server renders the value.
     """
 
     template_name = "formwork/widgets/date_picker.html"
@@ -42,9 +49,7 @@ class DatePicker(forms.DateInput):
 
     def __init__(self, attrs: dict[str, Any] | None = None, *, format: str | None = None) -> None:  # noqa: A002
         resolved_format = format or "%Y-%m-%d"
-        # Turn the strftime format into a human placeholder (%d/%m/%Y -> DD/MM/YYYY).
-        placeholder = re.sub(r"%(.)", lambda m: _PLACEHOLDER_TOKENS.get(m[1], m[0]), resolved_format)
-        defaults: dict[str, Any] = {"placeholder": placeholder}
+        defaults: dict[str, Any] = {"placeholder": _lazy_format_placeholder(resolved_format)}
         if attrs:
             defaults.update(attrs)
         super().__init__(attrs=defaults, format=resolved_format)
@@ -55,4 +60,6 @@ class DatePicker(forms.DateInput):
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
         widget["extra_class"] = widget["attrs"].pop("class", "")
+        # Sunday first, like Date.getDay() in the calendar grid.
+        widget["weekdays"] = [WEEKDAYS_ABBR[day] for day in (6, 0, 1, 2, 3, 4, 5)]
         return context

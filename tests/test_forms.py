@@ -2,13 +2,9 @@ import pytest
 from django import forms
 from django.test import override_settings
 
-from django_formwork.forms import (
-    FormworkForm,
-    FormworkJinja2Form,
-    FormworkJinja2ModelForm,
-    FormworkModelForm,
-)
-from django_formwork.renderers import FormworkJinja2Renderer, FormworkRenderer
+from django_formwork.boundfield import FormworkBoundField
+from django_formwork.forms import FormworkForm, FormworkModelForm
+from django_formwork.renderers import FormworkRenderer
 
 
 class TestFormworkForm:
@@ -48,13 +44,27 @@ class TestFormworkModelForm:
     def test_default_renderer(self):
         assert FormworkModelForm.default_renderer is FormworkRenderer
 
+    @pytest.mark.django_db
+    def test_subscript_with_model_at_runtime(self):
+        """``FormworkModelForm[Model]`` works without django-stubs-ext's monkeypatch."""
+        from e2e.models import BasicFormData
+
+        assert FormworkModelForm[BasicFormData] is FormworkModelForm
+
+        class F(FormworkModelForm[BasicFormData]):
+            class Meta:
+                model = BasicFormData
+                fields = ["name"]
+
+        assert isinstance(F().instance, BasicFormData)
+
 
 class TestFormworkRenderer:
     def test_form_template_name(self):
-        assert FormworkRenderer.form_template_name == "django/forms/formwork.html"
+        assert FormworkRenderer.form_template_name == "formwork/forms/div.html"
 
     def test_field_template_name(self):
-        assert FormworkRenderer.field_template_name == "django/forms/formwork_field.html"
+        assert FormworkRenderer.field_template_name == "formwork/forms/field.html"
 
     @override_settings(FORM_RENDERER="django_formwork.FormworkRenderer")
     def test_plain_form_uses_formwork_template(self):
@@ -118,8 +128,8 @@ class TestFormworkRenderer:
         assert 'class="label"' in html
 
     @override_settings(FORM_RENDERER="django_formwork.FormworkRenderer")
-    def test_as_field_group_renders_required_marker(self):
-        """as_field_group shows required marker for required fields."""
+    def test_as_field_group_marks_required_field(self):
+        """A plain Form marks the required field, not the optional one."""
 
         class F(forms.Form):
             name = forms.CharField()
@@ -128,8 +138,19 @@ class TestFormworkRenderer:
         form = F()
         name_html = form["name"].as_field_group()
         optional_html = form["optional"].as_field_group()
-        assert "text-error" in name_html
+        assert '<span class="text-error" aria-hidden="true">*</span>' in name_html
         assert "text-error" not in optional_html
+
+    @override_settings(FORM_RENDERER="django_formwork.FormworkRenderer")
+    def test_plain_form_gets_formwork_bound_field(self):
+        """The renderer's bound_field_class reaches plain Forms."""
+
+        class F(forms.Form):
+            name = forms.CharField()
+
+        bound = F()["name"]
+        assert isinstance(bound, FormworkBoundField)
+        assert 'aria-required="true"' in str(bound)
 
     def test_plain_form_without_renderer_uses_default(self):
         """Without FORM_RENDERER setting, plain Form uses Django's div.html."""
@@ -213,105 +234,3 @@ def test_formset_renders_with_formwork_renderer():
     assert 'name="form-1-name"' in html
     # Should have formwork fieldset structure
     assert 'class="fieldset"' in html
-
-
-def test_choices_search_instance_method_raises_improperly_configured():
-    """An instance-method search_choices_<name> is rejected at form init."""
-    # Regression: it registered unbound and blew up with TypeError at request time.
-    from django.core.exceptions import ImproperlyConfigured
-
-    from django_formwork.widgets import SearchSelect
-
-    class _Form(FormworkForm):
-        city = forms.ChoiceField(choices=[("a", "A")], widget=SearchSelect(search_decorator=None))
-
-        def search_choices_city(self, query, request=None):
-            return []
-
-    with pytest.raises(ImproperlyConfigured, match="staticmethod"):
-        _Form()
-
-
-def test_choices_search_staticmethod_registers():
-    """A @staticmethod search_choices_<name> registers without error."""
-    from django_formwork._registry import get_registration, make_choices_key
-    from django_formwork.widgets import SearchSelect
-
-    class _Form(FormworkForm):
-        city = forms.ChoiceField(choices=[("a", "A")], widget=SearchSelect(search_decorator=None))
-
-        @staticmethod
-        def search_choices_city(query, request=None):
-            return []
-
-    _Form()
-    assert get_registration(make_choices_key(_Form, "city")) is not None
-
-
-def test_non_callable_search_decorator_raises_improperly_configured():
-    """A non-callable search_decorator is a configuration error, not a public endpoint."""
-    # Regression: a typo like search_decorator="login_required" silently became None.
-    from django.core.exceptions import ImproperlyConfigured
-
-    from django_formwork.widgets import SearchSelect
-
-    class _Form(FormworkForm):
-        city = forms.ChoiceField(
-            choices=[("a", "A")],
-            widget=SearchSelect(search_decorator="login_required"),
-        )
-
-        @staticmethod
-        def search_choices_city(query, request=None):
-            return []
-
-    with pytest.raises(ImproperlyConfigured, match="non-callable"):
-        _Form()
-
-
-def test_metaclass_leaves_declared_plain_model_choice_field_alone():
-    """A declared plain ModelChoiceField keeps its type and attributes."""
-    # Regression: declared fields were rebuilt through the lossy from_field copy.
-    from e2e.models import DirtyTrackedData, Region
-
-    class _Form(FormworkModelForm):
-        region = forms.ModelChoiceField(
-            queryset=Region.objects.all(),
-            template_name="custom/field.html",
-        )
-
-        class Meta:
-            model = DirtyTrackedData
-            fields = ["name", "email", "region"]
-
-    field = _Form.base_fields["region"]
-    assert type(field) is forms.ModelChoiceField
-    assert field.template_name == "custom/field.html"
-
-
-def test_formwork_jinja2_form_renders_formwork_markup():
-    """FormworkJinja2Form renders formwork fieldset markup via the Jinja2 renderer."""
-
-    class F(FormworkJinja2Form):
-        name = forms.CharField()
-
-    assert F.default_renderer is FormworkJinja2Renderer
-    html = str(F())
-    assert "fieldset-legend" in html
-    assert 'name="name"' in html
-
-
-@pytest.mark.django_db
-def test_formwork_jinja2_model_form_renders_formwork_markup():
-    """FormworkJinja2ModelForm renders formwork fieldset markup via the Jinja2 renderer."""
-    from e2e.models import BasicFormData
-
-    class F(FormworkJinja2ModelForm):
-        class Meta:
-            model = BasicFormData
-            fields = ["name"]
-
-    assert F.default_renderer is FormworkJinja2Renderer
-    html = str(F())
-    assert "fieldset-legend" in html
-    assert 'name="name"' in html

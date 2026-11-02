@@ -641,6 +641,7 @@ def test_custom_collation_unique_constraint_is_not_batchable():
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.skipif(connection.vendor != "sqlite", reason="NOCASE is a SQLite collation")
 def test_collated_unique_collision_matches_stock():
     """A case-insensitive duplicate must raise exactly what stock raises."""
     with connection.schema_editor() as editor:

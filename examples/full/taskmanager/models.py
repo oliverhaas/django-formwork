@@ -19,7 +19,7 @@ class Tag(models.Model):
 
 class Member(models.Model):
     """A person tasks can be assigned to. Stands in for a real user model
-    so the assignee SearchSelect has actual rows to search over.
+    so the assignee Select has actual rows to search over.
     """
 
     name = models.CharField(max_length=100)

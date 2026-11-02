@@ -308,3 +308,38 @@ class DirtyUniquePair(FormworkModel):
 
     def __str__(self):
         return self.slug or f"DirtyUniquePair #{self.pk}"
+
+
+class SearchOption(models.Model):
+    """One row of a server-searched e2e select, grouped by ``kind``."""
+
+    kind = models.CharField(max_length=20)
+    code = models.CharField(max_length=10)
+    name = models.CharField(max_length=100)
+    icon = models.CharField(max_length=20, blank=True, default="")
+    description = models.CharField(max_length=100, blank=True, default="")
+
+    class Meta:
+        app_label = "e2e"
+        ordering = ["pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["kind", "code"], name="uq_search_option_kind_code"),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class SectionRecord(FormworkModel):
+    """One row that the section-forms page saves from two forms."""
+
+    name = models.CharField(max_length=100)
+    city = models.CharField(max_length=10, blank=True, default="")
+    note = models.CharField(max_length=100, blank=True, default="")
+    color = models.CharField(max_length=20)
+
+    class Meta:
+        app_label = "e2e"
+
+    def __str__(self):
+        return self.name

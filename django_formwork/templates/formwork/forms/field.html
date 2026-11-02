@@ -1,0 +1,34 @@
+{% load i18n %}
+{% partialdef label_row %}{{ field.label }}{% if field.is_mandatory and not field.field.disabled %} <span class="text-error" aria-hidden="true">*</span>{% endif %}{% endpartialdef %}
+{% partialdef label %}{% if field.label %}<label class="fieldset-legend"{% if field.auto_id %} id="{{ field.auto_id }}_label"{% endif %}{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}><span>{% partial label_row %}</span></label>{% endif %}{% endpartialdef %}
+{% partialdef control %}{% if field.widget_type == "checkbox" and field.subwidgets.0.data.text %}<label class="checkbox-single flex cursor-pointer items-center gap-2">{{ field }}<span>{{ field.subwidgets.0.data.text }}</span></label>{% else %}{{ field }}{% endif %}{% endpartialdef %}
+{% partialdef toggle %}<label class="flex min-h-10 w-fit cursor-pointer items-center gap-x-2 text-sm text-balance text-base-content/60 has-checked:font-medium has-checked:text-base-content"{% if field.auto_id %} id="{{ field.auto_id }}_label"{% endif %}{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}>{{ field }}{% if field.label %}<span>{% partial label_row %}</span>{% endif %}</label>{% endpartialdef %}
+{% partialdef tooltip_content %}<div class="tooltip-content formwork-errors" role="alert"{% if field.auto_id %} id="{{ field.auto_id }}_error"{% endif %}>{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}</div>{% endpartialdef %}
+{% partialdef error_help_row %}{% if field.errors and edisplay == "inline" or field.errors and edisplay == "auto" and field.help_text %}
+  <details class="formwork-disclosure formwork-errors"{% if field.auto_id %} id="{{ field.auto_id }}_disclosure"{% endif %}><summary class="label" data-more="{% translate "[more]" context "help text toggle" %}" data-less="{% translate "[less]" context "help text toggle" %}"><span class="formwork-disclosure-row text-error"><i class="icon icon-circle-x shrink-0" aria-hidden="true"></i><span class="formwork-disclosure-text min-w-0 flex-1" role="alert"{% if field.auto_id %} id="{{ field.auto_id }}_error"{% endif %}>{{ field.errors|join:" " }}</span></span>{% if field.help_text %}<span class="formwork-disclosure-row formwork-disclosure-body"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}><i class="icon icon-info shrink-0" aria-hidden="true"></i><span class="min-w-0 flex-1">{{ field.help_text }}</span></span>{% endif %}</summary></details>
+{% elif field.help_text %}
+  <details class="formwork-disclosure"{% if field.auto_id %} id="{{ field.auto_id }}_disclosure"{% endif %}><summary class="label" data-more="{% translate "[more]" context "help text toggle" %}" data-less="{% translate "[less]" context "help text toggle" %}"><span class="formwork-disclosure-row"><i class="icon icon-info shrink-0" aria-hidden="true"></i><span class="formwork-disclosure-text min-w-0 flex-1"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text }}</span></span></summary></details>
+{% endif %}{% endpartialdef %}
+{% if field.is_hidden %}{{ field }}{% else %}{% with edisplay=field.form.error_display|default:"auto" %}{% if field.use_fieldset %}
+<fieldset class="fieldset{% if field.widget_type == "checkboxselectmultiple" or field.widget_type == "radioselect" %} choice-group{% endif %}"{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}{% if field.aria_describedby %} aria-describedby="{{ field.aria_describedby }}"{% endif %}>
+  {% if field.label %}<legend class="fieldset-legend"><span>{% partial label_row %}</span></legend>{% endif %}
+  {% if field.errors and edisplay == "tooltip" or field.errors and edisplay == "auto" and not field.help_text %}<div class="tooltip tooltip-error tooltip-bottom">{{ field }}{% partial tooltip_content %}</div>{% else %}{{ field }}{% endif %}
+  {% partial error_help_row %}
+</fieldset>
+{% elif field.widget_type == "toggle" %}
+<fieldset class="fieldset"{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}>
+  {% if field.errors and edisplay == "tooltip" or field.errors and edisplay == "auto" and not field.help_text %}<div class="tooltip tooltip-error tooltip-bottom">{% partial toggle %}{% partial tooltip_content %}</div>{% else %}{% partial toggle %}{% endif %}
+  {% partial error_help_row %}
+</fieldset>
+{% elif field.widget_type == "checkbox" and not field.subwidgets.0.data.text %}
+<fieldset class="fieldset"{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}>
+  {% if field.errors and edisplay == "tooltip" or field.errors and edisplay == "auto" and not field.help_text %}<div class="tooltip tooltip-error tooltip-bottom">{% partial label %}{{ field }}{% partial tooltip_content %}</div>{% else %}{% partial label %}{{ field }}{% endif %}
+  {% partial error_help_row %}
+</fieldset>
+{% else %}
+<fieldset class="fieldset"{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}>
+  {% partial label %}
+  {% if field.errors and edisplay == "tooltip" or field.errors and edisplay == "auto" and not field.help_text %}<div class="tooltip tooltip-error tooltip-bottom">{% partial control %}{% partial tooltip_content %}</div>{% else %}{% partial control %}{% endif %}
+  {% partial error_help_row %}
+</fieldset>
+{% endif %}{% endwith %}{% endif %}

@@ -1,6 +1,5 @@
-{% comment %}
-Wraps the search control in DaisyUI's `.input` container with a leading
-magnifier, so the formwork SearchInput carries the search affordance with no
-per-template markup. The nested <input> is styled borderless by `.input`; the
-value/attrs markup mirrors Django's stock input.html.
-{% endcomment %}<label class="input w-full"><i class="icon icon-search shrink-0 opacity-50" aria-hidden="true"></i><input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}></label>
+{% load i18n %}<div class="relative group"{% if widget.show_clear or widget.filter_items %} x-data="formworkSearchInput"{% endif %}{% if widget.filter_items %} data-filter-items="{{ widget.filter_items }}" @htmx:after:settle.window="filter()"{% endif %}>
+  <input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.show_clear or widget.filter_items %} x-ref="input"{% endif %}{% if widget.filter_items %} @input="filter()" @keydown.enter.prevent{% endif %}{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}>
+  <div{% if widget.attrs.id %} id="{{ widget.attrs.id }}_icon"{% endif %} class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3.5">{% if widget.show_spinner %}<span class="loading loading-spinner loading-xs htmx-indicator absolute text-primary" aria-hidden="true"></span>{% endif %}<i class="icon icon-search text-base-content/50 group-focus-within:text-base-content{% if widget.show_spinner %} htmx-indicator-inverse{% endif %}" aria-hidden="true"></i></div>
+  {% if widget.show_clear %}<button type="button" class="absolute inset-y-0 end-0 flex items-center cursor-pointer pe-3.5 text-base-content/50" @mousedown.prevent @click="clear()" aria-label="{% translate 'Clear search' %}"><i class="icon icon-x" aria-hidden="true"></i></button>{% endif %}
+</div>

@@ -25,18 +25,23 @@
  *
  * Prerequisites (loaded by the user, BEFORE this script):
  *   - htmx 4.x
- *   - Alpine.js 3.x (if using Alpine-powered widgets)
+ *   - htmx's alpine-compat extension (`dist/ext/hx-alpine-compat.js`),
+ *     after htmx
+ *
+ * Alpine.js 3.x loads after this script, with `defer`. Module and defer
+ * scripts run in document order, so the `alpine:init` listeners exist
+ * when Alpine starts.
  */
 
 import "./formwork-core.js";
-import "./widgets/search_select.js";
-import "./widgets/multi_select.js";
+import "./widgets/select.js";
+import "./widgets/select_multiple.js";
 import "./widgets/combo_box.js";
 import "./widgets/date_picker.js";
-import "./widgets/drop_zone.js";
-import "./widgets/image_upload.js";
+import "./widgets/file_dropzone.js";
+import "./widgets/image_dropzone.js";
 import "./widgets/input_mask.js";
-import "./widgets/input_number.js";
-import "./widgets/otp_input.js";
-import "./widgets/password_reveal.js";
+import "./widgets/password_input.js";
+import "./widgets/search_input.js";
+import "./widgets/stepper_number.js";
 import "./widgets/validated_textarea.js";

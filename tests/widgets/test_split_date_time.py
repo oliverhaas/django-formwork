@@ -8,7 +8,7 @@ from django.http import QueryDict
 
 from django_formwork.forms import FormworkForm
 
-from .conftest import assert_html_equivalent, render_form, render_widget, submit
+from .conftest import render_form, render_widget, submit
 
 
 class SplitDateTimeForm(FormworkForm):
@@ -159,17 +159,6 @@ def test_split_datetime_form_prefix(renderer):
     time_input = soup.find("input", attrs={"name": "evt-event_at_1"})
     assert date_input is not None
     assert time_input is not None
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_split_datetime_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """SplitDateTimeWidget produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(SplitDateTimeForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(SplitDateTimeForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────

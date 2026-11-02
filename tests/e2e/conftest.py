@@ -108,26 +108,38 @@ def tight_page(page, live_server):
 
 @pytest.fixture
 def toggle_page(page, live_server):
-    """Navigate to a page containing the Toggle widget."""
+    """Navigate to a page containing the ToggleInput widget."""
     return _navigate(page, live_server, "/simple/")
 
 
 @pytest.fixture
-def search_select_page(page, live_server):
-    """Navigate to the SearchSelect page."""
-    return _navigate(page, live_server, "/search-select/")
+def select_page(page, live_server):
+    """Navigate to the Select page."""
+    return _navigate(page, live_server, "/select/")
 
 
 @pytest.fixture
-def multi_select_page(page, live_server):
-    """Navigate to the MultiSelect page."""
-    return _navigate(page, live_server, "/multi-select/")
+def select_multiple_page(page, live_server):
+    """Navigate to the SelectMultiple page."""
+    return _navigate(page, live_server, "/select-multiple/")
 
 
 @pytest.fixture
 def combobox_page(page, live_server):
     """Navigate to the ComboBox page."""
     return _navigate(page, live_server, "/combobox/")
+
+
+@pytest.fixture
+def dropdowns_page(page, live_server):
+    """Navigate to the dropdown behaviour page."""
+    return _navigate(page, live_server, "/dropdowns/")
+
+
+@pytest.fixture
+def read_only_page(page, live_server):
+    """Navigate to the dropdowns inside a disabled fieldset."""
+    return _navigate(page, live_server, "/read-only/")
 
 
 @pytest.fixture
@@ -144,7 +156,7 @@ def textarea_page(page, live_server):
 
 @pytest.fixture
 def new_widgets_page(page, live_server):
-    """Navigate to the new-widgets page (DatePicker, InputNumber, OTP, InputMask)."""
+    """Navigate to the new-widgets page (DatePicker, StepperNumberInput, OTP, InputMask)."""
     return _navigate(page, live_server, "/new-widgets/")
 
 
@@ -170,3 +182,21 @@ def complex_page(page, live_server):
 def autosave_page(page, live_server):
     """Navigate to the auto-save form page."""
     return _navigate(page, live_server, "/autosave/")
+
+
+@pytest.fixture
+def autosave_dropdowns_page(page, live_server):
+    """Navigate to the auto-saving form with a Select."""
+    return _navigate(page, live_server, "/autosave-dropdowns/")
+
+
+@pytest.fixture
+def translated_page(page, live_server, pseudo_catalog):
+    """Navigate to the page rendered in German, with formwork's strings from the ⟦⟧ catalog."""
+    return _navigate(page, live_server, "/translated/")
+
+
+@pytest.fixture
+def sections_page(page, live_server):
+    """Navigate to the section-forms page."""
+    return _navigate(page, live_server, "/sections/")

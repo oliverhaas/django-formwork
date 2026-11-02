@@ -1,0 +1,2 @@
+{% load i18n %}{# A filled text input is only :invalid on a pattern mismatch, so the control needs a placeholder. A server error (aria-invalid) shows its own row. #}
+<div class="hidden group-has-[:invalid:not(:placeholder-shown):not([aria-invalid])]/pattern:flex items-start gap-x-1.5 mx-1.5 mt-1.5"><i class="icon icon-circle-alert text-xs text-error shrink-0 mt-0.5" aria-hidden="true"></i><span role="alert" class="text-xs text-error font-normal min-w-0">{{ widget.pattern_hint }}</span></div>

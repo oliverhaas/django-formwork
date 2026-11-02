@@ -1,71 +1,55 @@
-"""Tests for ``_ErrorDisplayFormMixin`` (``Meta.error_display`` / kwarg resolution)."""
+"""``error_display`` resolution on FormworkForm and FormworkModelForm."""
 
 from __future__ import annotations
 
 import pytest
 from django import forms
-from e2e.models import BasicFormData
+from django.contrib.auth.models import User
+from django.core.exceptions import ImproperlyConfigured
 
 from django_formwork.forms import FormworkForm, FormworkModelForm
 
-pytestmark = pytest.mark.django_db
 
-
-class PlainForm(FormworkForm):
+class _PlainForm(FormworkForm):
     name = forms.CharField()
 
 
-class MetaInlineForm(FormworkForm):
+class _MetaForm(FormworkForm):
     name = forms.CharField()
 
     class Meta:
-        error_display = "inline"
+        error_display = "tooltip"
 
 
-class PlainModelForm(FormworkModelForm):
+class _PlainModelForm(FormworkModelForm[User]):
     class Meta:
-        model = BasicFormData
-        fields = ["name", "email"]
+        model = User
+        fields = ["username"]
 
 
-class MetaInlineModelForm(FormworkModelForm):
+class _MetaModelForm(FormworkModelForm[User]):
     class Meta:
-        model = BasicFormData
-        fields = ["name", "email"]
-        error_display = "inline"
+        model = User
+        fields = ["username"]
+        error_display = "tooltip"
 
 
-class TestFormOnly:
-    def test_default_is_inline(self):
-        form = PlainForm()
-        assert form.error_display == "inline"
-
-    def test_kwarg_sets_tooltip(self):
-        form = PlainForm(error_display="tooltip")
-        assert form.error_display == "tooltip"
-
-    def test_meta_default_sets_inline(self):
-        form = MetaInlineForm()
-        assert form.error_display == "inline"
-
-    def test_kwarg_overrides_meta(self):
-        form = MetaInlineForm(error_display="tooltip")
-        assert form.error_display == "tooltip"
+def test_default_is_auto() -> None:
+    assert _PlainForm().error_display == "auto"
+    assert _PlainModelForm().error_display == "auto"
 
 
-class TestModelForm:
-    def test_default_is_inline(self):
-        form = PlainModelForm()
-        assert form.error_display == "inline"
+def test_meta_sets_error_display() -> None:
+    assert _MetaForm().error_display == "tooltip"
+    assert _MetaModelForm().error_display == "tooltip"
 
-    def test_kwarg_sets_tooltip(self):
-        form = PlainModelForm(error_display="tooltip")
-        assert form.error_display == "tooltip"
 
-    def test_meta_default_sets_inline(self):
-        form = MetaInlineModelForm()
-        assert form.error_display == "inline"
+def test_kwarg_overrides_meta() -> None:
+    assert _MetaForm(error_display="inline").error_display == "inline"
+    assert _PlainForm(error_display="tooltip").error_display == "tooltip"
 
-    def test_kwarg_overrides_meta(self):
-        form = MetaInlineModelForm(error_display="tooltip")
-        assert form.error_display == "tooltip"
+
+@pytest.mark.parametrize("bad", ["popover", "", "Inline", "none"])
+def test_invalid_value_raises(bad: str) -> None:
+    with pytest.raises(ImproperlyConfigured):
+        _PlainForm(error_display=bad)

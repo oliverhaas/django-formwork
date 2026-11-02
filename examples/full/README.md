@@ -29,7 +29,7 @@ Open http://localhost:8000/.
 | `/tasks/` | Tasks list — htmx-driven filter bar, table with inline status edit per row |
 | `/tasks/new/` and `/tasks/<id>/edit/` | Two-column task form: full `ModelForm` left, metadata sidebar right |
 | `/wizard/` | Four-step project wizard (Project → Configuration → First task → Review) with the DaisyUI `steps` component |
-| `/settings/` | Showcase page for `PhoneInput`, `SearchSelect`, `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating`, persisted on a single local `Profile` row |
+| `/settings/` | Showcase page for `PhoneInput`, `Select`, `ImageDropzoneInput`, `PasswordInput`, `OTPInput`, `ComboBox`, `Rating`, persisted on a single local `Profile` row |
 
 ## Widgets covered
 
@@ -37,9 +37,9 @@ Every widget in the package gets airtime across these pages. Quick lookup:
 
 - **Dashboard quick-add**: plain Django inputs (a four-option priority doesn't need a fancy widget)
 - **Tasks list filter bar**: plain selects + plain text input
-- **Task form**: `SearchSelect` (assignee, backed by the `Member` model with an initials badge and email per option), `MultiSelect` (model-backed, auto-wired server search), `DatePicker`, `ImageDropZone`, `FileDropZone`, `Rating`
-- **Wizard**: `ValidatedTextarea`, `Toggle`, `Range`, `RadioSelect`, `DatePicker`, `MultiSelect`
-- **Settings**: `PhoneInput`, `SearchSelect` (country), `ImageDropZone`, `PasswordReveal`, `OTPInput`, `ComboBox`, `Rating`
+- **Task form**: `Select` (assignee, backed by the `Member` model with an initials badge and email per option, server search), `SelectMultiple` (tags, server search), `DatePicker`, `ImageDropzoneInput`, `FileDropzoneInput`, `Rating`
+- **Wizard**: `ValidatedTextarea`, `ToggleInput`, `Range`, `RadioSelect`, `DatePicker`, `SelectMultiple`
+- **Settings**: `PhoneInput`, `Select` (country), `ImageDropzoneInput`, `PasswordInput`, `OTPInput`, `ComboBox`, `Rating`
 
 ## What's intentionally not here
 

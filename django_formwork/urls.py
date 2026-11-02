@@ -1,4 +1,4 @@
-"""URL configuration for auto-registered formwork search endpoints.
+"""URL configuration for the formwork search endpoint.
 
 Add to your project's ``urlpatterns``::
 
@@ -11,10 +11,10 @@ Add to your project's ``urlpatterns``::
 
 from django.urls import path
 
-from django_formwork.views import FormworkAutoSearchView
+from django_formwork.views import FormworkSearchView
 
 app_name = "formwork"
 
 urlpatterns = [
-    path("search/<str:key>/", FormworkAutoSearchView.as_view(), name="search"),
+    path("search/<str:key>/", FormworkSearchView.as_view(), name="search"),
 ]

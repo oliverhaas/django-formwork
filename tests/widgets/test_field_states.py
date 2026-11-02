@@ -1,4 +1,4 @@
-"""Cross-cutting field states (disabled, readonly, required indicator, color input) that apply to all widget types."""
+"""Cross-cutting field states (disabled, readonly, color input) that apply to all widget types."""
 
 from __future__ import annotations
 
@@ -28,13 +28,6 @@ class ReadonlyFieldForm(FormworkForm):
         required=False,
         initial="Read-only value",
     )
-
-
-class RequiredFieldForm(FormworkForm):
-    """Form fixture with required and optional fields."""
-
-    required_name = forms.CharField(required=True)
-    optional_name = forms.CharField(required=False)
 
 
 class ColorInputForm(FormworkForm):
@@ -94,30 +87,7 @@ def test_color_input_renders_type():
     assert inp["type"] == "color"
 
 
-# ─── Level 2: Form integration (required indicator) ─────────────────────
-
-
-@pytest.mark.integration
-def test_required_field_has_asterisk(renderer):
-    """Required field renders a red asterisk in its fieldset legend/label."""
-    form = RequiredFieldForm()
-    soup = render_form(form, renderer=renderer)
-    fieldset = soup.find("fieldset", id="id_required_name_field")
-    assert fieldset is not None
-    asterisk = fieldset.find("span", class_="text-error")
-    assert asterisk is not None
-    assert asterisk.text == "*"
-
-
-@pytest.mark.integration
-def test_optional_field_no_asterisk(renderer):
-    """Optional field does not render an asterisk."""
-    form = RequiredFieldForm()
-    soup = render_form(form, renderer=renderer)
-    fieldset = soup.find("fieldset", id="id_optional_name_field")
-    assert fieldset is not None
-    asterisk = fieldset.find("span", class_="text-error")
-    assert asterisk is None
+# ─── Level 2: Form integration ─────────────────────────────────────────
 
 
 @pytest.mark.integration
@@ -224,27 +194,6 @@ def test_readonly_field_morph_preserves_value(builtin_page):
     inp = builtin_page.locator('input[name="readonly_text"]')
     submit(builtin_page)
     expect(inp).to_have_value("Read-only value")
-
-
-@pytest.mark.e2e
-def test_required_field_has_asterisk_on_page(basic_page):
-    """Required field (name) shows an asterisk in its fieldset on the /basic/ page."""
-    from playwright.sync_api import expect
-
-    fieldset = basic_page.locator("#id_name_field")
-    asterisk = fieldset.locator("span.text-error")
-    expect(asterisk).to_have_count(1)
-    assert asterisk.inner_text() == "*"
-
-
-@pytest.mark.e2e
-def test_optional_field_no_asterisk_on_page(builtin_page):
-    """Optional field (event_at) has no asterisk on the /builtin/ page."""
-    from playwright.sync_api import expect
-
-    fieldset = builtin_page.locator("#id_event_at_field")
-    asterisk = fieldset.locator("span.text-error")
-    expect(asterisk).to_have_count(0)
 
 
 @pytest.mark.e2e

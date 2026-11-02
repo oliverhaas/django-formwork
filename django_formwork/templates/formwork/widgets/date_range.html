@@ -1,0 +1,1 @@
+{% load i18n %}<div class="grid grid-cols-2 gap-x-2">{% for subwidget in widget.subwidgets %}<input type="{{ subwidget.type }}" name="{{ subwidget.name }}" aria-label="{{ subwidget.label }}"{% if subwidget.value != None %} value="{{ subwidget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" with widget=subwidget %}>{% endfor %}</div>

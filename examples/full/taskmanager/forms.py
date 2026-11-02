@@ -2,27 +2,33 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from django import forms
 from django.utils.html import format_html
 
-from django_formwork import ChoiceLabel, FormworkForm, FormworkModelChoiceField, FormworkModelForm
+from django_formwork import ChoiceLabel, FormworkForm, FormworkModelForm
 from django_formwork.widgets import (
     ComboBox,
     DatePicker,
-    FileDropZone,
-    ImageDropZone,
-    MultiSelect,
+    FileDropzoneInput,
+    ImageDropzoneInput,
     OTPInput,
-    PasswordReveal,
+    PasswordInput,
     Range,
     Rating,
-    SearchSelect,
-    Toggle,
+    Select,
+    SelectMultiple,
+    ToggleInput,
     ValidatedTextarea,
 )
 
 from .models import Member, Profile, Tag, Task
 from .widgets import PhoneInput
+
+if TYPE_CHECKING:
+    from django.db.models import QuerySet
+    from django.http import HttpRequest
 
 # Lifecycle ramp minus neutral, which reads as an unstyled border on a select.
 STATUS_SELECT_COLORS: dict[str, str] = {
@@ -33,7 +39,7 @@ STATUS_SELECT_COLORS: dict[str, str] = {
 }
 
 # Per-option trigger classes shared by the edit and row forms: the closed
-# SearchSelect adopts the selected option's class (priority tinted soft by
+# Select adopts the selected option's class (priority tinted soft by
 # severity, status a solid select-{color} border on the lifecycle ramp).
 PRIORITY_CHOICES = [
     (value, ChoiceLabel(label, selected_toggle_class=f"select-soft select-{Task.PRIORITY_COLORS[value]}"))
@@ -45,43 +51,59 @@ STATUS_CHOICES = [
 ]
 
 
+def search_members(_request: HttpRequest) -> QuerySet[Member]:
+    """The rows the assignee search offers."""
+    return Member.objects.all()
+
+
+def search_tags(_request: HttpRequest) -> QuerySet[Tag]:
+    """The rows the tag search offers."""
+    return Tag.objects.all()
+
+
+class MemberChoiceField(forms.ModelChoiceField):
+    """A member with an initials badge and an email line."""
+
+    def label_from_instance(self, obj: Member) -> ChoiceLabel:
+        return ChoiceLabel(
+            obj.name,
+            icon=format_html("<span class='badge badge-ghost badge-sm w-8'>{}</span>", obj.initials),
+            description=obj.email,
+        )
+
+
 class TaskEditForm(FormworkModelForm):
     """Full create/edit page: every task field, solid select-{color} status
-    border. Showcases SearchSelect + MultiSelect + DatePicker + drop zones +
+    border. Showcases Select + SelectMultiple + DatePicker + drop zones +
     Rating.
     """
 
     priority = forms.ChoiceField(
         choices=PRIORITY_CHOICES,
         initial=Task.Priority.MEDIUM,
-        widget=SearchSelect,
-        help_text="SearchSelect whose closed trigger adopts each option's selected_toggle_class: "
+        widget=Select,
+        help_text="Select whose closed trigger adopts each option's selected_toggle_class: "
         "select-soft tinted by severity, recoloring on pick without a round-trip.",
     )
     status = forms.ChoiceField(
         choices=STATUS_CHOICES,
         initial=Task.Status.TODO,
-        widget=SearchSelect,
+        widget=Select,
         help_text="Same trick as priority, but a select-{color} border instead of a soft fill: "
         "solid here on the edit page, dotted in the inline list rows, recoloring on pick.",
     )
-    assignee = FormworkModelChoiceField(
+    assignee = MemberChoiceField(
         queryset=Member.objects.all(),
         required=False,
         empty_label="Unassigned",
-        widget=SearchSelect(search_fields=["name", "email"], search_decorator=None),
-        icon_from_instance=lambda instance: format_html(
-            "<span class='badge badge-ghost badge-sm w-8'>{}</span>",
-            instance.initials,
-        ),
-        description_from_instance=lambda instance: instance.email,
-        help_text="SearchSelect over the Member model: server-side search, initials badge, email line.",
+        widget=Select(search_fields=["name", "email"], search_queryset=search_members, search_decorator=None),
+        help_text="Select over the Member model: server-side search, initials badge, email line.",
     )
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
-        widget=MultiSelect(search_fields=["name"], search_decorator=None),
-        help_text="MultiSelect with server-side search over tag names.",
+        widget=SelectMultiple(search_fields=["name"], search_queryset=search_tags, search_decorator=None),
+        help_text="SelectMultiple with server-side search over tag names.",
     )
     rating = forms.TypedChoiceField(
         choices=Rating.make_choices(5),
@@ -109,13 +131,13 @@ class TaskEditForm(FormworkModelForm):
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
             "due_date": DatePicker,
-            "cover_image": ImageDropZone(max_size=5 * 1024 * 1024),
-            "attachment": FileDropZone(max_size=10 * 1024 * 1024),
+            "cover_image": ImageDropzoneInput(max_size=5 * 1024 * 1024),
+            "attachment": FileDropzoneInput(max_size=10 * 1024 * 1024),
         }
         help_texts = {
             "due_date": "DatePicker with a calendar dropdown.",
-            "cover_image": "Shown as a thumbnail in the task list (ImageDropZone, ≤5 MB).",
-            "attachment": "Any single file (FileDropZone, ≤10 MB).",
+            "cover_image": "Shown as a thumbnail in the task list (ImageDropzoneInput, ≤5 MB).",
+            "attachment": "Any single file (FileDropzoneInput, ≤10 MB).",
         }
 
 
@@ -128,33 +150,30 @@ class TaskRowForm(FormworkModelForm):
     priority = forms.ChoiceField(
         choices=PRIORITY_CHOICES,
         initial=Task.Priority.MEDIUM,
-        widget=SearchSelect,
+        widget=Select,
     )
     status = forms.ChoiceField(
         choices=STATUS_CHOICES,
         initial=Task.Status.TODO,
-        widget=SearchSelect(attrs={"class": "select-dotted"}),
+        widget=Select(attrs={"class": "select-dotted"}),
     )
-    assignee = FormworkModelChoiceField(
+    assignee = MemberChoiceField(
         queryset=Member.objects.all(),
         required=False,
         empty_label="Unassigned",
-        widget=SearchSelect(
+        widget=Select(
             search_fields=["name", "email"],
+            search_queryset=search_members,
             search_decorator=None,
             attrs={"class": "select-ghost"},
         ),
-        icon_from_instance=lambda instance: format_html(
-            "<span class='badge badge-ghost badge-sm w-8'>{}</span>",
-            instance.initials,
-        ),
-        description_from_instance=lambda instance: instance.email,
     )
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
-        widget=MultiSelect(
+        widget=SelectMultiple(
             search_fields=["name"],
+            search_queryset=search_tags,
             search_decorator=None,
             attrs={"class": "select-ghost"},
         ),
@@ -197,7 +216,7 @@ class WizardConfigForm(FormworkForm):
     """Step 2: configuration."""
 
     enable_notifications = forms.BooleanField(
-        widget=Toggle,
+        widget=ToggleInput,
         required=False,
         initial=True,
         help_text="Email updates when tasks change.",
@@ -232,7 +251,7 @@ class WizardFirstTaskForm(FormworkForm):
     first_task_tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
-        widget=MultiSelect(search_fields=["name"], search_decorator=None),
+        widget=SelectMultiple(search_fields=["name"], search_queryset=search_tags, search_decorator=None),
         label="Tags",
     )
 
@@ -249,15 +268,15 @@ class SettingsForm(FormworkModelForm):
 
     country = forms.ChoiceField(
         choices=[("", ""), *Profile.Country.choices],
-        widget=SearchSelect(),
+        widget=Select(),
         required=False,
         help_text="Where you're based.",
     )
     new_password = forms.CharField(
-        widget=PasswordReveal,
+        widget=PasswordInput,
         required=False,
         help_text=(
-            "Leave blank to keep your current password. The eye button (PasswordReveal) "
+            "Leave blank to keep your current password. The eye button (PasswordInput) "
             "shows what you typed. If you do change it, use at "
             "least 12 characters and avoid reusing a password from another site. A "
             "passphrase of a few unrelated words is easy to remember and hard to guess."
@@ -294,7 +313,7 @@ class SettingsForm(FormworkModelForm):
         fields = ["full_name", "email", "phone", "country", "avatar", "favourite_food", "satisfaction"]
         widgets = {
             "phone": PhoneInput,
-            "avatar": ImageDropZone(max_size=2 * 1024 * 1024),
+            "avatar": ImageDropzoneInput(max_size=2 * 1024 * 1024),
             "favourite_food": ComboBox(
                 suggestions=["Pizza", "Pasta", "Sushi", "Tacos", "Curry", "Ramen", "Salad"],
             ),
@@ -302,7 +321,7 @@ class SettingsForm(FormworkModelForm):
         help_texts = {
             "phone": "Country code + number (custom PhoneInput multi-widget).",
             "avatar": (
-                "Square-ish PNG or JPG, ≤2 MB (ImageDropZone). The picture is shown at small sizes "
+                "Square-ish PNG or JPG, ≤2 MB (ImageDropzoneInput). The picture is shown at small sizes "
                 "throughout the app, so pick something that stays recognizable as a "
                 "tiny thumbnail. A close-up works better than a wide shot."
             ),

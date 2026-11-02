@@ -18,7 +18,7 @@ class TestTightForm:
 
     def test_submit_empty_shows_tooltip(self, tight_page):
         submit(tight_page)
-        assert tight_page.locator("#id_username_tooltip").count() == 1
+        assert tight_page.locator("#id_username_error.tooltip-content").count() == 1
 
     def test_error_renders_as_tooltip_not_inline(self, tight_page):
         submit(tight_page)
@@ -39,11 +39,11 @@ class TestTightForm:
         tight_page.locator('input[name="username"]').fill("admin")
         tight_page.locator('input[name="pin"]').fill("1234")
         submit(tight_page)
-        assert tight_page.locator("#id_username_tooltip").count() == 1
+        assert tight_page.locator("#id_username_error.tooltip-content").count() == 1
 
     def test_valid_submit_clears_tooltip(self, tight_page):
         submit(tight_page)
-        assert tight_page.locator("#id_username_tooltip").count() == 1
+        assert tight_page.locator("#id_username_error.tooltip-content").count() == 1
         tight_page.locator('input[name="username"]').fill("bob")
         tight_page.locator('input[name="pin"]').fill("1234")
         submit(tight_page)
@@ -78,13 +78,35 @@ class TestTightFormFloatingLabels:
             assert legend.count() == 1
             assert not legend.is_visible()
 
+    def test_select_label_floats_while_empty(self, tight_page):
+        """The trigger always shows a value or "Select…", so the label never sits on it."""
+        span = tight_page.locator("#id_role_field .floating-label > span")
+        assert span.evaluate("el => getComputedStyle(el).opacity") == "1"
+        assert span.evaluate("el => getComputedStyle(el).scale") == "0.75"
+
+    def test_focused_label_takes_the_primary_colour(self, tight_page):
+        tight_page.locator("#id_nickname").fill("Ada")
+        span = tight_page.locator("#id_nickname_field .floating-label > span")
+        primary = tight_page.evaluate(
+            """() => {
+                const probe = document.createElement("span");
+                probe.style.color = "var(--color-primary)";
+                document.body.append(probe);
+                return getComputedStyle(probe).color;
+            }"""
+        )
+        assert span.evaluate("el => getComputedStyle(el).color") == primary
+
     def test_floating_wraps_the_control(self, tight_page):
         """The real control sits inside the floating-label wrapper (accessible name)."""
         assert tight_page.locator("#tight-form .floating-label > input[name='nickname']").count() == 1
-        assert tight_page.locator("#tight-form .floating-label > select[name='role']").count() == 1
+        assert (
+            tight_page.locator("#tight-form .floating-label > details.formwork-select input[name='role']").count() == 1
+        )
         assert tight_page.locator("#tight-form .floating-label > textarea[name='note']").count() == 1
 
     def test_select_has_no_placeholder_attr(self, tight_page):
-        """<select> has no placeholder attribute; the text lives only in the span."""
-        select = tight_page.locator("#tight-form select[name='role']")
-        assert select.get_attribute("placeholder") is None
+        """The Select trigger has no placeholder attribute; the text lives only in the span."""
+        trigger = tight_page.locator("#tight-form #id_role")
+        assert trigger.get_attribute("placeholder") is None
+        assert "Role" not in trigger.inner_text()

@@ -1,2 +1,0 @@
-{# Wraps the search control in DaisyUI's `.input` with a leading magnifier; see the DTL twin for rationale. #}
-<label class="input w-full"><i class="icon icon-search shrink-0 opacity-50" aria-hidden="true"></i><input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}></label>

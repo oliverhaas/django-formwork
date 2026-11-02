@@ -1,0 +1,20 @@
+{% load i18n %}<div class="relative" x-data="formworkImageDropzone"{% if widget.preview_url %} data-stored{% endif %}{% if widget.max_size %} data-max-size="{{ widget.max_size }}"{% endif %} data-type-error="{% translate 'File type not accepted' %}" data-size-error="{% translate 'File too large' %}">
+  <input type="hidden" name="{{ widget.clear_name }}" value="" x-ref="clear">
+  {% if widget.preview_url %}<div class="relative flex h-64 items-center justify-center rounded-box border border-dashed border-base-300 bg-base-100 p-8" x-show="stored">
+    <button type="button"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_clear"{% endif %} class="btn btn-square btn-sm absolute end-2 top-2 z-10" @click="clear()" aria-label="{% translate 'Remove image' %}" title="{% translate 'Remove image' %}"><i class="icon icon-trash" aria-hidden="true"></i></button>
+    <img src="{{ widget.preview_url }}" alt="" class="h-auto max-h-full w-auto max-w-full rounded-box object-contain bg-transparency-checkerboard">
+  </div>
+  {% endif %}<label{% if widget.attrs.id %} for="{{ widget.attrs.id }}"{% endif %} class="group flex h-64 cursor-pointer flex-col items-center justify-center rounded-box border border-dashed border-base-300 p-8 text-center transition-colors hover:border-primary hover:bg-base-100 has-focus-visible:outline-2 has-focus-visible:outline-primary" :class="dragClass" x-show="empty"{% if widget.preview_url %} x-cloak{% endif %} @dragover.prevent="onDragOver()" @dragleave.prevent="onDragLeave()" @drop.prevent="drop($event)">
+    <i class="icon icon-image-up text-4xl group-hover:text-primary" aria-hidden="true"></i>
+    <span class="mt-4 text-base-content/70"><span class="font-medium text-base-content">{% translate "Drag your image here" %}</span> <span class="font-semibold group-hover:text-primary group-hover:underline">{% translate "or browse" %}</span></span>
+    {% if widget.hint %}<span class="mt-1 text-sm text-base-content/60">{{ widget.hint }}</span>{% endif %}
+    {% if widget.accept_display or widget.max_size_display %}<span class="mt-1 text-xs text-base-content/60">{{ widget.accept_display }}{% if widget.accept_display and widget.max_size_display %} · {% endif %}{% if widget.max_size_display %}{% blocktranslate with size=widget.max_size_display %}Max {{ size }}{% endblocktranslate %}{% endif %}</span>{% endif %}
+    <span class="btn btn-outline btn-neutral mt-3">{% translate "Upload Image" %}</span>
+    <input type="{{ widget.type }}" name="{{ widget.name }}" x-ref="input" class="sr-only" @change="onChange()"{% include "django/forms/widgets/attrs.html" %}>
+  </label>
+  <div class="relative flex h-64 items-center justify-center rounded-box border border-dashed border-base-300 bg-base-100 p-8" x-show="preview" x-cloak>
+    <button type="button" class="btn btn-square btn-sm absolute end-2 top-2 z-10" @click="discard()" aria-label="{% translate 'Remove image' %}" title="{% translate 'Remove image' %}"><i class="icon icon-trash" aria-hidden="true"></i></button>
+    <template x-if="preview"><img :src="preview" alt="" class="h-auto max-h-full w-auto max-w-full rounded-box object-contain bg-transparency-checkerboard"></template>
+  </div>
+  <p class="mt-1 text-sm text-error" role="alert" x-show="error" x-text="error" x-cloak></p>
+</div>

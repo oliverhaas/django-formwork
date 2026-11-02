@@ -20,13 +20,13 @@ class TaskFilter(filters.FilterSet):
         choices=Task.Status.choices,
         empty_label="All",
         label="",
-        widget=Select(floating_label=True, attrs={"class": "select w-full", "placeholder": "Status"}),
+        widget=Select(floating=True, attrs={"placeholder": "Status"}),
     )
     priority = filters.ChoiceFilter(
         choices=Task.Priority.choices,
         empty_label="All",
         label="",
-        widget=Select(floating_label=True, attrs={"class": "select w-full", "placeholder": "Priority"}),
+        widget=Select(floating=True, attrs={"placeholder": "Priority"}),
     )
 
     class Meta:

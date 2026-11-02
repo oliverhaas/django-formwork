@@ -1,32 +1,34 @@
 """Views for e2e testing. widget showcase with one page per topic."""
 
 from django import forms
+from django.db.models import QuerySet
 from django.forms.models import construct_instance
 from django.http import HttpRequest, HttpResponse
 from django.template import engines
-from e2e.models import AutoSaveFormData, BasicFormData, City, Region
+from django.utils import translation
+from e2e.models import AutoSaveFormData, BasicFormData, City, Region, SearchOption, SectionRecord
 
-from django_formwork.fields import ChoiceLabel
+from django_formwork import ChoiceLabel, section_forms
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkValidateView
 from django_formwork.widgets import (
     ComboBox,
+    ComboBoxMultiple,
     DataList,
     DatePicker,
-    FileDropZone,
-    ImageDropZone,
+    FileDropzoneInput,
+    ImageDropzoneInput,
     InputMask,
-    InputNumber,
-    MultiSelect,
     OTPInput,
-    PasswordReveal,
+    PasswordInput,
     Range,
     Rating,
-    SearchSelect,
     Select,
+    SelectMultiple,
+    StepperNumberInput,
     Textarea,
     TextInput,
-    Toggle,
+    ToggleInput,
     ValidatedTextarea,
 )
 
@@ -137,11 +139,11 @@ class AutoSaveForm(FormworkModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Model has blank=True (allows partial saves) but visually these
-        # fields are required. set required=True for the asterisk.
+        # fields are required. set required=True to show the asterisk.
         self.fields["name"].required = True
         self.fields["email"].required = True
         # Strip the HTML required attribute so native validation doesn't
-        # fire. keep field.required=True for the template asterisk.
+        # fire. keep field.required=True for the label.
         for field in self.fields.values():
             field.widget.use_required_attribute = lambda *_a: False
 
@@ -189,14 +191,14 @@ class AutoSaveForm(FormworkModelForm):
 
 
 class SimpleForm(FormworkForm):
-    """Toggle, range slider, password reveal, datalist, rating."""
+    """ToggleInput, Range, PasswordInput with reveal, DataList, Rating."""
 
-    toggle = forms.BooleanField(widget=Toggle, required=False)
+    toggle = forms.BooleanField(widget=ToggleInput, required=False)
     volume = forms.IntegerField(
         widget=Range(attrs={"min": "0", "max": "100", "step": "10"}),
     )
     password = forms.CharField(
-        widget=PasswordReveal(attrs={"placeholder": "Enter password"}),
+        widget=PasswordInput(attrs={"placeholder": "Enter password"}),
     )
     browser = forms.CharField(
         widget=DataList(
@@ -262,16 +264,16 @@ class TightForm(FormworkForm):
     # errors to the tooltip showcase above.
     nickname = forms.CharField(
         required=False,
-        widget=TextInput(attrs={"placeholder": "Nickname"}, floating_label=True),
+        widget=TextInput(attrs={"placeholder": "Nickname"}, floating=True),
     )
     role = forms.ChoiceField(
         required=False,
         choices=[("", ""), ("admin", "Admin"), ("user", "User")],
-        widget=Select(attrs={"placeholder": "Role"}, floating_label=True),
+        widget=Select(attrs={"placeholder": "Role"}, floating=True),
     )
     note = forms.CharField(
         required=False,
-        widget=Textarea(attrs={"placeholder": "Note"}, floating_label=True),
+        widget=Textarea(attrs={"placeholder": "Note"}, floating=True),
     )
 
     def clean_username(self):
@@ -487,19 +489,123 @@ _COUNTRY_DESCRIPTIONS = {
     "us": "North America",
 }
 
-E2E_COUNTRIES_SEARCH = [
-    {
-        "value": code,
-        "label": name,
-        "icon": flag,
-        "description": _COUNTRY_DESCRIPTIONS.get(code, ""),
-    }
-    for code, flag, name in _COUNTRIES
+_CITIES = [
+    ("nyc", "New York"),
+    ("ldn", "London"),
+    ("tyo", "Tokyo"),
+    ("par", "Paris"),
+    ("syd", "Sydney"),
+    ("ber", "Berlin"),
+    ("rom", "Rome"),
+    ("mad", "Madrid"),
+    ("ams", "Amsterdam"),
+    ("vie", "Vienna"),
+    ("prg", "Prague"),
+    ("lis", "Lisbon"),
+    ("dub", "Dublin"),
+    ("cop", "Copenhagen"),
+    ("sto", "Stockholm"),
+    ("hel", "Helsinki"),
+    ("war", "Warsaw"),
+    ("bud", "Budapest"),
+    ("ath", "Athens"),
+    ("ist", "Istanbul"),
+    ("bkk", "Bangkok"),
+    ("sin", "Singapore"),
+    ("hkg", "Hong Kong"),
+    ("sel", "Seoul"),
+]
+
+_LANGUAGES = [
+    ("py", "Python", "\U0001f40d"),
+    ("js", "JavaScript", "\U0001f7e8"),
+    ("go", "Go", "\U0001f439"),
+    ("rs", "Rust", "\U0001f980"),
+    ("ts", "TypeScript", "\U0001f535"),
+    ("rb", "Ruby", "\U0001f48e"),
+    ("java", "Java", ""),
+    ("kt", "Kotlin", ""),
+    ("swift", "Swift", ""),
+    ("c", "C", ""),
+    ("cpp", "C++", ""),
+    ("cs", "C#", ""),
+    ("php", "PHP", ""),
+    ("pl", "Perl", ""),
+    ("hs", "Haskell", ""),
+    ("ex", "Elixir", ""),
+    ("erl", "Erlang", ""),
+    ("scala", "Scala", ""),
+    ("clj", "Clojure", ""),
+    ("lua", "Lua", ""),
+    ("r", "R", ""),
+    ("jl", "Julia", ""),
+    ("dart", "Dart", ""),
+    ("ml", "OCaml", ""),
+    ("zig", "Zig", ""),
 ]
 
 
-class SearchSelectForm(FormworkForm):
-    """SearchSelect. few options (no search), many options (auto-search), icons, server-side."""
+def _ensure_search_options():
+    """Seed the rows the server-searched selects offer, once per database."""
+    if SearchOption.objects.exists():
+        return
+    rows = [SearchOption(kind="city", code=code, name=name) for code, name in _CITIES[:4]]
+    rows += [SearchOption(kind="city_many", code=code, name=name) for code, name in _CITIES]
+    rows += [
+        SearchOption(kind="country", code=code, name=name, icon=flag, description=_COUNTRY_DESCRIPTIONS[code])
+        for code, flag, name in _COUNTRIES
+    ]
+    rows += [SearchOption(kind="language", code=code, name=name, icon=icon) for code, name, icon in _LANGUAGES]
+    SearchOption.objects.bulk_create(rows)
+
+
+def _cities(request):
+    return SearchOption.objects.filter(kind="city")
+
+
+def _cities_many(request):
+    return SearchOption.objects.filter(kind="city_many")
+
+
+def _countries(request):
+    return SearchOption.objects.filter(kind="country")
+
+
+def _languages(request):
+    return SearchOption.objects.filter(kind="language")
+
+
+def _failing_search(request):
+    """Raise to exercise the failure UX (htmx 500 → alert)."""
+    raise RuntimeError("Simulated upstream failure")
+
+
+def _option_label(obj):
+    return ChoiceLabel(obj.name, icon=obj.icon, description=obj.description)
+
+
+class OptionChoiceField(forms.ModelChoiceField):
+    """Picks one ``SearchOption`` of a kind by its code."""
+
+    def __init__(self, kind, **kwargs):
+        super().__init__(queryset=SearchOption.objects.filter(kind=kind), to_field_name="code", **kwargs)
+
+    def label_from_instance(self, obj):
+        return _option_label(obj)
+
+
+class OptionMultipleChoiceField(forms.ModelMultipleChoiceField):
+    """Picks ``SearchOption`` rows of a kind by their codes."""
+
+    def __init__(self, kind, **kwargs):
+        super().__init__(queryset=SearchOption.objects.filter(kind=kind), to_field_name="code", **kwargs)
+
+    def label_from_instance(self, obj):
+        return _option_label(obj)
+
+
+class SelectForm(FormworkForm):
+    """Select. few options (no search), many options (auto-search), icons, server-side."""
 
     city_plain = forms.ChoiceField(
         choices=[
@@ -510,13 +616,13 @@ class SearchSelectForm(FormworkForm):
             ("par", "Paris"),
             ("syd", "Sydney"),
         ],
-        widget=SearchSelect,
+        widget=Select,
         required=False,
         label="City (plain, few options)",
     )
     country_many = forms.ChoiceField(
         choices=[("", "")] + [(c, ChoiceLabel(n, icon=flag)) for c, flag, n in _COUNTRIES],
-        widget=SearchSelect(),
+        widget=Select(),
         required=False,
         label="Country (many options, auto-search)",
     )
@@ -528,22 +634,25 @@ class SearchSelectForm(FormworkForm):
             ("tyo", ChoiceLabel("Tokyo", icon="\U0001f5fc", description="Capital of Japan")),
             ("par", ChoiceLabel("Paris", icon="\U0001f1eb\U0001f1f7", description="City of Light")),
         ],
-        widget=SearchSelect(),
+        widget=Select(),
         required=False,
         label="City (icons + descriptions)",
     )
-    city_htmx = forms.ChoiceField(
-        widget=SearchSelect(search_decorator=None),
+    city_htmx = OptionChoiceField(
+        "city",
+        widget=Select(search_fields=["name"], search_queryset=_cities, search_decorator=None),
         required=False,
-        label="City (server search, few, no search input)",
+        label="City (server search, fits one page, filters in the browser)",
     )
-    city_htmx_many = forms.ChoiceField(
-        widget=SearchSelect(search_decorator=None),
+    city_htmx_many = OptionChoiceField(
+        "city_many",
+        widget=Select(search_fields=["name"], search_queryset=_cities_many, search_decorator=None),
         required=False,
-        label="City (server search, many, auto search input)",
+        label="City (server search, one page plus Load more)",
     )
-    country_htmx_icons = forms.ChoiceField(
-        widget=SearchSelect(search_decorator=None),
+    country_htmx_icons = OptionChoiceField(
+        "country",
+        widget=Select(search_fields=["name"], search_queryset=_countries, search_decorator=None),
         required=False,
         label="Country (server search, icons + descriptions)",
     )
@@ -582,16 +691,17 @@ class SearchSelectForm(FormworkForm):
                 ],
             ),
         ],
-        widget=SearchSelect(show_search=True),
+        widget=Select(show_search=True),
         required=False,
         label="City by region (grouped)",
         help_text=(
-            "Grouped SearchSelect, optgroup headers shown as section titles, "
+            "Grouped Select, optgroup headers shown as section titles, "
             "auto-hide when search filters out their children."
         ),
     )
-    city_failing = forms.ChoiceField(
-        widget=SearchSelect(search_decorator=None),
+    city_failing = OptionChoiceField(
+        "city_many",
+        widget=Select(search_fields=["name"], search_queryset=_failing_search, search_decorator=None),
         required=False,
         label="City (server search, always fails)",
         help_text="Endpoint always raises, exercises the error UX.",
@@ -608,31 +718,19 @@ class SearchSelectForm(FormworkForm):
             ("mid", ChoiceLabel("Medium", selected_toggle_class="select-warning")),
             ("high", ChoiceLabel("High", selected_toggle_class="select-error")),
         ],
-        widget=SearchSelect,
+        widget=Select,
         required=False,
         label="Priority (trigger recolors by selection)",
         help_text="Selecting an option applies its class to the closed select box.",
     )
 
-    @staticmethod
-    def search_choices_city_htmx(query, request=None):
-        return _filter_search(query, E2E_CITIES)
-
-    @staticmethod
-    def search_choices_city_htmx_many(query, request=None):
-        return _filter_search(query, E2E_CITIES_MANY)
-
-    @staticmethod
-    def search_choices_country_htmx_icons(query, request=None):
-        return _filter_search(query, E2E_COUNTRIES_SEARCH)
-
-    @staticmethod
-    def search_choices_city_failing(query, request=None):
-        _raise_failure()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _ensure_search_options()
 
 
-class MultiSelectForm(FormworkForm):
-    """MultiSelect, plain, with icons (auto-search), and server-side search."""
+class SelectMultipleForm(FormworkForm):
+    """SelectMultiple, plain, with icons (auto-search), and server-side search."""
 
     languages_plain = forms.MultipleChoiceField(
         choices=[
@@ -641,18 +739,19 @@ class MultiSelectForm(FormworkForm):
             ("go", "Go"),
             ("rs", "Rust"),
         ],
-        widget=MultiSelect,
+        widget=SelectMultiple,
         required=False,
         label="Languages (plain)",
     )
     countries_icons = forms.MultipleChoiceField(
         choices=[(code, ChoiceLabel(name, icon=flag)) for code, flag, name in _COUNTRIES],
-        widget=MultiSelect(),
+        widget=SelectMultiple(),
         required=False,
         label="Countries (icons, auto-search)",
     )
-    languages_htmx = forms.MultipleChoiceField(
-        widget=MultiSelect(search_decorator=None),
+    languages_htmx = OptionMultipleChoiceField(
+        "language",
+        widget=SelectMultiple(search_fields=["name"], search_queryset=_languages, search_decorator=None),
         required=False,
         label="Languages (server-side search)",
     )
@@ -683,25 +782,30 @@ class MultiSelectForm(FormworkForm):
                 ],
             ),
         ],
-        widget=MultiSelect(show_search=True),
+        widget=SelectMultiple(show_search=True),
         required=False,
         label="Cities by region (grouped)",
-        help_text="Grouped MultiSelect, optgroup headers, keyboard nav, Enter toggles without closing.",
+        help_text="Grouped SelectMultiple, optgroup headers, keyboard nav, Enter toggles without closing.",
     )
-    languages_failing = forms.MultipleChoiceField(
-        widget=MultiSelect(search_decorator=None),
+    languages_failing = OptionMultipleChoiceField(
+        "language",
+        widget=SelectMultiple(search_fields=["name"], search_queryset=_failing_search, search_decorator=None),
         required=False,
         label="Languages (server search, always fails)",
         help_text="Endpoint always raises, exercises the error UX.",
     )
 
-    @staticmethod
-    def search_choices_languages_htmx(query, request=None):
-        return _filter_search(query, E2E_LANGUAGES)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _ensure_search_options()
 
-    @staticmethod
-    def search_choices_languages_failing(query, request=None):
-        _raise_failure()
+
+_LANGUAGE_ICONS = [
+    ChoiceLabel("Python", icon="\U0001f40d"),
+    ChoiceLabel("JavaScript", icon="\U0001f7e8"),
+    ChoiceLabel("Go", icon="\U0001f439"),
+    ChoiceLabel("Rust", icon="\U0001f980"),
+]
 
 
 class ComboBoxForm(FormworkForm):
@@ -716,9 +820,8 @@ class ComboBoxForm(FormworkForm):
         label="Language (single)",
     )
     toppings_multi = forms.CharField(
-        widget=ComboBox(
+        widget=ComboBoxMultiple(
             suggestions=["Pizza", "Pasta", "Sushi", "Tacos", "Curry"],
-            multiple=True,
             attrs={"placeholder": "Comma-separated"},
         ),
         required=False,
@@ -726,28 +829,15 @@ class ComboBoxForm(FormworkForm):
     )
     language_icons = forms.CharField(
         widget=ComboBox(
-            suggestions=["Python", "JavaScript", "Go", "Rust"],
-            icons={
-                "Python": "\U0001f40d",
-                "JavaScript": "\U0001f7e8",
-                "Go": "\U0001f439",
-                "Rust": "\U0001f980",
-            },
+            suggestions=_LANGUAGE_ICONS,
             attrs={"placeholder": "Language with icons"},
         ),
         required=False,
         label="Language (with icons)",
     )
     language_icons_multi = forms.CharField(
-        widget=ComboBox(
-            suggestions=["Python", "JavaScript", "Go", "Rust"],
-            icons={
-                "Python": "\U0001f40d",
-                "JavaScript": "\U0001f7e8",
-                "Go": "\U0001f439",
-                "Rust": "\U0001f980",
-            },
-            multiple=True,
+        widget=ComboBoxMultiple(
+            suggestions=_LANGUAGE_ICONS,
             attrs={"placeholder": "Languages with icons"},
         ),
         required=False,
@@ -755,6 +845,8 @@ class ComboBoxForm(FormworkForm):
     )
     language_htmx = forms.CharField(
         widget=ComboBox(
+            search_fields=["name"],
+            search_queryset=_languages,
             search_decorator=None,
             attrs={"placeholder": "Server-side search"},
         ),
@@ -763,7 +855,10 @@ class ComboBoxForm(FormworkForm):
     )
     language_htmx_icons = forms.CharField(
         widget=ComboBox(
+            search_fields=["name"],
+            search_queryset=_languages,
             search_decorator=None,
+            label_from_instance=_option_label,
             attrs={"placeholder": "Server search with icons"},
         ),
         required=False,
@@ -771,21 +866,13 @@ class ComboBoxForm(FormworkForm):
     )
     food_descriptions = forms.CharField(
         widget=ComboBox(
-            suggestions=["Pizza", "Sushi", "Tacos", "Curry", "Ramen"],
-            icons={
-                "Pizza": "\U0001f355",
-                "Sushi": "\U0001f363",
-                "Tacos": "\U0001f32e",
-                "Curry": "\U0001f35b",
-                "Ramen": "\U0001f35c",
-            },
-            descriptions={
-                "Pizza": "Italian classic",
-                "Sushi": "Japanese delicacy",
-                "Tacos": "Mexican street food",
-                "Curry": "Indian comfort food",
-                "Ramen": "Japanese noodle soup",
-            },
+            suggestions=[
+                ChoiceLabel("Pizza", icon="\U0001f355", description="Italian classic"),
+                ChoiceLabel("Sushi", icon="\U0001f363", description="Japanese delicacy"),
+                ChoiceLabel("Tacos", icon="\U0001f32e", description="Mexican street food"),
+                ChoiceLabel("Curry", icon="\U0001f35b", description="Indian comfort food"),
+                ChoiceLabel("Ramen", icon="\U0001f35c", description="Japanese noodle soup"),
+            ],
             attrs={"placeholder": "Pick a food"},
         ),
         required=False,
@@ -794,18 +881,19 @@ class ComboBoxForm(FormworkForm):
     food_grouped = forms.CharField(
         widget=ComboBox(
             suggestions=[
-                ("Italian", ["Pizza", "Pasta", "Risotto"]),
-                ("Japanese", ["Sushi", "Ramen", "Tempura"]),
-                ("Mexican", ["Tacos", "Burrito", "Enchilada"]),
+                (
+                    "Italian",
+                    [ChoiceLabel("Pizza", icon="\U0001f355"), ChoiceLabel("Pasta", icon="\U0001f35d"), "Risotto"],
+                ),
+                (
+                    "Japanese",
+                    [ChoiceLabel("Sushi", icon="\U0001f363"), ChoiceLabel("Ramen", icon="\U0001f35c"), "Tempura"],
+                ),
+                (
+                    "Mexican",
+                    [ChoiceLabel("Tacos", icon="\U0001f32e"), ChoiceLabel("Burrito", icon="\U0001f32f"), "Enchilada"],
+                ),
             ],
-            icons={
-                "Pizza": "\U0001f355",
-                "Pasta": "\U0001f35d",
-                "Sushi": "\U0001f363",
-                "Ramen": "\U0001f35c",
-                "Tacos": "\U0001f32e",
-                "Burrito": "\U0001f32f",
-            },
             attrs={"placeholder": "Pick a dish (grouped)"},
         ),
         required=False,
@@ -814,6 +902,8 @@ class ComboBoxForm(FormworkForm):
     )
     language_failing = forms.CharField(
         widget=ComboBox(
+            search_fields=["name"],
+            search_queryset=_failing_search,
             search_decorator=None,
             attrs={"placeholder": "Server search (always fails)"},
         ),
@@ -822,29 +912,91 @@ class ComboBoxForm(FormworkForm):
         help_text="Endpoint always raises, exercises the error UX.",
     )
 
-    @staticmethod
-    def search_choices_language_htmx(query, request=None):
-        return _filter_search(query, E2E_LANGUAGES)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _ensure_search_options()
 
-    @staticmethod
-    def search_choices_language_htmx_icons(query, request=None):
-        return _filter_search(query, E2E_LANGUAGES_ICONS)
 
-    @staticmethod
-    def search_choices_language_failing(query, request=None):
-        _raise_failure()
+class DropdownForm(FormworkForm):
+    """A short static menu, and server-searched lists whose selection lies past the first page."""
+
+    brand = forms.ChoiceField(
+        choices=[("acme", "Acme"), ("globex", "Globex"), ("initech", "Initech")],
+        widget=Select,
+        label="Brand (three options)",
+    )
+    city = OptionChoiceField(
+        "city_many",
+        widget=Select(search_fields=["name"], search_queryset=_cities_many, search_decorator=None),
+        initial="sel",
+        required=False,
+        label="City (selected past the first page)",
+    )
+    cities = OptionMultipleChoiceField(
+        "city_many",
+        widget=SelectMultiple(search_fields=["name"], search_queryset=_cities_many, search_decorator=None),
+        initial=["sel"],
+        required=False,
+        label="Cities (selected past the first page)",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _ensure_search_options()
+
+
+class AutoSaveDropdownForm(FormworkForm):
+    """A searchable Select on an auto-saving form: a pick or a search keystroke morphs the form."""
+
+    city = forms.ChoiceField(
+        choices=[
+            ("", ""),
+            ("nyc", "New York"),
+            ("ldn", "London"),
+            ("tyo", "Tokyo"),
+            ("par", "Paris"),
+            ("syd", "Sydney"),
+        ],
+        widget=Select(show_search=True),
+        required=False,
+        label="City",
+    )
+
+
+class SectionGeneralForm(FormworkModelForm):
+    """The first section of the section-forms page."""
+
+    city = forms.ChoiceField(
+        choices=[("", ""), ("nyc", "New York"), ("ldn", "London"), ("tyo", "Tokyo")],
+        widget=Select(),
+        required=False,
+        label="City",
+    )
+
+    class Meta:
+        model = SectionRecord
+        fields = ["name", "city"]
+
+
+class SectionExtrasForm(FormworkModelForm):
+    """The second section: it posts only its changed fields."""
+
+    class Meta:
+        model = SectionRecord
+        fields = ["note", "color"]
+        validate_dirty_only = True
 
 
 class UploadsForm(FormworkForm):
     """File upload widgets with variations."""
 
     dropzone = forms.FileField(
-        widget=FileDropZone(attrs={"multiple": True}),
+        widget=FileDropzoneInput(attrs={"multiple": True}),
         required=False,
         label="Drop zone (multi)",
     )
     dropzone_restricted = forms.FileField(
-        widget=FileDropZone(
+        widget=FileDropzoneInput(
             attrs={"accept": ".pdf"},
             max_size=5 * 1024 * 1024,
         ),
@@ -852,17 +1004,37 @@ class UploadsForm(FormworkForm):
         label="Drop zone (PDF only, 5 MB max)",
     )
     avatar = forms.ImageField(
-        widget=ImageDropZone,
+        widget=ImageDropzoneInput,
         required=False,
     )
     avatar_restricted = forms.ImageField(
-        widget=ImageDropZone(
+        widget=ImageDropzoneInput(
             attrs={"accept": ".png,.jpg,.jpeg"},
             max_size=2 * 1024 * 1024,
         ),
         required=False,
         label="Avatar (PNG/JPEG, 2 MB max)",
     )
+    avatar_stored = forms.ImageField(
+        widget=ImageDropzoneInput(
+            preview_url="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        ),
+        required=False,
+        label="Avatar (stored)",
+    )
+
+
+class TranslatedForm(FormworkForm):
+    """Widgets whose text the browser fills in, for the translated page."""
+
+    colors = forms.MultipleChoiceField(
+        choices=[(c, c.title()) for c in ("red", "green", "blue", "black", "white")],
+        widget=SelectMultiple,
+        initial=["red", "green", "blue", "black"],
+        required=False,
+    )
+    files = forms.FileField(widget=FileDropzoneInput(attrs={"multiple": True}), required=False)
+    note = forms.CharField(required=False, help_text="Hilfe " * 60)
 
 
 class TextareaForm(FormworkForm):
@@ -883,7 +1055,7 @@ class TextareaForm(FormworkForm):
 
 
 class NewWidgetsForm(FormworkForm):
-    """DatePicker, InputNumber, OTP, Country, InputMask."""
+    """DatePicker, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons."""
 
     due_date = forms.DateField(
         widget=DatePicker,
@@ -891,12 +1063,12 @@ class NewWidgetsForm(FormworkForm):
         help_text="Calendar date picker with month navigation.",
     )
     quantity = forms.IntegerField(
-        widget=InputNumber(attrs={"min": "1", "max": "99", "step": "1"}),
+        widget=StepperNumberInput(attrs={"min": "1", "max": "99", "step": "1"}),
         initial=1,
         help_text="Number input with +/- stepper buttons.",
     )
     price = forms.FloatField(
-        widget=InputNumber(attrs={"min": "0", "max": "10", "step": "0.1"}),
+        widget=StepperNumberInput(attrs={"min": "0", "max": "10", "step": "0.1"}),
         initial=0.2,
         required=False,
         help_text="Float stepper: 0.1 increments round to step precision.",
@@ -904,13 +1076,13 @@ class NewWidgetsForm(FormworkForm):
     otp_code = forms.CharField(
         widget=OTPInput(length=6),
         required=False,
-        help_text="One-time password with auto-advance between digits.",
+        help_text="One-time password, one box per digit.",
     )
     country = forms.ChoiceField(
         choices=[("", "")] + [(c, ChoiceLabel(n, icon=flag)) for c, flag, n in _COUNTRIES],
-        widget=SearchSelect(),
+        widget=Select(),
         required=False,
-        help_text="Searchable country selector with flag emojis.",
+        help_text="A Select whose options carry flag icons.",
     )
     zip_code = forms.CharField(
         widget=InputMask(mask="#####"),
@@ -929,13 +1101,20 @@ class ComplexForm(FormworkForm):
     """Cross-field validation with dropdowns, auto-validated on every change."""
 
     password = forms.CharField(
-        widget=PasswordReveal(attrs={"placeholder": "Password"}),
+        widget=PasswordInput(attrs={"placeholder": "Password"}),
     )
     confirm_password = forms.CharField(
-        widget=PasswordReveal(attrs={"placeholder": "Confirm password"}),
+        widget=PasswordInput(attrs={"placeholder": "Confirm password"}),
     )
-    country = forms.CharField(
-        widget=SearchSelect(search_decorator=None),
+    country = forms.ChoiceField(
+        choices=[
+            ("", ""),
+            *(
+                (code, ChoiceLabel(name, icon=flag, description=_COUNTRY_DESCRIPTIONS[code]))
+                for code, flag, name in _COUNTRIES
+            ),
+        ],
+        widget=Select(),
         required=False,
         label="Country",
     )
@@ -948,18 +1127,10 @@ class ComplexForm(FormworkForm):
             ("ts", "TypeScript"),
             ("rb", "Ruby"),
         ],
-        widget=MultiSelect(search_decorator=None),
+        widget=SelectMultiple(),
         required=False,
         label="Languages",
     )
-
-    @staticmethod
-    def search_choices_country(query, request=None):
-        return _filter_search(query, E2E_COUNTRIES_SEARCH)
-
-    @staticmethod
-    def search_choices_languages(query, request=None):
-        return _filter_search(query, E2E_LANGUAGES)
 
     start_date = forms.DateField(
         widget=forms.DateInput(attrs={"type": "date"}),
@@ -972,7 +1143,7 @@ class ComplexForm(FormworkForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Strip HTML required so auto-validate POSTs don't trigger native
-        # validation.  field.required stays True for the asterisk.
+        # validation.  field.required stays True for the label.
         for field in self.fields.values():
             field.widget.use_required_attribute = lambda *_a: False
 
@@ -1004,79 +1175,6 @@ class ComplexForm(FormworkForm):
         if country and not languages:
             self.add_error("languages", "Select at least one language when a country is chosen.")
         return cleaned
-
-
-# ---------------------------------------------------------------------------
-# Server-side search and validation endpoints
-# ---------------------------------------------------------------------------
-
-E2E_CITIES = [
-    {"value": "nyc", "label": "New York"},
-    {"value": "ldn", "label": "London"},
-    {"value": "tyo", "label": "Tokyo"},
-    {"value": "par", "label": "Paris"},
-]
-
-E2E_CITIES_MANY = [
-    {"value": "nyc", "label": "New York"},
-    {"value": "ldn", "label": "London"},
-    {"value": "tyo", "label": "Tokyo"},
-    {"value": "par", "label": "Paris"},
-    {"value": "syd", "label": "Sydney"},
-    {"value": "ber", "label": "Berlin"},
-    {"value": "rom", "label": "Rome"},
-    {"value": "mad", "label": "Madrid"},
-    {"value": "ams", "label": "Amsterdam"},
-    {"value": "vie", "label": "Vienna"},
-    {"value": "prg", "label": "Prague"},
-    {"value": "lis", "label": "Lisbon"},
-    {"value": "dub", "label": "Dublin"},
-    {"value": "cop", "label": "Copenhagen"},
-    {"value": "sto", "label": "Stockholm"},
-    {"value": "hel", "label": "Helsinki"},
-    {"value": "war", "label": "Warsaw"},
-    {"value": "bud", "label": "Budapest"},
-    {"value": "ath", "label": "Athens"},
-    {"value": "ist", "label": "Istanbul"},
-    {"value": "bkk", "label": "Bangkok"},
-    {"value": "sin", "label": "Singapore"},
-    {"value": "hkg", "label": "Hong Kong"},
-    {"value": "sel", "label": "Seoul"},
-]
-
-E2E_LANGUAGES = [
-    {"value": "py", "label": "Python"},
-    {"value": "js", "label": "JavaScript"},
-    {"value": "go", "label": "Go"},
-    {"value": "rs", "label": "Rust"},
-    {"value": "ts", "label": "TypeScript"},
-    {"value": "rb", "label": "Ruby"},
-]
-
-E2E_LANGUAGES_ICONS = [
-    {"label": "Python", "icon": "\U0001f40d"},
-    {"label": "JavaScript", "icon": "\U0001f7e8"},
-    {"label": "Go", "icon": "\U0001f439"},
-    {"label": "Rust", "icon": "\U0001f980"},
-    {"label": "TypeScript", "icon": "\U0001f535"},
-    {"label": "Ruby", "icon": "\U0001f48e"},
-]
-
-
-def _filter_search(query, results):
-    """Filter ``results`` by case-insensitive substring match on ``label``.
-
-    Throttle in DevTools (Network panel → "Slow 3G" or custom) if you want
-    to observe the loading skeleton in a manual demo.
-    """
-    if not query:
-        return results
-    return [r for r in results if query.lower() in r["label"].lower()]
-
-
-def _raise_failure():
-    """Raise to exercise the failure UX (htmx 500 → alert)."""
-    raise RuntimeError("Simulated upstream failure")
 
 
 class E2EBioValidateView(FormworkValidateView):
@@ -1119,6 +1217,7 @@ _HEAD = """\
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/formwork/formwork-dist.css">
 <script src="https://unpkg.com/htmx.org@4.0.0/dist/htmx.min.js"></script>
+<script src="https://unpkg.com/htmx.org@4.0.0/dist/ext/hx-alpine-compat.min.js"></script>
 <script type="module" src="/static/formwork/formwork.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>"""
 
@@ -1171,6 +1270,15 @@ def _form_html(url, form_id):
         f'hx-delete="{url}" hx-swap="outerMorph" hx-target="#{form_id}">Delete</button>\n'
         "    {% endif %}\n"
         "  </div>\n"
+        "</form>"
+    )
+
+
+def _read_only_form_html(url, form_id):
+    return (
+        f'<form id="{form_id}" method="post" hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}">\n'
+        "  {% csrf_token %}\n"
+        "  <fieldset disabled>{{ form }}</fieldset>\n"
         "</form>"
     )
 
@@ -1273,6 +1381,10 @@ def _to_session(cleaned_data):
             result[key] = val.name if hasattr(val, "name") else "[file]"
         elif hasattr(val, "isoformat"):
             result[key] = val.isoformat()
+        elif isinstance(val, SearchOption):
+            result[key] = val.code
+        elif isinstance(val, QuerySet):
+            result[key] = [obj.code for obj in val]
         elif isinstance(val, (str, int, float, bool, list, type(None))):
             result[key] = val
         else:
@@ -1377,7 +1489,12 @@ _PAGES = [
         "Standalone Elements",
         "Raw HTML inputs without a Django form, auto-styled by formwork.css",
     ),
-    ("simple", "/simple/", "Simple Custom Widgets", "Toggle, range slider, password reveal, datalist, and star rating"),
+    (
+        "simple",
+        "/simple/",
+        "Simple Custom Widgets",
+        "ToggleInput, Range, PasswordInput with reveal, DataList, and Rating",
+    ),
     (
         "inline-errors",
         "/inline-errors/",
@@ -1397,15 +1514,15 @@ _PAGES = [
         "Django\u2019s built-in compound widgets, SplitDateTimeWidget, ClearableFileInput, CheckboxSelectMultiple, SelectDateWidget",
     ),
     (
-        "search-select",
-        "/search-select/",
-        "SearchSelect",
+        "select",
+        "/select/",
+        "Select",
         "Searchable dropdown, static, with icons, and server-side search via htmx",
     ),
     (
-        "multi-select",
-        "/multi-select/",
-        "MultiSelect",
+        "select-multiple",
+        "/select-multiple/",
+        "SelectMultiple",
         "Multi-select dropdown, plain, with icons and auto-search, and server-side via htmx",
     ),
     (
@@ -1414,25 +1531,43 @@ _PAGES = [
         "ComboBox",
         "Filterable text input, single, multiple, with icons, and server-side via htmx",
     ),
+    (
+        "dropdowns",
+        "/dropdowns/",
+        "Dropdowns",
+        "Drop direction, short menus, and a selection past the first page of a server search",
+    ),
+    (
+        "read-only",
+        "/read-only/",
+        "Read-only Dropdowns",
+        "The dropdowns inside a disabled fieldset",
+    ),
     ("uploads", "/uploads/", "File Uploads", "Drag-and-drop file and image uploads with size and type restrictions"),
     ("textarea", "/textarea/", "ValidatedTextarea", "Server-side validation with inline word highlighting via htmx"),
     (
         "new-widgets",
         "/new-widgets/",
         "New Widgets",
-        "DatePicker, InputNumber, OTP, Country, InputMask",
+        "DatePicker, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons",
     ),
     (
         "complex",
         "/complex/",
         "Complex Form",
-        "Auto-validated cross-field form, passwords, dates, SearchSelect, MultiSelect with morph resilience",
+        "Auto-validated cross-field form, passwords, dates, Select, SelectMultiple with morph resilience",
     ),
     (
         "autosave",
         "/autosave/",
         "Auto-Save Form",
         "Auto-saves on every field change, server-side validation with htmx morph swap",
+    ),
+    (
+        "autosave-dropdowns",
+        "/autosave-dropdowns/",
+        "Auto-Save Dropdowns",
+        "A Select on an auto-saving form, morphed while it is open or holds an unsaved pick",
     ),
     (
         "icon-modifiers",
@@ -1513,7 +1648,46 @@ _ELEMENTS_CARD = _card_body(
 )
 _ELEMENTS_HTML = _page_html("Standalone Elements", _ELEMENTS_BODY)
 
-_FORM_HTML_FNS = {"complex": _complex_form_html, "autosave": _autosave_form_html}
+_SECTION_FORM_ATTRS = (
+    'data-section-form novalidate hx-post="/sections/" hx-trigger="change delay:300ms" '
+    'hx-swap="outerMorph" hx-sync="closest [data-section-forms]:queue all"'
+)
+
+_SECTIONS_INNER = (
+    "{% load formwork %}\n"
+    '<div id="sections" class="flex flex-col gap-6" data-section-forms>\n'
+    "  {% if tab == '2' %}\n"
+    '  <p id="second_tab">Second tab</p>\n'
+    "  {% else %}\n"
+    f'  <form id="general_form" hx-select="#general_form" {_SECTION_FORM_ATTRS}>\n'
+    '    {% csrf_token %}{% formwork_section "general" %}\n'
+    "    {{ sections.general }}\n"
+    "  </form>\n"
+    f'  <form id="extras_form" hx-select="#extras_form" data-send-changed {_SECTION_FORM_ATTRS}>\n'
+    '    {% csrf_token %}{% formwork_section "extras" %}\n'
+    '    <div data-section-indicator="#extras_indicator">{{ sections.extras.note.as_field_group }}</div>\n'
+    "    {{ sections.extras.color.as_field_group }}\n"
+    "  </form>\n"
+    '  <span id="extras_indicator" class="loading loading-spinner loading-sm htmx-indicator" aria-hidden="true">'
+    "</span>\n"
+    "  {% endif %}\n"
+    "</div>\n"
+    '<button id="second_tab_button" type="button" class="btn mt-4" hx-get="/sections/?tab=2" '
+    'hx-target="#sections" hx-select="#sections" hx-swap="outerHTML">Second tab</button>'
+)
+
+_SECTIONS_HTML = _page_html("Section Forms", _card_body("Section Forms", _SECTIONS_INNER)).replace(
+    "</head>", "  {% load formwork %}{% formwork_sections_js %}\n</head>"
+)
+
+_TRANSLATED_HTML = _page_html("Deutsch", _card_body("Deutsch", "{{ form }}")).replace('lang="en"', 'lang="de"')
+
+_FORM_HTML_FNS = {
+    "complex": _complex_form_html,
+    "autosave": _autosave_form_html,
+    "autosave-dropdowns": _autosave_form_html,
+    "read-only": _read_only_form_html,
+}
 
 _TEMPLATES = {
     key: _build_templates(key, url, title, desc, _FORM_HTML_FNS.get(key))
@@ -1664,16 +1838,28 @@ def builtin_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, BuiltinWidgetsForm, "builtin")
 
 
-def search_select_view(request: HttpRequest) -> HttpResponse:
-    return _form_view(request, SearchSelectForm, "search-select")
+def select_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, SelectForm, "select")
 
 
-def multi_select_view(request: HttpRequest) -> HttpResponse:
-    return _form_view(request, MultiSelectForm, "multi-select")
+def select_multiple_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, SelectMultipleForm, "select-multiple")
 
 
 def combobox_view(request: HttpRequest) -> HttpResponse:
     return _form_view(request, ComboBoxForm, "combobox")
+
+
+def dropdowns_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, DropdownForm, "dropdowns")
+
+
+def read_only_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, DropdownForm, "read-only")
+
+
+def autosave_dropdowns_view(request: HttpRequest) -> HttpResponse:
+    return _form_view(request, AutoSaveDropdownForm, "autosave-dropdowns")
 
 
 def uploads_view(request: HttpRequest) -> HttpResponse:
@@ -1722,3 +1908,20 @@ def complex_view(request: HttpRequest) -> HttpResponse:
     ctx = {"form": form, "saved": bool(saved)}
     template = engine.from_string(card_tmpl if is_htmx else page_tmpl)
     return HttpResponse(template.render(ctx, request))
+
+
+def translated_view(request: HttpRequest) -> HttpResponse:
+    with translation.override("de"):
+        template = engines["django"].from_string(_TRANSLATED_HTML)
+        return HttpResponse(template.render({"form": TranslatedForm()}, request))
+
+
+def sections_view(request: HttpRequest) -> HttpResponse:
+    """Two section forms that save one SectionRecord, and a tab that replaces them."""
+    record = SectionRecord.objects.first() or SectionRecord.objects.create(name="Lamp", city="nyc", color="red")
+    sections = section_forms(request, {"general": SectionGeneralForm, "extras": SectionExtrasForm}, instance=record)
+    for form in sections.values():
+        if form.is_bound and form.is_valid():
+            form.save()
+    template = engines["django"].from_string(_SECTIONS_HTML)
+    return HttpResponse(template.render({"sections": sections, "tab": request.GET.get("tab")}, request))

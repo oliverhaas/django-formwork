@@ -137,9 +137,9 @@ def test_search_filter_is_type_search_with_magnifier(client, db):
 def test_status_and_priority_filters_have_floating_labels(client, db):
     """The select filters carry floating labels so the active filter reads clearly."""
     content = client.get(reverse("task_list")).content.decode()
-    assert content.count('class="floating-label"') == 2
-    assert "<span>Status</span>" in content
-    assert "<span>Priority</span>" in content
+    assert content.count('class="floating-label formwork-floating-select"') == 2
+    assert '<span id="id_status_floating_label">Status</span>' in content
+    assert '<span id="id_priority_floating_label">Priority</span>' in content
 
 
 def test_filter_narrows_the_task_list(client, db):
@@ -152,7 +152,7 @@ def test_filter_narrows_the_task_list(client, db):
 
 
 def test_task_row_priority_trigger_carries_severity_class(client, db):
-    """The priority SearchSelect seeds its trigger class from the saved severity."""
+    """The priority Select seeds its trigger class from the saved severity."""
     Task.objects.create(title="Recolor me", priority=Task.Priority.HIGH)
     response = client.get(reverse("task_list"))
     assert response.status_code == 200

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 from django import forms
 from django.http import QueryDict
@@ -7,7 +9,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import ValidatedTextarea
 
-from .conftest import assert_html_equivalent, render_form, render_widget, submit
+from .conftest import render_form, render_widget, submit
 
 
 class ValidatedTextareaForm(FormworkForm):
@@ -142,7 +144,7 @@ def test_errors_tooltip_present():
     assert tooltip["id"] == "id_content_vttooltip"
     errors = tooltip.find("div", class_="formwork-errors")
     assert errors is not None
-    assert errors["id"] == "id_content_error"
+    assert errors["id"] == "id_content_live_error"
     assert errors["role"] == "alert"
 
 
@@ -180,45 +182,6 @@ def test_htmx_attrs_hx_swap():
     soup = render_widget(widget, name="content", attrs={"id": "id_content"})
     textarea = soup.find("textarea")
     assert textarea["hx-swap"] == "innerHTML"
-
-
-@pytest.mark.unit
-def test_htmx_params_none():
-    """Textarea hx-params is 'none' so only manually-injected params are sent."""
-    widget = ValidatedTextarea(validate_url="/validate/")
-    soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    textarea = soup.find("textarea")
-    assert textarea["hx-params"] == "none"
-
-
-@pytest.mark.unit
-def test_htmx_config_request_text_param():
-    """hx-on::config:request injects text=this.value."""
-    widget = ValidatedTextarea(validate_url="/validate/")
-    soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    textarea = soup.find("textarea")
-    config = textarea["hx-on::config:request"]
-    assert "event.detail.ctx.request.body.set('text', this.value)" in config
-
-
-@pytest.mark.unit
-def test_htmx_config_request_field_name():
-    """hx-on::config:request injects field_name param."""
-    widget = ValidatedTextarea(validate_url="/validate/")
-    soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    textarea = soup.find("textarea")
-    config = textarea["hx-on::config:request"]
-    assert "event.detail.ctx.request.body.set('field_name', 'content')" in config
-
-
-@pytest.mark.unit
-def test_htmx_config_request_errors_id():
-    """hx-on::config:request injects errors_id param."""
-    widget = ValidatedTextarea(validate_url="/validate/")
-    soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    textarea = soup.find("textarea")
-    config = textarea["hx-on::config:request"]
-    assert "event.detail.ctx.request.body.set('errors_id', 'id_content_error')" in config
 
 
 @pytest.mark.unit
@@ -330,20 +293,6 @@ def test_aria_invalid_alpine_binding_present():
     assert textarea.has_attr(":aria-invalid")
 
 
-@pytest.mark.unit
-def test_textarea_has_after_swap_handler():
-    """Textarea carries hx-on::after:swap to update hasErrors after htmx response.
-
-    htmx 4 fires after:swap on the source (textarea) once all main+OOB swaps
-    have completed, so the handler reads the up-to-date errors div content.
-    """
-    widget = ValidatedTextarea(validate_url="/validate/")
-    soup = render_widget(widget, name="content", attrs={"id": "id_content"})
-    textarea = soup.find("textarea")
-    assert textarea.has_attr("hx-on::after:swap")
-    assert "hasErrors" in textarea["hx-on::after:swap"]
-
-
 # ─── Level 3: Form integration ───────────────────────────────────────────────
 
 
@@ -371,7 +320,7 @@ def test_form_error_state(renderer):
     form = ValidatedTextareaForm(data={"content": ""}, error_display="tooltip")
     form.is_valid()
     soup = render_form(form, renderer=renderer)
-    tooltip = soup.find(id="id_content_tooltip")
+    tooltip = soup.select_one("#id_content_field > .tooltip > .tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
 
@@ -384,17 +333,6 @@ def test_form_prefix_handling(renderer):
     textarea = soup.find("textarea", attrs={"name": "cfg-content"})
     assert textarea is not None
     assert textarea["id"] == "id_cfg-content"
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """ValidatedTextarea produces equivalent HTML via DTL and Jinja2."""
-    soup_dtl = render_form(ValidatedTextareaForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(ValidatedTextareaForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────────
@@ -411,14 +349,14 @@ def _trigger_validation(page, text):
         const params = new URLSearchParams();
         params.append('text', text);
         params.append('field_name', 'bio');
-        params.append('errors_id', textarea.id + '_error');
+        params.append('errors_id', textarea.id + '_live_error');
         fetch(url, {method: 'POST', body: params})
             .then(r => r.text())
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString('<div>' + html + '</div>', 'text/html');
                 const oob = doc.querySelector('[hx-swap-oob]');
-                const errorsTarget = document.getElementById(textarea.id + '_error');
+                const errorsTarget = document.getElementById(textarea.id + '_live_error');
                 if (oob && errorsTarget) {
                     errorsTarget.innerHTML = oob.innerHTML;
                     oob.remove();
@@ -564,6 +502,15 @@ def test_aria_invalid_clears_when_errors_resolve(textarea_page):
     # Errors should be gone and aria-invalid="false" on textarea.
     expect(errors.locator("p")).to_have_count(0, timeout=3000)
     expect(ta).to_have_attribute("aria-invalid", "false")
+
+
+@pytest.mark.e2e
+def test_validation_request_posts_only_the_text(textarea_page):
+    """The debounced check posts the text and its two ids, not the rest of the form."""
+    with textarea_page.expect_request(lambda r: "/e2e/validate/bio/" in r.url) as request:
+        textarea_page.locator('textarea[name="bio"]').fill("spam")
+    names = re.findall(r'form-data; name="([^"]+)"', request.value.post_data)
+    assert sorted(names) == ["errors_id", "field_name", "text"]
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────────

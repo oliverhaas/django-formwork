@@ -304,16 +304,6 @@ class TestInlineErrorRendering:
         assert disclosure.find("button") is None
         assert disclosure.find(class_="formwork-disclosure-body") is None
 
-    def test_inline_mode_is_default(self):
-        class F(FormworkForm):
-            name = forms.CharField()
-
-        form = F(data={"name": ""})
-        form.is_valid()
-        soup = render_html(form)
-        assert soup.find("div", class_="tooltip") is None
-        assert soup.find(id="id_name_error") is not None
-
 
 class TestNonFieldErrors:
     """Non-field errors use DaisyUI alert component."""
@@ -426,54 +416,6 @@ class TestHiddenFields:
         assert not any("Hidden" in t for t in legend_texts)
 
 
-class TestRequiredFieldAsterisk:
-    """Required fields show an asterisk indicator."""
-
-    def test_required_field_has_asterisk(self):
-        class F(FormworkForm):
-            name = forms.CharField()
-
-        soup = render_html(F())
-        label = soup.find("label", class_="fieldset-legend")
-        asterisk = label.find("span", class_="text-error")
-        assert asterisk is not None
-        assert "*" in asterisk.get_text()
-
-    def test_optional_field_no_asterisk(self):
-        class F(FormworkForm):
-            name = forms.CharField(required=False)
-
-        soup = render_html(F())
-        label = soup.find("label", class_="fieldset-legend")
-        asterisk = label.find("span", class_="text-error")
-        assert asterisk is None
-
-    def test_required_fieldset_widget_has_asterisk(self):
-        class F(FormworkForm):
-            choice = forms.ChoiceField(
-                choices=[("a", "A"), ("b", "B")],
-                widget=forms.RadioSelect,
-            )
-
-        soup = render_html(F())
-        legend = soup.find("legend", class_="fieldset-legend")
-        asterisk = legend.find("span", class_="text-error")
-        assert asterisk is not None
-
-    def test_optional_fieldset_widget_no_asterisk(self):
-        class F(FormworkForm):
-            choice = forms.ChoiceField(
-                choices=[("a", "A"), ("b", "B")],
-                widget=forms.RadioSelect,
-                required=False,
-            )
-
-        soup = render_html(F())
-        legend = soup.find("legend", class_="fieldset-legend")
-        asterisk = legend.find("span", class_="text-error")
-        assert asterisk is None
-
-
 class TestMorphingIds:
     """All elements have stable IDs for htmx morph matching."""
 
@@ -501,16 +443,6 @@ class TestMorphingIds:
         fieldset = soup.find("fieldset", class_="fieldset")
         assert fieldset["id"] == "id_contact-name_field"
 
-    def test_tooltip_has_id_on_error(self):
-        class F(FormworkForm):
-            name = forms.CharField()
-
-        form = F(data={"name": ""}, error_display="tooltip")
-        form.is_valid()
-        soup = render_html(form)
-        tooltip = soup.find("div", class_="tooltip")
-        assert tooltip["id"] == "id_name_tooltip"
-
     def test_errors_div_has_id_on_error(self):
         class F(FormworkForm):
             name = forms.CharField()
@@ -521,7 +453,9 @@ class TestMorphingIds:
         errors = soup.find("div", class_="tooltip-content")
         assert errors["id"] == "id_name_error"
 
-    def test_non_field_errors_has_id(self):
+    def test_non_field_errors_have_no_fixed_id(self):
+        """Two forms on one page must not repeat an id."""
+
         class F(FormworkForm):
             name = forms.CharField()
 
@@ -532,7 +466,7 @@ class TestMorphingIds:
         form.is_valid()
         soup = render_html(form)
         alert = soup.find("div", class_="alert")
-        assert alert["id"] == "formwork-non-field-errors"
+        assert not alert.has_attr("id")
 
     def test_use_fieldset_branch_has_ids(self):
         """RadioSelect fields use <legend> and use_fieldset=True branch."""
@@ -548,8 +482,6 @@ class TestMorphingIds:
         soup = render_html(form)
         fieldset = soup.find("fieldset", class_="fieldset")
         assert fieldset["id"] == "id_choice_field"
-        tooltip = soup.find("div", class_="tooltip")
-        assert tooltip["id"] == "id_choice_tooltip"
         errors = soup.find("div", class_="tooltip-content")
         assert errors["id"] == "id_choice_error"
 
@@ -578,3 +510,15 @@ class TestTemplateTags:
         html = template.render(Context())
         assert "<script" in html
         assert "formwork/formwork.js" in html
+
+    def test_formwork_sections_js_tag(self):
+        html = Template("{% load formwork %}{% formwork_sections_js %}").render(Context())
+        assert html == '<script type="module" src="/static/formwork/sections.js"></script>'
+
+    def test_formwork_section_tag(self):
+        html = Template('{% load formwork %}{% formwork_section "general" %}').render(Context())
+        assert html == '<input type="hidden" name="_formwork_section" value="general">'
+
+    def test_formwork_section_tag_escapes_the_name(self):
+        html = Template("{% load formwork %}{% formwork_section name %}").render(Context({"name": '"x'}))
+        assert 'value="&quot;x"' in html

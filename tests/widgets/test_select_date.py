@@ -8,7 +8,7 @@ from django.http import QueryDict
 
 from django_formwork.forms import FormworkForm
 
-from .conftest import assert_html_equivalent, render_form, render_widget, submit
+from .conftest import render_form, render_widget, submit
 
 
 class SelectDateForm(FormworkForm):
@@ -143,17 +143,6 @@ def test_select_date_form_prefix(renderer):
     assert soup.find("select", attrs={"name": "reg-birthday_month"}) is not None
     assert soup.find("select", attrs={"name": "reg-birthday_day"}) is not None
     assert soup.find("select", attrs={"name": "reg-birthday_year"}) is not None
-
-
-# ─── Level 4: Jinja2 / DTL parity ────────────────────────────────────────
-
-
-@pytest.mark.integration
-def test_select_date_jinja2_dtl_parity(dtl_renderer, jinja2_renderer):
-    """SelectDateWidget produces equivalent HTML when rendered via DTL and Jinja2."""
-    soup_dtl = render_form(SelectDateForm(), renderer=dtl_renderer)
-    soup_jinja2 = render_form(SelectDateForm(), renderer=jinja2_renderer)
-    assert_html_equivalent(soup_dtl, soup_jinja2)
 
 
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
