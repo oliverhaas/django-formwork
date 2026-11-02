@@ -78,7 +78,9 @@
     - **Translations:** every string formwork shows goes through Django's translation
       functions, plurals included. Formwork ships no catalog, so run `makemessages` in
       your project. The JavaScript reads its texts from `data-*` attributes and needs no
-      JavaScript catalog.
+      JavaScript catalog. The CSS takes the `[more]`/`[less]` label of the help-text
+      toggle from the `data-more` and `data-less` attributes of its `<summary>`, so an
+      override of `formwork/forms/field.html` must keep them.
     - **What looks different:** `error_display = "auto"` is the default, so a field with
       help text shows its error inline and a field without help text shows it in a
       tooltip; set `"inline"` or `"tooltip"` in `Meta` or pass `error_display=` to keep

@@ -984,9 +984,10 @@ details.formwork-disclosure:not([open]) > summary .formwork-disclosure-text {
 /* [more]/[less] affordance — the last flex/grid item of the summary,
    shown only when the row is expandable.  Colour inherits the summary's
    muted .label look in every state; .text-error sits on the error row,
-   not the summary, so the affordance never turns red. */
+   not the summary, so the affordance never turns red.  The labels come
+   translated from the summary's data-more/data-less attributes. */
 details.formwork-disclosure[data-expandable] > summary::after {
-    content: "[more]";
+    content: attr(data-more);
     flex-shrink: 0;
     white-space: nowrap;
 }
@@ -995,7 +996,7 @@ details.formwork-disclosure[data-expandable] > summary::after {
    row (see the grid rules near .fieldset .label) and bottom-aligns with
    the final line of text. */
 details.formwork-disclosure[data-expandable][open] > summary::after {
-    content: "[less]";
+    content: attr(data-less);
     grid-column: 2;
     align-self: end;
 }

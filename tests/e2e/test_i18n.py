@@ -1,4 +1,4 @@
-"""E2e tests for a translated page: the client-side counts use the plural forms the server sends."""
+"""E2e tests for a translated page: the text the browser shows comes from the server's catalog."""
 
 from playwright.sync_api import expect
 
@@ -25,3 +25,14 @@ def test_file_dropzone_count_and_size_are_translated(translated_page):
     expect(zone.locator(".dropzone-file-name")).to_have_text("⟦2 files selected⟧")
     inp.set_input_files([{"name": "c.txt", "mimeType": "text/plain", "buffer": b"c" * 1536}])
     expect(zone.locator(".dropzone-file-size")).to_have_text("1,5 KB")
+
+
+def test_help_text_toggle_is_translated(translated_page):
+    summary = translated_page.locator("#id_note_disclosure > summary")
+    toggle = "el => getComputedStyle(el, '::after').content"
+    translated_page.wait_for_function(
+        "() => document.querySelector('#id_note_disclosure').hasAttribute('data-expandable')"
+    )
+    assert summary.evaluate(toggle) == '"⟦[more]⟧"'
+    summary.click()
+    assert summary.evaluate(toggle) == '"⟦[less]⟧"'

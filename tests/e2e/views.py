@@ -1018,7 +1018,7 @@ class UploadsForm(FormworkForm):
 
 
 class TranslatedForm(FormworkForm):
-    """Widgets whose JavaScript counts things, for the translated page."""
+    """Widgets whose text the browser fills in, for the translated page."""
 
     colors = forms.MultipleChoiceField(
         choices=[(c, c.title()) for c in ("red", "green", "blue", "black", "white")],
@@ -1027,6 +1027,7 @@ class TranslatedForm(FormworkForm):
         required=False,
     )
     files = forms.FileField(widget=FileDropzoneInput(attrs={"multiple": True}), required=False)
+    note = forms.CharField(required=False, help_text="Hilfe " * 60)
 
 
 class TextareaForm(FormworkForm):
