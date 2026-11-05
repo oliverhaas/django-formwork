@@ -151,34 +151,6 @@ python-version = "3.14"
 respect-type-ignore-comments = false
 
 [[tool.ty.overrides]]
-include = ["tests/**"]
-
-[tool.ty.overrides.rules]
-# Test files hit Django stub and BeautifulSoup stub limitations (unresolved
-# imports via pythonpath, ModelChoiceField.choices union, soup.find() nullability,
-# TEMPLATES dict shape, async clean override, etc.).  Suppressing broadly
-# because test code is verified by running the tests, not the type checker.
-unresolved-attribute = "ignore"
-unresolved-import = "ignore"
-invalid-argument-type = "ignore"
-invalid-assignment = "ignore"
-invalid-method-override = "ignore"
-not-iterable = "ignore"
-not-subscriptable = "ignore"
-no-matching-overload = "ignore"
-unsupported-operator = "ignore"
-call-non-callable = "ignore"
-unknown-argument = "ignore"
-
-[[tool.ty.overrides]]
-include = ["examples/**"]
-
-[tool.ty.overrides.rules]
-# Example apps hit Django stub limitations (choices type, settings, etc.).
-invalid-argument-type = "ignore"
-unresolved-import = "ignore"
-
-[[tool.ty.overrides]]
 include = ["django_formwork/async_forms.py"]
 
 [tool.ty.overrides.rules]
@@ -197,17 +169,6 @@ include = ["django_formwork/formsets.py"]
 unresolved-attribute = "ignore"
 
 [[tool.ty.overrides]]
-include = ["django_formwork/fields.py"]
-
-[tool.ty.overrides.rules]
-# FormworkModelChoiceIterator.choice() uses Any-typed local for field access;
-# method-shadowing pattern (self.label_from_instance = callable) is intentional;
-# label_from_instance(obj: Model) overrides generic _M from django stubs.
-unresolved-attribute = "ignore"
-invalid-assignment = "ignore"
-invalid-method-override = "ignore"
-
-[[tool.ty.overrides]]
 include = ["django_formwork/forms.py"]
 
 [tool.ty.overrides.rules]
@@ -216,7 +177,6 @@ include = ["django_formwork/forms.py"]
 # _DirtyOnlyModelFormMixin passes `self` (a bare mixin) to construct_instance
 # (which expects BaseForm); the mixin is only ever composed into one at runtime.
 unresolved-attribute = "ignore"
-invalid-assignment = "ignore"
 invalid-argument-type = "ignore"
 
 [[tool.ty.overrides]]
@@ -225,9 +185,7 @@ include = ["django_formwork/widgets/*.py"]
 [tool.ty.overrides.rules]
 # _DropZoneMixin uses super().get_context() which resolves at runtime via MRO
 # but ty can't see the cooperative base class.
-# PhoneInput.value_from_datadict returns str instead of list[Any] (intentional override).
 unresolved-attribute = "ignore"
-invalid-method-override = "ignore"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "settings.base"
