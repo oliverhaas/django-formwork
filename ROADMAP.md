@@ -1,21 +1,22 @@
 # django-formwork: Road to 1.0
 
-Working backlog of what's left to change, fix, or improve before this package earns a
-solid 1.0. Produced 2026-07-05 from a multi-dimension audit; cleaned 2026-07-12, with all
-completed items removed; reconciled 2026-07-18 against current source (git history and the
-changelog record what already landed). File:line refs are where the evidence lives.
+The backlog of changes, fixes and improvements for 1.0. A multi-dimension audit produced
+it on 2026-07-05. The 2026-07-12 cleanup removed the completed items, and the 2026-07-18
+pass checked the rest against the source. Git history and the changelog record what
+landed. The file:line references point at the evidence.
 
 ## Where it stands
 
-The three original release blockers (security/correctness, CSS/icon distribution, API
-naming lock-in) are resolved, and the architectural root cause is gone: the inline
-`x-data` extraction landed 2026-07-12, so all widget JS now ships as lintable
-`Alpine.data` modules with config passed through autoescaped `data-*` attributes. Since
-the 2026-07-12 cleanup, editable tables (`as_row`/`as_rows`/`FormworkRowSaveMixin`), the
-`error_display` Meta option, and a uniform top-level import surface all landed; the `Unreleased` changelog has grown large enough that an `a3`/beta cut is
-due. What remains is scoped work: the server-side upload enforcement decision, the
-remaining async save-path tests, screenshot coverage, dropdown a11y, docs (now including
-editable tables), and the config surface.
+The three original release blockers (security and correctness, CSS and icon
+distribution, API naming) are resolved. Every widget template binds a shipped
+`Alpine.data` module and passes its configuration through autoescaped `data-*`
+attributes, so no template value reaches a JavaScript expression. Editable tables
+(`as_row`/`as_rows`/`FormworkRowSaveMixin`), the `error_display` Meta option and the
+top-level import surface landed after the 2026-07-12 cleanup. The `Unreleased`
+changelog is large enough for an `a3` or beta release. The open items are the
+server-side upload enforcement decision, the remaining async save-path tests,
+screenshot coverage, dropdown a11y, the docs for formsets and editable tables, and the
+config surface.
 
 ---
 
@@ -25,22 +26,22 @@ editable tables), and the config surface.
   as cosmetic).** Drop zones enforce size and type only in client JS (file *count* is
   not enforced even there: a single-file zone accepts a multi-file drop); any direct
   POST uploads arbitrary size/type, a DoS + content-type bypass. It matches plain-Django
-  semantics, but the API *implies* enforcement. The docs already warn for `max_size`;
-  nothing says `accept` is cosmetic. Ship a validator auto-attached from the widget
-  config (or `FormworkFileField`/`ImageField`), or extend the docs warnings to
-  `accept`/count. (`django_formwork/widgets/file_dropzone.py:21`, medium)
+  semantics, but the API *implies* enforcement. The widget docs say that `accept` and
+  `max_size` only guide the browser; nothing mentions the file count. Ship a validator
+  auto-attached from the widget config (or `FormworkFileField`/`ImageField`), or extend
+  the docs warning to the count. (`django_formwork/widgets/file_dropzone.py:21`, medium)
 - [ ] **Finish covering the async ModelForm save path.** `avalidate_constraints` now has
   tests (constraint violation surfaces as a form error), but the two branches the audit
   named are still unexercised: `avalidate_unique`'s ValidationError branch has no async
   duplicate-unique test, and `_asave_m2m`'s loop body never runs because the only model
-  form touching the hook (`BasicModelForm`) has no M2M fields, so the test just asserts the
+  form touching the hook (`BasicModelForm`) has no M2M fields, so the test only asserts the
   hook is bound. Add a unique-collision async test and an `asave()` test on a form with a
   real `ManyToManyField`. (`django_formwork/async_forms.py:125`, medium)
 - [ ] **Add screenshot coverage and deeper e2e for** `date_picker`, `input_mask`,
-  `stepper_number`, `otp_input`. The extraction (2026-07-12) gave each its first browser
-  smoke test, so their JS is no longer entirely undriven; still missing are screenshot
-  baselines (none exist for these four) and the interaction cases the test files list
-  as planned (keyboard navigation, morph preservation). (`tests/widgets/`, medium)
+  `stepper_number`, `otp_input`. Each has a browser smoke test since the 2026-07-12
+  extraction. They lack screenshot baselines (none exist for these four) and the
+  interaction cases the test files list as planned (keyboard navigation, morph
+  preservation). (`tests/widgets/`, medium)
 - [ ] **Fix custom-dropdown accessibility.** Arrow-key navigation only adds a
   `highlighted` CSS class and scrolls the option into view; it never sets
   `aria-activedescendant`, so keyboard users get no announced highlight.
@@ -52,12 +53,12 @@ editable tables), and the config surface.
   `FORM_RENDERER`/`FORMWORK_FORCE_ASYNC`.
   (`mkdocs.yml:44`, medium)
 - [ ] **Settle the config surface.** `search_threshold` is class-only, the search page
-  size (`SEARCH_PAGE_SIZE`) isn't settable at all, `FORMWORK_FORCE_ASYNC` is an
-  undocumented bare `getattr`. Introduce one documented `FORMWORK` settings dict +
+  size (`SEARCH_PAGE_SIZE`) isn't settable at all, and `FORMWORK_FORCE_ASYNC` is a lone
+  setting read with a bare `getattr`. Introduce one documented `FORMWORK` settings dict +
   constructor kwargs. (`widgets/select.py:105`, medium)
 - [ ] **Scope the global htmx morph config to formwork subtrees.** `formwork-core.js`
   pushes `'open'` into `htmx.config.morphIgnore` and appends x-for/x-if selectors to
-  `morphSkipChildren` *globally*, silently changing morph for every non-formwork
+  `morphSkipChildren` *globally*, which changes the morph of every non-formwork
   `<details>` and Alpine list on the host page. Gate on a formwork marker in the
   per-node hook. (`static/formwork/formwork-core.js:321`, medium)
 - [ ] **Collapse the type-checking debt.** Two checkers with divergent suppression force
@@ -82,7 +83,7 @@ editable tables), and the config surface.
 
 - [ ] **Inline-formset editing UI: add/remove/reorder rows.** The rendering and per-row
   autosave half landed (`as_row`/`as_rows`/`FormworkRowSaveMixin`, keyed on the posted pk),
-  so formsets are no longer backend-only. What is left is the dynamic-row half: add, remove,
+  so formsets render in the browser. What is left is the dynamic-row half: add, remove,
   and reorder are demonstrated ad hoc in `examples/full` but not shipped as a reusable
   widget JS module wired to `FormworkBaseInlineFormSet`. (medium)
 - [ ] **Declarative form layout system** (fieldset grouping, multi-column, column span).
@@ -101,16 +102,10 @@ editable tables), and the config surface.
 - [ ] **Per-field template/escape hatch** (widget-tweaks/crispy equivalent) + remaining
   a11y polish (date-picker grid semantics). Lets non-DaisyUI stacks adopt without
   abandoning `{{ form }}`. (medium)
-- [ ] **Repo hygiene.** Publish an npm package (or drop the bundler-import claim that
-  can't resolve today), fix the dead `publish.yml` version verification on the
-  automated release path. (small)
-
----
-
-## Quick wins (small effort, high value)
-
-- [ ] Make the `[more]`/`[less]` error toggle translatable. The text is CSS `content`
-  in `formwork.css`, which no gettext call reaches. (`static/formwork/formwork.css:989`)
+- [ ] **Repo hygiene.** Publish an npm package, or keep the bundler import on the
+  site-packages path that the installation guide gives (the header comment of
+  `formwork.js` still names an npm-style `django-formwork/formwork.js`). Fix the dead
+  `publish.yml` version verification on the automated release path. (small)
 
 ---
 
