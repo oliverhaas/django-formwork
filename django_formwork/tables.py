@@ -22,7 +22,7 @@ PREFIX_INPUT_NAME = "_formwork_prefix"
 class RowRenderMixin:
     """Add ``as_row()`` to a form: render it as one table ``<tbody>``."""
 
-    template_name_row = "django_formwork/tables/row.html"
+    template_name_row = "formwork/tables/row.html"
 
     #: Set per render (by :meth:`TableRenderMixin.as_rows` or the caller) so
     #: the row's htmx wiring knows where to post. Empty renders a static row.
@@ -101,7 +101,7 @@ class RowRenderMixin:
 class TableRenderMixin:
     """Add ``as_rows()`` to a formset: render it as one editable ``<table>``."""
 
-    template_name_table = "django_formwork/tables/table.html"
+    template_name_table = "formwork/tables/table.html"
 
     if TYPE_CHECKING:
         forms: Any
@@ -121,7 +121,7 @@ class TableRenderMixin:
 class FormworkRowSaveMixin:
     """View mixin: save one row's changes (keyed on the posted pk) and re-render it.
 
-    ``queryset`` (or ``get_queryset()``) holds the rows a post may change; a pk
+    ``queryset`` (or ``get_queryset()``) holds the rows a post can change; a pk
     outside it gets a 404.
     """
 
@@ -136,11 +136,11 @@ class FormworkRowSaveMixin:
         return request.POST.get(PREFIX_INPUT_NAME) or None
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Any]:  # noqa: ARG002
-        """The rows this endpoint may change, e.g. ``Task.objects.filter(owner=request.user)``."""
+        """The rows this endpoint can change, e.g. ``Task.objects.filter(owner=request.user)``."""
         if self.queryset is None:
             model_name = self.form_class._meta.model.__name__  # noqa: SLF001
             msg = (
-                f"{type(self).__name__} needs a queryset (or get_queryset()) of the rows a user may "
+                f"{type(self).__name__} needs a queryset (or get_queryset()) of the rows a user can "
                 f"change, e.g. {model_name}.objects.filter(owner=request.user), or "
                 f"{model_name}.objects.all() for every row."
             )

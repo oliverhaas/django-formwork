@@ -60,6 +60,18 @@ def test_as_rows_renders_table_with_header_and_one_tbody_per_row():
     assert "alpha" in html and "beta" in html
 
 
+def test_project_template_overrides_the_row_template(settings, tmp_path):
+    override = tmp_path / "formwork" / "tables" / "row.html"
+    override.parent.mkdir(parents=True)
+    override.write_text("<tbody>project row</tbody>")
+    settings.TEMPLATES = [{**settings.TEMPLATES[0], "DIRS": [tmp_path]}]
+    settings.FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
+
+    html = CodeRowForm(instance=UniqueCode.objects.create(code="A")).as_row()
+
+    assert "project row" in html
+
+
 def test_row_save_updates_only_editable_fields():
     obj = UniqueCode.objects.create(code="A", label="alpha")
 
