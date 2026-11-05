@@ -53,7 +53,7 @@ class AsyncFormMixin:
         return super().is_valid()  # type: ignore[misc]
 
     async def ais_valid(self: Any) -> bool:
-        """Async version of ``is_valid()``."""
+        """``is_valid()`` that awaits an async ``clean_<name>()`` or ``clean()``."""
         if not self.is_bound:
             return False
         if self._errors is None:
@@ -61,7 +61,7 @@ class AsyncFormMixin:
         return not self._errors
 
     async def afull_clean(self: Any) -> None:
-        """Async version of ``full_clean()``."""
+        """``full_clean()`` with every ORM-capable step run in a worker thread or awaited."""
         from django.forms.utils import ErrorDict
 
         self._errors = ErrorDict(renderer=self.renderer)
@@ -76,7 +76,6 @@ class AsyncFormMixin:
         await self._apost_clean()
 
     async def _aclean_fields(self: Any) -> None:
-        """Async version of ``_clean_fields()``."""
         for name, bf in self._bound_items():
             field = bf.field
             try:
@@ -95,7 +94,6 @@ class AsyncFormMixin:
                 self.add_error(name, e)
 
     async def _aclean_form(self: Any) -> None:
-        """Async version of ``_clean_form()``."""
         try:
             if inspect.iscoroutinefunction(self.clean):
                 cleaned_data = await self.clean()
@@ -122,12 +120,12 @@ class AsyncModelFormMixin(AsyncFormMixin):
         _check_force_async(self, "save", "asave")
         return super().save(commit=commit)  # type: ignore[misc]
 
-    # NOTE: the async ``_post_clean`` (model construction + validation) lives on
-    # ``_DirtyOnlyModelFormMixin._apost_clean`` in django_formwork.forms, which
+    # The async _post_clean (model construction and validation) is
+    # _DirtyOnlyModelFormMixin._apost_clean in django_formwork.forms, which
     # precedes this mixin in the MRO of both model form base classes.
 
     async def avalidate_unique(self: Any) -> None:
-        """Async version of ``validate_unique()``."""
+        """Run the instance's ``validate_unique()`` in a worker thread."""
         exclude = self._get_validation_exclusions()
         try:
             await sync_to_async(self.instance.validate_unique)(exclude=exclude)
@@ -135,7 +133,7 @@ class AsyncModelFormMixin(AsyncFormMixin):
             self._update_errors(e)
 
     async def avalidate_constraints(self: Any) -> None:
-        """Async version of ``validate_constraints()``."""
+        """Run the instance's ``validate_constraints()`` in a worker thread."""
         exclude = self._get_validation_exclusions()
         try:
             await sync_to_async(self.instance.validate_constraints)(exclude=exclude)
@@ -143,7 +141,7 @@ class AsyncModelFormMixin(AsyncFormMixin):
             self._update_errors(e)
 
     async def asave(self: Any, commit: bool = True) -> models.Model:  # noqa: FBT001, FBT002
-        """Async version of ``ModelForm.save()``."""
+        """``save()`` through ``instance.asave()``; after ``commit=False``, await ``asave_m2m()``."""
         if self._errors is None:
             await self.afull_clean()
         if self._errors:
@@ -169,7 +167,6 @@ class AsyncModelFormMixin(AsyncFormMixin):
         raise RuntimeError(msg)
 
     async def _asave_m2m(self: Any) -> None:
-        """Async version of ``_save_m2m()``."""
         cleaned_data = self.cleaned_data
         exclude = self._meta.exclude
         fields = self._meta.fields
