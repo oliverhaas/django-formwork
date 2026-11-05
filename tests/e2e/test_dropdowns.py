@@ -90,3 +90,31 @@ def test_disabled_fieldset_makes_dropdowns_read_only(read_only_page):
         expect(read_only_page.locator(wrapper)).not_to_have_attribute("open", "")
         expect(read_only_page.locator(f"{wrapper} [x-ref=panel]")).to_be_hidden()
     assert root.evaluate("el => el.querySelector('input[type=hidden]').matches(':disabled')")
+
+
+def _add_project_dropdown(page):
+    """A project's own DaisyUI dropdown next to the formwork widgets."""
+    page.evaluate("""() => {
+        const host = document.createElement('div');
+        host.innerHTML = `
+            <details class="dropdown" id="project_menu" open>
+                <summary>Menu</summary>
+                <div class="dropdown-content"><input id="project_input"></div>
+            </details>`;
+        document.body.append(host);
+    }""")
+
+
+def test_project_dropdown_input_keeps_its_focus_ring(dropdowns_page):
+    _add_project_dropdown(dropdowns_page)
+    dropdowns_page.locator("#project_input").focus()
+    outline = dropdowns_page.locator("#project_input").evaluate("el => getComputedStyle(el).outlineStyle")
+    assert outline != "none"
+
+
+def test_project_details_dropdown_gets_no_click_overlay(dropdowns_page):
+    _add_project_dropdown(dropdowns_page)
+    position = dropdowns_page.locator("#project_menu > summary").evaluate(
+        "el => getComputedStyle(el, '::before').position",
+    )
+    assert position != "fixed"

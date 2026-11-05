@@ -849,17 +849,21 @@ input[type="hidden"] {
     @apply hidden;
 }
 
-/* Dropdown widgets: close <details> on outside click.
+/* Select dropdowns: close <details> on outside click.
    An invisible full-page overlay on <summary> captures the click,
-   which toggles the <details> closed.  Pure CSS, no JS needed. */
-details.dropdown[open] > summary::before {
+   which toggles the <details> closed.  Scoped to formwork's widgets,
+   so a project's own <details class="dropdown"> keeps its behavior. */
+details.formwork-select[open] > summary::before,
+details.formwork-select-multiple[open] > summary::before {
     content: "";
     @apply fixed inset-0 cursor-default;
 }
 
-/* Dropdown search inputs: no focus border/outline — the parent
-   dropdown already has focus styling on the summary trigger. */
-.dropdown-content input:focus {
+/* Select search inputs: no focus border or shadow; the summary trigger
+   already shows the dropdown's focus.  Scoped to formwork's widgets, so
+   inputs in a project's own .dropdown-content keep their focus ring. */
+details.formwork-select .dropdown-content input:focus,
+details.formwork-select-multiple .dropdown-content input:focus {
     @apply outline-none border-transparent shadow-none;
 }
 
