@@ -1,5 +1,5 @@
 /*
- * formwork.css — Complete Tailwind CSS input for django-formwork.
+ * formwork.css: the Tailwind CSS input for django-formwork.
  *
  * This file IS your Tailwind input.  Include it in your CSS:
  *
@@ -112,7 +112,7 @@
 }
 
 /* ================================================================
-   Inline disclosure (help text + inline errors) — layout overrides
+   Inline disclosure (help text + inline errors): layout overrides
    The collapsible help / inline-error row is a native <details>/<summary>.
    The <summary> carries .label for the muted help-text look, but .label is
    display:inline-flex (@layer utilities), which would shrink the summary to
@@ -202,7 +202,7 @@ fieldset.fieldset > details.formwork-disclosure {
     width: fit-content;
 }
 
-/* Single checkbox: two-column grid — checkbox in column 1, label and
+/* Single checkbox: a two-column grid with the checkbox in column 1, label and
    help text in column 2.  Help text aligns under the label, not the
    checkbox, for a clean indented look.
    Direct-child selectors exclude multi-checkbox groups (inputs nested
@@ -493,10 +493,6 @@ i.icon {
    above the button's label text.
    ================================================================ */
 
-.btn {
-    gap: 0.5rem;
-}
-
 .btn-icon::before,
 .btn-icon-end::after {
     @apply text-lg;
@@ -512,7 +508,7 @@ i.icon {
     mask-mode: alpha;
 }
 
-/* Size ladder — one Tailwind text step above each DaisyUI btn size */
+/* Size ladder: one Tailwind text step above each DaisyUI btn size */
 .btn-xs.btn-icon::before, .btn-xs.btn-icon-end::after { @apply text-xs; }
 .btn-sm.btn-icon::before, .btn-sm.btn-icon-end::after { @apply text-sm; }
 .btn-lg.btn-icon::before, .btn-lg.btn-icon-end::after { @apply text-xl; }
@@ -552,7 +548,7 @@ i.icon {
     border-color: transparent;
 }
 
-/* DatePicker: toggle button — subtle by default, dark when open. */
+/* DatePicker toggle button: faint by default, dark when open. */
 .date-picker-toggle {
     @apply cursor-pointer opacity-40 hover:opacity-70 transition-opacity shrink-0;
 }
@@ -578,7 +574,7 @@ i.icon {
     margin-inline-end: calc(var(--otp-gap) * -1);
 }
 
-/* InputMask: CSS Grid stacking — overlay shows colored text (black entered
+/* InputMask: CSS grid stacking. The overlay shows colored text (black entered
    chars, gray dots), input on top has transparent text but captures input.
    Same pattern as ValidatedTextarea. */
 .input-mask {
@@ -600,7 +596,7 @@ i.icon {
     @apply input w-full border-transparent pointer-events-none overflow-hidden whitespace-pre gap-0;
 }
 
-/* Unfilled dots and trailing literals — gray. */
+/* Unfilled dots and trailing literals are gray. */
 .input-mask-dot {
     color: color-mix(in oklab, currentColor 40%, transparent);
 }
@@ -613,7 +609,7 @@ select {
     @apply select w-full;
 }
 
-/* SelectMultiple / Select summary triggers — DaisyUI .select
+/* SelectMultiple / Select summary triggers: DaisyUI .select
    applied via @apply to avoid @layer utilities conflict. */
 details.formwork-select > summary,
 details.formwork-select-multiple > summary {
@@ -650,7 +646,7 @@ select:has(> option[value=""]:checked),
     color: color-mix(in oklab, currentColor 50%, transparent);
 }
 
-/* Placeholder option in the native dropdown — explicit color so the
+/* Placeholder option in the native dropdown: an explicit color, so the
    browser renders it gray (options don't inherit from <select>). */
 select > option[value=""] {
     color: rgba(0, 0, 0, 0.5); /* fallback */
@@ -759,7 +755,7 @@ input.combobox-input {
     @apply border-primary bg-primary/5;
 }
 
-/* Upload prompt icon — sized via font-size (iconx icons use 1em). */
+/* Upload prompt icon, sized via font-size (iconx icons use 1em). */
 .dropzone-prompt-icon {
     @apply mx-auto text-[2.5rem];
     color: #9ca3af; /* fallback for browsers without color-mix() */
@@ -940,11 +936,6 @@ details.dropdown.formwork-select > .dropdown-content {
    tooltip-error + tooltip-bottom positioning and styling.
    ================================================================ */
 
-/* Left-align error text (DaisyUI tooltip defaults to center). */
-.tooltip > .tooltip-content.formwork-errors {
-    @apply text-left;
-}
-
 /* Spacing between multiple error messages inside tooltip. */
 .formwork-errors > p + p {
     @apply mt-0.5;
@@ -985,7 +976,7 @@ details.formwork-disclosure:not([open]) > summary .formwork-disclosure-text {
     white-space: nowrap;
 }
 
-/* [more]/[less] affordance — the last flex/grid item of the summary,
+/* [more]/[less] affordance: the last flex/grid item of the summary,
    shown only when the row is expandable.  Colour inherits the summary's
    muted .label look in every state; .text-error sits on the error row,
    not the summary, so the affordance never turns red.  The labels come
@@ -1039,8 +1030,8 @@ details.formwork-disclosure[open] > summary > .formwork-disclosure-row > .icon {
 }
 
 /* Highlights div: mirrors textarea appearance, no visible border.
-   Text is transparent so only the <mark> backgrounds are visible — the
-   actual text is rendered by the textarea above. */
+   Text is transparent so only the <mark> backgrounds are visible.  The
+   textarea above renders the actual text. */
 .validated-textarea > .validated-textarea-highlights {
     @apply textarea w-full border-transparent pointer-events-none whitespace-pre-wrap break-words overflow-hidden !text-transparent;
 }
@@ -1065,11 +1056,6 @@ details.formwork-disclosure[open] > summary > .formwork-disclosure-row > .icon {
 /* Spacer: zero-height anchor so DaisyUI positions the tooltip below. */
 .validated-textarea-spacer {
     @apply w-full h-0;
-}
-
-/* Left-align error text (consistent with form-level error tooltips). */
-.validated-textarea-tooltip > .tooltip-content {
-    @apply text-left;
 }
 
 /* Error border on textarea when inline validation errors exist.
@@ -1129,20 +1115,14 @@ fieldset.formwork-dirty details.formwork-select-multiple > summary {
 
 
 /* ================================================================
-   Alert icon (alert-icon / alert-col / alert-soft)
+   Alert icon (alert-icon / alert-col)
 
-   Leading glyph on DaisyUI .alert via ::before pseudo.  Default
-   glyph is info.svg — override with any icon-* class on the alert
+   Leading glyph on DaisyUI .alert via ::before pseudo.  The default
+   glyph is info.svg; override it with any icon-* class on the alert
    container (icon-* is unlayered, beating @layer components).
 
-   alert-soft: softer background tint (15% vs DaisyUI's 8%).
    alert-col and text-wrap are unlayered (see below @layer components).
    ================================================================ */
-
-.alert-soft {
-    background-color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 15%, var(--color-base-100));
-    border-color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 18%, var(--color-base-100));
-}
 
 .alert-icon {
     --icon-url: url("../icons/lucide/info.svg");
@@ -1439,9 +1419,9 @@ input.combobox-input[aria-invalid="true"] {
    swap to other DaisyUI loading variants.
    ================================================================ */
 
-/* Mode 1: with btn-icon/btn-icon-end — swap icon to loading animation.
+/* Mode 1: with btn-icon/btn-icon-end, swap the icon for the loading animation.
    Explicit width/height beat @apply loading's oversized width (in
-   @layer utilities) — keeps spinner the same size as the icon slot. */
+   @layer utilities) and keep the spinner the same size as the icon slot. */
 .btn-loading.htmx-request::before,
 .btn-loading.htmx-request::after {
     @apply loading loading-spinner;
@@ -1461,7 +1441,7 @@ input.combobox-input[aria-invalid="true"] {
 .btn-loading-infinity.htmx-request::before,
 .btn-loading-infinity.htmx-request::after { @apply loading-infinity; }
 
-/* Mode 2: standalone — label hidden, centered loading overlay.
+/* Mode 2: standalone, with the label hidden behind a centered loading overlay.
    color:transparent hides the text while preserving button dimensions
    and background/border/shadow.  text-shadow:none kills DaisyUI's
    white text-shadow (drawn independently of color).
@@ -1512,10 +1492,10 @@ label:has(> input.hidden:checked) > .formwork-check {
 }
 
 /* Grouped dropdowns: indent options so they sit visually under the optgroup
-   header.  Unlayered + !important so it beats Tailwind's px-2 utility, which
-   lives in @layer utilities (higher precedence than unlayered styles). */
+   header.  Unlayered, so it beats Tailwind's px-2 utility: an unlayered
+   declaration outranks every @layer. */
 details.formwork-select ul:has(li.menu-title) li:not(.menu-title) > button,
 details.formwork-select-multiple ul:has(li.menu-title) li:not(.menu-title) > label,
 .dropdown.formwork-combobox ul:has(li.menu-title) li:not(.menu-title) > button {
-    padding-left: 1.25rem !important;
+    padding-left: 1.25rem;
 }

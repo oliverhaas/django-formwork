@@ -1,5 +1,5 @@
 /**
- * formwork-core.js — page-global infrastructure for django-formwork.
+ * formwork-core.js: page-global infrastructure for django-formwork.
  *
  * This file holds the non-widget logic that runs once per page,
  * regardless of which widgets are on the page:
@@ -188,8 +188,8 @@ const measureDisclosures = (target) => {
     let expandable;
     if (hasBody || d.open) {
       // A help row always hides revealable content; an already-open row was
-      // expandable when it was opened (and its text is wrapped now, so it
-      // can no longer be measured for overflow).
+      // expandable when it was opened, and its wrapped text can't be
+      // measured for overflow.
       expandable = true;
     } else {
       const text = summary.querySelector(".formwork-disclosure-text") || summary;
@@ -264,49 +264,12 @@ if (document.readyState === "loading") {
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => measureDisclosures(document));
 }
+// htmx fires after:settle on the swap target.  The rows already observed
+// re-measure themselves, so only the swapped subtree needs a pass.
 document.addEventListener("htmx:after:settle", (e) => {
-  const target = e.detail && e.detail.target ? e.detail.target : document;
+  const target = e.target instanceof Element && e.target.isConnected ? e.target : document;
   observeDisclosures(target);
   scheduleMeasureDisclosures(target);
-});
-
-// --- Alpine initialization for htmx-swapped content ---
-// htmx inserts and morphs server HTML outside Alpine's knowledge.  Two
-// failure modes have to be handled together:
-//
-//   1. Lazy-loaded content (hx-trigger="load", innerHTML swaps): Alpine's
-//      MutationObserver normally initializes inserted nodes, but it can miss
-//      the first swap if htmx inserts content before Alpine.start() runs
-//      (Alpine is commonly deferred).  Those roots need an explicit init.
-//
-//   2. Morphed content (hx-swap="outerMorph"): the morph preserves existing
-//      Alpine components (x-data is in morphIgnore, so the node is kept and
-//      its reactive state survives).  Calling Alpine.initTree() on such a
-//      subtree RE-initializes already-live components, corrupting Alpine's
-//      internal x-for/x-if markers ("Cannot read properties of undefined
-//      (reading '_x_marker')") and leaving the tree half-bound.
-//
-// The fix is a single idempotent pass: after every settle, initialize only
-// the Alpine roots that are NOT already initialized.  Fresh lazy-loaded roots
-// get set up exactly once; morph-preserved roots (which already carry
-// Alpine's _x_dataStack) are skipped, and the new nodes a morph adds inside
-// them are handled by Alpine's own observer.  This removes the need for user
-// pages to wire their own (double-initializing) Alpine.initTree call.
-const initAlpineRoots = (target) => {
-  if (typeof window === "undefined" || !window.Alpine) return;
-  if (!(target instanceof Element)) return;
-  const roots = target.hasAttribute("x-data") ? [target] : [];
-  roots.push(...target.querySelectorAll("[x-data]"));
-  for (const el of roots) {
-    // _x_dataStack is set by Alpine once a node's x-data is initialized;
-    // its absence means this root is genuinely new and needs setup.
-    if (!el._x_dataStack) {
-      window.Alpine.initTree(el);
-    }
-  }
-};
-document.addEventListener("htmx:after:settle", (e) => {
-  if (e.detail && e.detail.target) initAlpineRoots(e.detail.target);
 });
 
 // --- htmx 4 morph configuration ---
@@ -360,7 +323,7 @@ if (typeof htmx !== "undefined") {
       // Sync input `.value` property to match the new server-rendered
       // value, EXCEPT when this is the focused element (preserve user's
       // in-progress typing).  htmx's core morph only writes .value when
-      // the `value` *attribute* differs — but `<input>` elements where
+      // the `value` *attribute* differs, but `<input>` elements where
       // the user has typed have a .value PROPERTY that diverges from the
       // empty .value attribute.  Without this sync, server-driven
       // resets (e.g. clearing a form on delete) leave stale typed

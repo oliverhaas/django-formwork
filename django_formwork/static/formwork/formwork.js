@@ -1,5 +1,5 @@
 /**
- * formwork.js — formwork bundle.
+ * formwork.js: the formwork bundle.
  *
  * Aggregator that imports the page-global core (morph, dirty-tracking,
  * native-validation disabling) plus each widget's Alpine.data
@@ -8,20 +8,22 @@
  *
  * Three loading paths:
  *
- *   1. {% formwork_js %} — this file as <script type="module">.
+ *   1. {% formwork_js %}: this file as <script type="module">.
  *      One request, everything loaded.
  *
- *   2. {% formwork_core_js %} + {{ form.media }} — page-global core
+ *   2. {% formwork_core_js %} + {{ form.media }}: the page-global core
  *      from formwork-core.js, per-widget JS via Django's Media class.
  *      Two tags but only the JS the form actually uses is loaded.
  *
- *   3. Bundler import — `import "django-formwork/formwork.js"` from a
- *      JS bundler entry.  The bundler resolves the chain and emits a
- *      single bundle.  No {% formwork_js %} / {{ form.media }} needed.
+ *   3. Bundler import: import this file by its path in the installed
+ *      package (django_formwork/static/formwork/formwork.js) from a JS
+ *      bundler entry.  The package is not published to npm.  The bundler
+ *      resolves the chain and emits a single bundle, so the page needs
+ *      no {% formwork_js %} or {{ form.media }}.
  *
- * ES module URL deduplication makes the paths safely composable: if you
- * accidentally load both `{% formwork_js %}` and `{% formwork_core_js %}`,
- * the core only executes once.
+ * A browser runs an ES module once per URL, so the paths can be combined:
+ * a page that loads both `{% formwork_js %}` and `{% formwork_core_js %}`
+ * runs the core once.
  *
  * Prerequisites (loaded by the user, BEFORE this script):
  *   - htmx 4.x
