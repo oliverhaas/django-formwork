@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.choices import flatten_choices
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -92,9 +93,10 @@ class RowRenderMixin:
                 else:
                     display = str(value)
             else:
+                labels = {str(key): label for key, label in flatten_choices(getattr(bf.field, "choices", ()))}
                 value = bf.value()
-                choices = dict(getattr(bf.field, "choices", []) or [])
-                display = choices.get(value, value) if choices else ("" if value is None else str(value))
+                values = value if isinstance(value, (list, tuple)) else [value]
+                display = ", ".join(str(labels.get(str(v), v)) for v in values if v is not None)
             yield {"bound_field": bf, "editable": False, "display": display}
 
 

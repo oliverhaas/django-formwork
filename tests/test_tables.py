@@ -10,7 +10,7 @@ from django.http import Http404
 from django.test import RequestFactory
 from e2e.models import UniqueCode
 
-from django_formwork import FormworkModelForm, FormworkRowSaveMixin, formwork_modelformset_factory
+from django_formwork import FormworkForm, FormworkModelForm, FormworkRowSaveMixin, formwork_modelformset_factory
 from django_formwork.tables import PREFIX_INPUT_NAME
 
 pytestmark = pytest.mark.django_db
@@ -58,6 +58,15 @@ def test_as_rows_renders_table_with_header_and_one_tbody_per_row():
     assert "<th>Code</th>" in html
     assert html.count("<tbody") == 2
     assert "alpha" in html and "beta" in html
+
+
+def test_disabled_multiple_choice_cell_shows_the_chosen_labels():
+    class TagsForm(FormworkForm):
+        tags = forms.MultipleChoiceField(choices=[("a", "Apples"), ("b", "Bananas")], disabled=True)
+
+    html = TagsForm(initial={"tags": ["a", "b"]}).as_row()
+
+    assert "Apples, Bananas" in html
 
 
 def test_project_template_overrides_the_row_template(settings, tmp_path):
