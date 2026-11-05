@@ -9,7 +9,7 @@ from __future__ import annotations
 import annotationlib
 import hashlib
 import inspect
-from functools import cache
+from functools import cache, partial
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
 
@@ -194,7 +194,77 @@ def register_form_searches(form_cls: type) -> None:
 
         # Fails at import, not on the first search.
         declared_params(widget.search_queryset)
-        # A stable, opaque key: the same form and field map to it in every worker.
-        digest = hashlib.md5(f"{form_label}.{name}".encode(), usedforsecurity=False)
-        widget.search_key = digest.hexdigest()[:16]
+        widget.search_key = _search_key(f"{form_label}.{name}", widget)
         _registry[widget.search_key] = field
+
+
+def _search_key(field_label: str, widget: Any) -> str:  # noqa: ANN401
+    """A stable, opaque key: the same in every worker.
+
+    Factory-built forms share a class name, so the search's definition joins the key.
+    """
+    source = ":".join(
+        [
+            field_label,
+            _definition(widget.search_queryset),
+            _definition(widget.search_decorator),
+            ",".join(widget.search_fields or ()),
+        ],
+    )
+    key = hashlib.md5(source.encode(), usedforsecurity=False).hexdigest()[:16]
+    registered = _registry.get(key)
+    if registered is not None and not (
+        _same_definition(registered.widget.search_queryset, widget.search_queryset)
+        and _same_definition(registered.widget.search_decorator, widget.search_decorator)
+    ):
+        msg = (
+            f"{field_label}: a form of the same name already registered this search with "
+            f"other closure values. The endpoint serves one search per key, so scope the "
+            f"search_queryset through its request argument, not through variables it closes over."
+        )
+        raise ImproperlyConfigured(msg)
+    return key
+
+
+def _definition(obj: object) -> str:
+    """Where ``obj`` is defined: the same in every worker, unlike ``id()``."""
+    func = getattr(obj, "__func__", obj)
+    while isinstance(func, partial):
+        func = func.func
+    code = getattr(func, "__code__", None)
+    if code is None:
+        return f"{type(obj).__module__}.{type(obj).__qualname__}"
+    return f"{func.__module__}.{func.__qualname__}:{code.co_firstlineno}"
+
+
+def _same_definition(a: object, b: object, seen: set[tuple[int, int]] | None = None) -> bool:
+    """True for the same callable, or two built from one definition with equal bound values."""
+    seen = set() if seen is None else seen
+    if a is b or (id(a), id(b)) in seen:  # a function that closes over itself
+        return True
+    seen.add((id(a), id(b)))
+    parts_a, parts_b = _parts(a), _parts(b)
+    if parts_a is None or parts_b is None:
+        try:
+            return bool(a == b)
+        except Exception:  # noqa: BLE001 (an __eq__ that raises is not a match)
+            return False
+    return len(parts_a) == len(parts_b) and all(
+        _same_definition(x, y, seen) for x, y in zip(parts_a, parts_b, strict=True)
+    )
+
+
+def _parts(obj: object) -> list[Any] | None:
+    """What a callable built from one definition can differ by between calls; None for a non-callable."""
+    if isinstance(obj, partial):
+        return [obj.func, *obj.args, *sorted(obj.keywords.items())]
+    func: Any = getattr(obj, "__func__", obj)
+    code = getattr(func, "__code__", None)
+    if code is None:
+        return None
+    try:
+        cells = [cell.cell_contents for cell in func.__closure__ or ()]
+    except ValueError:  # an unfilled cell
+        cells = [object()]
+    defaults = [*(func.__defaults__ or ()), *sorted((func.__kwdefaults__ or {}).items())]
+    return [code, getattr(obj, "__self__", None), *cells, *defaults]

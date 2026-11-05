@@ -16,8 +16,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
+from django.forms import modelform_factory
 from django.test import Client
 from django.urls import reverse
+from e2e.models import City, Region
 
 from django_formwork import views
 from django_formwork.forms import FormworkForm, FormworkModelForm
@@ -231,6 +233,40 @@ def _build_form() -> type[FormworkForm]:
 
 def test_a_rebuilt_form_gets_the_same_key() -> None:
     assert _key(_build_form(), "user") == _key(_build_form(), "user")
+
+
+def _city_form(search_queryset: Callable[..., Any]) -> type[forms.ModelForm]:
+    widget = Select(search_fields=["name"], search_queryset=search_queryset, search_decorator=None)
+    return modelform_factory(City, form=FormworkModelForm, fields=["region"], widgets={"region": widget})
+
+
+def _north(request: HttpRequest) -> QuerySet[Region]:
+    return Region.objects.filter(name="North")
+
+
+def _south(request: HttpRequest) -> QuerySet[Region]:
+    return Region.objects.filter(name="South")
+
+
+@pytest.mark.django_db
+def test_factory_built_forms_over_one_model_keep_their_own_search() -> None:
+    north_form = _city_form(_north)
+    _city_form(_south)
+    north = Region.objects.create(name="North")
+    Region.objects.create(name="South")
+
+    response = Client().get(search_url(_key(north_form, "region"), {}, widget="select"))
+
+    assert _rows(response) == [str(north.pk)]
+
+
+def test_factory_form_closing_over_other_data_is_rejected() -> None:
+    def build(name: str) -> type[forms.ModelForm]:
+        return _city_form(lambda request: Region.objects.filter(name=name))
+
+    build("North")
+    with pytest.raises(ImproperlyConfigured, match="request"):
+        build("South")
 
 
 def _staff(request: HttpRequest) -> QuerySet[User]:
