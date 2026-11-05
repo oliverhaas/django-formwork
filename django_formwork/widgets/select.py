@@ -110,6 +110,11 @@ class SearchableSelectMixin(_SelectBase):
         # The trigger is a <summary>, which `<label for>` cannot target.
         return ""
 
+    def use_required_attribute(self, initial: object) -> bool:  # noqa: ARG002
+        # No control renders `required` (the trigger gets aria-required), and
+        # forms.Select would read the first choice for it: a query on a model field.
+        return False
+
     def __init__(  # noqa: PLR0913
         self,
         attrs: dict[str, Any] | None = None,

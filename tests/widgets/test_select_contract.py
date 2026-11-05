@@ -66,6 +66,15 @@ class _ModelSearchForm(FormworkForm):
     )
 
 
+class _NoBlankModelForm(FormworkForm):
+    listed = forms.ModelChoiceField(queryset=User.objects.order_by("pk"), empty_label=None, widget=Select)
+    searched = forms.ModelChoiceField(
+        queryset=User.objects.order_by("pk"),
+        empty_label=None,
+        widget=Select(search_fields=["email"], search_queryset=_users, search_decorator=None),
+    )
+
+
 class _FamilyForm(FormworkForm):
     select = forms.ChoiceField(choices=FRUITS, widget=Select)
     select_multiple = forms.MultipleChoiceField(choices=FRUITS, widget=SelectMultiple)
@@ -143,6 +152,16 @@ def test_a_bound_value_the_key_cannot_hold_renders_no_selection() -> None:
     form = _ModelSearchForm(data={"one": "not-a-pk"})
 
     assert len(_values(form, "one")) == 20
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("field", ["listed", "searched"])
+def test_a_model_select_without_a_blank_choice_queries_once(field: str, django_assert_num_queries) -> None:
+    User.objects.bulk_create(User(username=f"user{i}", email=f"user{i}@example.com") for i in range(22))
+    form = _NoBlankModelForm()
+
+    with django_assert_num_queries(1):
+        str(form[field])
 
 
 @pytest.mark.unit
