@@ -329,6 +329,15 @@ class TestFormworkValidateViewHardening:
         response = ProtectedView.as_view()(request)
         assert response.status_code == 403
 
+    def test_url_kwargs_reach_the_view(self):
+        class FieldView(FormworkValidateView):
+            def get_errors(self, text, **kwargs):
+                return [{"message": f"Checked {self.kwargs['field']}"}]
+
+        request = factory.post("/validate/bio/", {"text": "hello", "errors_id": "id_errors"})
+        response = FieldView.as_view()(request, field="bio")
+        assert "Checked bio" in response.content.decode()
+
     def test_validate_decorator_none_allows_anonymous(self):
         """validate_decorator=None (the default) means public, no auth check."""
         request = factory.post("/validate/", {"text": "hello", "errors_id": ""})

@@ -213,20 +213,10 @@ class FormworkValidateView(View):
         return super().dispatch(request, *args, **kwargs)
 
     def get_errors(self, text: str, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: ARG002
-        """Return validation errors for the given text.
-
-        Override this in your subclass.
-
-        Args:
-            text: The textarea content.
-            **kwargs: Additional context (e.g. ``request``).
-
-        Returns:
-            List of error dicts.
-        """
+        """The errors in ``text``; ``kwargs`` holds the ``request``, ``self.kwargs`` the URL kwargs."""
         return []
 
-    def post(self, request: HttpRequest) -> HttpResponse:
+    def post(self, request: HttpRequest, *_args: Any, **_kwargs: Any) -> HttpResponse:
         text = request.POST.get("text", "")[: self.MAX_TEXT_LENGTH]
         errors_id = request.POST.get("errors_id", "")
 
