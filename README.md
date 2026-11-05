@@ -43,7 +43,7 @@ Keep the scripts in this order. htmx's alpine-compat extension is required: with
 
 `Select`, `SelectMultiple`, `ComboBox`, `ComboBoxMultiple`, `TextInput`, `Textarea`, `PasswordInput`, `SearchInput`, `DateInput`, `DateRangeInput`, `DatePicker`, `StepperNumberInput`, `SuffixNumberInput`, `CheckboxInput`, `ToggleInput`, `CheckboxSelectMultiple`, `CardRadioSelect`, `CardCheckboxSelectMultiple`, `FileDropzoneInput`, `ImageDropzoneInput`, `OTPInput`, `InputMask`, `Range`, `Rating`, `DataList`, `ValidatedTextarea` and `Display`. The names shadow `django.forms` on purpose, so import the module: `from django_formwork import widgets`, then `widgets.Select`.
 
-`Select`, `SelectMultiple` and `ComboBox` search on the server when the widget gets a `search_queryset`. A `FormworkForm` or `FormworkModelForm` registers the search when its class is created, and one `include("django_formwork.urls")` serves every search. `ValidatedTextarea` posts its text to a `FormworkValidateView` subclass for live server-side validation.
+`Select`, `SelectMultiple`, `ComboBox` and `ComboBoxMultiple` search on the server when the widget gets a `search_queryset`. A `FormworkForm` or `FormworkModelForm` class registers the search when Python creates it, and one `include("django_formwork.urls")` serves every search. `ValidatedTextarea` posts its text to a `FormworkValidateView` subclass for live server-side validation.
 
 ## htmx 4 integration
 

@@ -33,7 +33,12 @@ Each field renders inside a `<fieldset class="fieldset">` with a label, help tex
 If you don't want to set `FORM_RENDERER` globally, use the form base classes:
 
 ```python
+# forms.py
+from django import forms
+
 from django_formwork import FormworkForm, FormworkModelForm
+
+from .models import Profile
 
 
 class ContactForm(FormworkForm):
@@ -112,36 +117,59 @@ The [widget reference](../reference/widgets.md) lists every widget and its param
 
 ```python
 # views.py
+import re
+
 from django_formwork import FormworkValidateView
+
+TYPOS = {"teh": "the", "recieve": "receive"}
 
 
 class SpellCheckView(FormworkValidateView):
     def get_errors(self, text: str, **kwargs) -> list[dict]:
-        errors = []
-        for match in find_misspellings(text):
-            errors.append(
-                {
-                    "message": f"Misspelled: {match.word}",
-                    "start": match.start,
-                    "end": match.end,
-                }
-            )
-        return errors
+        return [
+            {
+                "message": f"Did you mean {TYPOS[word.group().lower()]!r}?",
+                "start": word.start(),
+                "end": word.end(),
+            }
+            for word in re.finditer(r"\w+", text)
+            if word.group().lower() in TYPOS
+        ]
+```
+
+```python
+# urls.py
+from django.urls import path
+
+from .views import SpellCheckView
+
+urlpatterns = [
+    path("validate/spell/", SpellCheckView.as_view(), name="spell-check"),
+]
 ```
 
 ```python
 # forms.py
-content = forms.CharField(
-    widget=ValidatedTextarea(validate_url=reverse_lazy("spell-check")),
-)
+from django import forms
+from django.urls import reverse_lazy
+
+from django_formwork import widgets
+
+
+class PostForm(forms.Form):
+    content = forms.CharField(
+        widget=widgets.ValidatedTextarea(validate_url=reverse_lazy("spell-check")),
+    )
 ```
 
+The textarea sends its text only when it has an `id`. A form field gets one from the form's `auto_id`. A form with `auto_id=False`, or a widget rendered without `attrs={"id": ...}`, renders a textarea that never validates.
+
 !!! warning "CSRF exemption"
-    `FormworkValidateView` is CSRF-exempt because it performs read-only validation. Do not use it for operations with side effects (database writes, emails, etc.). For those, use a regular Django view with CSRF protection.
+    `FormworkValidateView` is CSRF-exempt because it only reads the posted text. Use it for read-only checks. A view that writes to the database or sends an email needs a regular Django view with CSRF protection.
 
 ## Server-side search
 
-`Select`, `SelectMultiple` and `ComboBox` search on the server when the widget gets a `search_queryset`. Wire the URL pattern once:
+`Select`, `SelectMultiple`, `ComboBox` and `ComboBoxMultiple` search on the server when the widget gets a `search_queryset`. Wire the URL pattern once:
 
 ```python
 # urls.py
@@ -155,9 +183,13 @@ urlpatterns = [
 Then give the widget the rows to search, the fields to match and an access rule:
 
 ```python
+# forms.py
+from django import forms
 from django.contrib.auth.decorators import login_required
 
 from django_formwork import FormworkForm, widgets
+
+from .models import City
 
 
 def cities(request):
@@ -175,7 +207,7 @@ class CityForm(FormworkForm):
     )
 ```
 
-The form registers the search when its class is created. Formwork imports the `forms` module of each installed app at startup, so a search declared there works in every worker from the first request. `search_queryset` is a callable that takes the request; the endpoint calls it for each search, so it can scope the rows to the user. `search_decorator` is required: pass an auth decorator such as `login_required`, or `None` for a public endpoint. The [views reference](../reference/views.md) covers the endpoint, paging, ranked search and search templates.
+The form class registers the search when Python creates it. Formwork imports the `forms` module of each installed app at startup, so a search declared there works in every worker from the first request. `search_queryset` is a callable that takes the request; the endpoint calls it for each search, so it can scope the rows to the user. `search_decorator` is required: pass an auth decorator such as `login_required`, or `None` for a public endpoint. The [views reference](../reference/views.md) covers the endpoint, paging, ranked search and search templates.
 
 ## Template tags
 

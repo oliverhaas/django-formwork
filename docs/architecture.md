@@ -4,11 +4,11 @@
 
 Django forms render at three levels:
 
-- **Form** (`{{ form }}`): all fields with labels, errors, help text.
-- **Field** (`{{ field.as_field_group }}`): one field with label, errors, help text.
-- **Widget** (`{{ field }}`): just the bare `<input>`, `<select>`, etc.
+- The form (`{{ form }}`) renders all fields with labels, errors and help text.
+- The field (`{{ field.as_field_group }}`) renders one field with its label, errors and help text.
+- The widget (`{{ field }}`) renders the bare `<input>`, `<select>` or `<textarea>`.
 
-Django admin only renders at the widget level. This means:
+Django admin renders only at the widget level, so formwork follows five constraints:
 
 1. Overriding form or field level rendering is admin-safe.
 2. Formwork never overrides a built-in widget template: it would reach admin
@@ -17,8 +17,8 @@ Django admin only renders at the widget level. This means:
 3. CSS is independent: admin and frontend load separate stylesheets.
 4. CSS styles all form elements globally: standalone inputs get
    DaisyUI styling without needing `{{ form }}`.
-5. CSS must be easily overridable: use `@layer components` so users
-   can override with utility classes or unlayered CSS.
+5. Most formwork rules sit in `@layer components`, so a Tailwind utility
+   class or unlayered project CSS overrides them.
 
 ## Rendering
 

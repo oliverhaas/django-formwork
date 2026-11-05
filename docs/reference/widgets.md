@@ -4,9 +4,11 @@ All widgets are in `django_formwork.widgets`. Their names follow Django's and
 shadow `django.forms` on purpose, so import the module:
 
 ```python
+from django import forms
+
 from django_formwork import widgets
 
-country = forms.ChoiceField(choices=COUNTRIES, widget=widgets.Select)
+country = forms.ChoiceField(choices=[("de", "Germany"), ("fr", "France")], widget=widgets.Select)
 ```
 
 `TextInput`, `Textarea`, `PasswordInput`, `DateInput`, `CheckboxInput`,
@@ -376,6 +378,11 @@ htmx posts the text after a 500 ms pause in typing. The server returns
 highlighted HTML (with `<mark>` tags around errors) that overlays the textarea,
 plus the messages through an out-of-band swap. Without `validate_url`, it
 renders a plain textarea.
+
+The live validation needs an `id` on the textarea, because the htmx target
+and the error area are built from it. A form field gets the `id` from the
+form's `auto_id`. With `auto_id=False`, or when you render the widget yourself
+without `attrs={"id": ...}`, the textarea sends no validation request.
 
 ```python
 content = forms.CharField(
