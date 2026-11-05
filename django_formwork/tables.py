@@ -93,7 +93,8 @@ class RowRenderMixin:
                 else:
                     display = str(value)
             else:
-                labels = {str(key): label for key, label in flatten_choices(getattr(bf.field, "choices", ()))}
+                choices: Iterator[tuple[Any, Any]] = flatten_choices(getattr(bf.field, "choices", ()))
+                labels = {str(key): label for key, label in choices}
                 value = bf.value()
                 values = value if isinstance(value, (list, tuple)) else [value]
                 display = ", ".join(str(labels.get(str(v), v)) for v in values if v is not None)
