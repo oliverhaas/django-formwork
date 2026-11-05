@@ -70,6 +70,10 @@ document.addEventListener("alpine:init", () => {
         return Object.keys(this.selected).length > 0;
       },
 
+      get triggerClass() {
+        return this.hasSelection ? "" : "formwork-placeholder";
+      },
+
       // Reads the selection map, not the checked rows: a swap replaces them.
       get displayHtml() {
         const picks = Object.values(this.selected);

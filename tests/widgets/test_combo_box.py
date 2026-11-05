@@ -1067,6 +1067,29 @@ def test_combo_box_focus_leaving_the_widget_closes_the_list(combobox_page):
     expect(listbox).to_be_hidden()
 
 
+@pytest.mark.e2e
+def test_combo_box_icon_overlay_covers_the_input_while_unfocused(combobox_page):
+    """With focus elsewhere the overlay lists the picks with their icons; focus brings the text back."""
+    import re
+
+    from playwright.sync_api import expect
+
+    inp = combobox_page.locator("#id_language_icons_multi")
+    overlay = combobox_page.locator("#id_language_icons_multi_wrapper .combobox-display")
+    listbox = combobox_page.locator("#id_language_icons_multi_listbox")
+    inp.click()
+    listbox.locator("button[data-value='Python']").click()
+    listbox.locator("button[data-value='Go']").click()
+    combobox_page.locator("#id_language_single").focus()
+    expect(overlay).to_be_visible()
+    expect(overlay.locator(":scope > span:nth-of-type(1) > span:first-child")).to_be_hidden()
+    expect(overlay.locator(":scope > span:nth-of-type(2) > span:first-child")).to_be_visible()
+    expect(inp).to_have_class(re.compile(r"\btext-transparent\b"))
+    inp.focus()
+    expect(overlay).to_be_hidden()
+    expect(inp).not_to_have_class(re.compile(r"\btext-transparent\b"))
+
+
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # Needs a page with a required ComboBox; /combobox/ has none.

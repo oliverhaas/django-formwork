@@ -76,6 +76,14 @@ document.addEventListener("alpine:init", () => {
         return this.label || "";
       },
 
+      get triggerText() {
+        return this.displayText || this.placeholder;
+      },
+
+      get triggerClass() {
+        return [this.displayText && this.value ? "" : "formwork-placeholder", this.selectedToggleClass].filter(Boolean);
+      },
+
       isSelected(el) {
         return this.value === el.dataset.value;
       },

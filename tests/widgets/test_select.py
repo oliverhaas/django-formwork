@@ -792,13 +792,23 @@ def test_select_icon_span_cloaked_without_selection():
     assert span.find("svg") is None
 
 
-@pytest.mark.unit
-def test_select_summary_class_binding_includes_selected_toggle_class():
-    """The summary :class array binds selectedToggleClass so Alpine can swap it live."""
-    widget = Select(choices=[("a", "Alpha")])
-    soup = render_widget(widget, name="test")
-    summary = soup.find("summary")
-    assert "selectedToggleClass" in summary.get(":class", "")
+@pytest.mark.e2e
+def test_select_trigger_takes_the_picked_option_class(select_page):
+    """The closed trigger wears the picked option's class and drops the placeholder style."""
+    import re
+
+    from playwright.sync_api import expect
+
+    trigger = select_page.locator("#id_priority")
+    expect(trigger).to_have_class(re.compile(r"\bformwork-placeholder\b"))
+    trigger.click()
+    select_page.locator("#id_priority_listbox button[data-value='high']").click()
+    expect(trigger).to_have_class(re.compile(r"\bselect-error\b"))
+    expect(trigger).not_to_have_class(re.compile(r"\bformwork-placeholder\b"))
+    trigger.click()
+    select_page.locator("#id_priority_listbox button[data-value='low']").click()
+    expect(trigger).to_have_class(re.compile(r"\bselect-success\b"))
+    expect(trigger).not_to_have_class(re.compile(r"\bselect-error\b"))
 
 
 @pytest.mark.unit

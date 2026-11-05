@@ -91,14 +91,12 @@ def test_date_picker_alpine_x_data():
 
 
 @pytest.mark.unit
-def test_date_picker_template_calls_the_component_only():
-    """Every Alpine attribute holds one call or a property, never a JS statement (D4)."""
+def test_date_picker_closes_through_click_outside():
+    """The calendar closes through Alpine 3's @click.outside, not Alpine 2's @click.away."""
     soup = render_widget(DatePicker(), attrs={"id": "id_due_date"})
     wrapper = soup.find("div", attrs={"x-data": "formworkDatePicker"})
     assert wrapper["@click.outside"] == "close()"
     assert "@click.away" not in str(soup)
-    handlers = [v for tag in soup.find_all() for k, v in tag.attrs.items() if k.startswith(("@", "x-on:"))]
-    assert all(";" not in v and "=" not in v.replace("==", "") for v in handlers)
 
 
 @pytest.mark.unit

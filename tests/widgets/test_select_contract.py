@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -194,6 +195,22 @@ def test_widget_templates_carry_no_script() -> None:
     assert templates
     for template in templates:
         assert "<script" not in template.read_text(), template.name
+
+
+_BINDING = re.compile(r'\s((?:x-|:|@)[\w:.-]+|hx-on[\w:.-]*)="([^"]*)"')
+_PATH = r"[A-Za-z_$][\w$]*(?:\??\.[A-Za-z_$][\w$]*|\[\d+\])*"
+_ARG = rf"(?:{_PATH}|-?\d+|'[^']*')"
+_CALL_OR_PROPERTY = re.compile(rf"!?{_PATH}(?:\((?:{_ARG}(?:, {_ARG})*)?\))?")
+
+
+@pytest.mark.unit
+def test_widget_template_bindings_hold_one_call_or_property() -> None:
+    """Logic lives in the Alpine components: a binding names a property or makes one call (D4)."""
+    for template in sorted(WIDGET_TEMPLATES.rglob("*.html")):
+        source = re.sub(r"{%.*?%}|{{.*?}}", "x", template.read_text())
+        for name, value in _BINDING.findall(source):
+            if name != "x-for" and value:
+                assert _CALL_OR_PROPERTY.fullmatch(value), f"{template.name}: {name}={value}"
 
 
 @pytest.mark.unit
