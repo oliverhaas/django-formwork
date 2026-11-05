@@ -111,6 +111,12 @@ class _BatchedUniquenessMixin:
         forms: list[Any]
         is_bound: bool
 
+    def _construct_form(self, i: int, **kwargs: Any) -> Any:  # noqa: ANN401
+        form = super()._construct_form(i, **kwargs)  # type: ignore[misc]
+        # Exempts the form from FORMWORK_FORCE_ASYNC: a formset validates and saves synchronously.
+        form._formwork_in_formset = True  # noqa: SLF001
+        return form
+
     def full_clean(self) -> None:
         if self.is_bound:
             self._clean_forms_batched()

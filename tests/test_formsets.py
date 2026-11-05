@@ -295,6 +295,16 @@ def test_formset_form_validated_on_its_own_reports_db_collision():
     assert len(formset.errors[0]["code"]) == 1
 
 
+def test_force_async_still_lets_a_formset_validate_and_save(settings):
+    settings.FORMWORK_FORCE_ASYNC = True
+    our_cls = formwork_modelformset_factory(UniqueCode, fields=["code", "label"], extra=0)
+    formset = our_cls(_data([{"code": "NEW", "label": "x"}]), queryset=UniqueCode.objects.none())
+
+    assert formset.is_valid() is True
+    formset.save()
+    assert UniqueCode.objects.filter(code="NEW").exists()
+
+
 # ---------------------------------------------------------------------------
 # Efficiency: query count
 # ---------------------------------------------------------------------------

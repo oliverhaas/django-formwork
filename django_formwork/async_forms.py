@@ -30,8 +30,9 @@ def _force_async_enabled() -> bool:
     return getattr(settings, "FORMWORK_FORCE_ASYNC", False)
 
 
-def _check_force_async(sync_name: str, async_name: str) -> None:
-    if _force_async_enabled():
+def _check_force_async(form: object, sync_name: str, async_name: str) -> None:
+    # Formsets have no async API, so their forms keep the sync one (see django_formwork.formsets).
+    if _force_async_enabled() and not getattr(form, "_formwork_in_formset", False):
         msg = f"FORMWORK_FORCE_ASYNC is enabled. Use {async_name}() instead of {sync_name}()."
         raise RuntimeError(msg)
 
@@ -44,11 +45,11 @@ class AsyncFormMixin:
     """
 
     def full_clean(self: Any) -> None:
-        _check_force_async("full_clean", "afull_clean")
+        _check_force_async(self, "full_clean", "afull_clean")
         super().full_clean()  # type: ignore[misc]
 
     def is_valid(self: Any) -> bool:
-        _check_force_async("is_valid", "ais_valid")
+        _check_force_async(self, "is_valid", "ais_valid")
         return super().is_valid()  # type: ignore[misc]
 
     async def ais_valid(self: Any) -> bool:
@@ -118,7 +119,7 @@ class AsyncModelFormMixin(AsyncFormMixin):
     """
 
     def save(self: Any, commit: bool = True) -> Any:  # noqa: FBT001, FBT002, ANN401
-        _check_force_async("save", "asave")
+        _check_force_async(self, "save", "asave")
         return super().save(commit=commit)  # type: ignore[misc]
 
     # NOTE: the async ``_post_clean`` (model construction + validation) lives on
