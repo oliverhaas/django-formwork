@@ -440,6 +440,17 @@ class TestDirtyOnlyForeignKey:
         assert obj.region_id is not None
         assert obj.name == "LEGACY_BAD"
 
+    def test_unchanged_fk_on_create_saves_the_initial_relation(self):
+        from e2e.models import Region
+
+        region = Region.objects.create(name="North")
+        form = DirtyTrackedFKForm(
+            data={"name": "Alice", "email": "a@b.com", "note": "", "region": str(region.pk)},
+            instance=DirtyTrackedData(region=region),
+        )
+        assert form.is_valid() is True
+        assert form.save().region == region
+
     def test_changed_fk_still_validates_and_saves(self):
         from e2e.models import Region
 
@@ -472,6 +483,17 @@ class TestAsyncDirtyOnlyForeignKey:
         await sync_to_async(obj.refresh_from_db)()
         assert obj.note == "changed"
         assert obj.region_id is not None
+
+    async def test_unchanged_fk_on_create_saves_the_initial_relation(self):
+        from e2e.models import Region
+
+        region = await Region.objects.acreate(name="North")
+        form = DirtyTrackedFKForm(
+            data={"name": "Alice", "email": "a@b.com", "note": "", "region": str(region.pk)},
+            instance=DirtyTrackedData(region=region),
+        )
+        assert await form.ais_valid() is True
+        assert (await form.asave()).region_id == region.pk
 
 
 # ---------------------------------------------------------------------------

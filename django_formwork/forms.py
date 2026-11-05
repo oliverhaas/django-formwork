@@ -25,7 +25,13 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db.models import Model, UniqueConstraint
 from django.forms import Form, ModelForm
 from django.forms.forms import DeclarativeFieldsMetaclass
-from django.forms.models import InlineForeignKeyField, ModelFormMetaclass, construct_instance
+from django.forms.models import (
+    InlineForeignKeyField,
+    ModelChoiceField,
+    ModelFormMetaclass,
+    ModelMultipleChoiceField,
+    construct_instance,
+)
 
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
 from django_formwork.boundfield import FormworkBoundField
@@ -114,12 +120,13 @@ class _DirtyOnlyFormMixin:
     holds ``BoundField.initial`` rather than the field's cleaned Python value.
     For a relational field on a model form that difference shows: ``initial``
     is the raw pk (from ``model_to_dict``), whereas a normal clean would put
-    the related instance there.  This does not affect saving.  The model-form
-    mixin excludes unchanged fields from ``construct_instance`` (see
-    ``_dirty_construct_exclude``), so the stored relation is left untouched
-    and the pk never reaches the FK descriptor.  It only matters if your own
-    code reads ``cleaned_data[<relation>]`` for a field the user left alone;
-    expect a pk there, not an instance.
+    the related instance there.  On an edit this does not affect saving: the
+    model-form mixin excludes unchanged fields from ``construct_instance``
+    (see ``_dirty_construct_exclude``), so the stored relation is left
+    untouched.  On a create every field is assigned, so an unchanged foreign
+    key's initial pk is resolved to its instance (see ``_resolves_initial``).
+    Otherwise expect a pk in ``cleaned_data[<relation>]`` for a field the user
+    left alone, not an instance.
     """
 
     if TYPE_CHECKING:
@@ -140,6 +147,10 @@ class _DirtyOnlyFormMixin:
         omitted = bf.field.widget.value_omitted_from_data(self.data, self.files, bf.html_name)
         return omitted or not bf._has_changed()  # type: ignore[attr-defined]  # noqa: SLF001
 
+    def _resolves_initial(self, bf: BoundField) -> bool:  # noqa: ARG002
+        """True when an unchanged field's initial goes through ``to_python()`` into ``cleaned_data``."""
+        return False
+
     def _clean_fields(self) -> None:
         if not self._validate_dirty_only:
             super()._clean_fields()  # type: ignore[misc]
@@ -147,7 +158,11 @@ class _DirtyOnlyFormMixin:
         for name, bf in self._bound_items():
             field = bf.field
             if self._unchanged(bf):
-                self.cleaned_data[name] = bf.initial
+                try:
+                    resolve = self._resolves_initial(bf)
+                    self.cleaned_data[name] = field.to_python(bf.initial) if resolve else bf.initial
+                except ValidationError as e:
+                    self.add_error(name, e)
                 continue
             try:
                 self.cleaned_data[name] = field._clean_bound_field(bf)  # noqa: SLF001
@@ -164,7 +179,13 @@ class _DirtyOnlyFormMixin:
         for name, bf in self._bound_items():
             field = bf.field
             if self._unchanged(bf):
-                self.cleaned_data[name] = bf.initial
+                try:
+                    resolve = self._resolves_initial(bf)
+                    self.cleaned_data[name] = (
+                        await sync_to_async(field.to_python)(bf.initial) if resolve else bf.initial
+                    )
+                except ValidationError as e:
+                    self.add_error(name, e)
                 continue
             try:
                 # A field's clean() may hit the ORM (e.g. ModelChoiceField
@@ -250,6 +271,16 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
             if len(group) > 1 and dirty.intersection(group):
                 members.update(group)
         return members
+
+    def _resolves_initial(self, bf: BoundField) -> bool:
+        # On a create construct_instance() assigns every field, and a foreign key takes an instance.
+        field = bf.field
+        return (
+            self.instance._state.adding  # noqa: SLF001
+            and isinstance(field, ModelChoiceField)
+            and not isinstance(field, ModelMultipleChoiceField)
+            and bf.initial not in field.empty_values
+        )
 
     def _dirty_construct_exclude(self) -> set[str]:
         """Fields ``construct_instance()`` should leave at their stored value.
