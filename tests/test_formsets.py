@@ -21,7 +21,7 @@ import pytest
 from django.db import DatabaseError, connection, models
 from django.db.models import QuerySet
 from django.db.models.functions import Upper
-from django.forms import inlineformset_factory, modelformset_factory
+from django.forms import BaseModelFormSet, inlineformset_factory, modelformset_factory
 from django.test.utils import CaptureQueriesContext
 from e2e.models import (
     CheckThenUnique,
@@ -244,6 +244,43 @@ class TestDeletionParity:
         ours = our_cls(payload, queryset=UniqueCode.objects.all())
         assert stock.is_valid() == ours.is_valid()
         assert _errors_repr(stock) == _errors_repr(ours)
+
+
+# ---------------------------------------------------------------------------
+# Parity: the batched pass does not depend on formset.clean() running
+# ---------------------------------------------------------------------------
+
+
+def test_clean_override_without_super_still_reports_db_collision():
+    UniqueCode.objects.create(code="TAKEN", label="seed")
+
+    class NoSuperStock(BaseModelFormSet):
+        def clean(self):
+            pass
+
+    class NoSuperOurs(FormworkBaseModelFormSet):
+        def clean(self):
+            pass
+
+    payload = _data([{"code": "TAKEN", "label": "x"}])
+    stock_cls = modelformset_factory(UniqueCode, fields=["code", "label"], extra=0, formset=NoSuperStock)
+    our_cls = formwork_modelformset_factory(UniqueCode, fields=["code", "label"], extra=0, formset=NoSuperOurs)
+    stock = stock_cls(payload, queryset=UniqueCode.objects.all())
+    ours = our_cls(payload, queryset=UniqueCode.objects.all())
+
+    assert ours.is_valid() is False
+    assert _errors_repr(stock) == _errors_repr(ours)
+
+
+def test_formset_form_validated_on_its_own_reports_db_collision():
+    UniqueCode.objects.create(code="TAKEN", label="seed")
+    our_cls = formwork_modelformset_factory(UniqueCode, fields=["code", "label"], extra=0)
+    formset = our_cls(_data([{"code": "TAKEN", "label": "x"}]), queryset=UniqueCode.objects.all())
+
+    assert formset.forms[0].is_valid() is False
+    assert "code" in formset.forms[0].errors
+    assert formset.is_valid() is False
+    assert len(formset.errors[0]["code"]) == 1
 
 
 # ---------------------------------------------------------------------------
