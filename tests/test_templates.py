@@ -1,3 +1,4 @@
+import pytest
 from bs4 import BeautifulSoup
 from django import forms
 from django.template import Context, Template
@@ -499,10 +500,10 @@ class TestMorphingIds:
 class TestTemplateTags:
     """formwork_css / formwork_js emit link and script tags for the static assets."""
 
-    def test_formwork_css_tag(self):
+    def test_formwork_css_tag_is_deprecated(self):
         template = Template("{% load formwork %}{% formwork_css %}")
-        html = template.render(Context())
-        assert "<link" in html
+        with pytest.warns(DeprecationWarning, match="Tailwind"):
+            html = template.render(Context())
         assert "formwork/formwork.css" in html
 
     def test_formwork_js_tag(self):
