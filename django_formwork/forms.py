@@ -3,8 +3,9 @@
 :class:`FormworkForm` and :class:`FormworkModelForm` use
 :class:`~django_formwork.renderers.FormworkRenderer` so that both
 ``{{ form }}`` and ``{{ field.as_field_group }}`` produce DaisyUI-styled
-markup.  All component styling is handled by the formwork CSS file via
-``@apply``.  No widget attributes are mutated in Python.
+markup.  The templates carry the DaisyUI classes and ``formwork.css`` the
+rest; :class:`~django_formwork.boundfield.FormworkBoundField` adds the ARIA
+attributes at render time.
 
 Using ``FORM_RENDERER = "django_formwork.FormworkRenderer"`` in settings
 is preferred over these base classes (it applies to *all* forms), but
@@ -54,20 +55,50 @@ _M = TypeVar("_M", bound=Model)
 _ERROR_DISPLAY_CHOICES = ("auto", "inline", "tooltip")
 
 
+def _check_meta(cls: type) -> None:
+    """Fail at import on a ``Meta`` option that would otherwise fail per request or not at all."""
+    meta = getattr(cls, "Meta", None)
+    error_display = getattr(meta, "error_display", "auto")
+    if error_display not in _ERROR_DISPLAY_CHOICES:
+        msg = f"{cls.__name__}.Meta.error_display must be one of {_ERROR_DISPLAY_CHOICES}, got {error_display!r}"
+        raise ImproperlyConfigured(msg)
+    # Only where Meta sets it: a factory-built subclass can narrow the fields an inherited list names.
+    mandatory = vars(meta).get("mandatory", ()) if meta is not None else ()
+    if isinstance(mandatory, str):
+        msg = f"{cls.__name__}.Meta.mandatory must be a list of field names, not the string {mandatory!r}."
+        raise ImproperlyConfigured(msg)
+    if unknown := sorted(set(mandatory) - set(getattr(cls, "base_fields", {}))):
+        msg = (
+            f"{cls.__name__}.Meta.mandatory names {unknown}, which the form does not declare. "
+            f"Add a field built in __init__ to self.mandatory there."
+        )
+        raise ImproperlyConfigured(msg)
+    model = getattr(getattr(cls, "_meta", None), "model", None)
+    if getattr(meta, "validate_dirty_only", False) and model is not None and not hasattr(model, "get_dirty_fields"):
+        msg = (
+            f"{cls.__name__} has validate_dirty_only=True but {model.__name__} does not provide "
+            f"get_dirty_fields(). Inherit from django_formwork.FormworkModel (or mix in "
+            f"filthyfields.DirtyFieldsMixin) on the model."
+        )
+        raise ImproperlyConfigured(msg)
+
+
 class FormworkFormMetaclass(DeclarativeFieldsMetaclass):
-    """Registers each field's server search at class creation."""
+    """Checks the ``Meta`` options and registers each field's server search at class creation."""
 
     def __new__(mcs, name: str, bases: tuple[type, ...], attrs: dict[str, Any], **kwargs: Any) -> type:
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
+        _check_meta(cls)
         register_form_searches(cls)
         return cls
 
 
 class FormworkModelFormMetaclass(ModelFormMetaclass):
-    """Registers each field's server search at class creation."""
+    """Checks the ``Meta`` options and registers each field's server search at class creation."""
 
     def __new__(mcs, name: str, bases: tuple[type, ...], attrs: dict[str, Any], **kwargs: Any) -> type:
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
+        _check_meta(cls)
         register_form_searches(cls)
         return cls
 

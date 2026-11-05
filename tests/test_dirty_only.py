@@ -215,14 +215,13 @@ class TestModelFormCreate:
 
 class TestImproperlyConfigured:
     def test_validate_dirty_only_requires_dirtyfieldsmixin(self):
-        class _BadForm(FormworkModelForm):
-            class Meta:
-                model = BasicFormData  # plain models.Model, no get_dirty_fields()
-                fields = ["name", "email"]
-                validate_dirty_only = True
-
         with pytest.raises(ImproperlyConfigured, match="get_dirty_fields"):
-            _BadForm()
+
+            class _BadForm(FormworkModelForm):
+                class Meta:
+                    model = BasicFormData  # plain models.Model, no get_dirty_fields()
+                    fields = ["name", "email"]
+                    validate_dirty_only = True
 
 
 class TestCrossFieldRuleGuard:

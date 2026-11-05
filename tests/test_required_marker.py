@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from bs4 import BeautifulSoup
 from django import forms
+from django.core.exceptions import ImproperlyConfigured
 
 from django_formwork.forms import FormworkForm
 
@@ -53,3 +54,14 @@ def test_only_a_field_the_user_must_fill_carries_the_asterisk(field: str, marked
 
 def test_a_mandatory_field_is_announced_as_required() -> None:
     assert _render("street").select_one("input[aria-required=true]") is not None
+
+
+@pytest.mark.parametrize("names", ["street", ["stret"]])
+def test_meta_mandatory_must_list_declared_fields(names: object) -> None:
+    with pytest.raises(ImproperlyConfigured, match=r"Meta\.mandatory"):
+
+        class _BadForm(FormworkForm):
+            street = forms.CharField(required=False)
+
+            class Meta:
+                mandatory = names
