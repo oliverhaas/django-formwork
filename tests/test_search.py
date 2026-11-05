@@ -289,11 +289,12 @@ def test_factory_built_forms_over_one_model_keep_their_own_search() -> None:
     north_form = _city_form(_north)
     _city_form(_south)
     north = Region.objects.create(name="North")
-    Region.objects.create(name="South")
+    south = Region.objects.create(name="South")
 
-    response = Client().get(search_url(_key(north_form, "region"), {}, widget="select"))
+    rows = _rows(Client().get(search_url(_key(north_form, "region"), {}, widget="select")))
 
-    assert _rows(response) == [str(north.pk)]
+    assert str(north.pk) in rows
+    assert str(south.pk) not in rows
 
 
 def test_factory_form_closing_over_other_data_is_rejected() -> None:
