@@ -247,6 +247,19 @@ class DatedCode(models.Model):
         return self.slug or f"DatedCode #{self.pk}"
 
 
+class DatedRegionEntry(models.Model):
+    """``unique_for_date`` on a foreign key, for batched date-uniqueness tests."""
+
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, unique_for_date="published")
+    published = models.DateField()
+
+    class Meta:
+        app_label = "e2e"
+
+    def __str__(self):
+        return f"DatedRegionEntry #{self.pk}"
+
+
 class AutoSaveFormData(models.Model):
     """Stores auto-saved form data (partial saves allowed)."""
 

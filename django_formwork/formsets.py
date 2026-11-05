@@ -506,6 +506,11 @@ class _BatchedUniquenessMixin:
             return (field_value, date.year, date.month, date.day)
         return (field_value, getattr(date, lookup_type))
 
+    @staticmethod
+    def _date_field_attname(model_class: type[Model], field: str) -> str:
+        """Raw column attribute (``region_id`` for a FK), as the prefetch reads it."""
+        return model_class._meta.get_field(field).attname  # type: ignore[union-attr]  # noqa: SLF001
+
     def _prefetch_dates(
         self,
         forms: list[Any],
@@ -521,23 +526,24 @@ class _BatchedUniquenessMixin:
                     continue
                 key = (id(model_class), check[1], field, unique_for)
                 wanted[key] = check
-                rows_wanted[key].append((getattr(form.instance, field), date))
+                rows_wanted[key].append((getattr(form.instance, self._date_field_attname(model_class, field)), date))
 
         taken: dict[tuple[int, str, str, str], dict[tuple[Any, ...], set[Any]]] = {}
         for key, (model_class, lookup_type, field, unique_for) in wanted.items():
+            attname = self._date_field_attname(model_class, field)
             query = Q()
             for field_value, date in rows_wanted[key]:
                 if lookup_type == "date":
                     query |= Q(
                         **{
-                            field: field_value,
+                            attname: field_value,
                             f"{unique_for}__day": date.day,
                             f"{unique_for}__month": date.month,
                             f"{unique_for}__year": date.year,
                         },
                     )
                 else:
-                    query |= Q(**{field: field_value, f"{unique_for}__{lookup_type}": getattr(date, lookup_type)})
+                    query |= Q(**{attname: field_value, f"{unique_for}__{lookup_type}": getattr(date, lookup_type)})
             existing: dict[tuple[Any, ...], set[Any]] = defaultdict(set)
             queryset = model_class._default_manager.filter(query)  # noqa: SLF001
             # Savepoint-isolate the read, as the sibling prefetch paths do.
@@ -546,7 +552,7 @@ class _BatchedUniquenessMixin:
             )
             try:
                 with atomic:
-                    for field_value, date, pk in queryset.values_list(field, unique_for, "pk"):
+                    for field_value, date, pk in queryset.values_list(attname, unique_for, "pk"):
                         existing[self._date_key(lookup_type, field_value, date)].add(pk)
             except DatabaseError:
                 # One big OR can exceed backend parameter limits; signal fallback.
@@ -568,7 +574,8 @@ class _BatchedUniquenessMixin:
             if date is None:
                 continue
             key = (id(model_class), lookup_type, field, unique_for)
-            row_key = self._date_key(lookup_type, getattr(instance, field), date)
+            field_value = getattr(instance, self._date_field_attname(model_class, field))
+            row_key = self._date_key(lookup_type, field_value, date)
             pks = set(taken.get(key, {}).get(row_key, set()))
             if not instance._state.adding and instance._is_pk_set():  # noqa: SLF001
                 pks.discard(instance.pk)

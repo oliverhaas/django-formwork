@@ -29,6 +29,7 @@ from e2e.models import (
     ConstraintPair,
     CustomMessageUnique,
     DatedCode,
+    DatedRegionEntry,
     Membership,
     MultiCheck,
     Region,
@@ -224,6 +225,17 @@ class TestUniqueForDateParity:
             ["slug", "published"],
             _data([{"slug": "hello", "published": "2026-01-01"}, {"slug": "other", "published": "2026-01-01"}]),
         )
+
+
+@pytest.mark.parametrize(("published", "collides"), [("2026-01-01", True), ("2026-02-02", False)])
+def test_foreign_key_unique_for_date_matches_stock(published, collides):
+    region = Region.objects.create(name="North")
+    DatedRegionEntry.objects.create(region=region, published="2026-01-01")
+    data = _data([{"region": str(region.pk), "published": published}])
+
+    _assert_parity(DatedRegionEntry, ["region", "published"], data)
+    our_cls = formwork_modelformset_factory(DatedRegionEntry, fields=["region", "published"], extra=0)
+    assert our_cls(data, queryset=DatedRegionEntry.objects.all()).is_valid() is not collides
 
 
 # ---------------------------------------------------------------------------
