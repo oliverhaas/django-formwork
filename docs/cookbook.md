@@ -2,15 +2,18 @@
 
 This guide builds one ticket form up from a single field to a searchable,
 server-validated form that saves, takes attachments, and edits existing records
-without re-validating untouched fields. Each step adds one capability, and
-every snippet is complete and works as shown. See the
+without re-validating untouched fields. Each step adds one capability. The
+snippets show the code that a step adds and leave out most imports, the URL
+configuration and the base template. The `Person` model has a `name` and an
+`email`, `PRIORITY_CHOICES` holds `(value, label)` pairs, and steps 5 and 6
+show parts of the `Ticket` model. See the
 [installation guide](getting-started/installation.md) for the one-time CSS and
 JavaScript setup.
 
 ## Step 1: the form is the center
 
-The center of Formwork is forms. You render them the normal Django way, and the
-default widgets get automatic styling according to your DaisyUI theme.
+You render a form the normal Django way, and the default widgets take their
+styling from your DaisyUI theme.
 
 ```python
 # forms.py
@@ -37,8 +40,8 @@ the base template's `<head>` from the start: htmx, its alpine-compat extension,
 
 ## Step 2: richer widgets
 
-Formwork ships widgets with extra styling and more modern behaviour, like
-dropdowns with search. Here the assignee is a `Select` backed by a model,
+Formwork widgets add styling and behaviour that the Django widgets lack, such
+as a dropdown with search. Here the assignee is a `Select` backed by a model,
 with an initials badge and the person's email shown for each option. The
 priority stays a plain `ChoiceField`; standard fields and Formwork widgets mix
 freely in one form.
@@ -93,10 +96,9 @@ inside the widget's markup.
 
 ## Step 3: server-side validation, still MPA
 
-Formwork makes direct server-side validation easy without leaving the typical
-MPA approach. It uses htmx and morph swaps: the form posts, the server
-re-renders it, and htmx morphs the whole form back in, keeping widget and focus
-state.
+The server validates the form, and the page stays a multi-page app: htmx
+posts the form, the server renders it again, and htmx morphs the whole form
+back into the page, so the widget and focus state stay as they were.
 
 ```python
 # forms.py
@@ -123,7 +125,7 @@ class TicketValidatedForm(TicketWidgetsForm):
 
 The form tag lives in a partial that `step3.html` wraps in the full page; the
 later steps reuse it, with the posting URL passed in as a variable. The view
-returns just the partial for htmx requests:
+returns only the partial for htmx requests:
 
 ```python
 # views.py
@@ -248,17 +250,17 @@ form = TicketUploadForm(request.POST, request.FILES)
 
 htmx does not read the form's `enctype`. Without
 `hx-encoding="multipart/form-data"` it submits the fields urlencoded and the
-file never reaches the server; `enctype` still covers the no-JavaScript
-fallback, so keep both. `max_size` rejects oversized files in the browser only, server-side
-checks stay your job. `upload_to` needs the usual `MEDIA_ROOT` and `MEDIA_URL`
-settings.
+file never reaches the server. `enctype` covers the no-JavaScript fallback,
+so keep both. `max_size` rejects an oversized file in the browser only, so
+check the size on the server yourself. `upload_to` needs the usual
+`MEDIA_ROOT` and `MEDIA_URL` settings.
 
 ## Step 6: skip validation for unchanged fields
 
 The steps so far create tickets. Editing an existing one runs into a different
 problem: re-running validation on fields the user did not touch can reject
-legacy data that is fine to leave alone. The example app seeds a ticket whose
-title today's validator would reject:
+legacy data that is fine to leave alone. Take a ticket titled `LEGACY`, saved
+before this validator existed:
 
 ```python
 # models.py
@@ -274,8 +276,7 @@ class Ticket(FormworkModel):
 
 Set `validate_dirty_only` on a `FormworkModelForm` whose model inherits
 `FormworkModel`; the model base brings the dirty-field tracking the form needs.
-The field list trims to what this page edits; `description` has been on the
-model all along.
+The field list holds only what this page edits.
 
 ```python
 # forms.py
@@ -309,11 +310,11 @@ carry through untouched. On create, the model's `full_clean()` covers every
 field as usual. See the [forms reference](reference/forms.md#validate_dirty_only)
 for the exact rules.
 
-This is the form `data-formwork-dirty` from step 3 was added for: it highlights
-the fields you changed, which here is exactly the set the server will validate.
-The two mechanisms are independent. The highlight is client-side display; the
-decision to skip is made on the server by comparing the posted data against the
-loaded instance, and it works the same without the attribute.
+On this form, `data-formwork-dirty` from step 3 highlights the fields you
+changed, which is the set that the server validates. The two mechanisms are
+independent. The browser draws the highlight, and the server decides what to
+skip by comparing the posted data against the loaded instance, with or without
+the attribute.
 
 ![Editing an existing ticket](img/cookbook/step-6.png)
 

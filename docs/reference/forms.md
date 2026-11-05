@@ -32,6 +32,8 @@ For icons, descriptions or a trigger class on model choices, return a
 [`ChoiceLabel`](widgets.md#choicelabel) from `label_from_instance`:
 
 ```python
+from django import forms
+
 from django_formwork import ChoiceLabel
 
 
@@ -42,8 +44,9 @@ class MemberChoiceField(forms.ModelChoiceField):
 
 ## Search registration
 
-A field whose widget (`Select`, `SelectMultiple`, `ComboBox`) has a
-`search_queryset` registers its search when the form class is created.
+A field whose widget (`Select`, `SelectMultiple`, `ComboBox` or
+`ComboBoxMultiple`) has a `search_queryset` registers its search when Python
+creates the form class.
 Formwork imports the `forms` module of every installed app at startup, so the
 search exists in every worker before the first request. A single
 `include("django_formwork.urls")` serves all of them. Registration raises
@@ -120,9 +123,9 @@ form = ContactForm(request.POST, error_display="tooltip")
 An inline error uses the pattern of the help text: a small icon below the
 widget, in error color, with the message truncated to one line and a `[more]`
 toggle when it overflows. `[more]` reveals the full error and the help text
-together; `[less]` collapses both. Collapsed, the help text is
+together; `[less]` collapses both. While collapsed, the help text is
 present for screen readers but visually hidden. A tooltip error is more
-compact, but it is easy to miss in a dense layout like a table row.
+compact, but a user can miss it in a dense layout such as a table row.
 
 Use `"inline"` for inline table-row editing, dense multi-column layouts, or
 forms where the help text must stay reachable while an error shows, and
@@ -158,13 +161,13 @@ For a field the user did not change:
 A field that the post leaves out counts as unchanged, so a form that posts
 only its changed fields (a section form with `data-send-changed`) validates
 only those. Changed fields validate as usual, and the form-wide `clean()`
-method always runs. Whether a field counts as changed is decided by the machinery behind
-`Form.changed_data`, comparing the posted value against the form's initial
-data; with `instance=` bound, initial data is what the database holds. The
-model-level exclusions only apply to existing instances. On create, the
-instance's `full_clean()` covers every field.
+method always runs. `Form.changed_data` decides whether a field counts as
+changed: it compares the posted value against the initial data of the form,
+and with `instance=` bound, the initial data is what the database holds. The
+model-level exclusions apply only to existing instances. On create, the
+`full_clean()` of the instance covers every field.
 
-On a `FormworkModelForm` this requires the model to provide
+On a `FormworkModelForm` the flag requires the model to provide
 `get_dirty_fields()`. Inherit [`FormworkModel`](#formworkmodel), or mix
 `filthyfields.DirtyFieldsMixin` into the model directly; the form raises
 `ImproperlyConfigured` otherwise. Plain `FormworkForm` supports the flag too,
@@ -176,11 +179,18 @@ walks through a legacy-data example.
 ## Async validation and saving
 
 `ais_valid()`, `afull_clean()`, and `asave()` are async counterparts to
-Django's sync methods. `clean_<field>()` and `clean()` may be sync or async in
-the same form; async ones are detected and awaited, so the async ORM works in
-validation without `sync_to_async` wrappers.
+Django's sync methods. `clean_<field>()` and `clean()` can be sync or async in
+the same form. Formwork detects the async ones and awaits them, so validation
+can use the async ORM without `sync_to_async` wrappers.
 
 ```python
+from django import forms
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+
+from django_formwork import FormworkForm
+
+
 class SignupForm(FormworkForm):
     email = forms.EmailField()
 
@@ -203,18 +213,17 @@ async def signup(request):
 returns the unsaved instance and exposes `asave_m2m` as an async callable;
 call `await form.asave_m2m()` after saving the instance. Calling the sync
 `save_m2m` hook on a form saved with `asave(commit=False)` raises
-`RuntimeError` so the mistake cannot silently skip M2M data.
+`RuntimeError` that points to `asave_m2m()`.
 
 Set `FORMWORK_FORCE_ASYNC = True` in settings to make the sync entry points
 (`is_valid()`, `full_clean()`, `save()`) raise `RuntimeError`. Use it to keep
 accidental sync calls out of an async codebase.
 
-This matters because the failure is otherwise silent: a form with an async
-`clean_<field>()` or `clean()` validated through the *sync* `is_valid()` stores
-the un-awaited coroutine in `cleaned_data` instead of running the check, so
-validation is skipped. Enable `FORMWORK_FORCE_ASYNC` in any project that defines
-async validators and touches forms from sync code (including templates that read
-`form.errors`) so the mistake fails loudly.
+Without the setting, a form with an async `clean_<field>()` or `clean()` that
+validates through the sync `is_valid()` stores the un-awaited coroutine in
+`cleaned_data` and skips the check. Enable `FORMWORK_FORCE_ASYNC` in a project
+that defines async validators and touches forms from sync code, including a
+template that reads `form.errors`. The sync call then raises `RuntimeError`.
 
 ## Section forms
 
@@ -278,9 +287,10 @@ out, and it does not need Alpine.
   until their saves are answered. Leaving the page during a save asks for
   confirmation.
 - `data-send-changed` on a form posts only the fields that differ from the last
-  valid render, plus `csrfmiddlewaretoken` and `_formwork_section`. Pair it
-  with `validate_dirty_only`, so the fields the post leaves out keep their
-  stored values.
+  valid render, plus `csrfmiddlewaretoken` and `_formwork_section`. With a
+  value, `data-send-changed="<prefix>"` also posts every field whose name
+  starts with `<prefix>`, changed or not. Pair it with `validate_dirty_only`,
+  so the fields the post leaves out keep their stored values.
 - `data-section-indicator="<selector>"` on a field wrapper shows that indicator
   while a save the field started runs.
 

@@ -28,7 +28,7 @@ INSTALLED_APPS = [
     "django_formwork",
 ]
 
-# Makes ALL forms use formwork templates automatically
+# Every form renders through the formwork templates
 FORM_RENDERER = "django_formwork.FormworkRenderer"
 
 TEMPLATES = [
@@ -54,12 +54,9 @@ Formwork's widgets use [Lucide](https://lucide.dev/) icons, fetched at setup tim
 python manage.py formwork install
 ```
 
-This does two things:
+The command downloads the Lucide SVGs through django-iconx into `<first STATICFILES_DIRS entry>/icons/lucide/`. Then it generates `iconx/icons.css` in your static directory, with one CSS class per icon that points at the served SVG.
 
-1. Downloads the Lucide SVGs (via django-iconx) into `<first STATICFILES_DIRS entry>/icons/lucide/`.
-2. Generates `iconx/icons.css` in your static directory, with one CSS class per icon pointing at the served SVGs.
-
-The command is idempotent; rerunning it re-downloads and regenerates in place. Both output directories (`static/icons/` and `static/iconx/`) are generated artifacts: gitignore them and run `formwork install` in CI and on fresh checkouts, or commit them if you prefer vendoring.
+A second run downloads and generates the files again in place. Both output directories (`static/icons/` and `static/iconx/`) are generated artifacts: gitignore them and run `formwork install` in CI and on fresh checkouts, or commit them if you prefer vendoring.
 
 ### Command reference: `formwork install`
 
@@ -69,15 +66,11 @@ python manage.py formwork install [--output DIR]
 
 - `--output DIR`: directory to write the generated CSS into (the file lands at `DIR/iconx/icons.css`). By default the command resolves your project static directory: the first entry of `STATICFILES_DIRS` if set, otherwise `BASE_DIR/static`. Use `--output` when your CSS build inputs live elsewhere.
 
-Notes:
-
-- The icon SVGs always download into the first `STATICFILES_DIRS` entry (django-iconx behavior); `--output` only moves the generated CSS.
-- If `STATICFILES_DIRS` is not set, the command falls back to `BASE_DIR/static` and warns you: add that directory to `STATICFILES_DIRS`, or Django will not serve the icons.
-- If neither `STATICFILES_DIRS` nor `BASE_DIR` is available in your settings, the command aborts with an error.
+The icon SVGs always go into the first `STATICFILES_DIRS` entry, because django-iconx downloads them there, so `--output` moves only the generated CSS. Without `STATICFILES_DIRS` the command uses `BASE_DIR/static` and prints a warning; add that directory to `STATICFILES_DIRS`, or Django does not serve the icons. With neither setting, the command stops with an error.
 
 ## 4. Build the CSS
 
-Formwork uses [DaisyUI](https://daisyui.com/) 5 for component styling and [Tailwind CSS](https://tailwindcss.com/) 4+ for the build step. Formwork ships `formwork.css`, the Tailwind source: it contains `@apply` directives and `@import "tailwindcss"` itself, so it has to be processed by the Tailwind CLI or PostCSS plugin, and you must not import Tailwind or DaisyUI a second time next to it.
+Formwork uses [DaisyUI](https://daisyui.com/) 5 for component styling and [Tailwind CSS](https://tailwindcss.com/) 4+ for the build step. Formwork ships `formwork.css`, the Tailwind source. It contains `@apply` directives, `@import "tailwindcss"` and the DaisyUI `@plugin`, so build it with the Tailwind CLI or the PostCSS plugin, and import neither Tailwind nor DaisyUI a second time next to it.
 
 Install the build tools:
 
@@ -124,7 +117,7 @@ The `examples/full` app in the repository is a working copy of exactly this setu
 
 ### DaisyUI version
 
-Formwork requires **DaisyUI 5.x**. DaisyUI 4 and earlier use a different component API and are not compatible. Within the DaisyUI 5 series, formwork is tested against the latest stable release; any DaisyUI 5.x version should work.
+Formwork requires DaisyUI 5. DaisyUI 4 and earlier use a different component API and do not work with formwork. The CI builds the CSS with the DaisyUI 5 release pinned in the repository's `package-lock.json`.
 
 ## 5. htmx and Alpine.js
 
@@ -142,7 +135,7 @@ The dynamic widgets (dropdowns, server-side search, password reveal, steppers, d
 2. The alpine-compat extension comes after htmx. It is required: without it a morph strips what Alpine bindings (`x-show`, `x-text`, `:class`, `:aria-selected`) wrote into the DOM.
 3. `{% formwork_js %}` comes before Alpine. Module scripts and `defer` scripts run in document order, and each formwork module registers its component in an `alpine:init` listener, which must exist when Alpine starts.
 
-htmx 4 handles the server-side search and validation requests; its built-in `outerMorph` swap covers what idiomorph did for htmx 2. `{% formwork_js %}` loads `formwork.js` as an ES module, which imports `formwork-core.js` (the `formwork-morph` htmx extension, dirty-field tracking, and native-validation disabling) plus each widget's Alpine.data component.
+htmx 4 sends the server-side search and validation requests, and its built-in `outerMorph` swap morphs a re-rendered form into the page. `{% formwork_js %}` loads `formwork.js` as an ES module, which imports `formwork-core.js` (the `formwork-morph` htmx extension, dirty-field tracking, and native-validation disabling) plus each widget's Alpine.data component.
 
 ### htmx extensions
 
@@ -152,11 +145,11 @@ htmx 4 runs every registered extension on the whole page. If you restrict them w
 
 ### JS loading paths
 
-The `{% formwork_js %}` bundle is one tag and covers everything; that's the path most projects want. Two alternatives also work.
+The `{% formwork_js %}` bundle is one tag and loads the core and every widget component. Two other paths load the same files.
 
 For per-form loading via Django's `Media`, use `{{ form.media }}` for the widget JS the form actually contains, and add `{% formwork_core_js %}` for the page-global core (morph, dirty-tracking, validation disabling). `Select`, `SelectMultiple`, `ComboBox`, `DatePicker`, `StepperNumberInput`, `PasswordInput`, `SearchInput`, `FileDropzoneInput`, `ImageDropzoneInput`, `InputMask` and `ValidatedTextarea` each declare a `Media` class that points at their Alpine component file. Place both tags where `{% formwork_js %}` would go, before Alpine.
 
-For bundler-driven loading, `import "/static/formwork/formwork.js"` from a vite, webpack, or esbuild entry. The bundler walks the chain and emits a single bundle; no template tag is needed.
+For a JS bundler (vite, webpack or esbuild), import `formwork.js` by its file path in the installed package, under the directory that the command in [step 4](#4-build-the-css) prints: `import "path/to/site-packages/django_formwork/static/formwork/formwork.js";`. The bundler follows the relative imports and emits one bundle, so the page needs no formwork template tag. The bundle must run after htmx and before Alpine, like the tag.
 
 ES modules are deduplicated by URL, so mixing tags is harmless. Combining `{% formwork_js %}` and `{% formwork_core_js %}` on the same page still executes the core only once.
 

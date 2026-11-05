@@ -1,6 +1,14 @@
 # Browser Support
 
-Formwork's CSS uses several modern CSS features. The table below lists the minimum browser versions required for full support.
+The CSS you build from `formwork.css` needs the browsers that Tailwind CSS 4 supports, plus CSS `subgrid`. The newer features that formwork uses beyond these, listed in [Progressive enhancements](#progressive-enhancements), have a fallback.
+
+## Effective minimum
+
+| Chrome | Edge | Firefox | Safari |
+|---|---|---|---|
+| 117 | 117 | 128 | 16.5 |
+
+Tailwind 4 [lists](https://tailwindcss.com/docs/compatibility) Chrome 111, Safari 16.4 and Firefox 128 as its minimum. `subgrid` raises Chrome and Edge to 117, and the CSS nesting in the DaisyUI 5 output raises Safari to 16.5. An older browser renders the forms with visual defects, and the forms still submit.
 
 ## Feature matrix
 
@@ -9,25 +17,26 @@ Formwork's CSS uses several modern CSS features. The table below lists the minim
 | `:has()` selector | 105 | 121 | 15.4 | 105 |
 | `color-mix()` | 111 | 113 | 16.2 | 111 |
 | CSS Grid `subgrid` | 117 | 71 | 16 | 117 |
-| CSS Nesting | 112 | 117 | 16.5 | 112 |
-| `color-mix()` with `oklab` | 111 | 113 | 16.2 | 111 |
+| CSS nesting | 112 | 117 | 16.5 | 112 |
 | `@layer` | 99 | 97 | 15.4 | 99 |
 
 ## Where each feature is used
 
-**`:has()`**: used throughout `formwork.css` to style fieldsets contextually: single-checkbox two-column layout, multi-widget side-by-side layout, error tooltip sizing, ClearableFileInput flow layout, and validated textarea error state.
+`formwork.css` uses `:has()` to style a fieldset by its content: the two-column layout of a single checkbox, the side-by-side layout of a multi-widget field, the size of the error tooltip, the `ClearableFileInput` layout and the error state of `ValidatedTextarea`.
 
-**`color-mix(in oklab, ...)`**: used for placeholder color on `<select>` and summary triggers, upload widget icon color, and the error highlight background on `ValidatedTextarea`. Browsers that don't support `color-mix()` fall back to a hardcoded `rgba()` value immediately before each `color-mix()` declaration.
+`color-mix(in oklab, ...)` mixes the placeholder color of the dropdown triggers and of `<select>`, the icon color of the drop zones, the error highlight of `ValidatedTextarea`, the soft select and textarea variants and the soft alert. Some of these declarations have an `rgba()` or hex fallback on the line before. The soft variants, the soft alert, the input-mask placeholder dots and the `SelectMultiple` trigger in a disabled fieldset have none, so a browser without `color-mix()` drops their colors.
 
-**CSS Grid `subgrid`**: used so checkbox and multi-widget inputs inside an error tooltip wrapper stay aligned with the parent fieldset's column grid.
+`subgrid` keeps a checkbox, or the inputs of a multi-widget field, aligned with the column grid of the fieldset while an error tooltip wraps them.
 
-**CSS Nesting**: used inside `@layer components` rule blocks (e.g. `.fieldset + .fieldset`). Browsers that don't support nesting will silently drop those rules.
+`formwork.css` itself has no nested rules. The DaisyUI 5 rules in the built CSS do, and a browser without nesting drops them.
 
-**`@layer`**: all `formwork.css` rules are wrapped in `@layer components`. This ensures Tailwind utilities in HTML (which are in `@layer utilities`) always take precedence, and users can override formwork styles with unlayered CSS. Browsers that don't support `@layer` receive no formwork styles at all.
+Most `formwork.css` rules sit in `@layer components`, so the Tailwind utilities in your markup (in `@layer utilities`) and your unlayered CSS override them. A few rules stay unlayered, because they must beat DaisyUI rules in `@layer utilities`. Tailwind 4 puts its own output in layers too, so a browser without `@layer` ignores most of the stylesheet.
 
-## Effective minimum
+## Progressive enhancements
 
-All five features are available in Chrome 117+, Firefox 121+, Safari 16.5+, and Edge 117+. Browsers released before these versions will have visual regressions (misaligned layouts, missing placeholder colors, broken subgrid alignment), but the forms remain functional.
+The dropdown panels of `Select`, `SelectMultiple` and `ComboBox` open in the top layer through the Popover API, and CSS anchor positioning places them next to the trigger. Without anchor positioning, the JavaScript sets the position of the panel. Without the Popover API, the panel stays absolutely positioned below its trigger.
 
-!!! note "Fallbacks"
-    `color-mix()` rules always include a `rgba()` fallback on the preceding line, so colors degrade gracefully on older browsers. All other features have no fallback. If you need to support older browsers, you will need to add custom CSS overrides.
+`field-sizing: content` lets the text input of `DatePicker` and a native `<select>` fit an auto-width table column. A browser without it keeps the default width.
+
+!!! note "Older browsers"
+    Formwork has no fallback for `:has()`, `subgrid`, nesting or `@layer`. To support an older browser, add your own CSS overrides.
