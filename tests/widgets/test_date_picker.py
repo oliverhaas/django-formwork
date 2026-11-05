@@ -188,3 +188,20 @@ def test_date_picker_opens_and_picks_day(new_widgets_page):
     inp = new_widgets_page.locator("input[name='due_date']")
     expect(inp).to_have_value(re.compile(r"^\d{4}-\d{2}-15$"))
     expect(panel).not_to_be_visible()
+
+
+@pytest.mark.e2e
+def test_date_picker_escape_and_focus_leaving_close_the_calendar(new_widgets_page):
+    """Escape closes the open calendar, and so does tabbing to another control."""
+    from playwright.sync_api import expect
+
+    inp = new_widgets_page.locator("#id_due_date")
+    panel = new_widgets_page.locator("#id_due_date_datepicker div.dropdown-content")
+    inp.click()
+    expect(panel).to_be_visible()
+    inp.press("Escape")
+    expect(panel).to_be_hidden()
+    new_widgets_page.locator("#id_due_date_datepicker button.date-picker-toggle").click()
+    expect(panel).to_be_visible()
+    new_widgets_page.locator("#id_quantity").focus()
+    expect(panel).to_be_hidden()

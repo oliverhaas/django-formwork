@@ -39,6 +39,18 @@ document.addEventListener("alpine:init", () => {
     toggle() {
       this.open = !this.open;
     },
+    // Escape closes an open calendar and goes no further, so a <dialog>
+    // around the widget stays open.
+    onEscape(event) {
+      if (!this.open) return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.close();
+    },
+    // Focus moving to another control closes the calendar.
+    onFocusOut(event) {
+      if (event.relatedTarget && !this.$root.contains(event.relatedTarget)) this.close();
+    },
     onInput() {
       this.value = this.$refs.input.value;
     },

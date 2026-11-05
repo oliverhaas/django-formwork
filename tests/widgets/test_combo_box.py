@@ -1032,6 +1032,41 @@ def test_combo_box_keyboard_escape_closes_dropdown(combobox_page):
     assert is_open is False
 
 
+@pytest.mark.e2e
+def test_combo_box_escape_in_a_dialog_closes_the_list_first(combobox_page):
+    """The first Escape closes the list; the next one reaches the modal dialog around it."""
+    from playwright.sync_api import expect
+
+    combobox_page.evaluate("""() => {
+        const dialog = document.createElement("dialog");
+        dialog.id = "e2e_dialog";
+        document.body.append(dialog);
+        dialog.append(document.getElementById("id_language_single_field"));
+        dialog.showModal();
+    }""")
+    inp = combobox_page.locator("#id_language_single")
+    inp.click()
+    listbox = combobox_page.locator("#id_language_single_listbox")
+    expect(listbox).to_be_visible()
+    inp.press("Escape")
+    expect(listbox).to_be_hidden()
+    expect(combobox_page.locator("#e2e_dialog[open]")).to_have_count(1)
+    inp.press("Escape")
+    expect(combobox_page.locator("#e2e_dialog[open]")).to_have_count(0)
+
+
+@pytest.mark.e2e
+def test_combo_box_focus_leaving_the_widget_closes_the_list(combobox_page):
+    """Tabbing to another control closes the list."""
+    from playwright.sync_api import expect
+
+    combobox_page.locator("#id_language_single").click()
+    listbox = combobox_page.locator("#id_language_single_listbox")
+    expect(listbox).to_be_visible()
+    combobox_page.locator("#id_toppings_multi").focus()
+    expect(listbox).to_be_hidden()
+
+
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # Needs a page with a required ComboBox; /combobox/ has none.

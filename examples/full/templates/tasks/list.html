@@ -89,6 +89,7 @@
       {# <details> + popover=manual + anchor positioning: same top-layer mechanism as the formwork widgets, so the menu escapes the scroll container. #}
       <details class="dropdown task-actions" x-data
                @toggle="$refs.menu.togglePopover($el.open)"
+               @click.outside="$el.removeAttribute('open')"
                style="anchor-name: --task-actions-{{ form.instance.pk }}">
         <summary class="btn btn-ghost btn-xs list-none" aria-label="actions">
           <i class="icon icon-ellipsis-vertical size-4"></i>

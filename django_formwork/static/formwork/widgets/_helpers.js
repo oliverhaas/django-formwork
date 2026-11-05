@@ -78,16 +78,17 @@ const borderHeight = (el) => {
 
 let anchorSeq = 0;
 
-// Close any open <details> dropdown when a real click lands outside it, so a
-// click anywhere else on the page (including another dropdown's trigger)
-// dismisses it. Native <details> has no such behaviour, and light dismiss is
-// off. One shared listener rather than a per-widget @click.outside: this
-// module loads once (ES-module dedup), and setting `open = false` lets each
-// widget's open observer hide its panel. A genuine click only, never a
-// morph, so it cannot close a panel behind the widget's back.
+// Close any open formwork <details> dropdown when a real click lands outside
+// it, so a click anywhere else on the page (including another dropdown's
+// trigger) dismisses it. Native <details> has no such behaviour, and light
+// dismiss is off. Other <details> on the page keep their own behaviour. One
+// shared listener rather than a per-widget @click.outside: this module loads
+// once (ES-module dedup), and setting `open = false` lets each widget's open
+// observer hide its panel. A genuine click only, never a morph, so it cannot
+// close a panel behind the widget's back.
 if (typeof document !== "undefined") {
   document.addEventListener("click", (e) => {
-    for (const details of document.querySelectorAll("details.dropdown[open]")) {
+    for (const details of document.querySelectorAll('details[open][x-data^="formwork"]')) {
       if (!details.contains(e.target)) details.open = false;
     }
   });
@@ -124,6 +125,27 @@ const baseData = () => ({
     this.$root.open = false;
     this.hidePanel();
     this.clearHighlight();
+  },
+
+  // Escape closes an open panel and goes no further, so a <dialog> around
+  // the widget stays open. Cancelling the key also keeps the search box from
+  // clearing itself, so the query is cleared here. Focus inside the closing
+  // panel goes back to the trigger instead of to the page.
+  onEscape(event) {
+    if (!this.isOpen) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const refocus = this.$refs.panel?.contains(document.activeElement);
+    if (this.search) this.clearSearch();
+    this.close();
+    if (refocus) this.$root.querySelector("summary")?.focus();
+  },
+
+  // Focus moving to another control closes the panel. Without a related
+  // target (a click on the page, a switch to another window) it stays open:
+  // the click listener above handles the click.
+  onFocusOut(event) {
+    if (event.relatedTarget && !this.$root.contains(event.relatedTarget)) this.close();
   },
 
   // Anchor names must be unique per instance, so they are inline styles

@@ -98,6 +98,8 @@ document.addEventListener("alpine:init", () => {
       onBlur(event) {
         if (this.$root.contains(event.relatedTarget)) return;
         this.focused = false;
+        // Tabbing to another control closes the list; a click is @click.outside's.
+        if (event.relatedTarget) this.close();
         if (this.multiple) {
           const inp = this.$refs.input;
           inp.value = inp.value.replace(/,\s*$/, "");

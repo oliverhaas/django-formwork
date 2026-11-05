@@ -1616,6 +1616,56 @@ def test_select_keyboard_close_clears_highlight(select_page):
     assert sel.locator("li.highlighted > [data-value]").count() == 0
 
 
+@pytest.mark.e2e
+def test_select_escape_in_a_dialog_closes_only_the_panel(select_page):
+    """Escape shuts the open panel, keeps the modal dialog around it open and refocuses the trigger."""
+    from playwright.sync_api import expect
+
+    select_page.evaluate("""() => {
+        const dialog = document.createElement("dialog");
+        dialog.id = "e2e_dialog";
+        document.body.append(dialog);
+        dialog.append(document.getElementById("id_city_grouped_field"));
+        dialog.showModal();
+    }""")
+    select_page.locator("#id_city_grouped").click()
+    search = select_page.locator("#id_city_grouped_wrapper input[type=search]")
+    expect(search).to_be_focused()
+    search.fill("par")
+    search.press("Escape")
+    expect(select_page.locator("#id_city_grouped_wrapper[open]")).to_have_count(0)
+    expect(select_page.locator("#e2e_dialog[open]")).to_have_count(1)
+    expect(select_page.locator("#id_city_grouped")).to_be_focused()
+    expect(search).to_have_value("")
+    select_page.keyboard.press("Escape")
+    expect(select_page.locator("#e2e_dialog[open]")).to_have_count(0)
+
+
+@pytest.mark.e2e
+def test_select_focus_leaving_the_widget_closes_the_panel(select_page):
+    """Tabbing to another control closes the panel, as a click elsewhere does."""
+    from playwright.sync_api import expect
+
+    select_page.locator("#id_city_plain").click()
+    expect(select_page.locator("#id_city_plain_wrapper[open]")).to_have_count(1)
+    select_page.locator("#id_city_icons").focus()
+    expect(select_page.locator("#id_city_plain_wrapper[open]")).to_have_count(0)
+
+
+@pytest.mark.e2e
+def test_select_outside_click_leaves_other_details_alone(select_page):
+    """Only formwork dropdowns close on an outside click; a page's own <details> keeps its state."""
+    from playwright.sync_api import expect
+
+    select_page.evaluate("""() => document.body.insertAdjacentHTML(
+        "afterbegin", '<details class="dropdown" id="e2e_menu" open><summary>Menu</summary></details>',
+    )""")
+    select_page.locator("#id_city_plain").click()
+    select_page.mouse.click(2, 300)
+    expect(select_page.locator("#id_city_plain_wrapper[open]")).to_have_count(0)
+    expect(select_page.locator("#e2e_menu[open]")).to_have_count(1)
+
+
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # Gap: /select/ has only required=False fields, so an e2e error-flow
