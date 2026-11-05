@@ -7,6 +7,8 @@ string annotations of ``_group_members`` as the param types they name.
 from __future__ import annotations
 
 import inspect
+from functools import partial
+from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -14,6 +16,7 @@ from bs4 import BeautifulSoup
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
+from django.core.checks import Tags, run_checks
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
 from django.forms import modelform_factory
@@ -187,6 +190,39 @@ def test_queryset_params_must_be_keyword_only_int_or_str(queryset: Callable[...,
                 queryset=User.objects.all(),
                 widget=Select(search_queryset=queryset, search_decorator=None),
             )
+
+
+def test_search_queryset_must_be_callable() -> None:
+    with pytest.raises(ImproperlyConfigured, match="must be a callable"):
+
+        class _F(FormworkForm):
+            user = forms.ModelChoiceField(
+                queryset=User.objects.all(),
+                widget=Select(search_queryset=User.objects.all(), search_decorator=None),
+            )
+
+
+class _PartialSearchForm(FormworkForm):
+    members = forms.ModelMultipleChoiceField(
+        queryset=User.objects.none(),
+        widget=SelectMultiple(search_queryset=partial(_group_members), search_decorator=None),
+    )
+
+
+def test_wrong_params_for_a_partial_search_are_rejected() -> None:
+    with pytest.raises(ImproperlyConfigured, match="takes"):
+        Select(search_key=_key(_PartialSearchForm, "members"), search_params={})
+
+
+@pytest.mark.parametrize("routed", [True, False])
+def test_system_check_reports_an_unrouted_search_endpoint(settings: Any, routed: bool) -> None:  # noqa: FBT001
+    unrouted = ModuleType("urls_without_formwork")
+    unrouted.urlpatterns = []  # type: ignore[attr-defined]
+    settings.ROOT_URLCONF = "e2e.urls" if routed else unrouted
+
+    ids = {error.id for error in run_checks(tags=[Tags.urls])}
+
+    assert ("django_formwork.E001" in ids) is not routed
 
 
 def test_postponed_annotations_declare_the_param_type(db: None) -> None:

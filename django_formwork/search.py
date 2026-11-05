@@ -80,7 +80,7 @@ def check_search_params(key: str, params: Mapping[str, int | str]) -> None:
         raise ImproperlyConfigured(msg)
     queryset = field.widget.search_queryset
     if params.keys() != (expected := declared_params(queryset)).keys():
-        msg = f"{queryset.__qualname__} takes {sorted(expected)}, got {sorted(params)}"
+        msg = f"{getattr(queryset, '__qualname__', queryset)} takes {sorted(expected)}, got {sorted(params)}"
         raise ImproperlyConfigured(msg)
 
 
@@ -151,7 +151,7 @@ def register_form_searches(form_cls: type) -> None:
 
     # Deferred: importing widgets at call time keeps this module a leaf.
     from django_formwork.widgets.combo_box import ComboBox
-    from django_formwork.widgets.select import SearchableSelectMixin, _UnsetDecorator
+    from django_formwork.widgets.select import SearchableSelectMixin
 
     for name, field in base_fields.items():
         widget = field.widget
@@ -174,28 +174,42 @@ def register_form_searches(form_cls: type) -> None:
                 raise ImproperlyConfigured(msg)
             continue
 
-        if isinstance(widget.search_decorator, _UnsetDecorator):
-            msg = (
-                f"{form_cls.__name__}.{name}: search_queryset needs an explicit "
-                f"search_decorator (e.g. login_required) or None for a public endpoint."
-            )
-            raise ImproperlyConfigured(msg)
-
-        if widget.search_ranked and not widget.search_fields:
-            msg = f"{form_cls.__name__}.{name}: search_ranked ranks the search_fields, and none are set."
-            raise ImproperlyConfigured(msg)
-
-        if widget.search_ranked and connection.vendor != "postgresql":
-            msg = (
-                f"{form_cls.__name__}.{name}: search_ranked needs PostgreSQL with the pg_trgm "
-                f"extension, but the default database is {connection.vendor}."
-            )
-            raise ImproperlyConfigured(msg)
-
-        # Fails at import, not on the first search.
-        declared_params(widget.search_queryset)
+        _check_search(f"{form_cls.__name__}.{name}", widget)
         widget.search_key = _search_key(f"{form_label}.{name}", widget)
         _registry[widget.search_key] = field
+
+
+def _check_search(label: str, widget: Any) -> None:  # noqa: ANN401
+    """Fail at import, not on the first search."""
+    from django_formwork.widgets.select import _UnsetDecorator
+
+    if isinstance(widget.search_decorator, _UnsetDecorator):
+        msg = (
+            f"{label}: search_queryset needs an explicit "
+            f"search_decorator (e.g. login_required) or None for a public endpoint."
+        )
+        raise ImproperlyConfigured(msg)
+
+    if widget.search_ranked and not widget.search_fields:
+        msg = f"{label}: search_ranked ranks the search_fields, and none are set."
+        raise ImproperlyConfigured(msg)
+
+    if widget.search_ranked and connection.vendor != "postgresql":
+        msg = (
+            f"{label}: search_ranked needs PostgreSQL with the pg_trgm "
+            f"extension, but the default database is {connection.vendor}."
+        )
+        raise ImproperlyConfigured(msg)
+
+    if not callable(widget.search_queryset):
+        msg = (
+            f"{label}: search_queryset must be a callable that takes the request, "
+            f"got {type(widget.search_queryset).__name__}. Wrap a queryset: "
+            f"lambda request: Model.objects.filter(...)."
+        )
+        raise ImproperlyConfigured(msg)
+
+    declared_params(widget.search_queryset)
 
 
 def _search_key(field_label: str, widget: Any) -> str:  # noqa: ANN401
@@ -228,7 +242,7 @@ def _search_key(field_label: str, widget: Any) -> str:  # noqa: ANN401
 
 def _definition(obj: object) -> str:
     """Where ``obj`` is defined: the same in every worker, unlike ``id()``."""
-    func = getattr(obj, "__func__", obj)
+    func: Any = getattr(obj, "__func__", obj)
     while isinstance(func, partial):
         func = func.func
     code = getattr(func, "__code__", None)

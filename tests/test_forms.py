@@ -1,5 +1,6 @@
 import pytest
 from django import forms
+from django.core.checks import Tags, run_checks
 from django.test import override_settings
 
 from django_formwork.boundfield import FormworkBoundField
@@ -234,3 +235,13 @@ def test_formset_renders_with_formwork_renderer():
     assert 'name="form-1-name"' in html
     # Should have formwork fieldset structure
     assert 'class="fieldset"' in html
+
+
+@pytest.mark.parametrize("installed", [True, False])
+def test_system_check_reports_a_missing_django_forms_app(settings, installed):
+    if not installed:
+        settings.INSTALLED_APPS = [app for app in settings.INSTALLED_APPS if app != "django.forms"]
+
+    ids = {error.id for error in run_checks(tags=[Tags.templates])}
+
+    assert ("django_formwork.E002" in ids) is not installed
