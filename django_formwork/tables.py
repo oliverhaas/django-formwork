@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from django.core.exceptions import ImproperlyConfigured
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from django.db.models import QuerySet
     from django.http import HttpRequest, HttpResponse
 
 __all__ = ["FormworkRowSaveMixin", "RowRenderMixin", "TableRenderMixin"]
@@ -116,9 +119,14 @@ class TableRenderMixin:
 
 
 class FormworkRowSaveMixin:
-    """View mixin: save one row's changes (keyed on the posted pk) and re-render it."""
+    """View mixin: save one row's changes (keyed on the posted pk) and re-render it.
+
+    ``queryset`` (or ``get_queryset()``) holds the rows a post may change; a pk
+    outside it gets a 404.
+    """
 
     form_class: type[Any]
+    queryset: QuerySet[Any] | None = None
 
     def get_save_url(self, request: HttpRequest) -> str:
         """URL the re-rendered row keeps posting to (the save endpoint itself)."""
@@ -127,20 +135,32 @@ class FormworkRowSaveMixin:
     def get_prefix(self, request: HttpRequest) -> str | None:
         return request.POST.get(PREFIX_INPUT_NAME) or None
 
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Any]:  # noqa: ARG002
+        """The rows this endpoint may change, e.g. ``Task.objects.filter(owner=request.user)``."""
+        if self.queryset is None:
+            model_name = self.form_class._meta.model.__name__  # noqa: SLF001
+            msg = (
+                f"{type(self).__name__} needs a queryset (or get_queryset()) of the rows a user may "
+                f"change, e.g. {model_name}.objects.filter(owner=request.user), or "
+                f"{model_name}.objects.all() for every row."
+            )
+            raise ImproperlyConfigured(msg)
+        return self.queryset.all()
+
     def get_object(self, request: HttpRequest, prefix: str | None) -> Any:  # noqa: ANN401
         from django.core.exceptions import ValidationError
         from django.http import Http404
 
-        model = self.form_class._meta.model  # noqa: SLF001
-        pk_name = model._meta.pk.name  # noqa: SLF001
+        queryset = self.get_queryset(request)
+        pk_name = queryset.model._meta.pk.name  # noqa: SLF001
         field = f"{prefix}-{pk_name}" if prefix else pk_name
         pk = request.POST.get(field)
         if pk is None:
             raise Http404("Row primary key missing from the request")
         try:
-            return model._default_manager.get(pk=pk)  # noqa: SLF001
-        except model.DoesNotExist as exc:
-            # Row deleted between render and autosave: a clean 404 beats a 500.
+            return queryset.get(pk=pk)
+        except queryset.model.DoesNotExist as exc:
+            # Row deleted between render and autosave, or outside the queryset: a clean 404 beats a 500.
             raise Http404("Row no longer exists") from exc
         except (ValueError, ValidationError) as exc:
             # A malformed pk (wrong type for the key field) is a bad request,
@@ -148,17 +168,17 @@ class FormworkRowSaveMixin:
             raise Http404("Row primary key is malformed") from exc
 
     def get_form_kwargs(self) -> dict[str, Any]:
-        """Extra kwargs for the row form (e.g. ``editable_fields`` to guard read-only columns)."""
+        """Extra kwargs for the row form's constructor."""
         return {}
 
     def get_form(self, request: HttpRequest, instance: Any, prefix: str | None) -> Any:  # noqa: ANN401
-        return self.form_class(request.POST, instance=instance, prefix=prefix, **self.get_form_kwargs())
+        return self.form_class(request.POST, request.FILES, instance=instance, prefix=prefix, **self.get_form_kwargs())
 
     def render_row(self, request: HttpRequest, form: Any) -> str:  # noqa: ANN401
         """HTML for the re-rendered row. Override to render a hand-authored row partial."""
         return form.as_row(self.get_save_url(request))
 
-    def post(self, request: HttpRequest, **_kwargs: Any) -> HttpResponse:
+    def post(self, request: HttpRequest, *_args: Any, **_kwargs: Any) -> HttpResponse:
         from django.http import HttpResponse
 
         prefix = self.get_prefix(request)

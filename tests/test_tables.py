@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import pytest
+from django import forms
+from django.core.exceptions import ImproperlyConfigured
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.http import Http404
 from django.test import RequestFactory
 from e2e.models import UniqueCode
 
@@ -61,6 +65,7 @@ def test_row_save_updates_only_editable_fields():
 
     class SaveView(FormworkRowSaveMixin):
         form_class = CodeRowForm
+        queryset = UniqueCode.objects.all()
 
     request = RequestFactory().post(
         "/save/",
@@ -76,10 +81,9 @@ def test_row_save_updates_only_editable_fields():
 
 
 def test_row_save_malformed_pk_raises_404_not_500():
-    from django.http import Http404
-
     class SaveView(FormworkRowSaveMixin):
         form_class = CodeRowForm
+        queryset = UniqueCode.objects.all()
 
     request = RequestFactory().post(
         "/save/",
@@ -95,6 +99,7 @@ def test_row_save_rerenders_pk_so_the_next_edit_finds_it():
 
     class SaveView(FormworkRowSaveMixin):
         form_class = CodeRowForm
+        queryset = UniqueCode.objects.all()
 
     request = RequestFactory().post(
         "/save/",
@@ -104,3 +109,51 @@ def test_row_save_rerenders_pk_so_the_next_edit_finds_it():
 
     assert b'name="form-0-id"' in response.content
     assert f'value="{obj.pk}"'.encode() in response.content
+
+
+def test_row_save_cannot_reach_a_row_outside_the_queryset():
+    obj = UniqueCode.objects.create(code="A", label="alpha")
+
+    class SaveView(FormworkRowSaveMixin):
+        form_class = CodeRowForm
+        queryset = UniqueCode.objects.exclude(pk=obj.pk)
+
+    request = RequestFactory().post("/save/", {"code": "Z", "id": str(obj.pk), PREFIX_INPUT_NAME: ""})
+    with pytest.raises(Http404):
+        SaveView().post(request)
+
+    obj.refresh_from_db()
+    assert obj.code == "A"
+
+
+def test_row_save_without_a_queryset_is_rejected():
+    obj = UniqueCode.objects.create(code="A", label="alpha")
+
+    class SaveView(FormworkRowSaveMixin):
+        form_class = CodeRowForm
+
+    request = RequestFactory().post("/save/", {"code": "Z", "id": str(obj.pk), PREFIX_INPUT_NAME: ""})
+    with pytest.raises(ImproperlyConfigured, match="queryset"):
+        SaveView().post(request)
+
+
+class AttachmentRowForm(CodeRowForm):
+    attachment = forms.FileField()
+
+
+def test_row_save_passes_uploaded_files_to_the_form():
+    obj = UniqueCode.objects.create(code="A", label="alpha")
+
+    class SaveView(FormworkRowSaveMixin):
+        form_class = AttachmentRowForm
+        queryset = UniqueCode.objects.all()
+
+    upload = SimpleUploadedFile("note.txt", b"hi")
+    request = RequestFactory().post(
+        "/save/",
+        {"code": "Z", "id": str(obj.pk), PREFIX_INPUT_NAME: "", "attachment": upload},
+    )
+    SaveView().post(request)
+
+    obj.refresh_from_db()
+    assert obj.code == "Z"
