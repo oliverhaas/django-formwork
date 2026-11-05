@@ -196,7 +196,7 @@ class _DirtyOnlyFormMixin:
                     if inspect.iscoroutinefunction(method):
                         value = await method()
                     else:
-                        value = method()
+                        value = await sync_to_async(method)()
                     self.cleaned_data[name] = value
             except ValidationError as e:
                 self.add_error(name, e)

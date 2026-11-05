@@ -87,7 +87,8 @@ class AsyncFormMixin:
                     if inspect.iscoroutinefunction(method):
                         value = await method()
                     else:
-                        value = method()
+                        # A sync clean_<name>() can use the ORM too.
+                        value = await sync_to_async(method)()
                     self.cleaned_data[name] = value
             except ValidationError as e:
                 self.add_error(name, e)
@@ -98,7 +99,7 @@ class AsyncFormMixin:
             if inspect.iscoroutinefunction(self.clean):
                 cleaned_data = await self.clean()
             else:
-                cleaned_data = self.clean()
+                cleaned_data = await sync_to_async(self.clean)()
         except ValidationError as e:
             self.add_error(None, e)
         else:
