@@ -64,6 +64,10 @@ class _ModelSearchForm(FormworkForm):
         queryset=User.objects.order_by("pk"),
         widget=Select(search_fields=["email"], search_queryset=_users, search_decorator=None),
     )
+    many = forms.ModelMultipleChoiceField(
+        queryset=User.objects.order_by("pk"),
+        widget=SelectMultiple(search_fields=["email"], search_queryset=_users, search_decorator=None),
+    )
 
 
 class _NoBlankModelForm(FormworkForm):
@@ -152,6 +156,16 @@ def test_a_bound_value_the_key_cannot_hold_renders_no_selection() -> None:
     form = _ModelSearchForm(data={"one": "not-a-pk"})
 
     assert len(_values(form, "one")) == 20
+
+
+@pytest.mark.django_db
+def test_a_malformed_value_keeps_the_valid_selections_past_the_page() -> None:
+    User.objects.bulk_create(User(username=f"user{i}", email=f"user{i}@example.com") for i in range(22))
+    last = str(User.objects.order_by("pk").values_list("pk", flat=True).last())
+
+    form = _ModelSearchForm(data={"many": ["not-a-pk", last]})
+
+    assert _values(form, "many")[-1] == last
 
 
 @pytest.mark.django_db

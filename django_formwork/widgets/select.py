@@ -226,11 +226,16 @@ class SearchableSelectMixin(_SelectBase):
             # One extra row tells whether more exist, so no COUNT runs.
             page = list(choices.queryset[: limit + 1])
             shown = {str(getattr(obj, key)) for obj in page[:limit]}
-            try:
-                rest = list(choices.queryset.filter(**{f"{key}__in": chosen - shown}))
-            except ValueError, TypeError, ValidationError:
-                # A bound value the key column cannot hold matches no row.
-                rest = []
+            # One value the key column cannot hold must not drop the others.
+            # filter() converts it without a query, as ModelMultipleChoiceField checks.
+            wanted = []
+            for subvalue in chosen - shown:
+                try:
+                    choices.queryset.filter(**{key: subvalue})
+                except ValueError, TypeError, ValidationError:
+                    continue
+                wanted.append(subvalue)
+            rest = list(choices.queryset.filter(**{f"{key}__in": wanted}))
             self.selected_past_page = [str(getattr(obj, key)) for obj in rest]
             pairs = [*blank, *(choices.choice(obj) for obj in [*page[:limit], *rest])]
         else:
@@ -292,6 +297,10 @@ class Select(SearchableSelectMixin, forms.Select):
         if isinstance(fmt_value, (list, tuple)):
             widget["value"] = fmt_value[0] if fmt_value else ""
         first = widget["selected_options"][0] if widget["selected_options"] else {}
+        # A value no option holds (a deleted row, an edited post) shows the
+        # placeholder, so it must not post again. Empty choices can't tell.
+        if not first and (widget["options"] or isinstance(self.choices, ModelChoiceIterator)):
+            widget["value"] = ""
         widget["selected_label"] = first.get("label", "")
         widget["selected_icon"] = first.get("icon", "")
         widget["selected_label_html"] = first.get("label_html", "")

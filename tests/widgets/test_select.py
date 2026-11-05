@@ -949,6 +949,20 @@ def test_select_form_error_state_shows_tooltip(renderer):
 
 
 @pytest.mark.integration
+def test_select_bound_value_no_option_holds_posts_blank(renderer):
+    """A posted value the choices lack shows the placeholder, so it does not post again."""
+
+    class CityForm(FormworkForm):
+        city = forms.ChoiceField(choices=[("nyc", "New York"), ("ldn", "London")], widget=Select, required=False)
+
+    form = CityForm(data={"city": "par"})
+    assert not form.is_valid()
+    soup = render_form(form, renderer=renderer)
+    assert soup.find("input", {"type": "hidden", "name": "city"})["value"] == ""
+    assert soup.find("details", class_="formwork-select")["data-value"] == ""
+
+
+@pytest.mark.integration
 def test_select_form_prefix_handling(renderer):
     """Form prefix propagates to the hidden input name and widget id."""
     form = SelectForm(prefix="loc")
