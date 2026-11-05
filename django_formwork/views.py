@@ -33,6 +33,8 @@ __all__ = [
     "FormworkValidateView",
 ]
 
+_DB_INT_MAX = 2**63 - 1
+
 
 @final
 class FormworkSearchView(View):
@@ -105,7 +107,9 @@ class FormworkSearchView(View):
             offset = int(request.GET.get("offset", 0))
         except KeyError, ValueError:
             raise Http404 from None
-        if offset < 0:
+        # Past a signed 64-bit integer the database raises instead of matching no rows.
+        ints = [offset + SEARCH_PAGE_SIZE + 1, *(value for value in params.values() if isinstance(value, int))]
+        if offset < 0 or any(abs(value) > _DB_INT_MAX for value in ints):
             raise Http404
         query = request.GET.get("q", "").strip()[: self.MAX_QUERY_LENGTH]
         to_field_name = getattr(field, "to_field_name", None) or "pk"
@@ -116,7 +120,10 @@ class FormworkSearchView(View):
             raise Http404 from None
         queryset = self.search(queryset, widget=widget, query=query)
         # One row past the cap: cheaper than a COUNT and enough to say "there are more".
-        rows = list(queryset[offset : offset + SEARCH_PAGE_SIZE + 1])
+        try:
+            rows = list(queryset[offset : offset + SEARCH_PAGE_SIZE + 1])
+        except OverflowError:  # SQLite: an exclude value past a 64-bit integer
+            raise Http404 from None
         truncated = len(rows) > SEARCH_PAGE_SIZE
         del rows[SEARCH_PAGE_SIZE:]
         # ModelChoiceField provides label_from_instance; a free-text ComboBox over a

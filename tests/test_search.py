@@ -509,6 +509,9 @@ def test_search_serves_the_rows_of_the_bound_param(widget_class: type[Select | S
         ("1", "&exclude=crew"),
         ("1", "&offset=-20"),
         ("1", "&offset=next"),
+        ("1", f"&offset={2**63}"),
+        (str(2**63), ""),
+        ("1", f"&exclude={2**63}"),
         ("1", "&widget=table"),
     ],
 )
