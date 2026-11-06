@@ -1130,6 +1130,39 @@ def test_combo_box_search_query_leaves_out_the_field_name(combobox_page):
 
 
 @pytest.mark.e2e
+def test_combo_box_newest_query_runs_after_a_pending_search(combobox_page):
+    """Queries typed while a search is pending end with the newest one, not the first one queued."""
+    from urllib.parse import parse_qs, urlsplit
+
+    from playwright.sync_api import expect
+
+    inp = combobox_page.locator('input[name="language_htmx"]')
+    rows = combobox_page.locator("#id_language_htmx_listbox button[data-value]")
+    inp.click()
+    expect(rows).to_have_count(20)
+    combobox_page.evaluate(
+        """() => {
+          window.__fwQueries = [];
+          document.addEventListener("htmx:config:request", (e) => window.__fwQueries.push(e.detail.ctx.request.body.get("q")));
+        }"""
+    )
+    held = []
+
+    def hold(route):
+        held.append(route)
+
+    combobox_page.route(lambda url: parse_qs(urlsplit(url).query).get("q") == ["G"], hold)
+    with combobox_page.expect_request(lambda request: "q=G" in request.url):
+        inp.press_sequentially("G")
+    inp.press_sequentially("o")
+    combobox_page.wait_for_function("q => window.__fwQueries.includes(q)", arg="Go")
+    inp.fill("Z")
+    combobox_page.wait_for_function("q => window.__fwQueries.includes(q)", arg="Z")
+    held[0].continue_()
+    expect(rows).to_have_text(["Zig"])
+
+
+@pytest.mark.e2e
 def test_combo_box_failing_search_shows_error_alert(combobox_page):
     """When the search endpoint returns 500, the error alert replaces the listbox."""
     from playwright.sync_api import expect

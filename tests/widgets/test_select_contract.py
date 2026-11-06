@@ -214,6 +214,17 @@ def test_widget_template_bindings_hold_one_call_or_property() -> None:
 
 
 @pytest.mark.unit
+def test_requests_fired_while_typing_queue_the_newest_one() -> None:
+    """The default sync keeps the first request behind a pending one and drops the rest, losing the last keystrokes."""
+    typed = 0
+    for template in sorted(WIDGET_TEMPLATES.rglob("*.html")):
+        for tag in re.findall(r"<[^<>]*hx-trigger=\"input changed[^<>]*>", template.read_text()):
+            typed += 1
+            assert 'hx-sync="this:queue last"' in tag, template.name
+    assert typed == 3
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize("field", ["select", "select_multiple", "combo_box", "combo_box_multiple", "floating"])
 def test_no_label_targets_a_hidden_input(field: str) -> None:
     soup = BeautifulSoup(str(_FamilyForm()[field].as_field_group()), "html.parser")
