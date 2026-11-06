@@ -287,7 +287,7 @@ class SearchableSelectMixin(_SelectBase):
         if not placeholder:
             msg = f"{type(self).__name__}(floating=True) needs a placeholder: it is the label text."
             raise ImproperlyConfigured(msg)
-        # The placeholder is the label now, so the empty trigger shows the default text.
+        # The placeholder text is the label, so an empty trigger shows the default text.
         widget["trigger_placeholder"] = ""
         id_ = widget["attrs"].get("id")
         if id_:

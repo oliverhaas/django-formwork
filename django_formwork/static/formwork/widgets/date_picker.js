@@ -19,11 +19,8 @@ document.addEventListener("alpine:init", () => {
         this.buildDays();
       };
       sync();
-      // htmx 4 morphs swapped-in content in place rather than replacing the
-      // node, so this x-data component (and thus init()) only ever runs
-      // once. Re-sync whenever the server updates data-value (e.g. after
-      // this widget's own htmx-triggered save) so the calendar popup
-      // doesn't highlight a stale day after the input's own swap.
+      // A morph keeps this component, so init() runs once. A data-value the
+      // server sends re-syncs the calendar, or it would highlight a stale day.
       new MutationObserver(sync).observe(el, {
         attributes: true,
         attributeFilter: ["data-value"],

@@ -26,10 +26,12 @@ class Rating(forms.RadioSelect):
 
     Usage::
 
+        from django_formwork.widgets import Rating
+
         rating = forms.TypedChoiceField(
             choices=Rating.make_choices(5),
             coerce=int,
-            widget=Rating,
+            widget=Rating(),
         )
     """
 
@@ -48,7 +50,7 @@ class Rating(forms.RadioSelect):
 
     @staticmethod
     def make_choices(max_stars: int = 5) -> list[tuple[str, str]]:
-        """Return a choices list for 1..max_stars."""
+        """The star labels translate when rendered, so the choices can sit on a form class."""
         return [(str(i), _lazy_star_label(i)) for i in range(1, max_stars + 1)]
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
