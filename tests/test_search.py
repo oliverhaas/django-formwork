@@ -7,6 +7,8 @@ string annotations of ``_group_members`` as the param types they name.
 from __future__ import annotations
 
 import inspect
+from functools import partial
+from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -14,10 +16,13 @@ from bs4 import BeautifulSoup
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
+from django.core.checks import Tags, run_checks
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
+from django.forms import modelform_factory
 from django.test import Client
 from django.urls import reverse
+from e2e.models import City, Region
 
 from django_formwork import views
 from django_formwork.forms import FormworkForm, FormworkModelForm
@@ -187,6 +192,39 @@ def test_queryset_params_must_be_keyword_only_int_or_str(queryset: Callable[...,
             )
 
 
+def test_search_queryset_must_be_callable() -> None:
+    with pytest.raises(ImproperlyConfigured, match="must be a callable"):
+
+        class _F(FormworkForm):
+            user = forms.ModelChoiceField(
+                queryset=User.objects.all(),
+                widget=Select(search_queryset=User.objects.all(), search_decorator=None),
+            )
+
+
+class _PartialSearchForm(FormworkForm):
+    members = forms.ModelMultipleChoiceField(
+        queryset=User.objects.none(),
+        widget=SelectMultiple(search_queryset=partial(_group_members), search_decorator=None),
+    )
+
+
+def test_wrong_params_for_a_partial_search_are_rejected() -> None:
+    with pytest.raises(ImproperlyConfigured, match="takes"):
+        Select(search_key=_key(_PartialSearchForm, "members"), search_params={})
+
+
+@pytest.mark.parametrize("routed", [True, False])
+def test_system_check_reports_an_unrouted_search_endpoint(settings: Any, routed: bool) -> None:  # noqa: FBT001
+    unrouted = ModuleType("urls_without_formwork")
+    unrouted.urlpatterns = []  # type: ignore[attr-defined]
+    settings.ROOT_URLCONF = "e2e.urls" if routed else unrouted
+
+    ids = {error.id for error in run_checks(tags=[Tags.urls])}
+
+    assert ("django_formwork.E001" in ids) is not routed
+
+
 def test_postponed_annotations_declare_the_param_type(db: None) -> None:
     assert inspect.get_annotations(_group_members)["group"] == "int"
     crew = Group.objects.create(name="crew")
@@ -231,6 +269,41 @@ def _build_form() -> type[FormworkForm]:
 
 def test_a_rebuilt_form_gets_the_same_key() -> None:
     assert _key(_build_form(), "user") == _key(_build_form(), "user")
+
+
+def _city_form(search_queryset: Callable[..., Any]) -> type[forms.ModelForm]:
+    widget = Select(search_fields=["name"], search_queryset=search_queryset, search_decorator=None)
+    return modelform_factory(City, form=FormworkModelForm, fields=["region"], widgets={"region": widget})
+
+
+def _north(request: HttpRequest) -> QuerySet[Region]:
+    return Region.objects.filter(name="North")
+
+
+def _south(request: HttpRequest) -> QuerySet[Region]:
+    return Region.objects.filter(name="South")
+
+
+@pytest.mark.django_db
+def test_factory_built_forms_over_one_model_keep_their_own_search() -> None:
+    north_form = _city_form(_north)
+    _city_form(_south)
+    north = Region.objects.create(name="North")
+    south = Region.objects.create(name="South")
+
+    rows = _rows(Client().get(search_url(_key(north_form, "region"), {}, widget="select")))
+
+    assert str(north.pk) in rows
+    assert str(south.pk) not in rows
+
+
+def test_factory_form_closing_over_other_data_is_rejected() -> None:
+    def build(name: str) -> type[forms.ModelForm]:
+        return _city_form(lambda request: Region.objects.filter(name=name))
+
+    build("North")
+    with pytest.raises(ImproperlyConfigured, match="request"):
+        build("South")
 
 
 def _staff(request: HttpRequest) -> QuerySet[User]:
@@ -437,6 +510,9 @@ def test_search_serves_the_rows_of_the_bound_param(widget_class: type[Select | S
         ("1", "&exclude=crew"),
         ("1", "&offset=-20"),
         ("1", "&offset=next"),
+        ("1", f"&offset={2**63}"),
+        (str(2**63), ""),
+        ("1", f"&exclude={2**63}"),
         ("1", "&widget=table"),
     ],
 )

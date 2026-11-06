@@ -9,7 +9,7 @@ from __future__ import annotations
 import annotationlib
 import hashlib
 import inspect
-from functools import cache
+from functools import cache, partial
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
 
@@ -80,7 +80,7 @@ def check_search_params(key: str, params: Mapping[str, int | str]) -> None:
         raise ImproperlyConfigured(msg)
     queryset = field.widget.search_queryset
     if params.keys() != (expected := declared_params(queryset)).keys():
-        msg = f"{queryset.__qualname__} takes {sorted(expected)}, got {sorted(params)}"
+        msg = f"{getattr(queryset, '__qualname__', queryset)} takes {sorted(expected)}, got {sorted(params)}"
         raise ImproperlyConfigured(msg)
 
 
@@ -151,7 +151,7 @@ def register_form_searches(form_cls: type) -> None:
 
     # Deferred: importing widgets at call time keeps this module a leaf.
     from django_formwork.widgets.combo_box import ComboBox
-    from django_formwork.widgets.select import SearchableSelectMixin, _UnsetDecorator
+    from django_formwork.widgets.select import SearchableSelectMixin
 
     for name, field in base_fields.items():
         widget = field.widget
@@ -174,27 +174,111 @@ def register_form_searches(form_cls: type) -> None:
                 raise ImproperlyConfigured(msg)
             continue
 
-        if isinstance(widget.search_decorator, _UnsetDecorator):
-            msg = (
-                f"{form_cls.__name__}.{name}: search_queryset needs an explicit "
-                f"search_decorator (e.g. login_required) or None for a public endpoint."
-            )
-            raise ImproperlyConfigured(msg)
-
-        if widget.search_ranked and not widget.search_fields:
-            msg = f"{form_cls.__name__}.{name}: search_ranked ranks the search_fields, and none are set."
-            raise ImproperlyConfigured(msg)
-
-        if widget.search_ranked and connection.vendor != "postgresql":
-            msg = (
-                f"{form_cls.__name__}.{name}: search_ranked needs PostgreSQL with the pg_trgm "
-                f"extension, but the default database is {connection.vendor}."
-            )
-            raise ImproperlyConfigured(msg)
-
-        # Fails at import, not on the first search.
-        declared_params(widget.search_queryset)
-        # A stable, opaque key: the same form and field map to it in every worker.
-        digest = hashlib.md5(f"{form_label}.{name}".encode(), usedforsecurity=False)
-        widget.search_key = digest.hexdigest()[:16]
+        _check_search(f"{form_cls.__name__}.{name}", widget)
+        widget.search_key = _search_key(f"{form_label}.{name}", widget)
         _registry[widget.search_key] = field
+
+
+def _check_search(label: str, widget: Any) -> None:  # noqa: ANN401
+    """Fail at import, not on the first search."""
+    from django_formwork.widgets.select import _UnsetDecorator
+
+    if isinstance(widget.search_decorator, _UnsetDecorator):
+        msg = (
+            f"{label}: search_queryset needs an explicit "
+            f"search_decorator (e.g. login_required) or None for a public endpoint."
+        )
+        raise ImproperlyConfigured(msg)
+
+    if widget.search_ranked and not widget.search_fields:
+        msg = f"{label}: search_ranked ranks the search_fields, and none are set."
+        raise ImproperlyConfigured(msg)
+
+    if widget.search_ranked and connection.vendor != "postgresql":
+        msg = (
+            f"{label}: search_ranked needs PostgreSQL with the pg_trgm "
+            f"extension, but the default database is {connection.vendor}."
+        )
+        raise ImproperlyConfigured(msg)
+
+    if not callable(widget.search_queryset):
+        msg = (
+            f"{label}: search_queryset must be a callable that takes the request, "
+            f"got {type(widget.search_queryset).__name__}. Wrap a queryset: "
+            f"lambda request: Model.objects.filter(...)."
+        )
+        raise ImproperlyConfigured(msg)
+
+    declared_params(widget.search_queryset)
+
+
+def _search_key(field_label: str, widget: Any) -> str:  # noqa: ANN401
+    """A stable, opaque key: the same in every worker.
+
+    Factory-built forms share a class name, so the search's definition joins the key.
+    """
+    source = ":".join(
+        [
+            field_label,
+            _definition(widget.search_queryset),
+            _definition(widget.search_decorator),
+            ",".join(widget.search_fields or ()),
+        ],
+    )
+    key = hashlib.md5(source.encode(), usedforsecurity=False).hexdigest()[:16]
+    registered = _registry.get(key)
+    if registered is not None and not (
+        _same_definition(registered.widget.search_queryset, widget.search_queryset)
+        and _same_definition(registered.widget.search_decorator, widget.search_decorator)
+    ):
+        msg = (
+            f"{field_label}: a form of the same name already registered this search with "
+            f"other closure values. The endpoint serves one search per key, so scope the "
+            f"search_queryset through its request argument, not through variables it closes over."
+        )
+        raise ImproperlyConfigured(msg)
+    return key
+
+
+def _definition(obj: object) -> str:
+    """Where ``obj`` is defined: the same in every worker, unlike ``id()``."""
+    func: Any = getattr(obj, "__func__", obj)
+    while isinstance(func, partial):
+        func = func.func
+    code = getattr(func, "__code__", None)
+    if code is None:
+        return f"{type(obj).__module__}.{type(obj).__qualname__}"
+    return f"{func.__module__}.{func.__qualname__}:{code.co_firstlineno}"
+
+
+def _same_definition(a: object, b: object, seen: set[tuple[int, int]] | None = None) -> bool:
+    """True for the same callable, or two built from one definition with equal bound values."""
+    seen = set() if seen is None else seen
+    if a is b or (id(a), id(b)) in seen:  # a function that closes over itself
+        return True
+    seen.add((id(a), id(b)))
+    parts_a, parts_b = _parts(a), _parts(b)
+    if parts_a is None or parts_b is None:
+        try:
+            return bool(a == b)
+        except Exception:  # noqa: BLE001 (an __eq__ that raises is not a match)
+            return False
+    return len(parts_a) == len(parts_b) and all(
+        _same_definition(x, y, seen) for x, y in zip(parts_a, parts_b, strict=True)
+    )
+
+
+def _parts(obj: object) -> list[Any] | None:
+    """What a callable built from one definition can differ by between calls; None for a non-callable."""
+    if isinstance(obj, partial):
+        return [obj.func, *obj.args, *sorted(obj.keywords.items())]
+    func: Any = getattr(obj, "__func__", obj)
+    code = getattr(func, "__code__", None)
+    if code is None:
+        return None
+    try:
+        cells = [cell.cell_contents for cell in func.__closure__ or ()]
+    except ValueError:  # an unfilled cell
+        cells = [object()]
+    defaults = [*(func.__defaults__ or ()), *sorted((func.__kwdefaults__ or {}).items())]
+    return [code, getattr(obj, "__self__", None), *cells, *defaults]

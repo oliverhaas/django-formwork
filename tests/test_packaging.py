@@ -39,8 +39,10 @@ def test_all_matches_lazy_export_map():
 def test_top_level_names_match_submodule_objects():
     """Lazy re-exports are the same objects as their submodule originals."""
     import django_formwork
-    from django_formwork import forms, formsets, models, renderers, views
+    from django_formwork import fields, forms, formsets, models, renderers, views
 
+    assert django_formwork.DateRange is fields.DateRange
+    assert django_formwork.DateRangeField is fields.DateRangeField
     assert django_formwork.FormworkForm is forms.FormworkForm
     assert django_formwork.FormworkModelForm is forms.FormworkModelForm
     assert django_formwork.FormworkModel is models.FormworkModel
@@ -57,6 +59,15 @@ def test_async_mixins_resolve_from_top_level():
 
     assert AsyncFormMixin is async_forms.AsyncFormMixin
     assert AsyncModelFormMixin is async_forms.AsyncModelFormMixin
+
+
+@pytest.mark.unit
+def test_old_choice_label_name_warns_on_every_access():
+    import django_formwork
+
+    for _ in range(2):
+        with pytest.warns(DeprecationWarning, match="0.2.0"):
+            assert django_formwork.FormworkChoiceLabel is django_formwork.ChoiceLabel
 
 
 @pytest.mark.unit

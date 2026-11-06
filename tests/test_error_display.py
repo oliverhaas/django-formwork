@@ -53,3 +53,11 @@ def test_kwarg_overrides_meta() -> None:
 def test_invalid_value_raises(bad: str) -> None:
     with pytest.raises(ImproperlyConfigured):
         _PlainForm(error_display=bad)
+
+
+def test_invalid_meta_value_fails_at_class_creation() -> None:
+    with pytest.raises(ImproperlyConfigured, match=r"Meta\.error_display"):
+
+        class _BadMetaForm(FormworkForm):
+            class Meta:
+                error_display = "popover"
