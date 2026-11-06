@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from django import forms
+from django.utils import translation
 
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import StepperNumberInput
@@ -35,6 +36,14 @@ def test_step_config_reaches_alpine_as_data_attributes():
     assert root is not None
     assert root["data-min"] == "1"
     assert root["data-integer"] == "true"
+
+
+@pytest.mark.unit
+def test_stepper_number_min_reaches_alpine_unlocalized():
+    """A decimal ``min`` keeps its point under a comma locale, so the component can parse it."""
+    with translation.override("de"):
+        soup = render_widget(StepperNumberInput(min=0.5), name="qty")
+    assert soup.select_one('[x-data="formworkStepperNumber"]')["data-min"] == "0.5"
 
 
 @pytest.mark.unit
@@ -193,3 +202,15 @@ def test_stepper_number_clamps_a_typed_value_to_max(new_widgets_page):
     inp.fill("500")
     inp.dispatch_event("change")
     expect(inp).to_have_value("99")
+
+
+@pytest.mark.e2e
+def test_stepper_number_buttons_leave_a_readonly_value(new_widgets_page):
+    """The buttons don't change a readonly input."""
+    from playwright.sync_api import expect
+
+    field = new_widgets_page.locator("#id_quantity_field")
+    inp = new_widgets_page.locator("input[name='quantity']")
+    inp.evaluate("el => { el.readOnly = true; }")
+    field.locator("button[aria-label='Increase']").click()
+    expect(inp).to_have_value("1")

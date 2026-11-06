@@ -36,6 +36,8 @@ export const countText = (el, count) => {
   return form.replace("%(count)s", count);
 };
 
+let highlightIds = 0;
+
 const visibleOptions = (component) =>
   [...component.$refs.options.querySelectorAll("[data-value]")].filter((el) => el.offsetParent !== null);
 
@@ -78,24 +80,44 @@ const borderHeight = (el) => {
 
 let anchorSeq = 0;
 
-// Close any open <details> dropdown when a real click lands outside it, so a
-// click anywhere else on the page (including another dropdown's trigger)
-// dismisses it. Native <details> has no such behaviour, and light dismiss is
-// off. One shared listener rather than a per-widget @click.outside: this
-// module loads once (ES-module dedup), and setting `open = false` lets each
-// widget's open observer hide its panel. A genuine click only, never a
-// morph, so it cannot close a panel behind the widget's back.
+// Close any open formwork <details> dropdown when a real click lands outside
+// it, so a click anywhere else on the page (including another dropdown's
+// trigger) dismisses it. Native <details> has no such behaviour, and light
+// dismiss is off. Other <details> on the page keep their own behaviour. One
+// shared listener rather than a per-widget @click.outside: this module loads
+// once (ES-module dedup), and setting `open = false` lets each widget's open
+// observer hide its panel. A genuine click only, never a morph, so it cannot
+// close a panel behind the widget's back.
 if (typeof document !== "undefined") {
   document.addEventListener("click", (e) => {
-    for (const details of document.querySelectorAll("details.dropdown[open]")) {
+    for (const details of document.querySelectorAll('details[open][x-data^="formwork"]')) {
       if (!details.contains(e.target)) details.open = false;
+    }
+  });
+}
+
+// Numbers each htmx request when it has collected its values. A swap stamps
+// the formwork roots it brings in with the number of the request they answer,
+// so a widget can tell the answer to a request sent before its latest pick
+// from the answer to one that carried the pick.
+let requestSeq = 0;
+
+if (typeof document !== "undefined") {
+  document.addEventListener("htmx:config:request", (e) => {
+    e.detail.ctx.formworkRequest = ++requestSeq;
+  });
+  document.addEventListener("htmx:before:swap", (e) => {
+    for (const task of e.detail.tasks ?? []) {
+      for (const root of task.fragment?.querySelectorAll('[x-data^="formwork"]') ?? []) {
+        root._formworkRequest = e.detail.ctx?.formworkRequest;
+      }
     }
   });
 }
 
 const baseData = () => ({
   _v: 0,
-  _dirty: false,
+  _pickedAfter: 0,
   search: "",
   showSearch: false,
   placeholder: "",
@@ -124,6 +146,40 @@ const baseData = () => ({
     this.$root.open = false;
     this.hidePanel();
     this.clearHighlight();
+  },
+
+  notePick() {
+    this._pickedAfter = requestSeq;
+  },
+
+  // Asked by the formwork morph before a morph touches this root. The answer
+  // to a request older than the latest pick is a stale echo: it would revert
+  // the pick, whose change event armed a newer request. The answer to a
+  // request that carried the pick is the server's word, even when it holds
+  // another value.
+  acceptMorph(newNode) {
+    return !(newNode._formworkRequest <= this._pickedAfter);
+  },
+
+  // Escape closes an open panel and goes no further, so a <dialog> around
+  // the widget stays open. Cancelling the key also keeps the search box from
+  // clearing itself, so the query is cleared here. Focus inside the closing
+  // panel goes back to the trigger instead of to the page.
+  onEscape(event) {
+    if (!this.isOpen) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const refocus = this.$refs.panel?.contains(document.activeElement);
+    if (this.search) this.clearSearch();
+    this.close();
+    if (refocus) this.$root.querySelector("summary")?.focus();
+  },
+
+  // Focus moving to another control closes the panel. Without a related
+  // target (a click on the page, a switch to another window) it stays open:
+  // the click listener above handles the click.
+  onFocusOut(event) {
+    if (event.relatedTarget && !this.$root.contains(event.relatedTarget)) this.close();
   },
 
   // Anchor names must be unique per instance, so they are inline styles
@@ -284,8 +340,15 @@ const baseData = () => ({
   clearHighlight() {
     if (this.highlightedEl) {
       this.highlightedEl.classList.remove("highlighted");
+      this.highlightedEl.removeAttribute("id");
       this.highlightedEl = null;
     }
+  },
+
+  // The text box keeps focus while the arrows move the highlight, so it
+  // points screen readers at the highlighted row by id.
+  get activeOption() {
+    return this.highlightedEl?.id;
   },
 
   nav(dir) {
@@ -295,9 +358,11 @@ const baseData = () => ({
     if (idx === -1) idx = dir > 0 ? 0 : visible.length - 1;
     else idx = (idx + dir + visible.length) % visible.length;
     this.clearHighlight();
-    this.highlightedEl = visible[idx].closest("li");
-    this.highlightedEl.classList.add("highlighted");
-    this.highlightedEl.scrollIntoView({ block: "nearest" });
+    const li = visible[idx].closest("li");
+    li.id = `formwork-option-${++highlightIds}`;
+    li.classList.add("highlighted");
+    li.scrollIntoView({ block: "nearest" });
+    this.highlightedEl = li;
   },
 
   // The highlighted row's option, else the first visible one.
@@ -307,9 +372,12 @@ const baseData = () => ({
   },
 
   // htmx 4 builds the GET query from the request body. The search box has no
-  // name, so the form never posts it.
+  // name, so the form never posts it. The ComboBox input has the field name,
+  // which could shadow a search param, so its text goes out as q only.
   onSearchConfig(event) {
-    event.detail.ctx.request.body.set("q", this.query);
+    const body = event.detail.ctx.request.body;
+    if (this.$root.dataset.name) body.delete(this.$root.dataset.name);
+    body.set("q", this.query);
   },
 
   // Bound on the root, so it also covers "Load more". An error response must

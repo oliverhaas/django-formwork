@@ -73,6 +73,15 @@ def test_an_optional_range_accepts_two_empty_inputs():
 
 
 @pytest.mark.unit
+def test_a_zero_max_span_rejects_a_two_day_range():
+    class _OneDayForm(FormworkForm):
+        period = DateRangeField(max_span=dt.timedelta(0))
+
+    form = _OneDayForm(data={"period_0": "2026-03-01", "period_1": "2026-03-02"})
+    assert form.has_error("period", code="max_span")
+
+
+@pytest.mark.unit
 def test_both_inputs_render_from_one_value():
     """One value renders both native inputs, each named for screen readers."""
     html = _Form(initial={"period": [dt.date(2026, 3, 1), dt.date(2026, 3, 10)]})["period"].as_widget()

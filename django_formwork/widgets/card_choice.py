@@ -11,8 +11,6 @@ from django.forms.widgets import ChoiceWidget
 class _CardChoiceMixin(ChoiceWidget):
     """Shared rendering for the card choice widgets."""
 
-    template_name = "formwork/widgets/card_choice.html"
-
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         # The template cannot read the hyphenated key; the error border needs it.
@@ -23,6 +21,10 @@ class _CardChoiceMixin(ChoiceWidget):
 class CardRadioSelect(_CardChoiceMixin, forms.RadioSelect):
     """Radio choices drawn as large selectable cards, side by side from the ``lg`` breakpoint."""
 
+    template_name = "formwork/widgets/card_choice.html"
+
 
 class CardCheckboxSelectMultiple(_CardChoiceMixin, forms.CheckboxSelectMultiple):
     """Checkbox choices drawn as large selectable cards, side by side from the ``lg`` breakpoint."""
+
+    template_name = "formwork/widgets/card_choice.html"

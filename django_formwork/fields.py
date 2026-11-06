@@ -49,5 +49,5 @@ class DateRangeField(forms.MultiValueField):
             return
         if start > end:
             raise forms.ValidationError(self.error_messages["start_after_end"], code="start_after_end")
-        if self.max_span and end > start + self.max_span:
+        if self.max_span is not None and end > start + self.max_span:
             raise forms.ValidationError(self.error_messages["max_span"], code="max_span")

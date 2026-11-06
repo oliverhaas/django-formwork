@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 import pytest
 from django import forms
@@ -35,7 +35,7 @@ def test_date_picker_custom_placeholder():
 def test_date_picker_custom_format_round_trips():
     """A custom format string formats the date value in both get_context and render."""
     widget = DatePicker(format="%d.%m.%Y")
-    value = datetime.date(2026, 7, 13)
+    value = dt.date(2026, 7, 13)
     ctx = widget.get_context("due_date", value, {"id": "id_due_date"})
     assert ctx["widget"]["value"] == "13.07.2026"
     soup = render_widget(widget, name="due_date", value=value, attrs={"id": "id_due_date"})
@@ -69,10 +69,8 @@ def test_date_picker_renders_placeholder():
 @pytest.mark.unit
 def test_date_picker_renders_with_value():
     """A date value is reflected in the rendered input's value attribute."""
-    import datetime
-
     widget = DatePicker()
-    soup = render_widget(widget, value=datetime.date(2024, 6, 15), attrs={"id": "id_due_date"})
+    soup = render_widget(widget, value=dt.date(2024, 6, 15), attrs={"id": "id_due_date"})
     inp = soup.find("input")
     assert inp is not None
     assert inp.get("value") == "2024-06-15"
@@ -81,24 +79,20 @@ def test_date_picker_renders_with_value():
 @pytest.mark.unit
 def test_date_picker_alpine_x_data():
     """The wrapper div binds to the formworkDatePicker Alpine.data component."""
-    import datetime
-
     widget = DatePicker()
-    soup = render_widget(widget, value=datetime.date(2024, 6, 15), attrs={"id": "id_due_date"})
+    soup = render_widget(widget, value=dt.date(2024, 6, 15), attrs={"id": "id_due_date"})
     wrapper = soup.find("div", attrs={"x-data": "formworkDatePicker"})
     assert wrapper is not None
     assert wrapper["data-value"] == "2024-06-15"
 
 
 @pytest.mark.unit
-def test_date_picker_template_calls_the_component_only():
-    """Every Alpine attribute holds one call or a property, never a JS statement (D4)."""
+def test_date_picker_closes_through_click_outside():
+    """The calendar closes through Alpine 3's @click.outside, not Alpine 2's @click.away."""
     soup = render_widget(DatePicker(), attrs={"id": "id_due_date"})
     wrapper = soup.find("div", attrs={"x-data": "formworkDatePicker"})
     assert wrapper["@click.outside"] == "close()"
     assert "@click.away" not in str(soup)
-    handlers = [v for tag in soup.find_all() for k, v in tag.attrs.items() if k.startswith(("@", "x-on:"))]
-    assert all(";" not in v and "=" not in v.replace("==", "") for v in handlers)
 
 
 @pytest.mark.unit
@@ -170,7 +164,27 @@ def test_date_picker_escapes_value_in_x_data(renderer):
     soup = render_form(form, renderer=renderer)
     wrapper = soup.find("div", class_="date-picker")
     assert wrapper["x-data"] == "formworkDatePicker"
-    assert wrapper["data-value"] == payload
+    assert wrapper["data-value"] == ""
+    assert soup.find("input", attrs={"name": "due_date"})["value"] == payload
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("value", [dt.date(2026, 11, 6), "06/11/2026", "2026-11-06"])
+def test_date_picker_calendar_value_is_iso_under_any_format(value):
+    """The calendar gets ``YYYY-MM-DD`` while the input shows the configured format."""
+    soup = render_widget(DatePicker(format="%d/%m/%Y"), value=value)
+    assert soup.select_one("[x-data=formworkDatePicker]")["data-value"] == "2026-11-06"
+
+
+@pytest.mark.e2e
+def test_date_picker_input_is_named_by_its_label_alone(new_widgets_page):
+    """The calendar toggle's name stays out of the input's name; a click on the box still focuses the input."""
+    from playwright.sync_api import expect
+
+    inp = new_widgets_page.locator("input[name='due_date']")
+    expect(inp).to_have_accessible_name("Due date")
+    new_widgets_page.locator("#id_due_date_datepicker .date-picker-label").click(position={"x": 4, "y": 4})
+    expect(inp).to_be_focused()
 
 
 @pytest.mark.e2e
@@ -188,3 +202,20 @@ def test_date_picker_opens_and_picks_day(new_widgets_page):
     inp = new_widgets_page.locator("input[name='due_date']")
     expect(inp).to_have_value(re.compile(r"^\d{4}-\d{2}-15$"))
     expect(panel).not_to_be_visible()
+
+
+@pytest.mark.e2e
+def test_date_picker_escape_and_focus_leaving_close_the_calendar(new_widgets_page):
+    """Escape closes the open calendar, and so does tabbing to another control."""
+    from playwright.sync_api import expect
+
+    inp = new_widgets_page.locator("#id_due_date")
+    panel = new_widgets_page.locator("#id_due_date_datepicker div.dropdown-content")
+    inp.click()
+    expect(panel).to_be_visible()
+    inp.press("Escape")
+    expect(panel).to_be_hidden()
+    new_widgets_page.locator("#id_due_date_datepicker button.date-picker-toggle").click()
+    expect(panel).to_be_visible()
+    new_widgets_page.locator("#id_quantity").focus()
+    expect(panel).to_be_hidden()

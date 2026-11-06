@@ -58,6 +58,7 @@ nav:
   - Reference:
       - Architecture: architecture.md
       - Forms: reference/forms.md
+      - Formsets: reference/formsets.md
       - Widgets: reference/widgets.md
       - Views: reference/views.md
       - Browser Support: reference/browser-support.md

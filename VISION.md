@@ -9,10 +9,10 @@ best of both MPA and SPA. Built 100% on htmx 4, DaisyUI 5, and Tailwind 4.
 
 1. **Django forms, but better.** A formwork form is a Django form: same fields,
    `clean()`, `is_valid()`, ModelForm `Meta`. Set `FORM_RENDERER` once and `{{ form }}`
-   just works. Almost never any manual wiring: rendering and functionality work like
-   normal Django forms, just better and more modern.
+   renders the styled markup and the widget behavior. A form needs almost no manual
+   wiring: it renders and validates like a normal Django form.
    - Layout (fieldsets, rows, tabs, sections) declared on the form class. Opinionated
-     styling out of the box with few explicit options; templates/CSS as the manual but
+     styling by default with few explicit options; templates/CSS as the manual but
      possible escape hatch.
    - Everything is a form: filters are GET-bound forms, wizard steps are forms, confirm
      dialogs are one-button forms, inline cell edits are bound fields (maybe just one),
@@ -21,7 +21,7 @@ best of both MPA and SPA. Built 100% on htmx 4, DaisyUI 5, and Tailwind 4.
      improvements), so edit and show never drift.
 
 2. **Nothing plain breaks.** Basic Django widgets and fields are styled automatically.
-   No plain Django forms usage may look bad, render wrong, or break in any way.
+   Plain Django forms usage must never look bad, render wrong, or break.
 
 3. **Styled by default, DaisyUI-native.** One design system, full DaisyUI support in
    every regard, theming through DaisyUI themes. Styling lives partly in global CSS and
@@ -32,7 +32,7 @@ best of both MPA and SPA. Built 100% on htmx 4, DaisyUI 5, and Tailwind 4.
      through the project's `FORM_RENDERER`, so shadowing `django/forms/widgets/*.html`
      leaks into Django admin and every third-party app, swapping markup out from under
      the JS those widgets rely on (see "the admin stays untouched" below). Built-in
-     widgets are improved with **global CSS only**. Widget templates are exclusively for
+     widgets are improved with global CSS only. Widget templates are exclusively for
      formwork's own widgets, which a developer opts into by setting the widget (point 4).
      Never an automatic swap of a built-in.
    - When a built-in needs more than CSS can give it (a leading magnifier on a search

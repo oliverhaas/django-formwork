@@ -73,6 +73,24 @@ class AsyncFormCleanForm(FormworkForm):
         return cleaned
 
 
+class SyncOrmCleanFieldForm(FormworkForm):
+    name = forms.CharField()
+
+    def clean_name(self):
+        if Region.objects.filter(name=self.cleaned_data["name"]).exists():
+            raise ValidationError("Taken")
+        return self.cleaned_data["name"]
+
+
+class SyncOrmCleanForm(FormworkForm):
+    name = forms.CharField()
+
+    def clean(self):
+        if Region.objects.filter(name=self.cleaned_data.get("name")).exists():
+            raise ValidationError("Taken")
+        return self.cleaned_data
+
+
 class BasicModelForm(FormworkModelForm):
     class Meta:
         model = BasicFormData
@@ -311,6 +329,16 @@ class CountingCleanForm(FormworkForm):
     async def clean_name(self):
         type(self).clean_calls += 1
         return self.cleaned_data["name"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("form_cls", [SyncOrmCleanFieldForm, SyncOrmCleanForm])
+async def test_sync_clean_methods_may_query_in_ais_valid(form_cls, monkeypatch):
+    monkeypatch.delenv("DJANGO_ALLOW_ASYNC_UNSAFE", raising=False)
+    await Region.objects.acreate(name="North")
+    form = form_cls(data={"name": "North"})
+    assert await form.ais_valid() is False
+    assert "Taken" in str(form.errors)
 
 
 @pytest.mark.asyncio

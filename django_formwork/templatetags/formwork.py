@@ -1,3 +1,5 @@
+import warnings
+
 from django import template
 from django.templatetags.static import static
 from django.utils.html import format_html
@@ -9,13 +11,16 @@ register = template.Library()
 
 @register.simple_tag
 def formwork_css() -> str:
-    """Output a ``<link>`` tag for the formwork bridge CSS.
+    """Deprecated, removed in 0.2.0: links ``formwork.css`` unbuilt, though it is Tailwind input.
 
-    Usage::
-
-        {% load formwork %}
-        {% formwork_css %}
+    Import ``formwork.css`` from the project's Tailwind entry point and link the built file instead.
     """
+    warnings.warn(
+        "{% formwork_css %} links formwork.css unbuilt, so its styles do not apply, and goes away in 0.2.0. "
+        "Import formwork.css from your Tailwind entry point and link the built CSS instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return format_html('<link rel="stylesheet" href="{}">', static("formwork/formwork.css"))
 
 

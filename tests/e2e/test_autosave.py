@@ -318,8 +318,9 @@ def test_picked_option_keeps_check_mark_after_autosave(autosave_dropdowns_page):
     with _morph(page):
         panel.locator('button[data-value="ldn"]').click()
 
-    expect(page.locator('#id_city_wrapper button[data-value="ldn"]')).to_have_attribute("aria-selected", "true")
-    expect(page.locator('#id_city_wrapper button[data-value="par"]')).to_have_attribute("aria-selected", "false")
+    city = page.locator("#id_city_wrapper li[role=option]")
+    expect(city.filter(has=page.locator('button[data-value="ldn"]'))).to_have_attribute("aria-selected", "true")
+    expect(city.filter(has=page.locator('button[data-value="par"]'))).to_have_attribute("aria-selected", "false")
 
 
 def test_open_dropdown_keeps_search_filter_through_autosave(autosave_dropdowns_page):
@@ -356,6 +357,22 @@ def test_pick_made_during_a_save_survives_the_older_response(autosave_dropdowns_
 
     expect(page.locator("#id_city_value")).to_have_value("par")
     expect(page.locator("summary#id_city span[x-text]")).to_have_text("Paris")
+
+
+def test_server_answer_to_the_pick_wins_over_the_pick(autosave_dropdowns_page):
+    page = autosave_dropdowns_page
+    page.route(
+        "**/autosave-dropdowns/",
+        lambda route: route.continue_(
+            post_data=route.request.post_data.replace('name="city"\r\n\r\nldn', 'name="city"\r\n\r\ntyo'),
+        ),
+    )
+
+    with _morph(page):
+        _open_city(page).locator('button[data-value="ldn"]').click()
+
+    expect(page.locator("#id_city_value")).to_have_value("tyo")
+    expect(page.locator("summary#id_city span[x-text]")).to_have_text("Tokyo")
 
 
 @pytest.mark.screenshot

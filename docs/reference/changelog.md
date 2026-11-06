@@ -1,90 +1,91 @@
 # Changelog
 
-## Unreleased
+## 0.1.0a3 (2026-11-06)
 
 ### Breaking changes
 
 - **Widget, search and setup rework.** Every project needs code changes for this
-  upgrade: rename the widgets, move server-side search onto the widget, add
+  upgrade. Rename the widgets, move server-side search onto the widget, add
   `"django.forms"` to `INSTALLED_APPS`, and load htmx's alpine-compat extension. If you
-  override formwork templates, copy them again from the new paths. The names in the older
-  entries of this section are the names before the rework.
-    - **Renamed widgets:** `SearchSelect` → `Select`, `MultiSelect` → `SelectMultiple`,
+  override formwork templates, copy them again from the new paths.
+    - Rename the widgets: `SearchSelect` → `Select`, `MultiSelect` → `SelectMultiple`,
       `ComboBox(multiple=True)` → `ComboBoxMultiple`, `Toggle` → `ToggleInput`,
       `PasswordReveal` → `PasswordInput` (the show button is on by default,
       `reveal=False` drops it), `InputNumber` → `StepperNumberInput`, `FileDropZone` →
-      `FileDropzoneInput`, `ImageDropZone` → `ImageDropzoneInput`. The floating-label
-      argument `floating_label=` → `floating=`. `widgets.Select` is the Alpine dropdown:
-      the floating native `Select` is gone, use `Select(floating=True)`. `ComboBox` takes
+      `FileDropzoneInput`, `ImageDropZone` → `ImageDropzoneInput`. `ComboBox` takes
       `ChoiceLabel` suggestions in place of its `icons=` and `descriptions=` dicts.
-    - **Renamed Alpine components:** `formworkSearchSelect` → `formworkSelect`,
-      `formworkMultiSelect` → `formworkSelectMultiple`, `formworkInputNumber` →
-      `formworkStepperNumber`, `formworkPasswordReveal` → `formworkPasswordInput`,
-      `formworkDropZone` → `formworkFileDropzone`, `formworkImageUpload` →
-      `formworkImageDropzone`. `OTPInput` renders one input with `length` slots and no
-      JavaScript, so `formworkOtpInput` is gone.
-    - **Renamed templates:** `django/forms/formwork.html` → `formwork/forms/div.html`,
+    - Rename the Alpine components: `formworkSearchSelect` → `formworkSelect` and
+      `formworkMultiSelect` → `formworkSelectMultiple`. `OTPInput` renders one input with
+      `length` slots and needs no JavaScript.
+    - Rename the templates: `django/forms/formwork.html` → `formwork/forms/div.html` and
       `django/forms/formwork_field.html` → `formwork/forms/field.html`. Each widget
-      template is named after its widget module (`select.html`, `select_multiple.html`,
-      `stepper_number.html`, `file_dropzone.html`, ...). The dropdown root classes are
-      `formwork-select` (was `search-select`), `formwork-select-multiple` (was
-      `multiselect`) and `formwork-combobox` (was `combobox`), so update CSS that
-      targets the old classes.
-    - **Renderer:** `FormworkRenderer` is a `TemplatesSetting` renderer, so a template in
-      your project overrides the formwork one. It needs `"django.forms"` in
+      template is named after its widget module: `search_select.html` → `select.html`,
+      `multi_select.html` → `select_multiple.html`, `input_number.html` →
+      `stepper_number.html`, `password_reveal.html` → `password_input.html`,
+      `drop_zone.html` → `file_dropzone.html` and `image_upload.html` →
+      `image_dropzone.html`. The dropdown root classes are `formwork-select` (was
+      `search-select`), `formwork-select-multiple` (was `multiselect`) and
+      `formwork-combobox` (was `combobox`), so update CSS that targets the old classes.
+    - `FormworkRenderer` is a `TemplatesSetting` renderer, so a template in your
+      project overrides the formwork one. It needs `"django.forms"` in
       `INSTALLED_APPS` and a `DjangoTemplates` backend that finds app templates. See
       [Installation](../getting-started/installation.md).
-    - **Server-side search:** a `Select`, `SelectMultiple` or `ComboBox` searches on the
+    - A `Select`, `SelectMultiple`, `ComboBox` or `ComboBoxMultiple` searches on the
       server when it gets `search_queryset`, a callable that takes the request and returns
       the rows. `search_fields` names the columns to match, and `search_decorator` (an
       auth decorator, or `None` for a public search) is required. A `FormworkForm` or
       `FormworkModelForm` class registers the search when Python creates it, and the app
       imports the `forms` module of every installed app at startup. The endpoint returns
-      20 rows, the dropdown adds a "Load more" button, and no `COUNT` query runs. `search_ranked=True` orders matches by quality on
-      PostgreSQL (pg_trgm) and raises `ImproperlyConfigured` on other databases.
-      `search_key` with `search_params` reuses one registered search for fields built in
-      `__init__`. `FormworkSearchView` is final, and an anonymous request for an unknown
-      key redirects to `LOGIN_URL`. See [Server-side search](views.md#server-side-search).
-    - **Scripts:** load htmx, then `dist/ext/hx-alpine-compat.js`, then
-      `{% formwork_js %}`, then Alpine with `defer`. Without alpine-compat a morph strips
-      the state that Alpine bindings wrote into the page. An `htmx.config.extensions`
-      whitelist must list `alpine-compat` and `formwork-morph`. A morph cannot open or
-      close a `<details>` or `<dialog>`, because `open` is in `htmx.config.morphIgnore`.
-    - **Removed:** the Jinja2 support (`FormworkJinja2Renderer`, `FormworkJinja2Form`,
+      20 rows, the dropdown adds a "Load more" button, and no `COUNT` query runs.
+      `search_ranked=True` orders matches by quality on PostgreSQL (pg_trgm) and raises
+      `ImproperlyConfigured` on other databases. `search_key` with `search_params` reuses
+      one registered search for fields built in `__init__`. `FormworkSearchView` is
+      final, and an anonymous request for an unknown key redirects to `LOGIN_URL`. See
+      [Server-side search](views.md#server-side-search).
+    - Load htmx, then `dist/ext/hx-alpine-compat.min.js`, then `{% formwork_js %}`,
+      then Alpine with `defer`. Without alpine-compat a morph strips the state that
+      Alpine bindings wrote into the page. An `htmx.config.extensions` whitelist must
+      list `alpine-compat` and `formwork-morph`, plus `formwork-sections` on a page with
+      section forms. A morph cannot open or close a `<details>` or `<dialog>`, because
+      `open` is in `htmx.config.morphIgnore`.
+    - The Jinja2 support is removed (`FormworkJinja2Renderer`, `FormworkJinja2Form`,
       `FormworkJinja2ModelForm`, `formwork_jinja2_environment` and the `jinja2/`
-      templates), the `search_choices_<field>` form methods, `FormworkAutoSearchView`
-      and the `widget_type` tokens, and `FormworkModelChoiceField` and
-      `FormworkModelMultipleChoiceField` with their `icon_from_instance` and
-      `description_from_instance` arguments. Return a `ChoiceLabel` from a plain
-      `ModelChoiceField.label_from_instance()` instead. `ChoiceLabel` lives in
-      `django_formwork.widgets.select` and stays importable from `django_formwork` and
-      `django_formwork.widgets`.
-    - **New widgets:** `SuffixNumberInput`, `DateInput`, `DateRangeInput` with
-      `DateRangeField` and `DateRange` (in `django_formwork.fields`), `Display` for
-      read-only values, `CardRadioSelect`, `CardCheckboxSelectMultiple`,
+      templates). So are the `search_choices_<field>` form methods,
+      `FormworkAutoSearchView` and the `widget_type` tokens, and
+      `FormworkModelChoiceField`, `FormworkModelMultipleChoiceField` and
+      `FormworkModelChoiceIterator` with the `icon_from_instance` and
+      `description_from_instance` arguments of the fields. Return a
+      `ChoiceLabel` from a plain `ModelChoiceField.label_from_instance()` instead.
+      `ChoiceLabel` lives in `django_formwork.widgets.select`, and you can import it from
+      `django_formwork` and `django_formwork.widgets`.
+    - The new widgets are `SuffixNumberInput`, `DateInput`, `DateRangeInput` with
+      `DateRangeField` and `DateRange` (in `django_formwork.fields`, and importable from
+      `django_formwork`), `Display` for read-only values, `CardRadioSelect`,
+      `CardCheckboxSelectMultiple`,
       `CheckboxInput(text=...)`, `CheckboxSelectMultiple(columns=...)`,
       `ComboBoxMultiple` and `PatternHintMixin`. `TextInput` takes `input_type=`,
       `Textarea` takes `floating=`, and `SearchInput` takes `show_spinner`, `show_clear`
       and `filter_items`. `Select` and `SelectMultiple` take `allow_clear` and
       `floating`. See [Widgets](widgets.md).
-    - **Section forms:** `section_forms()` and the `{% formwork_section %}` tag let
-      several forms on one page autosave their own fields of one row. Load
-      `{% formwork_sections_js %}` after htmx on those pages, and give each form
+    - `section_forms()` and the `{% formwork_section %}` tag let several forms on one
+      page autosave their own fields of one row. Load `{% formwork_sections_js %}` after
+      htmx on those pages, and give each form
       `hx-sync="closest [data-section-forms]:queue all"`. See
       [Section forms](forms.md#section-forms).
-    - **`Meta.mandatory`** marks a field that a save accepts empty but a later step
-      needs. Its label gets the red `*` and its widget gets `aria-required`, as on a
-      required field.
-    - **Translations:** every string formwork shows goes through Django's translation
-      functions, plurals included. Formwork ships no catalog, so run `makemessages` in
-      your project. The JavaScript reads its texts from `data-*` attributes and needs no
-      JavaScript catalog. The CSS takes the `[more]`/`[less]` label of the help-text
-      toggle from the `data-more` and `data-less` attributes of its `<summary>`, so an
-      override of `formwork/forms/field.html` must keep them.
-    - **What looks different:** `error_display = "auto"` is the default, so a field with
-      help text shows its error inline and a field without help text shows it in a
-      tooltip; set `"inline"` or `"tooltip"` in `Meta` or pass `error_display=` to keep
-      one style. `ToggleInput` puts its label beside the switch, dimmed while off.
+    - `Meta.mandatory` marks a field that a save accepts empty but a later step needs.
+      Its label gets the red `*` and its widget gets `aria-required`, as on a required
+      field. A string in place of a list, or a name that is not a field of the form,
+      raises `ImproperlyConfigured` when Python creates the form class.
+    - Every string formwork shows goes through Django's translation functions, plurals
+      included. Formwork ships no catalog, so run `makemessages` in your project. The
+      JavaScript reads its texts from `data-*` attributes and needs no JavaScript
+      catalog. The CSS takes the `[more]`/`[less]` label of the help-text toggle from the
+      `data-more` and `data-less` attributes of its `<summary>`, so an override of
+      `formwork/forms/field.html` must keep them.
+    - Some widgets look different. `error_display = "auto"` is the default, so a field
+      with help text shows its error inline and a field without help text shows it in a
+      tooltip. To keep one style, set `"inline"` or `"tooltip"` in `Meta` or pass
+      `error_display=`. `ToggleInput` puts its label beside the switch, dimmed while off.
       Checkbox and radio groups render as a plain stacked list, each label as wide as its
       text. A disabled dropdown trigger is greyed out. The open panel is at most 288px
       high and shrinks to stay inside the viewport, and the caret points up while it is
@@ -93,198 +94,287 @@
       while the password is visible. `ImageDropzoneInput` shows the field label and an
       "Upload Image" button. `OTPInput` is one `<input>` drawn as digit slots, in place
       of one input per digit.
-    - **What looks the same:** required fields keep the red `*` and optional fields get
-      no marker. The dropdowns keep their caret, compact rows and "Select…" placeholder,
-      and the closed `SelectMultiple` keeps the option icons.
+    - Required fields keep the red `*` and optional fields get no marker. The dropdowns
+      keep their caret, compact rows and "Select…" placeholder, and the closed
+      `SelectMultiple` keeps the option icons.
 
 - **`django_formwork.widgets.combobox` renamed to `django_formwork.widgets.combo_box`.**
-  Importing `ComboBox` from `django_formwork.widgets` is unaffected. The widget-type
-  tokens (`"multiselect"`, `"combobox"`), `SearchRegistration.widget_type`,
-  `FormworkSearchView.widget_type` and the `MULTISELECT_TEMPLATE` / `COMBOBOX_TEMPLATE`
-  attributes are gone with the rework above, and the dropdown root classes changed with it.
+  Importing `ComboBox` from `django_formwork.widgets` is unaffected. The rework removes
+  the widget-type tokens (`"search_select"`, `"multiselect"`, `"combobox"`),
+  `SearchRegistration.widget_type`, `FormworkSearchView.widget_type` and the
+  `SEARCH_SELECT_TEMPLATE`, `MULTISELECT_TEMPLATE` and `COMBOBOX_TEMPLATE` attributes,
+  and it changes the dropdown root classes.
 - **The 0.1.0a2 search registry is gone.** `django_formwork.registry`, `make_key`,
   `make_choices_key`, `register`, `get_registration`, `get_registry` and
   `SearchRegistration` are removed. The public surface is the `search_queryset` argument
   of the widgets, the `django_formwork.search` module and `include("django_formwork.urls")`
   (see the rework above).
-- **Help text is escaped.** A plain `help_text` string with HTML tags now shows the tags
-  as text, where formwork and Django's own templates rendered it as HTML. Build help text
-  that needs markup with `format_html()` or `mark_safe()`. A help text built from user
-  data can no longer inject markup. See [Forms](forms.md#help-text).
+- **Help text is escaped.** A plain `help_text` string with HTML tags shows the tags as
+  text. Formwork 0.1.0a2 rendered it as HTML, and Django's own templates still do. Build
+  help text that needs markup with `format_html()` or `mark_safe()`. A help text built
+  from user data cannot inject markup. See [Forms](forms.md#help-text).
 
 ### Added
 
 - **Editable tables.** `as_row()` renders a `FormworkForm`/`FormworkModelForm` as a
   table `<tbody>`, and `as_rows()` renders a formset as one editable `<table>`. Pair
   them with the new `FormworkRowSaveMixin` view mixin for per-row htmx autosave: each
-  row posts only its own changes (keyed on the posted pk) and re-renders in place.
+  row posts only its own changes (keyed on the posted pk) and re-renders in place. The
+  view needs `queryset` or `get_queryset(request)` with the rows the user can change, and
+  a pk outside it gets a 404. The form gets `request.FILES`, and the view takes URL
+  kwargs. Override the markup at `formwork/tables/row.html` and
+  `formwork/tables/table.html`.
+- **Model formsets that check uniqueness in one query per check.**
+  `formwork_modelformset_factory` and `formwork_inlineformset_factory` build formsets
+  whose `unique`, `unique_together` and `unique_for_date` checks against the database run
+  once for all rows, not once per row. The errors, their messages and their placement
+  match Django's. The forms they build are exempt from `FORMWORK_FORCE_ASYNC`: in an
+  async view, wrap `formset.is_valid()` and `save()` in `sync_to_async`. See
+  [Formsets](formsets.md).
+- **System checks for the setup.** `manage.py check` reports `django_formwork.E001` when
+  a form declares a server-side search but the URLconf does not include
+  `django_formwork.urls`, and `django_formwork.E002` when `"django.forms"` is missing
+  from `INSTALLED_APPS`. Both mistakes used to show up only on the first search or
+  render.
+- **Django 6.1 support.** CI runs the suite on Django 6.0 and 6.1.
 - **Native `<select multiple>` keeps Django's rendering.** A plain
   `forms.SelectMultiple` rendered through the formwork renderer stays a native
   `<select multiple>`. Use `widgets.SelectMultiple` for the dropdown.
 - **`error_display` Meta option for field error rendering.** `FormworkForm` and
   `FormworkModelForm` accept `error_display = "auto"` (default), `"inline"` or
-  `"tooltip"`. `"inline"` renders the error below the widget with the same
-  icon-plus-toggle pattern as help text, in error color; `"tooltip"` uses the DaisyUI
-  tooltip; `"auto"` picks inline when the field has help text and the tooltip otherwise.
-  Collapsed shows the truncated error only; the `[more]` toggle expands both the full
-  error and the help text together. See [Forms](forms.md#error_display).
+  `"tooltip"`. `"inline"` renders the error below the widget in the error color, with
+  the icon and the toggle of the help text. `"tooltip"` uses the DaisyUI tooltip, and
+  `"auto"` picks inline when the field has help text and the tooltip otherwise. The
+  collapsed line shows only the truncated error, and the `[more]` toggle expands the
+  full error and the help text. Another value raises `ImproperlyConfigured` when Python
+  creates the form class. See [Forms](forms.md#error_display).
 - **`ImageDropzoneInput` shows the stored image.** The widget previews the field's
   stored file, or `preview_url` when set. On an optional field its remove button posts
   `clear_<name>`, so the field cleans to `False` and a model form empties it, as with
   `ClearableFileInput`. After a remove the drop area comes back, and a file picked there
   replaces the stored one. See [Widgets](widgets.md#imagedropzoneinput).
-- **Uniform top-level import surface.** Every documented public name now resolves lazily
-  from the package root: form and formset base classes and factories, fields, view base
-  classes, renderers, the async mixins, and `FormworkModel` (whose documented
-  `from django_formwork import FormworkModel` previously raised `ImportError`). Imports
-  stay lazy via a module-level `__getattr__`, so `import django_formwork` still works
-  without configured settings or a ready app registry. Submodule imports keep working;
-  the docs now show top-level imports as canonical.
+- **Uniform top-level import surface.** The form and formset base classes and factories,
+  `section_forms`, `DateRangeField` and `DateRange`, `ChoiceLabel`, `FormworkBoundField`,
+  `FormworkRenderer`, `FormworkSearchView`, `FormworkValidateView`,
+  `FormworkRowSaveMixin`, `FormworkModel` and the async mixins import from
+  `django_formwork`. The widgets stay in `django_formwork.widgets`. A module-level
+  `__getattr__` imports each name on first access, so `import django_formwork` works
+  without configured settings or a ready app registry. Submodule imports keep working,
+  and the docs show the top-level imports.
+- **`validate_dirty_only` skips validation of unchanged fields.** Set it in `Meta` or pass
+  it to the form. A field the user did not change skips its validators, its
+  `clean_<field>()` method and the model checks, and keeps its stored value. On a
+  `FormworkModelForm` the model needs `get_dirty_fields()`: inherit the new abstract
+  `FormworkModel`, or mix in `filthyfields.DirtyFieldsMixin`. The package adds a
+  dependency on `django-filthyfields`. A model form whose model lacks
+  `get_dirty_fields()` raises `ImproperlyConfigured` when Python creates the form class.
+  See [Forms](forms.md#validate_dirty_only).
 
 ### Security
 
-- **JS-escape every value interpolated into an Alpine `x-data` / expression context.** Alpine
-  evaluates the HTML-entity-decoded attribute, so Django's autoescaping alone does not defend.
-  Fixed the unescaped interpolations in `date_picker.html` (XSS on validation-error redisplay),
-  `otp_input.html` and `input_number.html` (`InputNumber` now
-  interpolates the value as a quoted, JS-escaped string instead of a raw expression), and in the
-  `SEARCH_SELECT_TEMPLATE` / `COMBOBOX_TEMPLATE` htmx response fragments (stored XSS when
-  `to_field_name` or labels contain user-editable data).
-- **Search registry keys now include the form class and field name** (mirroring choices-backed
-  keys). Previously two forms searching the same model + `search_fields` shared one registration
-  last-writer-wins, so a public form could silently drop another form's `search_decorator` or
-  replace its scoped queryset with an unfiltered one. Each key is derived from the form's
-  module, class and field name.
-- **The search endpoint renders the rows with the template of the registered widget** and
-  takes no client-supplied `?type=` parameter. Widget templates no longer send `type` with
-  search requests, and the `FormworkSearchView.VALID_WIDGET_TYPES` attribute was removed.
-- **`FormworkValidateView` hardening:** new `validate_decorator` hook (the same access-control
-  pattern the search side exposes via `search_decorator`) and a `MAX_TEXT_LENGTH` cap (default
-  `50_000` characters, mirroring `MAX_QUERY_LENGTH`) that truncates POSTed text before
-  validation.
+- **No template value reaches an Alpine expression.** Alpine evaluates the attribute after
+  the browser decodes its HTML entities, so Django's autoescaping does not protect a value
+  inside `x-data` or another expression. In 0.1.0a2 a field value could run as script in
+  `date_picker.html` (when a form with a validation error rendered again), `otp_input.html`
+  and `input_number.html`, and a user-editable label or `to_field_name` value could do the
+  same in the `SEARCH_SELECT_TEMPLATE` and `COMBOBOX_TEMPLATE` search responses. The
+  templates pass values through autoescaped `data-*` attributes, and the search rows
+  render through the `option_list` partial of each widget template.
+- **Each form field gets its own search registration.** In 0.1.0a2 two forms that searched
+  the same model with the same `search_fields` got one registry key, and the form that
+  registered last won. A public form could drop the `search_decorator` of another form or
+  replace its scoped queryset with an unfiltered one. The key comes from the module,
+  the class and the field name of the form, and from where `search_queryset` and
+  `search_decorator` are defined, so forms that a factory builds over one model keep
+  their own search. `search_queryset` must be a callable that filters through the
+  request it gets. A second form of the same name whose `search_queryset` closes over
+  other values raises `ImproperlyConfigured`, and so does a `search_queryset` that is not
+  callable (the message names the field).
+- **The search endpoint renders only formwork's own row templates.** The `widget` query
+  parameter must be `select`, `select_multiple` or `combo_box`, and the endpoint returns
+  404 for any other value. The `type` parameter and the
+  `FormworkSearchView.VALID_WIDGET_TYPES` attribute are removed.
+- **`FormworkValidateView` takes a `validate_decorator` and caps the text length.**
+  `validate_decorator` wraps the view, as `search_decorator` does for the search view.
+  `MAX_TEXT_LENGTH` (default `50_000` characters) truncates the posted text before
+  validation, as `MAX_QUERY_LENGTH` does for a search query.
 
 ### Changed
 
-- **Targets the stable htmx 4.0.0 release.** The installation guide, the full example, and
-  the e2e harness load `htmx.org@4.0.0` (was `4.0.0-beta3`). If you load htmx yourself,
+- **Targets the stable htmx 4.0.1 release.** The installation guide, the full example, and
+  the e2e harness load `htmx.org@4.0.1` (was `4.0.0-beta3`). If you load htmx yourself,
   bump your pin; formwork's templates and `formwork-core.js` need no changes. npm still
-  tags htmx 2 as `latest`, so pin `@4.0.0` explicitly instead of loading an unversioned
+  tags htmx 2 as `latest`, so pin `@4.0.1` explicitly instead of loading an unversioned
   `htmx.org` URL.
-- **`DatePicker`, `OTPInput`, and `InputMask` now bind to shipped Alpine.data components**
-  (`formworkDatePicker`, `formworkOtpInput`, `formworkInputMask` in
-  `formwork/widgets/date_picker.js`, `otp_input.js`, and `input_mask.js`) instead of inlining
-  their behavior in the templates' `x-data` attribute. Configuration rides in autoescaped
-  `data-*` attributes read via `dataset` at init: `data-value` (DatePicker), `data-digits`
-  (OTPInput, a JSON array exposed as `widget.initial_digits_json` in the template context),
-  and `data-mask` (InputMask). The three widget classes gained a `Media` declaration, so the
-  usual `{% formwork_core_js %}` + `{{ form.media }}` pair loads the new modules automatically.
-  If you override these widget templates, update your copies: `x-data` now holds only the
-  component name, and the `escapejs` filters were dropped alongside the JS-string literals
-  they protected (values no longer pass through an executable context, so autoescaping alone
-  is the correct and sufficient defense; there is no security regression).
-- **`InputNumber`, `PasswordReveal`, and `ValidatedTextarea` now bind to shipped Alpine.data
-  components** (`formworkInputNumber`, `formworkPasswordReveal`, `formworkValidatedTextarea`
-  in `formwork/widgets/input_number.js`, `password_reveal.js`, and `validated_textarea.js`)
-  instead of inlining their behavior in the templates' `x-data` attribute. Configuration
-  rides in autoescaped `data-*` attributes read via `dataset` at init: `data-value`,
-  `data-min`, `data-max`, and `data-step` (InputNumber) and `data-has-errors`
-  (ValidatedTextarea); PasswordReveal is config-free. The three widget classes gained a
-  `Media` declaration, so the usual `{% formwork_core_js %}` + `{{ form.media }}` pair loads
-  the new modules automatically. If you override these widget templates, update your copies:
-  `x-data` now holds only the component name, and InputNumber's `escapejs` filter was dropped
-  alongside the JS-string literal it protected (no security regression, see the entry above).
-- **`FileDropZone` and `ImageDropZone` now bind to shipped Alpine.data components**
-  (`formworkDropZone`, `formworkImageUpload` in `formwork/widgets/drop_zone.js` and
-  `image_upload.js`; the JS files follow the template basenames) instead of inlining their
-  behavior in the templates' `x-data` attribute. Configuration rides in an autoescaped
-  `data-max-size` attribute read via `dataset` at init (`0` means no client-side size
-  check). The two widget classes gained a `Media` declaration, so the usual
-  `{% formwork_core_js %}` + `{{ form.media }}` pair loads the new modules automatically.
-  If you override the `drop_zone.html` / `image_upload.html` widget templates, update your
-  copies: `x-data` now holds only the component name. The client-side accept/max-size
-  checks are unchanged and remain presentational only; server-side enforcement stays a
-  separate roadmap item. This completes the extraction: no widget template carries an
-  inline `x-data` object literal anymore, and the `formwork.js`
-  aggregator imports every widget module, so `{% formwork_js %}` and bundler
-  (`import "django-formwork/formwork.js"`) setups pick up the new files without changes.
-- **`manage.py formwork install` now writes the generated icon CSS into your project's static
-  directory** instead of into the installed `django_formwork` package, which failed on
-  read-only installs (containers, system-wide pip, Nix). The file lands at
-  `<first STATICFILES_DIRS entry>/iconx/icons.css`, falling back to
-  `BASE_DIR/static/iconx/icons.css` when `STATICFILES_DIRS` is not set; a new `--output DIR`
-  option overrides the directory. Consequently **`formwork.css` no longer imports
-  `../iconx/icons.css`**: add `@import "./static/iconx/icons.css" layer(components);`
-  (adjusted to your static dir) next to the formwork import in your Tailwind input. The
-  layer lets `size-*` utilities override the 1em icon size. The installation guide and the
-  `full` example show the updated recipe.
-- **Rewrote the installation guide so a fresh install actually works.** It now documents the
-  previously missing required steps: `django_iconx` in `INSTALLED_APPS`,
-  `manage.py formwork install` (including the new `--output` option), importing only
-  `formwork.css` (not Tailwind/DaisyUI a second time) plus the generated icons CSS.
-  `formwork.css` registers the package templates, widgets and scripts with `@source`
-  itself, so your Tailwind input lists only your own sources.
-- **`search_decorator` is typed `Callable | None`** on `SearchSelect`, `MultiSelect`, and
-  `ComboBox` (was `Callable | object`). Runtime behavior is unchanged: omitting the argument
-  still raises `ImproperlyConfigured` when server-side search is registered.
-- **Help text now renders as a single truncated line with a leading info icon** instead of
-  wrapping across multiple lines. When the text overflows, a `[more]`/`[less]` toggle
-  appears at the end of the line to expand or collapse it. This changes the DOM inside the
-  help-text `<p class="label">` in `formwork_field.html`: if you
-  override this template, the help text now lives in a nested `<span>` alongside the icon
-  and toggle button rather than directly in the `<p>`.
+- **`{% formwork_css %}` is deprecated and goes away in 0.2.0.** The tag links
+  `formwork.css` as it ships, but the file is Tailwind input, so the browser applies none
+  of its styles. Import `formwork.css` from your Tailwind input and link the built CSS.
+  The tag raises a `DeprecationWarning`.
+- **`django_formwork.FormworkChoiceLabel` from 0.1.0a2 still imports.** It resolves to
+  `ChoiceLabel` with a `DeprecationWarning` and goes away in 0.2.0. Use `ChoiceLabel`.
+- **`DatePicker` and `InputMask` bind to shipped Alpine.data components.** If you override
+  their widget templates, copy them again: `x-data` holds only the component name. The
+  components are `formworkDatePicker` and `formworkInputMask` in
+  `formwork/widgets/date_picker.js` and `input_mask.js`. They read their configuration from
+  autoescaped `data-*` attributes: `data-value` (`DatePicker`) and `data-mask`
+  (`InputMask`). Each widget class declares the module in its `Media`, so
+  `{% formwork_core_js %}` with `{{ form.media }}` loads it. The templates drop their
+  `escapejs` filters, because no value passes through a JavaScript expression any more.
+  `OTPInput` needs no JavaScript.
+- **`StepperNumberInput`, `PasswordInput` and `ValidatedTextarea` bind to shipped
+  Alpine.data components.** If you override their widget templates, copy them again:
+  `x-data` holds only the component name. The components are `formworkStepperNumber`,
+  `formworkPasswordInput` and `formworkValidatedTextarea` in
+  `formwork/widgets/stepper_number.js`, `password_input.js` and `validated_textarea.js`.
+  `StepperNumberInput` reads `data-min` and `data-integer` and takes `max` and `step` from
+  its `<input>`. `ValidatedTextarea` reads `data-has-errors`, and `PasswordInput` takes no
+  configuration. Each widget class declares its module in `Media`.
+- **`FileDropzoneInput` and `ImageDropzoneInput` bind to shipped Alpine.data components.**
+  If you override `file_dropzone.html` or `image_dropzone.html`, copy them again: `x-data`
+  holds only the component name. The components are `formworkFileDropzone` and
+  `formworkImageDropzone` in `formwork/widgets/file_dropzone.js` and `image_dropzone.js`.
+  They read the size limit from `data-max-size`, and the template leaves the attribute out
+  when the widget has no limit. Each widget class declares its module in `Media`. The
+  server does not repeat the type and size checks of the browser, so validate the upload
+  in the form. No widget template has an `x-data` object literal, and `formwork.js`
+  imports every widget module, so `{% formwork_js %}` and a bundler import of
+  `django_formwork/static/formwork/formwork.js` load the new files.
+- **`manage.py formwork install` writes the generated icon CSS into your project's static
+  directory.** In 0.1.0a2 it wrote into the installed `django_formwork` package, which
+  fails on a read-only install (containers, system-wide pip, Nix). The file lands at
+  `<first STATICFILES_DIRS entry>/iconx/icons.css`, or at `BASE_DIR/static/iconx/icons.css`
+  when `STATICFILES_DIRS` is not set. The new `--output DIR` option sets the directory.
+  `formwork.css` does not import `../iconx/icons.css` any more, so add
+  `@import "./static/iconx/icons.css" layer(components);` (with your static directory)
+  next to the formwork import in your Tailwind input. The layer lets the `size-*`
+  utilities override the 1em icon size. The installation guide and the `full` example
+  show the recipe.
+- **The installation guide lists every required step.** These are `django_iconx` in
+  `INSTALLED_APPS`, `manage.py formwork install` with its `--output` option, and a
+  Tailwind input that imports `formwork.css` and the generated icon CSS, without a second
+  import of Tailwind or DaisyUI. `formwork.css` registers the package templates, widgets
+  and scripts with `@source`, so your Tailwind input lists only your own sources.
+- **A type checker accepts only a callable or `None` for `search_decorator`** on `Select`,
+  `SelectMultiple`, `ComboBox` and `ComboBoxMultiple` (was `Callable | object`). Runtime
+  behavior is unchanged: a form with a `search_queryset` widget and no `search_decorator`
+  raises `ImproperlyConfigured` when Python creates the form class.
+- **Help text renders as one truncated line with a leading info icon.** When the text
+  overflows, a `[more]`/`[less]` toggle at the end of the line expands or collapses it.
+  If you override `formwork/forms/field.html`, copy it again: the help text sits in a
+  `<details class="formwork-disclosure">`, and its `<summary>` carries the `data-more` and
+  `data-less` labels.
 
 ### Fixed
 
 - **`ValidatedTextarea` posts only its text to the validate endpoint.** htmx 4 has no
   `hx-params`, so each check while typing posted every field of the enclosing form,
-  with any files picked in it. It now posts `text`, `field_name` and `errors_id` only.
+  with any files picked in it. It posts `text`, `field_name` and `errors_id` only.
 - **Screen readers name the `FileDropzoneInput` by its field label.** The keyboard
   focus went to a drop area named only "Choose files", while the field label, help text
-  and error state sat on a hidden file input. The file input now takes the focus, and
-  the drop area shows the focus ring.
-- **Dropdowns close on any click outside.** `SearchSelect` and `MultiSelect` dismiss
-  when a click lands anywhere outside the open panel, including another dropdown's
-  trigger. Previously the top-layer popover stayed open, so opening a second dropdown
-  left both showing.
-- **Dropdown placeholder stays muted on focus.** The `MultiSelect` / `SearchSelect`
-  "Select…" placeholder no longer brightens to body-text color when the trigger is
-  focused.
+  and error state sat on a hidden file input. The file input takes the focus, and the
+  drop area shows the focus ring.
+- **Dropdowns close on any click outside.** `Select` and `SelectMultiple` close when a
+  click lands anywhere outside the open panel, including the trigger of another dropdown,
+  so opening a second dropdown closes the first.
+- **The dropdown placeholder stays muted on focus.** The "Select…" placeholder of
+  `Select` and `SelectMultiple` keeps its muted color when the trigger has focus.
 - **Dropdown option rows invert on press, and the closed trigger keeps its border.**
-  Pressing an option now gives active-state feedback, and the trigger retains its
-  border while the panel is open.
-- **Dropdown widgets no longer drop Django's `aria-describedby`.** `SearchSelect` and
-  `MultiSelect` render it on the `<summary>` trigger and `ComboBox` on the combobox input,
-  so assistive tech now hears the help text and error message that
-  Django 6 auto-wires, not just `aria-invalid`.
-- **Drop-zone rejection feedback is announced.** The client-side error `<p>` in
-  `FileDropZone` and `ImageDropZone` has `role="alert"`, so "file(s) too
-  large" / "wrong type" feedback reaches screen readers.
-- **`InputNumber` renders empty for an unbound/`None` value** instead of `0`, and the
-  stepper's `inc()`/`dec()` round to the step's decimal precision (stepping `0.2` by `0.1`
-  yields `0.3`, not `0.30000000000000004`).
-- **`FormworkValidateView` no longer emits a stray empty `<mark>`** when an error span lies
-  entirely outside the submitted text (spans clamped to nothing are now dropped).
+  A pressed option shows its active state, and the trigger keeps its border while the
+  panel is open.
+- **Dropdown widgets keep Django's `aria-describedby`.** `Select` and `SelectMultiple`
+  render it on the `<summary>` trigger and `ComboBox` on the combobox input, so a screen
+  reader reads the help text and the error message that Django 6 links to the field, in
+  addition to `aria-invalid`.
+- **Screen readers announce a rejected drop.** The client-side error `<p>` in
+  `FileDropzoneInput` and `ImageDropzoneInput` has `role="alert"`, so a screen reader
+  reads the "too large" and "wrong type" messages.
+- **`StepperNumberInput` renders empty for an unbound or `None` value** in place of `0`.
+  The buttons round to the decimals of the step, so stepping `0.2` by `0.1` gives `0.3`,
+  not `0.30000000000000004`.
+- **`FormworkValidateView` emits no empty `<mark>`** when an error span lies entirely
+  outside the submitted text. The view drops a span that clamps to nothing.
+- **`FormworkValidateView` works behind a URL with kwargs.** A validate view routed as
+  `validate/<field>/` raised a `TypeError` on every post. The URL kwargs reach the view
+  as `self.kwargs`.
+- **`ais_valid()` runs a sync `clean_<field>()` or `clean()` that queries the
+  database.** Such a method raised `SynchronousOnlyOperation`, because `ais_valid()`
+  called it inside the event loop. Sync methods run in a worker thread, and async ones
+  are still awaited.
+- **Your own `<details class="dropdown">` keeps its behavior.** `formwork.css` laid a
+  full-page click overlay over every open DaisyUI `details.dropdown` and removed the
+  focus ring of every input inside a `.dropdown-content`. Both rules apply only to the
+  formwork `Select` and `SelectMultiple` now. A project dropdown that relied on the
+  overlay to close on an outside click needs its own handler, for example
+  `@click.outside="$el.open = false"` with Alpine.
+- **`InputMask` keeps its text through a morph.** A morph emptied the visible text of
+  every `InputMask` without focus. Backspace after a literal removes the character
+  before it, typing in the middle shifts the rest, and a `+1` mask no longer reads its
+  own `1` as a typed digit.
+- **Typing fast sends the last keystrokes.** Text typed into the search box of a
+  `Select`, into a `ComboBox` or into a `ValidatedTextarea` while a request was pending
+  never reached the server, so the list showed the results of an older query. The newest
+  request now waits in a queue and runs after the pending one.
+- **A `Select` or `SelectMultiple` takes the server's answer to a pick.** After a pick
+  the widget turned away every morph whose value differed from the pick, so a server
+  that changed or reset the value was ignored. Only the answer to a request sent before
+  the latest pick is turned away now.
+- **Escape closes only the dropdown.** Escape in an open `Select`, `SelectMultiple`,
+  `ComboBox` or `DatePicker` panel inside a `<dialog>` closed the dialog too. It closes
+  the panel and puts the focus back on the trigger. Moving the focus to another control
+  closes the panel.
+- **Screen readers announce the picked and the highlighted option.** `aria-selected` sits
+  on the option row, and the search box of a `Select` and the `ComboBox` input point at
+  the highlighted row with `aria-activedescendant`. A `Select` with its own `id` in
+  `attrs` is named by its label and its value; it pointed `aria-labelledby` at an id no
+  element had.
+- **Labels name the `DatePicker` and the floating `PasswordInput` alone.** Screen readers
+  read "Due date Toggle calendar" and "Password Show password", because the toggle
+  button sat inside the label.
+- **A `Select` keeps the attrs you pass.** `data-*`, `hx-*`, `autofocus`, `title` and
+  other attrs were dropped. `data-*` and `hx-*` go on the hidden input that holds the
+  value and fires `change`; the rest go on the trigger.
+- **A `SelectMultiple` with one malformed past-page key keeps its other selections.**
+  The bad key hid every selection past the first page. A `Select` no longer posts a value that no option holds behind the placeholder, so an
+  optional field can be saved again.
+- **A `Select` on a `ModelChoiceField` without a blank choice runs one query.** Django's
+  required-attribute check ran the queryset a second time.
+- **`TextInput(attrs={"type": "email"})` renders `type="email"`.** The widget and
+  subclasses that set `input_type` rendered `type="text"`.
+- **`ValidatedTextarea` keeps a leading blank line.** The value lost it on every render,
+  and autosave posted the shorter text.
+- **`DatePicker(format="%d/%m/%Y")` opens the calendar on the stored date.** It opened on
+  the current month with no day picked.
+- **The `StepperNumberInput` buttons leave a readonly value alone**, and a decimal `min`
+  works under a locale with a decimal comma.
+- **`Rating` can go back to unrated.** The clear radio never rendered checked and stayed
+  enabled on a disabled field. The stars get `required`, `aria-invalid`, `aria-required`
+  and a caller class.
+- **`SuffixNumberInput` keeps a caller `style`.** The prefix padding replaced it.
+- **`ComboBox` sends the typed text as `q` only.** The request also carried it under the
+  field name, so a field named like a search param broke the search. A `(value, label)`
+  pair in the suggestions raises `ImproperlyConfigured`; it rendered as a group with one
+  suggestion per letter.
 
 ### Removed
 
 - **`PhoneInput` widget.** Bundling a country dial-code table (with flag emoji) and a bespoke
   prefix picker put application data in the framework, and it emitted a non-normalized
   `"+1 5551234"` string with no validation. Real phone handling belongs to a dedicated library
-  such as `django-phonenumber-field`. The `full` example now ships a local `PhoneInput` that
-  shows how a project builds one. Removing it also let the bundled country/dial-code dataset
-  (`django_formwork/data.py`) be deleted.
+  such as `django-phonenumber-field`. The `full` example has a local `PhoneInput` that
+  shows how a project builds one. The country and dial-code dataset
+  (`django_formwork/data.py`) is removed with it.
 - **`CountryInput` widget and `country_choices()`.** The country selector was a thin wrapper
-  over `SearchSelect` pre-loaded with an ISO 3166-1 list, and it never validated (choices sat
-  on the widget, not the field, so every submitted value was rejected). Country lists are
-  application data, not framework data: build a `forms.ChoiceField(choices=...,
-  widget=SearchSelect())` from your own list (or a package like `django-countries`). The
-  `full` example shows the pattern.
-- **The dead `AsyncModelFormMixin._apost_clean` override.** It was shadowed by the dirty-only
-  model form mixin in the MRO of `FormworkModelForm` and never
-  called. Anyone composing `AsyncModelFormMixin` directly with a plain `ModelForm`
-  (unsupported) must supply their own `_apost_clean`.
+  over `SearchSelect` with an ISO 3166-1 list, and it never validated: the choices sat on
+  the widget, not the field, so the form rejected every submitted value. Country lists are
+  application data. Build a `forms.ChoiceField(choices=..., widget=widgets.Select())` from
+  your own list or from a package such as `django-countries`. The `full` example shows the
+  pattern.
+- **The dead `AsyncModelFormMixin._apost_clean` override.** The dirty-only model form
+  mixin shadowed it in the MRO of `FormworkModelForm`, so nothing called it. If you
+  combine `AsyncModelFormMixin` directly with a plain `ModelForm` (unsupported), supply
+  your own `_apost_clean`.
 
-## 0.1.0a2
+## 0.1.0a2 (2026-05-18)
 
 ### Added
 

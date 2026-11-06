@@ -22,6 +22,8 @@ class ValidatedTextarea(forms.Textarea):
 
     Usage::
 
+        from django_formwork.widgets import ValidatedTextarea
+
         content = forms.CharField(
             widget=ValidatedTextarea(validate_url=reverse_lazy("validate-text")),
         )

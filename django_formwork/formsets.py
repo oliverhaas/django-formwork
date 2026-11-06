@@ -88,11 +88,13 @@ TakenUniques = dict[tuple[int, tuple[str, ...], str | None], dict[tuple[Any, ...
 class _BatchedUniquenessMixin:
     """Collapse a model formset's O(N x M) uniqueness queries into O(M).
 
-    Mixed in *before* :class:`~django.forms.models.BaseModelFormSet`.  Children
-    are told to defer their per-form against-the-database checks; the formset
-    then runs one batched query per distinct uniqueness check in
-    :meth:`validate_unique` and rebuilds exactly the errors Django would have
-    raised per form.
+    Mixed in *before* :class:`~django.forms.models.BaseModelFormSet`.  In
+    :meth:`full_clean` the children are cleaned with their per-form
+    against-the-database checks deferred; the formset then runs one batched
+    query per distinct uniqueness check and rebuilds exactly the errors Django
+    would have raised per form, before ``validate_max`` / ``validate_min`` and
+    ``clean()`` run.  A child validated on its own (``form.is_valid()`` before
+    the formset) runs Django's per-form checks itself.
 
     Batched: classic ``unique`` / ``unique_together`` / ``unique_for_<date>``,
     the field-based ``Meta.constraints`` ``UniqueConstraint`` s that Django treats
@@ -107,37 +109,44 @@ class _BatchedUniquenessMixin:
 
     if TYPE_CHECKING:
         forms: list[Any]
-        deleted_forms: list[Any]
+        is_bound: bool
 
     def _construct_form(self, i: int, **kwargs: Any) -> Any:  # noqa: ANN401
         form = super()._construct_form(i, **kwargs)  # type: ignore[misc]
-        # Honored by FormworkModelForm, which then sets ``_uniqueness_deferred``.
-        # A plain ModelForm ignores it and keeps Django's per-form behavior
-        # (still correct, just not batched).
-        form._defer_unique_to_formset = True  # noqa: SLF001
+        # Exempts the form from FORMWORK_FORCE_ASYNC: a formset validates and saves synchronously.
+        form._formwork_in_formset = True  # noqa: SLF001
         return form
 
-    def validate_unique(self) -> None:
-        # Reproduce each deferred child's against-the-database errors before the
-        # in-memory cross-form dedup, so the dedup's ``valid_forms`` filter sees
-        # the same forms stock Django would.  The two phases and their order
-        # mirror stock ``_post_clean``: ``validate_unique`` (classic unique /
-        # date checks) first, then ``validate_constraints`` (``Meta.constraints``
-        # in declaration order).  Keeping them separate is what preserves the
-        # message order when a check and a unique both land in ``__all__``.
-        forms = self._forms_to_check()
-        self._perform_classic_unique_checks([f for f in forms if getattr(f, "_validate_unique", False)])
-        self._perform_meta_constraints([f for f in forms if getattr(f, "_validate_constraints", False)])
-        super().validate_unique()  # type: ignore[misc]
+    def full_clean(self) -> None:
+        if self.is_bound:
+            self._clean_forms_batched()
+        super().full_clean()  # type: ignore[misc]
+
+    def _clean_forms_batched(self) -> None:
+        """Clean every child, then add its database errors before ``validate_max`` and ``clean()``.
+
+        The phases follow stock ``_post_clean`` (unique checks, then ``Meta.constraints``),
+        which keeps the ``__all__`` message order.
+        """
+        forms = self.forms
+        # A plain ModelForm ignores the flag and keeps Django's per-form checks.
+        for form in forms:
+            form._defer_unique_to_formset = True  # noqa: SLF001
+        try:
+            for form in forms:
+                form.errors  # noqa: B018 (runs the child's full_clean())
+        finally:
+            for form in forms:
+                form._defer_unique_to_formset = False  # noqa: SLF001
+        # Deleted children are checked too: stock's _post_clean queries for them
+        # as well, and the formset drops their errors.
+        deferred = [form for form in forms if getattr(form, "_uniqueness_deferred", False)]
+        for form in deferred:
+            form._uniqueness_deferred = False  # noqa: SLF001
+        self._perform_classic_unique_checks([f for f in deferred if getattr(f, "_validate_unique", False)])
+        self._perform_meta_constraints([f for f in deferred if getattr(f, "_validate_constraints", False)])
 
     # -- collecting the checks -------------------------------------------------
-
-    def _forms_to_check(self) -> list[Any]:
-        deleted = set(self.deleted_forms)
-        # ``_uniqueness_deferred`` is set by FormworkModelForm only after its
-        # clean() ran and only when it actually skipped its own checks, i.e. the
-        # same forms whose ``_post_clean`` would have queried in stock.
-        return [form for form in self.forms if getattr(form, "_uniqueness_deferred", False) and form not in deleted]
 
     @staticmethod
     def _is_batchable_unique(constraint: Any, model_class: type[Model]) -> TypeGuard[UniqueConstraint]:  # noqa: ANN401
@@ -503,6 +512,11 @@ class _BatchedUniquenessMixin:
             return (field_value, date.year, date.month, date.day)
         return (field_value, getattr(date, lookup_type))
 
+    @staticmethod
+    def _date_field_attname(model_class: type[Model], field: str) -> str:
+        """Raw column attribute (``region_id`` for a FK), as the prefetch reads it."""
+        return model_class._meta.get_field(field).attname  # type: ignore[union-attr]  # noqa: SLF001
+
     def _prefetch_dates(
         self,
         forms: list[Any],
@@ -518,23 +532,24 @@ class _BatchedUniquenessMixin:
                     continue
                 key = (id(model_class), check[1], field, unique_for)
                 wanted[key] = check
-                rows_wanted[key].append((getattr(form.instance, field), date))
+                rows_wanted[key].append((getattr(form.instance, self._date_field_attname(model_class, field)), date))
 
         taken: dict[tuple[int, str, str, str], dict[tuple[Any, ...], set[Any]]] = {}
         for key, (model_class, lookup_type, field, unique_for) in wanted.items():
+            attname = self._date_field_attname(model_class, field)
             query = Q()
             for field_value, date in rows_wanted[key]:
                 if lookup_type == "date":
                     query |= Q(
                         **{
-                            field: field_value,
+                            attname: field_value,
                             f"{unique_for}__day": date.day,
                             f"{unique_for}__month": date.month,
                             f"{unique_for}__year": date.year,
                         },
                     )
                 else:
-                    query |= Q(**{field: field_value, f"{unique_for}__{lookup_type}": getattr(date, lookup_type)})
+                    query |= Q(**{attname: field_value, f"{unique_for}__{lookup_type}": getattr(date, lookup_type)})
             existing: dict[tuple[Any, ...], set[Any]] = defaultdict(set)
             queryset = model_class._default_manager.filter(query)  # noqa: SLF001
             # Savepoint-isolate the read, as the sibling prefetch paths do.
@@ -543,7 +558,7 @@ class _BatchedUniquenessMixin:
             )
             try:
                 with atomic:
-                    for field_value, date, pk in queryset.values_list(field, unique_for, "pk"):
+                    for field_value, date, pk in queryset.values_list(attname, unique_for, "pk"):
                         existing[self._date_key(lookup_type, field_value, date)].add(pk)
             except DatabaseError:
                 # One big OR can exceed backend parameter limits; signal fallback.
@@ -565,7 +580,8 @@ class _BatchedUniquenessMixin:
             if date is None:
                 continue
             key = (id(model_class), lookup_type, field, unique_for)
-            row_key = self._date_key(lookup_type, getattr(instance, field), date)
+            field_value = getattr(instance, self._date_field_attname(model_class, field))
+            row_key = self._date_key(lookup_type, field_value, date)
             pks = set(taken.get(key, {}).get(row_key, set()))
             if not instance._state.adding and instance._is_pk_set():  # noqa: SLF001
                 pks.discard(instance.pk)

@@ -152,6 +152,7 @@ class TaskRowSave(FormworkRowSaveMixin, View):
     """Inline row edit via htmx: save the changed row and morph it back."""
 
     form_class = TaskRowForm
+    queryset = Task.objects.all()
     http_method_names = ["post"]
 
     def render_row(self, request, form):

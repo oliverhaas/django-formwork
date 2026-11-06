@@ -47,6 +47,7 @@ HELP_TEXT = "Pick one."
 class _Form(FormworkForm):
     name = forms.CharField(help_text=HELP_TEXT)
     fruit = forms.ChoiceField(choices=CHOICES, help_text=HELP_TEXT, widget=Select)
+    custom_id = forms.ChoiceField(choices=CHOICES, widget=Select(attrs={"id": "fruit_picker"}))
 
     class Meta:
         error_display = "inline"
@@ -75,8 +76,9 @@ def test_described_by_targets_exist(field: str, bind_invalid: bool) -> None:  # 
             assert target in _ids(soup), target
 
 
-def test_summary_names_itself_by_label_then_value() -> None:
-    soup = _render("fruit", bind_invalid=False)
+@pytest.mark.parametrize("field", ["fruit", "custom_id"])
+def test_summary_names_itself_by_label_then_value(field: str) -> None:
+    soup = _render(field, bind_invalid=False)
 
     summary = soup.select_one("summary")
     assert summary is not None

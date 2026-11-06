@@ -3,6 +3,7 @@ package root (PEP 562), keeping ``import django_formwork`` free of
 import-time Django requirements.  Submodule imports keep working.
 """
 
+import warnings
 from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING, Any
 
@@ -14,6 +15,7 @@ except PackageNotFoundError:
 if TYPE_CHECKING:
     from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
     from django_formwork.boundfield import FormworkBoundField
+    from django_formwork.fields import DateRange, DateRangeField
     from django_formwork.forms import (
         FormworkForm,
         FormworkFormMetaclass,
@@ -41,6 +43,8 @@ _EXPORTS = {
     "AsyncFormMixin": "django_formwork.async_forms",
     "AsyncModelFormMixin": "django_formwork.async_forms",
     "ChoiceLabel": "django_formwork.widgets.select",
+    "DateRange": "django_formwork.fields",
+    "DateRangeField": "django_formwork.fields",
     "FormworkBaseInlineFormSet": "django_formwork.formsets",
     "FormworkBaseModelFormSet": "django_formwork.formsets",
     "FormworkBoundField": "django_formwork.boundfield",
@@ -62,6 +66,8 @@ __all__ = [
     "AsyncFormMixin",
     "AsyncModelFormMixin",
     "ChoiceLabel",
+    "DateRange",
+    "DateRangeField",
     "FormworkBaseInlineFormSet",
     "FormworkBaseModelFormSet",
     "FormworkBoundField",
@@ -81,7 +87,16 @@ __all__ = [
 ]
 
 
+#: Old name -> (current name, release that removes the old one). Never cached, so each access warns.
+_DEPRECATED = {"FormworkChoiceLabel": ("ChoiceLabel", "0.2.0")}
+
+
 def __getattr__(name: str) -> Any:  # noqa: ANN401 (lazy exports have heterogeneous types)
+    if name in _DEPRECATED:
+        current, removal = _DEPRECATED[name]
+        msg = f"django_formwork.{name} is deprecated and goes away in {removal}; use django_formwork.{current}."
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        return __getattr__(current)
     module_path = _EXPORTS.get(name)
     if module_path is None:
         msg = f"module {__name__!r} has no attribute {name!r}"

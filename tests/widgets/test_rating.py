@@ -218,6 +218,26 @@ def test_rating_allow_clear_renders_hidden_input():
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(("value", "clear_checked"), [(None, True), ("", True), ("2", False)])
+def test_rating_clear_radio_holds_the_empty_value(value, clear_checked):
+    """The clear radio is the checked one while no star is."""
+    widget = Rating(allow_clear=True)
+    widget.choices = Rating.make_choices(3)
+    soup = render_widget(widget, value=value)
+    assert soup.find("input", class_="rating-hidden").has_attr("checked") is clear_checked
+    assert len(soup.select("input[checked]")) == 1
+
+
+@pytest.mark.unit
+def test_rating_disabled_disables_the_clear_radio():
+    """A disabled rating can't be cleared through its clear radio."""
+    widget = Rating(allow_clear=True, attrs={"disabled": True})
+    widget.choices = Rating.make_choices(3)
+    soup = render_widget(widget, value="2")
+    assert all(radio.has_attr("disabled") for radio in soup.select("input"))
+
+
+@pytest.mark.unit
 def test_rating_no_allow_clear_no_hidden_input():
     """allow_clear=False produces no hidden clear radio."""
     widget = Rating(allow_clear=False)
@@ -279,6 +299,27 @@ def test_rating_error_state_shows_tooltip(renderer):
     tooltip = soup.find(id="id_rating_error", class_="tooltip-content")
     assert tooltip is not None
     assert "required" in tooltip.text.lower()
+
+
+@pytest.mark.integration
+def test_rating_error_state_reaches_the_radios(renderer):
+    """Each star carries the invalid and required state the field sets."""
+    form = RatingForm(data={})
+    form.is_valid()
+    radios = render_form(form, renderer=renderer).select("input[name='rating']")
+    assert [(r["aria-invalid"], r["aria-required"], r.has_attr("required")) for r in radios] == [
+        ("true", "true", True)
+    ] * 5
+
+
+@pytest.mark.unit
+def test_rating_caller_class_joins_the_star_class():
+    """A caller class follows the star classes on the one class attribute."""
+    widget = Rating(attrs={"class": "rating-lg"})
+    widget.choices = Rating.make_choices(2)
+    soup = render_widget(widget, value="1")
+    assert str(soup).count("class=") == 3
+    assert [r["class"] for r in soup.select("input")] == [["mask", "mask-star-2", "rating-lg"]] * 2
 
 
 @pytest.mark.integration

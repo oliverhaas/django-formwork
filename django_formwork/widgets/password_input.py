@@ -31,5 +31,11 @@ class PasswordInput(FloatingLabelMixin, forms.PasswordInput):
 
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
-        context["widget"]["reveal"] = self.reveal
+        widget = context["widget"]
+        widget["reveal"] = self.reveal
+        id_ = widget["attrs"].get("id")
+        if self.floating and self.reveal and id_:
+            # The reveal button sits inside the floating label, which would add its name to the input's.
+            widget["floating_label_id"] = f"{id_}_floating_label"
+            widget["attrs"].setdefault("aria-labelledby", widget["floating_label_id"])
         return context
