@@ -62,13 +62,21 @@ class CityForm(FormworkForm):
 | `allow_clear` | `Select` and `SelectMultiple`: the list starts with the empty choice of an optional field (`empty_label` of a `ModelChoiceField`), so the user can clear it. |
 
 The form class registers each search when Python creates it, under a stable
-key built from the module, the form class and the field name. Formwork imports the
+key built from the module, the form class, the field name, and the place where
+`search_queryset` and `search_decorator` are defined, so forms that a factory
+builds over one model keep their own search. Formwork imports the
 `forms` module of every installed app at startup, so a search declared there
 exists in every worker before the first request. A form defined elsewhere
 registers when its module is first imported. Registration raises
-`ImproperlyConfigured` for a widget without `search_decorator`, for
-`search_fields` without `search_queryset`, and for `search_ranked` without
-`search_fields` or outside PostgreSQL.
+`ImproperlyConfigured` for a widget without `search_decorator`, for a
+`search_queryset` that is not callable, for `search_fields` without
+`search_queryset`, and for `search_ranked` without `search_fields` or outside
+PostgreSQL.
+
+`search_queryset` filters through the request it gets, never through values it
+closes over. The endpoint serves one search per key, so a second form of the same
+name whose `search_queryset` closes over other values raises
+`ImproperlyConfigured`.
 
 The endpoint renders each row with `label_from_instance` of the field, so a
 [`ChoiceLabel`](widgets.md#choicelabel) adds an icon, a description or a

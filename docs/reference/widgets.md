@@ -453,13 +453,13 @@ format; the native control accepts only ISO, so `format` defaults to
 
 `DateRangeInput` puts a start and an end `DateInput` side by side under one
 field label, with "From" and "To" names for screen readers. Use it through
-`DateRangeField` from `django_formwork.fields`, which cleans to a
+`DateRangeField`, which cleans to a
 `DateRange(start, end)`:
 
 ```python
 from datetime import timedelta
 
-from django_formwork.fields import DateRangeField
+from django_formwork import DateRangeField
 
 period = DateRangeField(
     max_span=timedelta(days=90),

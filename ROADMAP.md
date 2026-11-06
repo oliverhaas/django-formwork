@@ -15,8 +15,7 @@ attributes, so no template value reaches a JavaScript expression. Editable table
 top-level import surface landed after the 2026-07-12 cleanup. The `Unreleased`
 changelog is large enough for an `a3` or beta release. The open items are the
 server-side upload enforcement decision, the remaining async save-path tests,
-screenshot coverage, dropdown a11y, the docs for formsets and editable tables, and the
-config surface.
+screenshot coverage, dropdown a11y, a settings page, and the config surface.
 
 ---
 
@@ -46,12 +45,9 @@ config surface.
   `highlighted` CSS class and scrolls the option into view; it never sets
   `aria-activedescendant`, so keyboard users get no announced highlight.
   (`static/formwork/widgets/_helpers.js:292`, medium)
-- [ ] **Document formsets, editable tables, and a consolidated settings page.** The
-  marketed batched-uniqueness formsets have zero docs and no nav entry; the newer editable
-  tables (`as_row`/`as_rows`/`FormworkRowSaveMixin` and per-row htmx autosave) shipped with
-  no docs or nav entry either; no single settings reference for
-  `FORM_RENDERER`/`FORMWORK_FORCE_ASYNC`.
-  (`mkdocs.yml:44`, medium)
+- [ ] **Add a consolidated settings page.** Formsets and editable tables have their
+  reference page now. No single page lists `FORM_RENDERER` and `FORMWORK_FORCE_ASYNC`.
+  (`mkdocs.yml`, small)
 - [ ] **Settle the config surface.** `search_threshold` is class-only, the search page
   size (`SEARCH_PAGE_SIZE`) isn't settable at all, and `FORMWORK_FORCE_ASYNC` is a lone
   setting read with a bare `getattr`. Introduce one documented `FORMWORK` settings dict +

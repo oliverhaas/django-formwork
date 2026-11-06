@@ -46,6 +46,8 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 On startup, formwork imports the `forms` module of every installed app, so a form with a server-side search registers it before the first request.
 
+`manage.py check` reports two setup mistakes: `django_formwork.E001` when a form declares a server-side search but the URLconf does not include `django_formwork.urls`, and `django_formwork.E002` when `"django.forms"` is missing from `INSTALLED_APPS`.
+
 ## 3. Install the icons
 
 Formwork's widgets use [Lucide](https://lucide.dev/) icons, fetched at setup time rather than bundled. Run:

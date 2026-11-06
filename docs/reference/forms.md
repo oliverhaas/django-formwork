@@ -51,7 +51,11 @@ Formwork imports the `forms` module of every installed app at startup, so the
 search exists in every worker before the first request. A single
 `include("django_formwork.urls")` serves all of them. Registration raises
 `ImproperlyConfigured` for a widget without `search_decorator`: pass an auth
-decorator such as `login_required`, or `None` for a public endpoint. See
+decorator such as `login_required`, or `None` for a public endpoint. A bad `Meta`
+option fails the same way, when Python creates the class: an `error_display`
+other than `"auto"`, `"inline"` or `"tooltip"`, a `mandatory` that is a string or
+names a field the form lacks, and `validate_dirty_only` on a model without
+`get_dirty_fields()`. See
 [Views](views.md#server-side-search) for the endpoint and the
 [quickstart](../getting-started/quickstart.md#server-side-search) for a worked
 example.
@@ -224,6 +228,11 @@ validates through the sync `is_valid()` stores the un-awaited coroutine in
 `cleaned_data` and skips the check. Enable `FORMWORK_FORCE_ASYNC` in a project
 that defines async validators and touches forms from sync code, including a
 template that reads `form.errors`. The sync call then raises `RuntimeError`.
+
+Formwork's model formsets validate their forms through the sync path, so their
+forms are exempt from the setting; see [Formsets](formsets.md#formwork_force_async).
+`FormworkRowSaveMixin` calls the sync `is_valid()`, so a row save fails while the
+setting is on.
 
 ## Section forms
 
