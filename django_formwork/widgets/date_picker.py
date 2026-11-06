@@ -71,7 +71,8 @@ class DatePicker(forms.DateInput):
         if isinstance(value, datetime.date):
             return value.strftime("%Y-%m-%d")
         if isinstance(value, str):
-            for date_format in (self.format, "%Y-%m-%d"):
+            # A day picked in the calendar comes back as ISO text after a failed submit.
+            for date_format in (self.format or "%Y-%m-%d", "%Y-%m-%d"):
                 try:
                     return datetime.datetime.strptime(value, date_format).date().isoformat()  # noqa: DTZ007
                 except ValueError:
