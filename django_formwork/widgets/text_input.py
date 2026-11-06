@@ -19,10 +19,12 @@ class TextInput(PatternHintMixin, FloatingLabelMixin, forms.TextInput):
     template_name = "formwork/widgets/text_input.html"
 
     def __init__(
-        self, attrs: dict[str, Any] | None = None, *, floating: bool = False, input_type: str = "text"
+        self, attrs: dict[str, Any] | None = None, *, floating: bool = False, input_type: str | None = None
     ) -> None:
         super().__init__(attrs, floating=floating)
-        self.input_type = input_type
+        # Django's Input already took a `type` from attrs.
+        if input_type is not None:
+            self.input_type = input_type
 
 
 class Textarea(FloatingLabelMixin, forms.Textarea):
