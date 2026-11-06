@@ -3,7 +3,8 @@ name = "django-formwork"
 version = "0.1.0a2"
 description = "An opinionated UI framework for Django, built on Django forms"
 readme = "README.md"
-license = { text = "BSD-3-Clause" }
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 keywords = ["django", "forms", "widgets", "rendering", "htmx"]
 authors = [{ name = "Oliver Haas", email = "ohaas@e1plus.de" }]
@@ -13,7 +14,6 @@ classifiers = [
   "Framework :: Django",
   "Framework :: Django :: 6.0",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: BSD License",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
@@ -56,7 +56,7 @@ dev = [
 docs = ["mkdocs==1.6.1", "mkdocs-material==9.7.7", "mike==2.2.0"]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
