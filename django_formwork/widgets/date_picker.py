@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import re
 from typing import Any
 
@@ -68,13 +68,13 @@ class DatePicker(forms.DateInput):
 
     def _iso_value(self, value: object) -> str:
         """The calendar parses only ``YYYY-MM-DD``, whatever ``format`` renders."""
-        if isinstance(value, datetime.date):
+        if isinstance(value, dt.date):
             return value.strftime("%Y-%m-%d")
         if isinstance(value, str):
             # A day picked in the calendar comes back as ISO text after a failed submit.
             for date_format in (self.format or "%Y-%m-%d", "%Y-%m-%d"):
                 try:
-                    return datetime.datetime.strptime(value, date_format).date().isoformat()  # noqa: DTZ007
+                    return dt.datetime.strptime(value, date_format).date().isoformat()  # noqa: DTZ007
                 except ValueError:
                     continue
         return ""
