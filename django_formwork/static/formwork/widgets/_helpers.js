@@ -361,9 +361,12 @@ const baseData = () => ({
   },
 
   // htmx 4 builds the GET query from the request body. The search box has no
-  // name, so the form never posts it.
+  // name, so the form never posts it. The ComboBox input has the field name,
+  // which could shadow a search param, so its text goes out as q only.
   onSearchConfig(event) {
-    event.detail.ctx.request.body.set("q", this.query);
+    const body = event.detail.ctx.request.body;
+    if (this.$root.dataset.name) body.delete(this.$root.dataset.name);
+    body.set("q", this.query);
   },
 
   // Bound on the root, so it also covers "Load more". An error response must

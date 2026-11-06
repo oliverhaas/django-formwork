@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 from django import forms
+from django.core.exceptions import ImproperlyConfigured
 from django.http import QueryDict
 from django.utils.safestring import mark_safe
 
@@ -133,6 +134,13 @@ def test_combo_box_flat_suggestions_have_no_group():
     widget = ComboBox(suggestions=["A", "B"])
     options = widget.get_context("test", "", {})["widget"]["options"]
     assert [(o["group"], o["label"]) for o in options] == [("", "A"), ("", "B")]
+
+
+@pytest.mark.unit
+def test_combo_box_rejects_value_label_pairs():
+    """A Django-style ``(value, label)`` pair fails at once instead of turning into a group of letters."""
+    with pytest.raises(ImproperlyConfigured, match="not \\(value, label\\) pairs"):
+        ComboBox(suggestions=[("py", "Python")])
 
 
 @pytest.mark.unit
@@ -1105,6 +1113,20 @@ def test_combo_box_server_search_fills_the_list_on_first_focus(combobox_page):
     expect(rows).to_have_count(0)
     combobox_page.locator('input[name="language_htmx"]').click()
     expect(rows).to_have_count(20, timeout=10000)
+
+
+@pytest.mark.e2e
+def test_combo_box_search_query_leaves_out_the_field_name(combobox_page):
+    """The typed text goes out as ``q`` only, so a field named like a search param can't override it."""
+    from urllib.parse import parse_qs, urlsplit
+
+    inp = combobox_page.locator('input[name="language_htmx"]')
+    inp.click()
+    with combobox_page.expect_request(lambda request: "q=Ge" in request.url) as request_info:
+        inp.press_sequentially("Ge")
+    query = parse_qs(urlsplit(request_info.value.url).query)
+    assert query["q"] == ["Ge"]
+    assert "language_htmx" not in query
 
 
 @pytest.mark.e2e
