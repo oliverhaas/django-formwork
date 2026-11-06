@@ -16,11 +16,6 @@ const pickHtml = ({ label = "", icon, labelHtml }) => {
   return icon ? `${icon} ${text}` : text;
 };
 
-const sameKeys = (a, b) => {
-  const keys = Object.keys(a);
-  return keys.length === Object.keys(b).length && keys.every((k) => k in b);
-};
-
 const parseSelected = (json) => Object.fromEntries(JSON.parse(json || "[]"));
 
 document.addEventListener("alpine:init", () => {
@@ -54,18 +49,6 @@ document.addEventListener("alpine:init", () => {
         this.writeValues();
       },
 
-      // Asked by the formwork morph before a morph touches this root. A stale
-      // echo (the response to an older submit, landing after further toggles)
-      // must not revert the newer selection: the last toggle's change event
-      // already armed a submit that carries all of it. The echo of that
-      // submit confirms it.
-      acceptMorph(newNode) {
-        if (!this._dirty) return true;
-        if (!sameKeys(parseSelected(newNode.dataset.selected), this.selected)) return false;
-        this._dirty = false;
-        return true;
-      },
-
       get hasSelection() {
         return Object.keys(this.selected).length > 0;
       },
@@ -88,7 +71,7 @@ document.addEventListener("alpine:init", () => {
         if (cb.type !== "checkbox") return;
         if (cb.checked) this.selected[cb.dataset.value] = pickHtml(cb.dataset);
         else delete this.selected[cb.dataset.value];
-        this._dirty = true;
+        this.notePick();
         // Written back so that a morph to a different server selection is seen as a change.
         this.$root.dataset.selected = JSON.stringify(Object.entries(this.selected));
         this.writeValues();

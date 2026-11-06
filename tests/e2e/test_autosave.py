@@ -358,6 +358,22 @@ def test_pick_made_during_a_save_survives_the_older_response(autosave_dropdowns_
     expect(page.locator("summary#id_city span[x-text]")).to_have_text("Paris")
 
 
+def test_server_answer_to_the_pick_wins_over_the_pick(autosave_dropdowns_page):
+    page = autosave_dropdowns_page
+    page.route(
+        "**/autosave-dropdowns/",
+        lambda route: route.continue_(
+            post_data=route.request.post_data.replace('name="city"\r\n\r\nldn', 'name="city"\r\n\r\ntyo'),
+        ),
+    )
+
+    with _morph(page):
+        _open_city(page).locator('button[data-value="ldn"]').click()
+
+    expect(page.locator("#id_city_value")).to_have_value("tyo")
+    expect(page.locator("summary#id_city span[x-text]")).to_have_text("Tokyo")
+
+
 @pytest.mark.screenshot
 def test_autosave_filled_form_screenshot(autosave_page, assert_screenshot):
     """Visual snapshot: form after filling every field, auto-saved field by field."""

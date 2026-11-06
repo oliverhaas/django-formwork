@@ -60,17 +60,6 @@ document.addEventListener("alpine:init", () => {
         this._v++;
       },
 
-      // Asked by the formwork morph before a morph touches this root. A
-      // stale echo (the response to an older submit, landing after a newer
-      // pick) must not revert the newer pick: its change event already
-      // armed a fresh submit. The pick's own echo confirms it.
-      acceptMorph(newNode) {
-        if (!this._dirty) return true;
-        if ((newNode.dataset.value || "") !== this.value) return false;
-        this._dirty = false;
-        return true;
-      },
-
       get displayText() {
         this._v;
         return this.label || "";
@@ -115,7 +104,7 @@ document.addEventListener("alpine:init", () => {
       },
 
       choose(choice) {
-        this._dirty = true;
+        this.notePick();
         Object.assign(this, choice);
         // readChoice() reads these, so a cloned or restored copy keeps this
         // choice, and a morph to a different server choice is seen as a change.

@@ -94,9 +94,28 @@ if (typeof document !== "undefined") {
   });
 }
 
+// Numbers each htmx request when it has collected its values. A swap stamps
+// the formwork roots it brings in with the number of the request they answer,
+// so a widget can tell the answer to a request sent before its latest pick
+// from the answer to one that carried the pick.
+let requestSeq = 0;
+
+if (typeof document !== "undefined") {
+  document.addEventListener("htmx:config:request", (e) => {
+    e.detail.ctx.formworkRequest = ++requestSeq;
+  });
+  document.addEventListener("htmx:before:swap", (e) => {
+    for (const task of e.detail.tasks ?? []) {
+      for (const root of task.fragment?.querySelectorAll('[x-data^="formwork"]') ?? []) {
+        root._formworkRequest = e.detail.ctx?.formworkRequest;
+      }
+    }
+  });
+}
+
 const baseData = () => ({
   _v: 0,
-  _dirty: false,
+  _pickedAfter: 0,
   search: "",
   showSearch: false,
   placeholder: "",
@@ -125,6 +144,19 @@ const baseData = () => ({
     this.$root.open = false;
     this.hidePanel();
     this.clearHighlight();
+  },
+
+  notePick() {
+    this._pickedAfter = requestSeq;
+  },
+
+  // Asked by the formwork morph before a morph touches this root. The answer
+  // to a request older than the latest pick is a stale echo: it would revert
+  // the pick, whose change event armed a newer request. The answer to a
+  // request that carried the pick is the server's word, even when it holds
+  // another value.
+  acceptMorph(newNode) {
+    return !(newNode._formworkRequest <= this._pickedAfter);
   },
 
   // Escape closes an open panel and goes no further, so a <dialog> around
