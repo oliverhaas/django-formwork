@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from django import forms
 from django.http import QueryDict
@@ -10,7 +12,7 @@ from django.utils.safestring import mark_safe
 from django_formwork import ChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.search import SEARCH_PAGE_SIZE
-from django_formwork.widgets import Select
+from django_formwork.widgets import ComboBox, Select
 
 from .conftest import open_dropdown, render_form, render_widget, server_widget, submit
 
@@ -1004,13 +1006,20 @@ def test_select_option_data_attrs_round_trip_raw(renderer):
     assert btn["data-label"] == "O'Brien & Sons"
 
 
-@pytest.mark.integration
-def test_select_checkmark_follows_aria_selected(renderer):
-    """The checkmark reads aria-selected, which the component derives from the raw data-value."""
-    soup = render_form(RoundTripSelectForm(), renderer=renderer)
-    btn = soup.find("button", attrs={"data-value": "uuid-1234"})
-    assert btn[":aria-selected"] == "isSelected($el)"
-    assert "group-aria-selected/option:opacity-100" in btn.find("span", class_="formwork-check")["class"]
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "widget",
+    [Select(choices=[("go", "Go"), ("zig", "Zig")]), ComboBox(suggestions=["Go", "Zig"])],
+    ids=["select", "combo"],
+)
+def test_listbox_aria_selected_sits_on_the_option(widget):
+    """Screen readers read aria-selected from the role=option element, not from a button inside it."""
+    soup = render_widget(widget, name="language")
+    options = soup.select("[role=option]")
+    assert len(options) == 2
+    assert all(li[":aria-selected"] == "isSelected($el)" for li in options)
+    assert all("group/option" in li["class"] for li in options)
+    assert not soup.select("button[\\:aria-selected]")
 
 
 @pytest.mark.integration
@@ -1548,6 +1557,23 @@ def test_select_keyboard_arrowdown_navigates(select_page):
     search.press("ArrowDown")  # tyo (next group)
     select_page.wait_for_timeout(50)
     assert sel.locator("li.highlighted > [data-value]").first.get_attribute("data-value") == "tyo"
+
+
+@pytest.mark.e2e
+def test_select_search_box_names_the_highlighted_option(select_page):
+    """Focus stays in the search box, so aria-activedescendant tells screen readers which row the arrows reached."""
+    from playwright.sync_api import expect
+
+    sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
+    search = sel.locator('.dropdown-content input[type="search"]')
+    search.press("ArrowDown")
+    search.press("ArrowDown")
+    active = sel.locator("li.highlighted")
+    expect(active).to_have_attribute("role", "option")
+    expect(search).to_have_attribute("aria-activedescendant", active.get_attribute("id"))
+    expect(select_page.locator("[role=option][id]")).to_have_count(1)
+    search.press("Escape")
+    expect(search).not_to_have_attribute("aria-activedescendant", re.compile("."))
 
 
 @pytest.mark.e2e

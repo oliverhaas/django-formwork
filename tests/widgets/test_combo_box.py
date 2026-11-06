@@ -194,6 +194,15 @@ def test_combo_box_renders_without_id():
     assert div is not None
 
 
+@pytest.mark.unit
+def test_combo_box_input_points_at_the_highlighted_option():
+    """The input keeps focus during arrow keys, so it names the highlighted row through aria-activedescendant."""
+    soup = render_widget(ComboBox(suggestions=["Go", "Zig"]), name="language", attrs={"id": "id_language"})
+    inp = soup.select_one("input[role=combobox]")
+    assert inp["aria-controls"] == "id_language_listbox"
+    assert inp[":aria-activedescendant"] == "activeOption"
+
+
 # ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
 
 

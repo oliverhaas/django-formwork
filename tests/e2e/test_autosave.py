@@ -318,8 +318,9 @@ def test_picked_option_keeps_check_mark_after_autosave(autosave_dropdowns_page):
     with _morph(page):
         panel.locator('button[data-value="ldn"]').click()
 
-    expect(page.locator('#id_city_wrapper button[data-value="ldn"]')).to_have_attribute("aria-selected", "true")
-    expect(page.locator('#id_city_wrapper button[data-value="par"]')).to_have_attribute("aria-selected", "false")
+    city = page.locator("#id_city_wrapper li[role=option]")
+    expect(city.filter(has=page.locator('button[data-value="ldn"]'))).to_have_attribute("aria-selected", "true")
+    expect(city.filter(has=page.locator('button[data-value="par"]'))).to_have_attribute("aria-selected", "false")
 
 
 def test_open_dropdown_keeps_search_filter_through_autosave(autosave_dropdowns_page):

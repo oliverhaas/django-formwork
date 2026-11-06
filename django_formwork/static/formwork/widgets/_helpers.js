@@ -36,6 +36,8 @@ export const countText = (el, count) => {
   return form.replace("%(count)s", count);
 };
 
+let highlightIds = 0;
+
 const visibleOptions = (component) =>
   [...component.$refs.options.querySelectorAll("[data-value]")].filter((el) => el.offsetParent !== null);
 
@@ -338,8 +340,15 @@ const baseData = () => ({
   clearHighlight() {
     if (this.highlightedEl) {
       this.highlightedEl.classList.remove("highlighted");
+      this.highlightedEl.removeAttribute("id");
       this.highlightedEl = null;
     }
+  },
+
+  // The text box keeps focus while the arrows move the highlight, so it
+  // points screen readers at the highlighted row by id.
+  get activeOption() {
+    return this.highlightedEl?.id;
   },
 
   nav(dir) {
@@ -349,9 +358,11 @@ const baseData = () => ({
     if (idx === -1) idx = dir > 0 ? 0 : visible.length - 1;
     else idx = (idx + dir + visible.length) % visible.length;
     this.clearHighlight();
-    this.highlightedEl = visible[idx].closest("li");
-    this.highlightedEl.classList.add("highlighted");
-    this.highlightedEl.scrollIntoView({ block: "nearest" });
+    const li = visible[idx].closest("li");
+    li.id = `formwork-option-${++highlightIds}`;
+    li.classList.add("highlighted");
+    li.scrollIntoView({ block: "nearest" });
+    this.highlightedEl = li;
   },
 
   // The highlighted row's option, else the first visible one.

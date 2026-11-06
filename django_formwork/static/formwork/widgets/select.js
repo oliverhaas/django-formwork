@@ -74,7 +74,7 @@ document.addEventListener("alpine:init", () => {
       },
 
       isSelected(el) {
-        return this.value === el.dataset.value;
+        return this.value === el.querySelector("[data-value]").dataset.value;
       },
 
       onOptionClick(event) {
