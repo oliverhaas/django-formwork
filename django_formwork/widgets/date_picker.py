@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import re
 from typing import Any
 
@@ -62,4 +63,17 @@ class DatePicker(forms.DateInput):
         widget["extra_class"] = widget["attrs"].pop("class", "")
         # Sunday first, like Date.getDay() in the calendar grid.
         widget["weekdays"] = [WEEKDAYS_ABBR[day] for day in (6, 0, 1, 2, 3, 4, 5)]
+        widget["iso_value"] = self._iso_value(value)
         return context
+
+    def _iso_value(self, value: object) -> str:
+        """The calendar parses only ``YYYY-MM-DD``, whatever ``format`` renders."""
+        if isinstance(value, datetime.date):
+            return value.strftime("%Y-%m-%d")
+        if isinstance(value, str):
+            for date_format in (self.format, "%Y-%m-%d"):
+                try:
+                    return datetime.datetime.strptime(value, date_format).date().isoformat()  # noqa: DTZ007
+                except ValueError:
+                    continue
+        return ""

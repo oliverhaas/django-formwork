@@ -168,7 +168,16 @@ def test_date_picker_escapes_value_in_x_data(renderer):
     soup = render_form(form, renderer=renderer)
     wrapper = soup.find("div", class_="date-picker")
     assert wrapper["x-data"] == "formworkDatePicker"
-    assert wrapper["data-value"] == payload
+    assert wrapper["data-value"] == ""
+    assert soup.find("input", attrs={"name": "due_date"})["value"] == payload
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("value", [datetime.date(2026, 11, 6), "06/11/2026", "2026-11-06"])
+def test_date_picker_calendar_value_is_iso_under_any_format(value):
+    """The calendar gets ``YYYY-MM-DD`` while the input shows the configured format."""
+    soup = render_widget(DatePicker(format="%d/%m/%Y"), value=value)
+    assert soup.select_one("[x-data=formworkDatePicker]")["data-value"] == "2026-11-06"
 
 
 @pytest.mark.e2e
