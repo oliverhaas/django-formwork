@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 import pytest
 from django import forms
@@ -35,7 +35,7 @@ def test_date_picker_custom_placeholder():
 def test_date_picker_custom_format_round_trips():
     """A custom format string formats the date value in both get_context and render."""
     widget = DatePicker(format="%d.%m.%Y")
-    value = datetime.date(2026, 7, 13)
+    value = dt.date(2026, 7, 13)
     ctx = widget.get_context("due_date", value, {"id": "id_due_date"})
     assert ctx["widget"]["value"] == "13.07.2026"
     soup = render_widget(widget, name="due_date", value=value, attrs={"id": "id_due_date"})
@@ -69,10 +69,8 @@ def test_date_picker_renders_placeholder():
 @pytest.mark.unit
 def test_date_picker_renders_with_value():
     """A date value is reflected in the rendered input's value attribute."""
-    import datetime
-
     widget = DatePicker()
-    soup = render_widget(widget, value=datetime.date(2024, 6, 15), attrs={"id": "id_due_date"})
+    soup = render_widget(widget, value=dt.date(2024, 6, 15), attrs={"id": "id_due_date"})
     inp = soup.find("input")
     assert inp is not None
     assert inp.get("value") == "2024-06-15"
@@ -81,10 +79,8 @@ def test_date_picker_renders_with_value():
 @pytest.mark.unit
 def test_date_picker_alpine_x_data():
     """The wrapper div binds to the formworkDatePicker Alpine.data component."""
-    import datetime
-
     widget = DatePicker()
-    soup = render_widget(widget, value=datetime.date(2024, 6, 15), attrs={"id": "id_due_date"})
+    soup = render_widget(widget, value=dt.date(2024, 6, 15), attrs={"id": "id_due_date"})
     wrapper = soup.find("div", attrs={"x-data": "formworkDatePicker"})
     assert wrapper is not None
     assert wrapper["data-value"] == "2024-06-15"
