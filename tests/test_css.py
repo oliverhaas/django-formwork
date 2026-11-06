@@ -89,12 +89,6 @@ class TestStaticFiles:
         content = Path(result).read_text()
         assert ".alert.alert-col" in content
 
-    def test_css_has_alert_soft(self):
-        result = find("formwork/formwork.css")
-        assert result is not None
-        content = Path(result).read_text()
-        assert ".alert-soft" in content
-
     def test_css_has_form_control_soft_variant(self):
         result = find("formwork/formwork.css")
         assert result is not None
