@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -720,6 +720,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/formsets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formsets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/widgets/" class="md-nav__link">
         
   
@@ -1019,100 +1047,92 @@
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># settings.py</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">[</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="o">...</span><span class="p">,</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="s2">&quot;django.contrib.staticfiles&quot;</span><span class="p">,</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="s2">&quot;django.forms&quot;</span><span class="p">,</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="s2">&quot;django_iconx&quot;</span><span class="p">,</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="s2">&quot;django_formwork&quot;</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="s2">"django.contrib.staticfiles"</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="s2">"django.forms"</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="s2">"django_iconx"</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="s2">"django_formwork"</span><span class="p">,</span>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">]</span>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Makes ALL forms use formwork templates automatically</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">FORM_RENDERER</span> <span class="o">=</span> <span class="s2">&quot;django_formwork.FormworkRenderer&quot;</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Every form renders through the formwork templates</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">FORM_RENDERER</span> <span class="o">=</span> <span class="s2">"django_formwork.FormworkRenderer"</span>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">TEMPLATES</span> <span class="o">=</span> <span class="p">[</span>
 </span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="p">{</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>        <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;django.template.backends.django.DjangoTemplates&quot;</span><span class="p">,</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        <span class="s2">&quot;APP_DIRS&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>        <span class="s2">"BACKEND"</span><span class="p">:</span> <span class="s2">"django.template.backends.django.DjangoTemplates"</span><span class="p">,</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        <span class="s2">"APP_DIRS"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
 </span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="o">...</span>
 </span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    <span class="p">},</span>
 </span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="p">]</span>
 </span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="n">STATICFILES_DIRS</span> <span class="o">=</span> <span class="p">[</span><span class="n">BASE_DIR</span> <span class="o">/</span> <span class="s2">&quot;static&quot;</span><span class="p">]</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="n">STATICFILES_DIRS</span> <span class="o">=</span> <span class="p">[</span><span class="n">BASE_DIR</span> <span class="o">/</span> <span class="s2">"static"</span><span class="p">]</span>
 </span></code></pre></div>
 <p><code>FormworkRenderer</code> is a <code>TemplatesSetting</code> renderer: it loads templates through <code>TEMPLATES</code>, so a project template with the same path overrides any formwork template. <code>"django.forms"</code> supplies Django's own widget templates, and the <code>DjangoTemplates</code> backend must find app templates (<code>APP_DIRS=True</code> or the <code>app_directories</code> loader). <code>django_iconx</code> must be in <code>INSTALLED_APPS</code> for the next step to work. <code>STATICFILES_DIRS</code> tells the icon install where to put the downloaded files and lets Django serve them.</p>
 <p>On startup, formwork imports the <code>forms</code> module of every installed app, so a form with a server-side search registers it before the first request.</p>
+<p><code>manage.py check</code> reports two setup mistakes: <code>django_formwork.E001</code> when a form declares a server-side search but the URLconf does not include <code>django_formwork.urls</code>, and <code>django_formwork.E002</code> when <code>"django.forms"</code> is missing from <code>INSTALLED_APPS</code>.</p>
 <h2 id="3-install-the-icons">3. Install the icons<a class="headerlink" href="#3-install-the-icons" title="Permanent link">&para;</a></h2>
 <p>Formwork's widgets use <a href="https://lucide.dev/">Lucide</a> icons, fetched at setup time rather than bundled. Run:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>manage.py<span class="w"> </span>formwork<span class="w"> </span>install
 </span></code></pre></div>
-<p>This does two things:</p>
-<ol>
-<li>Downloads the Lucide SVGs (via django-iconx) into <code>&lt;first STATICFILES_DIRS entry&gt;/icons/lucide/</code>.</li>
-<li>Generates <code>iconx/icons.css</code> in your static directory, with one CSS class per icon pointing at the served SVGs.</li>
-</ol>
-<p>The command is idempotent; rerunning it re-downloads and regenerates in place. Both output directories (<code>static/icons/</code> and <code>static/iconx/</code>) are generated artifacts: gitignore them and run <code>formwork install</code> in CI and on fresh checkouts, or commit them if you prefer vendoring.</p>
+<p>The command downloads the Lucide SVGs through django-iconx into <code>&lt;first STATICFILES_DIRS entry&gt;/icons/lucide/</code>. Then it generates <code>iconx/icons.css</code> in your static directory, with one CSS class per icon that points at the served SVG.</p>
+<p>A second run downloads and generates the files again in place. Both output directories (<code>static/icons/</code> and <code>static/iconx/</code>) are generated artifacts: gitignore them and run <code>formwork install</code> in CI and on fresh checkouts, or commit them if you prefer vendoring.</p>
 <h3 id="command-reference-formwork-install">Command reference: <code>formwork install</code><a class="headerlink" href="#command-reference-formwork-install" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python manage.py formwork install [--output DIR]
 </span></code></pre></div>
 <ul>
 <li><code>--output DIR</code>: directory to write the generated CSS into (the file lands at <code>DIR/iconx/icons.css</code>). By default the command resolves your project static directory: the first entry of <code>STATICFILES_DIRS</code> if set, otherwise <code>BASE_DIR/static</code>. Use <code>--output</code> when your CSS build inputs live elsewhere.</li>
 </ul>
-<p>Notes:</p>
-<ul>
-<li>The icon SVGs always download into the first <code>STATICFILES_DIRS</code> entry (django-iconx behavior); <code>--output</code> only moves the generated CSS.</li>
-<li>If <code>STATICFILES_DIRS</code> is not set, the command falls back to <code>BASE_DIR/static</code> and warns you: add that directory to <code>STATICFILES_DIRS</code>, or Django will not serve the icons.</li>
-<li>If neither <code>STATICFILES_DIRS</code> nor <code>BASE_DIR</code> is available in your settings, the command aborts with an error.</li>
-</ul>
+<p>The icon SVGs always go into the first <code>STATICFILES_DIRS</code> entry, because django-iconx downloads them there, so <code>--output</code> moves only the generated CSS. Without <code>STATICFILES_DIRS</code> the command uses <code>BASE_DIR/static</code> and prints a warning; add that directory to <code>STATICFILES_DIRS</code>, or Django does not serve the icons. With neither setting, the command stops with an error.</p>
 <h2 id="4-build-the-css">4. Build the CSS<a class="headerlink" href="#4-build-the-css" title="Permanent link">&para;</a></h2>
-<p>Formwork uses <a href="https://daisyui.com/">DaisyUI</a> 5 for component styling and <a href="https://tailwindcss.com/">Tailwind CSS</a> 4+ for the build step. Formwork ships <code>formwork.css</code>, the Tailwind source: it contains <code>@apply</code> directives and <code>@import "tailwindcss"</code> itself, so it has to be processed by the Tailwind CLI or PostCSS plugin, and you must not import Tailwind or DaisyUI a second time next to it.</p>
+<p>Formwork uses <a href="https://daisyui.com/">DaisyUI</a> 5 for component styling and <a href="https://tailwindcss.com/">Tailwind CSS</a> 4+ for the build step. Formwork ships <code>formwork.css</code>, the Tailwind source. It contains <code>@apply</code> directives, <code>@import "tailwindcss"</code> and the DaisyUI <code>@plugin</code>, so build it with the Tailwind CLI or the PostCSS plugin, and import neither Tailwind nor DaisyUI a second time next to it.</p>
 <p>Install the build tools:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>npm<span class="w"> </span>install<span class="w"> </span>-D<span class="w"> </span>tailwindcss<span class="w"> </span>@tailwindcss/cli<span class="w"> </span>daisyui@5
 </span></code></pre></div>
 <p>Create your Tailwind input (say <code>app.css</code> in your project root):</p>
-<div class="language-css highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c">/* Formwork&#39;s Tailwind source (already includes Tailwind + the DaisyUI plugin). */</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">&quot;path/to/site-packages/django_formwork/static/formwork/formwork.css&quot;</span><span class="p">;</span>
+<div class="language-css highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c">/* Formwork's Tailwind source (already includes Tailwind + the DaisyUI plugin). */</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">"path/to/site-packages/django_formwork/static/formwork/formwork.css"</span><span class="p">;</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c">/* The icon classes generated by `manage.py formwork install` (step 3).</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c">   In a layer, so that size-* utilities override the 1em icon size. */</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">&quot;./static/iconx/icons.css&quot;</span><span class="w"> </span><span class="nt">layer</span><span class="o">(</span><span class="nt">components</span><span class="o">)</span><span class="p">;</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">"./static/iconx/icons.css"</span><span class="w"> </span><span class="nt">layer</span><span class="o">(</span><span class="nt">components</span><span class="o">)</span><span class="p">;</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c">/* Your own templates. */</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">@</span><span class="k">source</span><span class="w"> </span><span class="s2">&quot;./templates/&quot;</span><span class="p">;</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">@</span><span class="k">source</span><span class="w"> </span><span class="s2">"./templates/"</span><span class="p">;</span>
 </span></code></pre></div>
 <p>Tailwind 4 only emits utility classes it finds in scanned sources. <code>formwork.css</code> registers the package templates, widgets and scripts with <code>@source</code> itself, and it safelists the <code>{select,input,textarea}-{color}</code> and <code>badge-{color}</code> classes, so your entry point lists only your own sources. Add an <code>@source</code> or an <code>@source inline(...)</code> for a class name that your code builds at render time, such as <code>f"badge-{status}"</code>.</p>
 <p>To find the site-packages path for the import line:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import django_formwork; print(django_formwork.__path__[0])&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import django_formwork; print(django_formwork.__path__[0])"</span>
 </span></code></pre></div>
 <p>Then build:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>npx<span class="w"> </span>@tailwindcss/cli<span class="w"> </span>-i<span class="w"> </span>app.css<span class="w"> </span>-o<span class="w"> </span>static/dist.css
 </span></code></pre></div>
 <p>And link the built file in your base template:</p>
 <div class="language-html highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>{% load static %}
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">&quot;stylesheet&quot;</span> <span class="na">href</span><span class="o">=</span><span class="s">&quot;{% static &#39;dist.css&#39; %}&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">"stylesheet"</span> <span class="na">href</span><span class="o">=</span><span class="s">"{% static 'dist.css' %}"</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <p>The <code>examples/full</code> app in the repository is a working copy of exactly this setup.</p>
 <h3 id="daisyui-version">DaisyUI version<a class="headerlink" href="#daisyui-version" title="Permanent link">&para;</a></h3>
-<p>Formwork requires <strong>DaisyUI 5.x</strong>. DaisyUI 4 and earlier use a different component API and are not compatible. Within the DaisyUI 5 series, formwork is tested against the latest stable release; any DaisyUI 5.x version should work.</p>
+<p>Formwork requires DaisyUI 5. DaisyUI 4 and earlier use a different component API and do not work with formwork. The CI builds the CSS with the DaisyUI 5 release pinned in the repository's <code>package-lock.json</code>.</p>
 <h2 id="5-htmx-and-alpinejs">5. htmx and Alpine.js<a class="headerlink" href="#5-htmx-and-alpinejs" title="Permanent link">&para;</a></h2>
 <p>The dynamic widgets (dropdowns, server-side search, password reveal, steppers, drop zones, validated textarea) need htmx 4, htmx's alpine-compat extension and Alpine.js 3. Load them yourself, in this order:</p>
 <div class="language-html highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>{% load formwork %}
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;https://unpkg.com/htmx.org@4.0.0/dist/htmx.min.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;https://unpkg.com/htmx.org@4.0.0/dist/ext/hx-alpine-compat.min.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">src</span><span class="o">=</span><span class="s">"https://unpkg.com/htmx.org@4.0.1/dist/htmx.min.js"</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">src</span><span class="o">=</span><span class="s">"https://unpkg.com/htmx.org@4.0.1/dist/ext/hx-alpine-compat.min.js"</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>{% formwork_js %}
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">defer</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">defer</span> <span class="na">src</span><span class="o">=</span><span class="s">"https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <ol>
 <li>htmx comes first, because the formwork modules register htmx extensions.</li>
 <li>The alpine-compat extension comes after htmx. It is required: without it a morph strips what Alpine bindings (<code>x-show</code>, <code>x-text</code>, <code>:class</code>, <code>:aria-selected</code>) wrote into the DOM.</li>
 <li><code>{% formwork_js %}</code> comes before Alpine. Module scripts and <code>defer</code> scripts run in document order, and each formwork module registers its component in an <code>alpine:init</code> listener, which must exist when Alpine starts.</li>
 </ol>
-<p>htmx 4 handles the server-side search and validation requests; its built-in <code>outerMorph</code> swap covers what idiomorph did for htmx 2. <code>{% formwork_js %}</code> loads <code>formwork.js</code> as an ES module, which imports <code>formwork-core.js</code> (the <code>formwork-morph</code> htmx extension, dirty-field tracking, and native-validation disabling) plus each widget's Alpine.data component.</p>
+<p>htmx 4 sends the server-side search and validation requests, and its built-in <code>outerMorph</code> swap morphs a re-rendered form into the page. <code>{% formwork_js %}</code> loads <code>formwork.js</code> as an ES module, which imports <code>formwork-core.js</code> (the <code>formwork-morph</code> htmx extension, dirty-field tracking, and native-validation disabling) plus each widget's Alpine.data component.</p>
 <h3 id="htmx-extensions">htmx extensions<a class="headerlink" href="#htmx-extensions" title="Permanent link">&para;</a></h3>
 <p>htmx 4 runs every registered extension on the whole page. If you restrict them with an <code>htmx.config.extensions</code> whitelist, list <code>alpine-compat</code> and <code>formwork-morph</code>, plus <code>formwork-sections</code> on a page that loads <a href="../../reference/forms/#section-forms">section forms</a>.</p>
 <p><code>formwork-core.js</code> adds <code>open</code> to <code>htmx.config.morphIgnore</code>, so a morph leaves an open dropdown or disclosure as the user left it. For the same reason a server response cannot open or close a <code>&lt;details&gt;</code> or a <code>&lt;dialog&gt;</code> by morph; change the <code>open</code> state in the browser.</p>
 <h3 id="js-loading-paths">JS loading paths<a class="headerlink" href="#js-loading-paths" title="Permanent link">&para;</a></h3>
-<p>The <code>{% formwork_js %}</code> bundle is one tag and covers everything; that's the path most projects want. Two alternatives also work.</p>
+<p>The <code>{% formwork_js %}</code> bundle is one tag and loads the core and every widget component. Two other paths load the same files.</p>
 <p>For per-form loading via Django's <code>Media</code>, use <code>{{ form.media }}</code> for the widget JS the form actually contains, and add <code>{% formwork_core_js %}</code> for the page-global core (morph, dirty-tracking, validation disabling). <code>Select</code>, <code>SelectMultiple</code>, <code>ComboBox</code>, <code>DatePicker</code>, <code>StepperNumberInput</code>, <code>PasswordInput</code>, <code>SearchInput</code>, <code>FileDropzoneInput</code>, <code>ImageDropzoneInput</code>, <code>InputMask</code> and <code>ValidatedTextarea</code> each declare a <code>Media</code> class that points at their Alpine component file. Place both tags where <code>{% formwork_js %}</code> would go, before Alpine.</p>
-<p>For bundler-driven loading, <code>import "/static/formwork/formwork.js"</code> from a vite, webpack, or esbuild entry. The bundler walks the chain and emits a single bundle; no template tag is needed.</p>
+<p>For a JS bundler (vite, webpack or esbuild), import <code>formwork.js</code> by its file path in the installed package, under the directory that the command in <a href="#4-build-the-css">step 4</a> prints: <code>import "path/to/site-packages/django_formwork/static/formwork/formwork.js";</code>. The bundler follows the relative imports and emits one bundle, so the page needs no formwork template tag. The bundle must run after htmx and before Alpine, like the tag.</p>
 <p>ES modules are deduplicated by URL, so mixing tags is harmless. Combining <code>{% formwork_js %}</code> and <code>{% formwork_core_js %}</code> on the same page still executes the core only once.</p>
 <p><code>{% formwork_sections_js %}</code> loads <code>sections.js</code> for section forms. The bundle leaves it out. Load it after htmx; it does not need Alpine.</p>
 <h2 id="translations">Translations<a class="headerlink" href="#translations" title="Permanent link">&para;</a></h2>
@@ -1168,10 +1188,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.sections", "navigation.expand", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.sections", "navigation.expand", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

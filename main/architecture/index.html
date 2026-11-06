@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -647,6 +647,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/formsets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formsets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/widgets/" class="md-nav__link">
         
   
@@ -864,11 +892,11 @@
 <h2 id="design-constraints">Design constraints<a class="headerlink" href="#design-constraints" title="Permanent link">&para;</a></h2>
 <p>Django forms render at three levels:</p>
 <ul>
-<li><strong>Form</strong> (<code>{{ form }}</code>): all fields with labels, errors, help text.</li>
-<li><strong>Field</strong> (<code>{{ field.as_field_group }}</code>): one field with label, errors, help text.</li>
-<li><strong>Widget</strong> (<code>{{ field }}</code>): just the bare <code>&lt;input&gt;</code>, <code>&lt;select&gt;</code>, etc.</li>
+<li>The form (<code>{{ form }}</code>) renders all fields with labels, errors and help text.</li>
+<li>The field (<code>{{ field.as_field_group }}</code>) renders one field with its label, errors and help text.</li>
+<li>The widget (<code>{{ field }}</code>) renders the bare <code>&lt;input&gt;</code>, <code>&lt;select&gt;</code> or <code>&lt;textarea&gt;</code>.</li>
 </ul>
-<p>Django admin only renders at the widget level. This means:</p>
+<p>Django admin renders only at the widget level, so formwork follows five constraints:</p>
 <ol>
 <li>Overriding form or field level rendering is admin-safe.</li>
 <li>Formwork never overrides a built-in widget template: it would reach admin
@@ -877,8 +905,8 @@
 <li>CSS is independent: admin and frontend load separate stylesheets.</li>
 <li>CSS styles all form elements globally: standalone inputs get
    DaisyUI styling without needing <code>{{ form }}</code>.</li>
-<li>CSS must be easily overridable: use <code>@layer components</code> so users
-   can override with utility classes or unlayered CSS.</li>
+<li>Most formwork rules sit in <code>@layer components</code>, so a Tailwind utility
+   class or unlayered project CSS overrides them.</li>
 </ol>
 <h2 id="rendering">Rendering<a class="headerlink" href="#rendering" title="Permanent link">&para;</a></h2>
 <p><code>FormworkRenderer</code> is a <code>TemplatesSetting</code> renderer. It renders <code>{{ form }}</code>
@@ -1072,10 +1100,10 @@ them for a new widget and for a change to an existing one.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.sections", "navigation.expand", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.sections", "navigation.expand", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

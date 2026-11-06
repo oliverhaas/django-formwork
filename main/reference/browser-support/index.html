@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -545,6 +545,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../formsets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formsets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../widgets/" class="md-nav__link">
         
   
@@ -661,6 +689,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#effective-minimum" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effective minimum
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#feature-matrix" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -683,10 +722,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#effective-minimum" class="md-nav__link">
+  <a href="#progressive-enhancements" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Effective minimum
+        Progressive enhancements
       
     </span>
   </a>
@@ -764,6 +803,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#effective-minimum" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effective minimum
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#feature-matrix" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -786,10 +836,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#effective-minimum" class="md-nav__link">
+  <a href="#progressive-enhancements" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Effective minimum
+        Progressive enhancements
       
     </span>
   </a>
@@ -817,7 +867,27 @@
 
 
 <h1 id="browser-support">Browser Support<a class="headerlink" href="#browser-support" title="Permanent link">&para;</a></h1>
-<p>Formwork's CSS uses several modern CSS features. The table below lists the minimum browser versions required for full support.</p>
+<p>The CSS you build from <code>formwork.css</code> needs the browsers that Tailwind CSS 4 supports, plus CSS <code>subgrid</code>. The newer features that formwork uses beyond these, listed in <a href="#progressive-enhancements">Progressive enhancements</a>, have a fallback.</p>
+<h2 id="effective-minimum">Effective minimum<a class="headerlink" href="#effective-minimum" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Chrome</th>
+<th>Edge</th>
+<th>Firefox</th>
+<th>Safari</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>117</td>
+<td>117</td>
+<td>128</td>
+<td>16.5</td>
+</tr>
+</tbody>
+</table>
+<p>Tailwind 4 <a href="https://tailwindcss.com/docs/compatibility">lists</a> Chrome 111, Safari 16.4 and Firefox 128 as its minimum. <code>subgrid</code> raises Chrome and Edge to 117, and the CSS nesting in the DaisyUI 5 output raises Safari to 16.5. An older browser renders the forms with visual defects, and the forms still submit.</p>
 <h2 id="feature-matrix">Feature matrix<a class="headerlink" href="#feature-matrix" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -852,18 +922,11 @@
 <td>117</td>
 </tr>
 <tr>
-<td>CSS Nesting</td>
+<td>CSS nesting</td>
 <td>112</td>
 <td>117</td>
 <td>16.5</td>
 <td>112</td>
-</tr>
-<tr>
-<td><code>color-mix()</code> with <code>oklab</code></td>
-<td>111</td>
-<td>113</td>
-<td>16.2</td>
-<td>111</td>
 </tr>
 <tr>
 <td><code>@layer</code></td>
@@ -875,16 +938,17 @@
 </tbody>
 </table>
 <h2 id="where-each-feature-is-used">Where each feature is used<a class="headerlink" href="#where-each-feature-is-used" title="Permanent link">&para;</a></h2>
-<p><strong><code>:has()</code></strong>: used throughout <code>formwork.css</code> to style fieldsets contextually: single-checkbox two-column layout, multi-widget side-by-side layout, error tooltip sizing, ClearableFileInput flow layout, and validated textarea error state.</p>
-<p><strong><code>color-mix(in oklab, ...)</code></strong>: used for placeholder color on <code>&lt;select&gt;</code> and summary triggers, upload widget icon color, and the error highlight background on <code>ValidatedTextarea</code>. Browsers that don't support <code>color-mix()</code> fall back to a hardcoded <code>rgba()</code> value immediately before each <code>color-mix()</code> declaration.</p>
-<p><strong>CSS Grid <code>subgrid</code></strong>: used so checkbox and multi-widget inputs inside an error tooltip wrapper stay aligned with the parent fieldset's column grid.</p>
-<p><strong>CSS Nesting</strong>: used inside <code>@layer components</code> rule blocks (e.g. <code>.fieldset + .fieldset</code>). Browsers that don't support nesting will silently drop those rules.</p>
-<p><strong><code>@layer</code></strong>: all <code>formwork.css</code> rules are wrapped in <code>@layer components</code>. This ensures Tailwind utilities in HTML (which are in <code>@layer utilities</code>) always take precedence, and users can override formwork styles with unlayered CSS. Browsers that don't support <code>@layer</code> receive no formwork styles at all.</p>
-<h2 id="effective-minimum">Effective minimum<a class="headerlink" href="#effective-minimum" title="Permanent link">&para;</a></h2>
-<p>All five features are available in Chrome 117+, Firefox 121+, Safari 16.5+, and Edge 117+. Browsers released before these versions will have visual regressions (misaligned layouts, missing placeholder colors, broken subgrid alignment), but the forms remain functional.</p>
+<p><code>formwork.css</code> uses <code>:has()</code> to style a fieldset by its content: the two-column layout of a single checkbox, the side-by-side layout of a multi-widget field, the size of the error tooltip, the <code>ClearableFileInput</code> layout and the error state of <code>ValidatedTextarea</code>.</p>
+<p><code>color-mix(in oklab, ...)</code> mixes the placeholder color of the dropdown triggers and of <code>&lt;select&gt;</code>, the icon color of the drop zones, the error highlight of <code>ValidatedTextarea</code>, the soft select and textarea variants and the soft alert. Some of these declarations have an <code>rgba()</code> or hex fallback on the line before. The soft variants, the soft alert, the input-mask placeholder dots and the <code>SelectMultiple</code> trigger in a disabled fieldset have none, so a browser without <code>color-mix()</code> drops their colors.</p>
+<p><code>subgrid</code> keeps a checkbox, or the inputs of a multi-widget field, aligned with the column grid of the fieldset while an error tooltip wraps them.</p>
+<p><code>formwork.css</code> itself has no nested rules. The DaisyUI 5 rules in the built CSS do, and a browser without nesting drops them.</p>
+<p>Most <code>formwork.css</code> rules sit in <code>@layer components</code>, so the Tailwind utilities in your markup (in <code>@layer utilities</code>) and your unlayered CSS override them. A few rules stay unlayered, because they must beat DaisyUI rules in <code>@layer utilities</code>. Tailwind 4 puts its own output in layers too, so a browser without <code>@layer</code> ignores most of the stylesheet.</p>
+<h2 id="progressive-enhancements">Progressive enhancements<a class="headerlink" href="#progressive-enhancements" title="Permanent link">&para;</a></h2>
+<p>The dropdown panels of <code>Select</code>, <code>SelectMultiple</code> and <code>ComboBox</code> open in the top layer through the Popover API, and CSS anchor positioning places them next to the trigger. Without anchor positioning, the JavaScript sets the position of the panel. Without the Popover API, the panel stays absolutely positioned below its trigger.</p>
+<p><code>field-sizing: content</code> lets the text input of <code>DatePicker</code> and a native <code>&lt;select&gt;</code> fit an auto-width table column. A browser without it keeps the default width.</p>
 <div class="admonition note">
-<p class="admonition-title">Fallbacks</p>
-<p><code>color-mix()</code> rules always include a <code>rgba()</code> fallback on the preceding line, so colors degrade gracefully on older browsers. All other features have no fallback. If you need to support older browsers, you will need to add custom CSS overrides.</p>
+<p class="admonition-title">Older browsers</p>
+<p>Formwork has no fallback for <code>:has()</code>, <code>subgrid</code>, nesting or <code>@layer</code>. To support an older browser, add your own CSS overrides.</p>
 </div>
 
 
@@ -937,10 +1001,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.sections", "navigation.expand", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.sections", "navigation.expand", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>
