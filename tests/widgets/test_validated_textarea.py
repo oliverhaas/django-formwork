@@ -241,11 +241,11 @@ def test_no_htmx_without_validate_url():
 
 @pytest.mark.unit
 def test_preserves_value():
-    """The submitted value appears as textarea text content."""
+    """The submitted value appears as textarea text content, after the newline a browser drops."""
     widget = ValidatedTextarea(validate_url="/validate/")
     soup = render_widget(widget, name="content", value="hello world", attrs={"id": "id_content"})
     textarea = soup.find("textarea")
-    assert textarea.string == "hello world"
+    assert textarea.string == "\nhello world"
 
 
 @pytest.mark.unit
@@ -368,6 +368,17 @@ def _trigger_validation(page, text):
     }""",
         text,
     )
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("validate_url", [None, "/validate/"])
+def test_value_keeps_its_leading_newline(page, validate_url):
+    """The parser drops a newline right after ``<textarea>``, so the value's own one has to follow it."""
+    from playwright.sync_api import expect
+
+    html = ValidatedTextarea(validate_url=validate_url).render("notes", "\nsecond line", attrs={"id": "id_notes"})
+    page.set_content(html)
+    expect(page.locator("textarea")).to_have_value("\nsecond line")
 
 
 @pytest.mark.e2e
