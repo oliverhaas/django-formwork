@@ -1,0 +1,1599 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An opinionated UI framework for Django, built on Django forms">
+      
+      
+      
+        <link rel="canonical" href="https://oliverhaas.github.io/django-formwork/0.1.0a3/reference/changelog/">
+      
+      
+        <link rel="prev" href="../browser-support/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Changelog - Django Formwork</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#changelog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Django Formwork" class="md-header__button md-logo" aria-label="Django Formwork" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Django Formwork
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Changelog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/oliverhaas/django-formwork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    oliverhaas/django-formwork
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Django Formwork" class="md-nav__button md-logo" aria-label="Django Formwork" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Django Formwork
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/oliverhaas/django-formwork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    oliverhaas/django-formwork
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cookbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cookbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../forms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../formsets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formsets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../widgets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Widgets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browser-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#010a3-2026-11-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0a3 (2026-11-06)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0a3 (2026-11-06)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010a2-2026-05-18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0a2 (2026-05-18)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0a2 (2026-05-18)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010a1-2026-03-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0a1 (2026-03-15)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0a1 (2026-03-15)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#010a3-2026-11-06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0a3 (2026-11-06)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0a3 (2026-11-06)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010a2-2026-05-18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0a2 (2026-05-18)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0a2 (2026-05-18)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010a1-2026-03-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0a1 (2026-03-15)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0a1 (2026-03-15)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="010a3-2026-11-06">0.1.0a3 (2026-11-06)<a class="headerlink" href="#010a3-2026-11-06" title="Permanent link">&para;</a></h2>
+<h3 id="breaking-changes">Breaking changes<a class="headerlink" href="#breaking-changes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>
+<p><strong>Widget, search and setup rework.</strong> Every project needs code changes for this
+  upgrade. Rename the widgets, move server-side search onto the widget, add
+  <code>"django.forms"</code> to <code>INSTALLED_APPS</code>, and load htmx's alpine-compat extension. If you
+  override formwork templates, copy them again from the new paths.</p>
+<ul>
+<li>Rename the widgets: <code>SearchSelect</code> → <code>Select</code>, <code>MultiSelect</code> → <code>SelectMultiple</code>,
+  <code>ComboBox(multiple=True)</code> → <code>ComboBoxMultiple</code>, <code>Toggle</code> → <code>ToggleInput</code>,
+  <code>PasswordReveal</code> → <code>PasswordInput</code> (the show button is on by default,
+  <code>reveal=False</code> drops it), <code>InputNumber</code> → <code>StepperNumberInput</code>, <code>FileDropZone</code> →
+  <code>FileDropzoneInput</code>, <code>ImageDropZone</code> → <code>ImageDropzoneInput</code>. <code>ComboBox</code> takes
+  <code>ChoiceLabel</code> suggestions in place of its <code>icons=</code> and <code>descriptions=</code> dicts.</li>
+<li>Rename the Alpine components: <code>formworkSearchSelect</code> → <code>formworkSelect</code> and
+  <code>formworkMultiSelect</code> → <code>formworkSelectMultiple</code>. <code>OTPInput</code> renders one input with
+  <code>length</code> slots and needs no JavaScript.</li>
+<li>Rename the templates: <code>django/forms/formwork.html</code> → <code>formwork/forms/div.html</code> and
+  <code>django/forms/formwork_field.html</code> → <code>formwork/forms/field.html</code>. Each widget
+  template is named after its widget module: <code>search_select.html</code> → <code>select.html</code>,
+  <code>multi_select.html</code> → <code>select_multiple.html</code>, <code>input_number.html</code> →
+  <code>stepper_number.html</code>, <code>password_reveal.html</code> → <code>password_input.html</code>,
+  <code>drop_zone.html</code> → <code>file_dropzone.html</code> and <code>image_upload.html</code> →
+  <code>image_dropzone.html</code>. The dropdown root classes are <code>formwork-select</code> (was
+  <code>search-select</code>), <code>formwork-select-multiple</code> (was <code>multiselect</code>) and
+  <code>formwork-combobox</code> (was <code>combobox</code>), so update CSS that targets the old classes.</li>
+<li><code>FormworkRenderer</code> is a <code>TemplatesSetting</code> renderer, so a template in your
+  project overrides the formwork one. It needs <code>"django.forms"</code> in
+  <code>INSTALLED_APPS</code> and a <code>DjangoTemplates</code> backend that finds app templates. See
+  <a href="../../getting-started/installation/">Installation</a>.</li>
+<li>A <code>Select</code>, <code>SelectMultiple</code>, <code>ComboBox</code> or <code>ComboBoxMultiple</code> searches on the
+  server when it gets <code>search_queryset</code>, a callable that takes the request and returns
+  the rows. <code>search_fields</code> names the columns to match, and <code>search_decorator</code> (an
+  auth decorator, or <code>None</code> for a public search) is required. A <code>FormworkForm</code> or
+  <code>FormworkModelForm</code> class registers the search when Python creates it, and the app
+  imports the <code>forms</code> module of every installed app at startup. The endpoint returns
+  20 rows, the dropdown adds a "Load more" button, and no <code>COUNT</code> query runs.
+  <code>search_ranked=True</code> orders matches by quality on PostgreSQL (pg_trgm) and raises
+  <code>ImproperlyConfigured</code> on other databases. <code>search_key</code> with <code>search_params</code> reuses
+  one registered search for fields built in <code>__init__</code>. <code>FormworkSearchView</code> is
+  final, and an anonymous request for an unknown key redirects to <code>LOGIN_URL</code>. See
+  <a href="../views/#server-side-search">Server-side search</a>.</li>
+<li>Load htmx, then <code>dist/ext/hx-alpine-compat.min.js</code>, then <code>{% formwork_js %}</code>,
+  then Alpine with <code>defer</code>. Without alpine-compat a morph strips the state that
+  Alpine bindings wrote into the page. An <code>htmx.config.extensions</code> whitelist must
+  list <code>alpine-compat</code> and <code>formwork-morph</code>, plus <code>formwork-sections</code> on a page with
+  section forms. A morph cannot open or close a <code>&lt;details&gt;</code> or <code>&lt;dialog&gt;</code>, because
+  <code>open</code> is in <code>htmx.config.morphIgnore</code>.</li>
+<li>The Jinja2 support is removed (<code>FormworkJinja2Renderer</code>, <code>FormworkJinja2Form</code>,
+  <code>FormworkJinja2ModelForm</code>, <code>formwork_jinja2_environment</code> and the <code>jinja2/</code>
+  templates). So are the <code>search_choices_&lt;field&gt;</code> form methods,
+  <code>FormworkAutoSearchView</code> and the <code>widget_type</code> tokens, and
+  <code>FormworkModelChoiceField</code>, <code>FormworkModelMultipleChoiceField</code> and
+  <code>FormworkModelChoiceIterator</code> with the <code>icon_from_instance</code> and
+  <code>description_from_instance</code> arguments of the fields. Return a
+  <code>ChoiceLabel</code> from a plain <code>ModelChoiceField.label_from_instance()</code> instead.
+  <code>ChoiceLabel</code> lives in <code>django_formwork.widgets.select</code>, and you can import it from
+  <code>django_formwork</code> and <code>django_formwork.widgets</code>.</li>
+<li>The new widgets are <code>SuffixNumberInput</code>, <code>DateInput</code>, <code>DateRangeInput</code> with
+  <code>DateRangeField</code> and <code>DateRange</code> (in <code>django_formwork.fields</code>, and importable from
+  <code>django_formwork</code>), <code>Display</code> for read-only values, <code>CardRadioSelect</code>,
+  <code>CardCheckboxSelectMultiple</code>,
+  <code>CheckboxInput(text=...)</code>, <code>CheckboxSelectMultiple(columns=...)</code>,
+  <code>ComboBoxMultiple</code> and <code>PatternHintMixin</code>. <code>TextInput</code> takes <code>input_type=</code>,
+  <code>Textarea</code> takes <code>floating=</code>, and <code>SearchInput</code> takes <code>show_spinner</code>, <code>show_clear</code>
+  and <code>filter_items</code>. <code>Select</code> and <code>SelectMultiple</code> take <code>allow_clear</code> and
+  <code>floating</code>. See <a href="../widgets/">Widgets</a>.</li>
+<li><code>section_forms()</code> and the <code>{% formwork_section %}</code> tag let several forms on one
+  page autosave their own fields of one row. Load <code>{% formwork_sections_js %}</code> after
+  htmx on those pages, and give each form
+  <code>hx-sync="closest [data-section-forms]:queue all"</code>. See
+  <a href="../forms/#section-forms">Section forms</a>.</li>
+<li><code>Meta.mandatory</code> marks a field that a save accepts empty but a later step needs.
+  Its label gets the red <code>*</code> and its widget gets <code>aria-required</code>, as on a required
+  field. A string in place of a list, or a name that is not a field of the form,
+  raises <code>ImproperlyConfigured</code> when Python creates the form class.</li>
+<li>Every string formwork shows goes through Django's translation functions, plurals
+  included. Formwork ships no catalog, so run <code>makemessages</code> in your project. The
+  JavaScript reads its texts from <code>data-*</code> attributes and needs no JavaScript
+  catalog. The CSS takes the <code>[more]</code>/<code>[less]</code> label of the help-text toggle from the
+  <code>data-more</code> and <code>data-less</code> attributes of its <code>&lt;summary&gt;</code>, so an override of
+  <code>formwork/forms/field.html</code> must keep them.</li>
+<li>Some widgets look different. <code>error_display = "auto"</code> is the default, so a field
+  with help text shows its error inline and a field without help text shows it in a
+  tooltip. To keep one style, set <code>"inline"</code> or <code>"tooltip"</code> in <code>Meta</code> or pass
+  <code>error_display=</code>. <code>ToggleInput</code> puts its label beside the switch, dimmed while off.
+  Checkbox and radio groups render as a plain stacked list, each label as wide as its
+  text. A disabled dropdown trigger is greyed out. The open panel is at most 288px
+  high and shrinks to stay inside the viewport, and the caret points up while it is
+  open. The dropdown search box has a magnifier and a clear button, and shows past 10
+  options instead of from 20. The password button shows the current state: an open eye
+  while the password is visible. <code>ImageDropzoneInput</code> shows the field label and an
+  "Upload Image" button. <code>OTPInput</code> is one <code>&lt;input&gt;</code> drawn as digit slots, in place
+  of one input per digit.</li>
+<li>Required fields keep the red <code>*</code> and optional fields get no marker. The dropdowns
+  keep their caret, compact rows and "Select…" placeholder, and the closed
+  <code>SelectMultiple</code> keeps the option icons.</li>
+</ul>
+</li>
+<li>
+<p><strong><code>django_formwork.widgets.combobox</code> renamed to <code>django_formwork.widgets.combo_box</code>.</strong>
+  Importing <code>ComboBox</code> from <code>django_formwork.widgets</code> is unaffected. The rework removes
+  the widget-type tokens (<code>"search_select"</code>, <code>"multiselect"</code>, <code>"combobox"</code>),
+  <code>SearchRegistration.widget_type</code>, <code>FormworkSearchView.widget_type</code> and the
+  <code>SEARCH_SELECT_TEMPLATE</code>, <code>MULTISELECT_TEMPLATE</code> and <code>COMBOBOX_TEMPLATE</code> attributes,
+  and it changes the dropdown root classes.</p>
+</li>
+<li><strong>The 0.1.0a2 search registry is gone.</strong> <code>django_formwork.registry</code>, <code>make_key</code>,
+  <code>make_choices_key</code>, <code>register</code>, <code>get_registration</code>, <code>get_registry</code> and
+  <code>SearchRegistration</code> are removed. The public surface is the <code>search_queryset</code> argument
+  of the widgets, the <code>django_formwork.search</code> module and <code>include("django_formwork.urls")</code>
+  (see the rework above).</li>
+<li><strong>Help text is escaped.</strong> A plain <code>help_text</code> string with HTML tags shows the tags as
+  text. Formwork 0.1.0a2 rendered it as HTML, and Django's own templates still do. Build
+  help text that needs markup with <code>format_html()</code> or <code>mark_safe()</code>. A help text built
+  from user data cannot inject markup. See <a href="../forms/#help-text">Forms</a>.</li>
+</ul>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Editable tables.</strong> <code>as_row()</code> renders a <code>FormworkForm</code>/<code>FormworkModelForm</code> as a
+  table <code>&lt;tbody&gt;</code>, and <code>as_rows()</code> renders a formset as one editable <code>&lt;table&gt;</code>. Pair
+  them with the new <code>FormworkRowSaveMixin</code> view mixin for per-row htmx autosave: each
+  row posts only its own changes (keyed on the posted pk) and re-renders in place. The
+  view needs <code>queryset</code> or <code>get_queryset(request)</code> with the rows the user can change, and
+  a pk outside it gets a 404. The form gets <code>request.FILES</code>, and the view takes URL
+  kwargs. Override the markup at <code>formwork/tables/row.html</code> and
+  <code>formwork/tables/table.html</code>.</li>
+<li><strong>Model formsets that check uniqueness in one query per check.</strong>
+  <code>formwork_modelformset_factory</code> and <code>formwork_inlineformset_factory</code> build formsets
+  whose <code>unique</code>, <code>unique_together</code> and <code>unique_for_date</code> checks against the database run
+  once for all rows, not once per row. The errors, their messages and their placement
+  match Django's. The forms they build are exempt from <code>FORMWORK_FORCE_ASYNC</code>: in an
+  async view, wrap <code>formset.is_valid()</code> and <code>save()</code> in <code>sync_to_async</code>. See
+  <a href="../formsets/">Formsets</a>.</li>
+<li><strong>System checks for the setup.</strong> <code>manage.py check</code> reports <code>django_formwork.E001</code> when
+  a form declares a server-side search but the URLconf does not include
+  <code>django_formwork.urls</code>, and <code>django_formwork.E002</code> when <code>"django.forms"</code> is missing
+  from <code>INSTALLED_APPS</code>. Both mistakes used to show up only on the first search or
+  render.</li>
+<li><strong>Django 6.1 support.</strong> CI runs the suite on Django 6.0 and 6.1.</li>
+<li><strong>Native <code>&lt;select multiple&gt;</code> keeps Django's rendering.</strong> A plain
+  <code>forms.SelectMultiple</code> rendered through the formwork renderer stays a native
+  <code>&lt;select multiple&gt;</code>. Use <code>widgets.SelectMultiple</code> for the dropdown.</li>
+<li><strong><code>error_display</code> Meta option for field error rendering.</strong> <code>FormworkForm</code> and
+  <code>FormworkModelForm</code> accept <code>error_display = "auto"</code> (default), <code>"inline"</code> or
+  <code>"tooltip"</code>. <code>"inline"</code> renders the error below the widget in the error color, with
+  the icon and the toggle of the help text. <code>"tooltip"</code> uses the DaisyUI tooltip, and
+  <code>"auto"</code> picks inline when the field has help text and the tooltip otherwise. The
+  collapsed line shows only the truncated error, and the <code>[more]</code> toggle expands the
+  full error and the help text. Another value raises <code>ImproperlyConfigured</code> when Python
+  creates the form class. See <a href="../forms/#error_display">Forms</a>.</li>
+<li><strong><code>ImageDropzoneInput</code> shows the stored image.</strong> The widget previews the field's
+  stored file, or <code>preview_url</code> when set. On an optional field its remove button posts
+  <code>clear_&lt;name&gt;</code>, so the field cleans to <code>False</code> and a model form empties it, as with
+  <code>ClearableFileInput</code>. After a remove the drop area comes back, and a file picked there
+  replaces the stored one. See <a href="../widgets/#imagedropzoneinput">Widgets</a>.</li>
+<li><strong>Uniform top-level import surface.</strong> The form and formset base classes and factories,
+  <code>section_forms</code>, <code>DateRangeField</code> and <code>DateRange</code>, <code>ChoiceLabel</code>, <code>FormworkBoundField</code>,
+  <code>FormworkRenderer</code>, <code>FormworkSearchView</code>, <code>FormworkValidateView</code>,
+  <code>FormworkRowSaveMixin</code>, <code>FormworkModel</code> and the async mixins import from
+  <code>django_formwork</code>. The widgets stay in <code>django_formwork.widgets</code>. A module-level
+  <code>__getattr__</code> imports each name on first access, so <code>import django_formwork</code> works
+  without configured settings or a ready app registry. Submodule imports keep working,
+  and the docs show the top-level imports.</li>
+<li><strong><code>validate_dirty_only</code> skips validation of unchanged fields.</strong> Set it in <code>Meta</code> or pass
+  it to the form. A field the user did not change skips its validators, its
+  <code>clean_&lt;field&gt;()</code> method and the model checks, and keeps its stored value. On a
+  <code>FormworkModelForm</code> the model needs <code>get_dirty_fields()</code>: inherit the new abstract
+  <code>FormworkModel</code>, or mix in <code>filthyfields.DirtyFieldsMixin</code>. The package adds a
+  dependency on <code>django-filthyfields</code>. A model form whose model lacks
+  <code>get_dirty_fields()</code> raises <code>ImproperlyConfigured</code> when Python creates the form class.
+  See <a href="../forms/#validate_dirty_only">Forms</a>.</li>
+</ul>
+<h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>No template value reaches an Alpine expression.</strong> Alpine evaluates the attribute after
+  the browser decodes its HTML entities, so Django's autoescaping does not protect a value
+  inside <code>x-data</code> or another expression. In 0.1.0a2 a field value could run as script in
+  <code>date_picker.html</code> (when a form with a validation error rendered again), <code>otp_input.html</code>
+  and <code>input_number.html</code>, and a user-editable label or <code>to_field_name</code> value could do the
+  same in the <code>SEARCH_SELECT_TEMPLATE</code> and <code>COMBOBOX_TEMPLATE</code> search responses. The
+  templates pass values through autoescaped <code>data-*</code> attributes, and the search rows
+  render through the <code>option_list</code> partial of each widget template.</li>
+<li><strong>Each form field gets its own search registration.</strong> In 0.1.0a2 two forms that searched
+  the same model with the same <code>search_fields</code> got one registry key, and the form that
+  registered last won. A public form could drop the <code>search_decorator</code> of another form or
+  replace its scoped queryset with an unfiltered one. The key comes from the module,
+  the class and the field name of the form, and from where <code>search_queryset</code> and
+  <code>search_decorator</code> are defined, so forms that a factory builds over one model keep
+  their own search. <code>search_queryset</code> must be a callable that filters through the
+  request it gets. A second form of the same name whose <code>search_queryset</code> closes over
+  other values raises <code>ImproperlyConfigured</code>, and so does a <code>search_queryset</code> that is not
+  callable (the message names the field).</li>
+<li><strong>The search endpoint renders only formwork's own row templates.</strong> The <code>widget</code> query
+  parameter must be <code>select</code>, <code>select_multiple</code> or <code>combo_box</code>, and the endpoint returns
+  404 for any other value. The <code>type</code> parameter and the
+  <code>FormworkSearchView.VALID_WIDGET_TYPES</code> attribute are removed.</li>
+<li><strong><code>FormworkValidateView</code> takes a <code>validate_decorator</code> and caps the text length.</strong>
+  <code>validate_decorator</code> wraps the view, as <code>search_decorator</code> does for the search view.
+  <code>MAX_TEXT_LENGTH</code> (default <code>50_000</code> characters) truncates the posted text before
+  validation, as <code>MAX_QUERY_LENGTH</code> does for a search query.</li>
+</ul>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Targets the stable htmx 4.0.1 release.</strong> The installation guide, the full example, and
+  the e2e harness load <code>htmx.org@4.0.1</code> (was <code>4.0.0-beta3</code>). If you load htmx yourself,
+  bump your pin; formwork's templates and <code>formwork-core.js</code> need no changes. npm still
+  tags htmx 2 as <code>latest</code>, so pin <code>@4.0.1</code> explicitly instead of loading an unversioned
+  <code>htmx.org</code> URL.</li>
+<li><strong><code>{% formwork_css %}</code> is deprecated and goes away in 0.2.0.</strong> The tag links
+  <code>formwork.css</code> as it ships, but the file is Tailwind input, so the browser applies none
+  of its styles. Import <code>formwork.css</code> from your Tailwind input and link the built CSS.
+  The tag raises a <code>DeprecationWarning</code>.</li>
+<li><strong><code>django_formwork.FormworkChoiceLabel</code> from 0.1.0a2 still imports.</strong> It resolves to
+  <code>ChoiceLabel</code> with a <code>DeprecationWarning</code> and goes away in 0.2.0. Use <code>ChoiceLabel</code>.</li>
+<li><strong><code>DatePicker</code> and <code>InputMask</code> bind to shipped Alpine.data components.</strong> If you override
+  their widget templates, copy them again: <code>x-data</code> holds only the component name. The
+  components are <code>formworkDatePicker</code> and <code>formworkInputMask</code> in
+  <code>formwork/widgets/date_picker.js</code> and <code>input_mask.js</code>. They read their configuration from
+  autoescaped <code>data-*</code> attributes: <code>data-value</code> (<code>DatePicker</code>) and <code>data-mask</code>
+  (<code>InputMask</code>). Each widget class declares the module in its <code>Media</code>, so
+  <code>{% formwork_core_js %}</code> with <code>{{ form.media }}</code> loads it. The templates drop their
+  <code>escapejs</code> filters, because no value passes through a JavaScript expression any more.
+  <code>OTPInput</code> needs no JavaScript.</li>
+<li><strong><code>StepperNumberInput</code>, <code>PasswordInput</code> and <code>ValidatedTextarea</code> bind to shipped
+  Alpine.data components.</strong> If you override their widget templates, copy them again:
+  <code>x-data</code> holds only the component name. The components are <code>formworkStepperNumber</code>,
+  <code>formworkPasswordInput</code> and <code>formworkValidatedTextarea</code> in
+  <code>formwork/widgets/stepper_number.js</code>, <code>password_input.js</code> and <code>validated_textarea.js</code>.
+  <code>StepperNumberInput</code> reads <code>data-min</code> and <code>data-integer</code> and takes <code>max</code> and <code>step</code> from
+  its <code>&lt;input&gt;</code>. <code>ValidatedTextarea</code> reads <code>data-has-errors</code>, and <code>PasswordInput</code> takes no
+  configuration. Each widget class declares its module in <code>Media</code>.</li>
+<li><strong><code>FileDropzoneInput</code> and <code>ImageDropzoneInput</code> bind to shipped Alpine.data components.</strong>
+  If you override <code>file_dropzone.html</code> or <code>image_dropzone.html</code>, copy them again: <code>x-data</code>
+  holds only the component name. The components are <code>formworkFileDropzone</code> and
+  <code>formworkImageDropzone</code> in <code>formwork/widgets/file_dropzone.js</code> and <code>image_dropzone.js</code>.
+  They read the size limit from <code>data-max-size</code>, and the template leaves the attribute out
+  when the widget has no limit. Each widget class declares its module in <code>Media</code>. The
+  server does not repeat the type and size checks of the browser, so validate the upload
+  in the form. No widget template has an <code>x-data</code> object literal, and <code>formwork.js</code>
+  imports every widget module, so <code>{% formwork_js %}</code> and a bundler import of
+  <code>django_formwork/static/formwork/formwork.js</code> load the new files.</li>
+<li><strong><code>manage.py formwork install</code> writes the generated icon CSS into your project's static
+  directory.</strong> In 0.1.0a2 it wrote into the installed <code>django_formwork</code> package, which
+  fails on a read-only install (containers, system-wide pip, Nix). The file lands at
+  <code>&lt;first STATICFILES_DIRS entry&gt;/iconx/icons.css</code>, or at <code>BASE_DIR/static/iconx/icons.css</code>
+  when <code>STATICFILES_DIRS</code> is not set. The new <code>--output DIR</code> option sets the directory.
+  <code>formwork.css</code> does not import <code>../iconx/icons.css</code> any more, so add
+  <code>@import "./static/iconx/icons.css" layer(components);</code> (with your static directory)
+  next to the formwork import in your Tailwind input. The layer lets the <code>size-*</code>
+  utilities override the 1em icon size. The installation guide and the <code>full</code> example
+  show the recipe.</li>
+<li><strong>The installation guide lists every required step.</strong> These are <code>django_iconx</code> in
+  <code>INSTALLED_APPS</code>, <code>manage.py formwork install</code> with its <code>--output</code> option, and a
+  Tailwind input that imports <code>formwork.css</code> and the generated icon CSS, without a second
+  import of Tailwind or DaisyUI. <code>formwork.css</code> registers the package templates, widgets
+  and scripts with <code>@source</code>, so your Tailwind input lists only your own sources.</li>
+<li><strong>A type checker accepts only a callable or <code>None</code> for <code>search_decorator</code></strong> on <code>Select</code>,
+  <code>SelectMultiple</code>, <code>ComboBox</code> and <code>ComboBoxMultiple</code> (was <code>Callable | object</code>). Runtime
+  behavior is unchanged: a form with a <code>search_queryset</code> widget and no <code>search_decorator</code>
+  raises <code>ImproperlyConfigured</code> when Python creates the form class.</li>
+<li><strong>Help text renders as one truncated line with a leading info icon.</strong> When the text
+  overflows, a <code>[more]</code>/<code>[less]</code> toggle at the end of the line expands or collapses it.
+  If you override <code>formwork/forms/field.html</code>, copy it again: the help text sits in a
+  <code>&lt;details class="formwork-disclosure"&gt;</code>, and its <code>&lt;summary&gt;</code> carries the <code>data-more</code> and
+  <code>data-less</code> labels.</li>
+</ul>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>ValidatedTextarea</code> posts only its text to the validate endpoint.</strong> htmx 4 has no
+  <code>hx-params</code>, so each check while typing posted every field of the enclosing form,
+  with any files picked in it. It posts <code>text</code>, <code>field_name</code> and <code>errors_id</code> only.</li>
+<li><strong>Screen readers name the <code>FileDropzoneInput</code> by its field label.</strong> The keyboard
+  focus went to a drop area named only "Choose files", while the field label, help text
+  and error state sat on a hidden file input. The file input takes the focus, and the
+  drop area shows the focus ring.</li>
+<li><strong>Dropdowns close on any click outside.</strong> <code>Select</code> and <code>SelectMultiple</code> close when a
+  click lands anywhere outside the open panel, including the trigger of another dropdown,
+  so opening a second dropdown closes the first.</li>
+<li><strong>The dropdown placeholder stays muted on focus.</strong> The "Select…" placeholder of
+  <code>Select</code> and <code>SelectMultiple</code> keeps its muted color when the trigger has focus.</li>
+<li><strong>Dropdown option rows invert on press, and the closed trigger keeps its border.</strong>
+  A pressed option shows its active state, and the trigger keeps its border while the
+  panel is open.</li>
+<li><strong>Dropdown widgets keep Django's <code>aria-describedby</code>.</strong> <code>Select</code> and <code>SelectMultiple</code>
+  render it on the <code>&lt;summary&gt;</code> trigger and <code>ComboBox</code> on the combobox input, so a screen
+  reader reads the help text and the error message that Django 6 links to the field, in
+  addition to <code>aria-invalid</code>.</li>
+<li><strong>Screen readers announce a rejected drop.</strong> The client-side error <code>&lt;p&gt;</code> in
+  <code>FileDropzoneInput</code> and <code>ImageDropzoneInput</code> has <code>role="alert"</code>, so a screen reader
+  reads the "too large" and "wrong type" messages.</li>
+<li><strong><code>StepperNumberInput</code> renders empty for an unbound or <code>None</code> value</strong> in place of <code>0</code>.
+  The buttons round to the decimals of the step, so stepping <code>0.2</code> by <code>0.1</code> gives <code>0.3</code>,
+  not <code>0.30000000000000004</code>.</li>
+<li><strong><code>FormworkValidateView</code> emits no empty <code>&lt;mark&gt;</code></strong> when an error span lies entirely
+  outside the submitted text. The view drops a span that clamps to nothing.</li>
+<li><strong><code>FormworkValidateView</code> works behind a URL with kwargs.</strong> A validate view routed as
+  <code>validate/&lt;field&gt;/</code> raised a <code>TypeError</code> on every post. The URL kwargs reach the view
+  as <code>self.kwargs</code>.</li>
+<li><strong><code>ais_valid()</code> runs a sync <code>clean_&lt;field&gt;()</code> or <code>clean()</code> that queries the
+  database.</strong> Such a method raised <code>SynchronousOnlyOperation</code>, because <code>ais_valid()</code>
+  called it inside the event loop. Sync methods run in a worker thread, and async ones
+  are still awaited.</li>
+<li><strong>Your own <code>&lt;details class="dropdown"&gt;</code> keeps its behavior.</strong> <code>formwork.css</code> laid a
+  full-page click overlay over every open DaisyUI <code>details.dropdown</code> and removed the
+  focus ring of every input inside a <code>.dropdown-content</code>. Both rules apply only to the
+  formwork <code>Select</code> and <code>SelectMultiple</code> now. A project dropdown that relied on the
+  overlay to close on an outside click needs its own handler, for example
+  <code>@click.outside="$el.open = false"</code> with Alpine.</li>
+<li><strong><code>InputMask</code> keeps its text through a morph.</strong> A morph emptied the visible text of
+  every <code>InputMask</code> without focus. Backspace after a literal removes the character
+  before it, typing in the middle shifts the rest, and a <code>+1</code> mask no longer reads its
+  own <code>1</code> as a typed digit.</li>
+<li><strong>Typing fast sends the last keystrokes.</strong> Text typed into the search box of a
+  <code>Select</code>, into a <code>ComboBox</code> or into a <code>ValidatedTextarea</code> while a request was pending
+  never reached the server, so the list showed the results of an older query. The newest
+  request now waits in a queue and runs after the pending one.</li>
+<li><strong>A <code>Select</code> or <code>SelectMultiple</code> takes the server's answer to a pick.</strong> After a pick
+  the widget turned away every morph whose value differed from the pick, so a server
+  that changed or reset the value was ignored. Only the answer to a request sent before
+  the latest pick is turned away now.</li>
+<li><strong>Escape closes only the dropdown.</strong> Escape in an open <code>Select</code>, <code>SelectMultiple</code>,
+  <code>ComboBox</code> or <code>DatePicker</code> panel inside a <code>&lt;dialog&gt;</code> closed the dialog too. It closes
+  the panel and puts the focus back on the trigger. Moving the focus to another control
+  closes the panel.</li>
+<li><strong>Screen readers announce the picked and the highlighted option.</strong> <code>aria-selected</code> sits
+  on the option row, and the search box of a <code>Select</code> and the <code>ComboBox</code> input point at
+  the highlighted row with <code>aria-activedescendant</code>. A <code>Select</code> with its own <code>id</code> in
+  <code>attrs</code> is named by its label and its value; it pointed <code>aria-labelledby</code> at an id no
+  element had.</li>
+<li><strong>Labels name the <code>DatePicker</code> and the floating <code>PasswordInput</code> alone.</strong> Screen readers
+  read "Due date Toggle calendar" and "Password Show password", because the toggle
+  button sat inside the label.</li>
+<li><strong>A <code>Select</code> keeps the attrs you pass.</strong> <code>data-*</code>, <code>hx-*</code>, <code>autofocus</code>, <code>title</code> and
+  other attrs were dropped. <code>data-*</code> and <code>hx-*</code> go on the hidden input that holds the
+  value and fires <code>change</code>; the rest go on the trigger.</li>
+<li><strong>A <code>SelectMultiple</code> with one malformed past-page key keeps its other selections.</strong>
+  The bad key hid every selection past the first page. A <code>Select</code> no longer posts a value that no option holds behind the placeholder, so an
+  optional field can be saved again.</li>
+<li><strong>A <code>Select</code> on a <code>ModelChoiceField</code> without a blank choice runs one query.</strong> Django's
+  required-attribute check ran the queryset a second time.</li>
+<li><strong><code>TextInput(attrs={"type": "email"})</code> renders <code>type="email"</code>.</strong> The widget and
+  subclasses that set <code>input_type</code> rendered <code>type="text"</code>.</li>
+<li><strong><code>ValidatedTextarea</code> keeps a leading blank line.</strong> The value lost it on every render,
+  and autosave posted the shorter text.</li>
+<li><strong><code>DatePicker(format="%d/%m/%Y")</code> opens the calendar on the stored date.</strong> It opened on
+  the current month with no day picked.</li>
+<li><strong>The <code>StepperNumberInput</code> buttons leave a readonly value alone</strong>, and a decimal <code>min</code>
+  works under a locale with a decimal comma.</li>
+<li><strong><code>Rating</code> can go back to unrated.</strong> The clear radio never rendered checked and stayed
+  enabled on a disabled field. The stars get <code>required</code>, <code>aria-invalid</code>, <code>aria-required</code>
+  and a caller class.</li>
+<li><strong><code>SuffixNumberInput</code> keeps a caller <code>style</code>.</strong> The prefix padding replaced it.</li>
+<li><strong><code>ComboBox</code> sends the typed text as <code>q</code> only.</strong> The request also carried it under the
+  field name, so a field named like a search param broke the search. A <code>(value, label)</code>
+  pair in the suggestions raises <code>ImproperlyConfigured</code>; it rendered as a group with one
+  suggestion per letter.</li>
+</ul>
+<h3 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>PhoneInput</code> widget.</strong> Bundling a country dial-code table (with flag emoji) and a bespoke
+  prefix picker put application data in the framework, and it emitted a non-normalized
+  <code>"+1 5551234"</code> string with no validation. Real phone handling belongs to a dedicated library
+  such as <code>django-phonenumber-field</code>. The <code>full</code> example has a local <code>PhoneInput</code> that
+  shows how a project builds one. The country and dial-code dataset
+  (<code>django_formwork/data.py</code>) is removed with it.</li>
+<li><strong><code>CountryInput</code> widget and <code>country_choices()</code>.</strong> The country selector was a thin wrapper
+  over <code>SearchSelect</code> with an ISO 3166-1 list, and it never validated: the choices sat on
+  the widget, not the field, so the form rejected every submitted value. Country lists are
+  application data. Build a <code>forms.ChoiceField(choices=..., widget=widgets.Select())</code> from
+  your own list or from a package such as <code>django-countries</code>. The <code>full</code> example shows the
+  pattern.</li>
+<li><strong>The dead <code>AsyncModelFormMixin._apost_clean</code> override.</strong> The dirty-only model form
+  mixin shadowed it in the MRO of <code>FormworkModelForm</code>, so nothing called it. If you
+  combine <code>AsyncModelFormMixin</code> directly with a plain <code>ModelForm</code> (unsupported), supply
+  your own <code>_apost_clean</code>.</li>
+</ul>
+<h2 id="010a2-2026-05-18">0.1.0a2 (2026-05-18)<a class="headerlink" href="#010a2-2026-05-18" title="Permanent link">&para;</a></h2>
+<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Documentation for six widgets that already shipped in 0.1.0a1 but were missing from the reference: <code>CountryInput</code>, <code>DatePicker</code>, <code>InputMask</code>, <code>InputNumber</code>, <code>OTPInput</code>, <code>PhoneInput</code>.</li>
+</ul>
+<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Tightened support window to Python 3.14 and Django 6.0 (was Python 3.12+ / Django 5.2+ in 0.1.0a1). Pin <code>django-formwork==0.1.0a1</code> if you need the wider range.</li>
+<li><strong><code>formwork.js</code> is now an ES module</strong> — <code>{% formwork_js %}</code> emits <code>&lt;script type="module" src="..."&gt;</code> so the file's internal imports of <code>formwork-core.js</code> and <code>widgets/*.js</code> resolve. Users who reference <code>formwork.js</code> directly (without using the template tag) must add <code>type="module"</code> to their <code>&lt;script&gt;</code> tag.</li>
+<li><strong>Page-global core split into <code>formwork-core.js</code></strong> — the htmx morph extension, dirty-tracking, and native-validation disabling now live in their own file, loaded via the new <code>{% formwork_core_js %}</code> template tag. <code>{% formwork_js %}</code> still works exactly as before (it imports <code>formwork-core.js</code> plus the three widget modules); the split lets users on <code>{{ form.media }}</code> load only the core they need.</li>
+<li><strong>Per-widget <code>Media.js</code></strong> — <code>SearchSelect</code>, <code>MultiSelect</code>, and <code>ComboBox</code> now declare <code>class Media: js = ...</code> so their Alpine.data component code is included automatically via <code>{{ form.media }}</code>. Three loading paths now coexist: <code>{% formwork_js %}</code> (one-tag bundle), <code>{% formwork_core_js %}</code> + <code>{{ form.media }}</code> (per-form), or <code>import "django-formwork/formwork.js"</code> from a JS bundler (django-vite, webpack, esbuild). ES module URL dedup makes the paths safely composable.</li>
+<li><strong>Migrated to htmx 4</strong> — The package now targets htmx 4 (currently beta). The standalone <code>idiomorph-ext.min.js</code> dependency is gone (htmx 4 has morph in core). User-facing changes:<ul>
+<li>Form templates now use <code>hx-swap="outerMorph"</code> (was <code>hx-swap="morph:outerHTML"</code> + <code>hx-ext="morph"</code>)</li>
+<li>Bundled examples and the e2e harness load <code>htmx.org@4.0.0-beta3</code> (was <code>@2</code>)</li>
+<li><code>formwork.js</code> registers a <code>formwork-morph</code> htmx extension instead of monkey-patching <code>Idiomorph.morph()</code></li>
+<li>All <code>hx-on::</code> attribute event names switch from dash to colon (<code>config-request</code> → <code>config:request</code>, etc.); <code>hx-on::send-error</code> consolidates into <code>hx-on::error</code></li>
+<li><code>htmx:afterSwap</code> / <code>htmx:afterSettle</code> event listeners renamed to <code>htmx:after:swap</code> / <code>htmx:after:settle</code></li>
+</ul>
+</li>
+<li>Users on htmx 2 should pin the previous django-formwork version.</li>
+</ul>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Failed server-side searches no longer flash response body / stale prerender into the listbox.</strong> Two related fixes:<ul>
+<li>htmx 4 (beta) changed its <code>noSwap</code> default to <code>[204, 304]</code>, so 4xx/5xx responses started getting swapped into the swap target — for our dropdowns that meant the Django debug HTML (or any error body) briefly painted in the listbox before our <code>hasError</code> handler hid it. Each dropdown's htmx-enabled input now cancels the swap on <code>before:swap</code> when <code>event.detail.ctx.response.status &gt;= 400</code>.</li>
+<li>The <code>hasError = false</code> reset on <code>before:request</code> made the listbox visible again between request and a failed response, briefly re-showing the prerendered "No results" alert. That reset moved into <code>before:swap</code> (for status &lt; 400 only), so <code>hasError</code> now stays <code>true</code> across consecutive failures and only clears when a successful swap actually happens.</li>
+</ul>
+</li>
+</ul>
+<h2 id="010a1-2026-03-15">0.1.0a1 (2026-03-15)<a class="headerlink" href="#010a1-2026-03-15" title="Permanent link">&para;</a></h2>
+<p>First alpha release.</p>
+<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>FormworkRenderer</strong> — Custom form renderer that applies DaisyUI-styled templates to all forms via <code>FORM_RENDERER</code> setting</li>
+<li><strong>FormworkForm / FormworkModelForm</strong> — Convenience base classes for per-form styling</li>
+<li><strong>Form template</strong> (<code>formwork.html</code>) — Renders each field inside <code>&lt;fieldset class="fieldset"&gt;</code> with labels, help text, and error tooltips</li>
+<li><strong>Field template</strong> (<code>formwork_field.html</code>) — Single source of truth for field rendering with DaisyUI tooltip errors</li>
+<li><strong>CSS architecture</strong> — All DaisyUI classes applied via <code>@apply</code> in <code>formwork.css</code> (inside <code>@layer components</code>), not in Python or templates</li>
+<li><strong>Template tags</strong> — <code>{% formwork_css %}</code> and <code>{% formwork_js %}</code> for including static assets</li>
+<li><strong>Custom widgets:</strong><ul>
+<li><code>Toggle</code> — Checkbox as DaisyUI toggle switch</li>
+<li><code>Range</code> — HTML5 range slider</li>
+<li><code>Rating</code> — Star rating with radio inputs (with optional clear button)</li>
+<li><code>PasswordReveal</code> — Password input with show/hide toggle (Alpine.js)</li>
+<li><code>SearchSelect</code> — Single-select dropdown with text search (static or htmx)</li>
+<li><code>MultiSelect</code> — Multi-select dropdown with checkboxes (static or htmx)</li>
+<li><code>ComboBox</code> — Text input with autocomplete suggestions (static or htmx, single or multiple)</li>
+<li><code>DataList</code> — Text input with native <code>&lt;datalist&gt;</code> suggestions</li>
+<li><code>FileDropZone</code> — Drag-and-drop file upload with size/type validation</li>
+<li><code>ImageDropZone</code> — Drag-and-drop image upload with preview</li>
+<li><code>ValidatedTextarea</code> — Textarea with server-side validation and word highlighting</li>
+</ul>
+</li>
+<li><strong>Server-side views:</strong><ul>
+<li><code>FormworkSearchView</code> — Base view for dropdown search endpoints</li>
+<li><code>FormworkValidateView</code> — Base view for textarea validation with <code>&lt;mark&gt;</code> highlighting</li>
+</ul>
+</li>
+<li><strong>htmx morph integration</strong> (<code>formwork.js</code>) — Registers a <code>formwork-morph</code> extension that preserves Alpine.js state, <code>&lt;details&gt;</code> open state, <code>x-text</code>/<code>x-html</code> content, focused-input values, and <code>x-for</code>/<code>x-if</code> generated nodes during htmx morph swaps</li>
+<li>Django 5.2, 6.0 support; Python 3.12, 3.13, 3.14</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.sections", "navigation.expand", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>

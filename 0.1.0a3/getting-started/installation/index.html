@@ -1,0 +1,1198 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An opinionated UI framework for Django, built on Django forms">
+      
+      
+      
+        <link rel="canonical" href="https://oliverhaas.github.io/django-formwork/0.1.0a3/getting-started/installation/">
+      
+      
+        <link rel="prev" href="../..">
+      
+      
+        <link rel="next" href="../quickstart/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Installation - Django Formwork</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#installation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Django Formwork" class="md-header__button md-logo" aria-label="Django Formwork" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Django Formwork
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Installation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/oliverhaas/django-formwork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    oliverhaas/django-formwork
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Django Formwork" class="md-nav__button md-logo" aria-label="Django Formwork" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Django Formwork
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/oliverhaas/django-formwork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    oliverhaas/django-formwork
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-install-the-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Install the package
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-configure-django" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Configure Django
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-install-the-icons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Install the icons
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Install the icons">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#command-reference-formwork-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command reference: formwork install
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-build-the-css" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Build the CSS
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Build the CSS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#daisyui-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DaisyUI version
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-htmx-and-alpinejs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. htmx and Alpine.js
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. htmx and Alpine.js">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#htmx-extensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        htmx extensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#js-loading-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JS loading paths
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#translations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Translations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cookbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cookbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/forms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/formsets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formsets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/widgets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Widgets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/browser-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-install-the-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Install the package
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-configure-django" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Configure Django
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-install-the-icons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Install the icons
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Install the icons">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#command-reference-formwork-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command reference: formwork install
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-build-the-css" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Build the CSS
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Build the CSS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#daisyui-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DaisyUI version
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-htmx-and-alpinejs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. htmx and Alpine.js
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. htmx and Alpine.js">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#htmx-extensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        htmx extensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#js-loading-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JS loading paths
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#translations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Translations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
+<p>Five steps: install the package, configure Django, install the icons, build the CSS, and load htmx and Alpine.js for the dynamic widgets.</p>
+<h2 id="1-install-the-package">1. Install the package<a class="headerlink" href="#1-install-the-package" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>django-formwork
+</span></code></pre></div>
+<p>Or with uv:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>add<span class="w"> </span>django-formwork
+</span></code></pre></div>
+<h2 id="2-configure-django">2. Configure Django<a class="headerlink" href="#2-configure-django" title="Permanent link">&para;</a></h2>
+<p>Add <code>django.forms</code>, <code>django_iconx</code> (a dependency that manages the icon set) and <code>django_formwork</code> to your installed apps, set the form renderer, and make sure you have a project-level static directory:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># settings.py</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="o">...</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="s2">"django.contrib.staticfiles"</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="s2">"django.forms"</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="s2">"django_iconx"</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="s2">"django_formwork"</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">]</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Every form renders through the formwork templates</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">FORM_RENDERER</span> <span class="o">=</span> <span class="s2">"django_formwork.FormworkRenderer"</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">TEMPLATES</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="p">{</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>        <span class="s2">"BACKEND"</span><span class="p">:</span> <span class="s2">"django.template.backends.django.DjangoTemplates"</span><span class="p">,</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        <span class="s2">"APP_DIRS"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="o">...</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    <span class="p">},</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="p">]</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="n">STATICFILES_DIRS</span> <span class="o">=</span> <span class="p">[</span><span class="n">BASE_DIR</span> <span class="o">/</span> <span class="s2">"static"</span><span class="p">]</span>
+</span></code></pre></div>
+<p><code>FormworkRenderer</code> is a <code>TemplatesSetting</code> renderer: it loads templates through <code>TEMPLATES</code>, so a project template with the same path overrides any formwork template. <code>"django.forms"</code> supplies Django's own widget templates, and the <code>DjangoTemplates</code> backend must find app templates (<code>APP_DIRS=True</code> or the <code>app_directories</code> loader). <code>django_iconx</code> must be in <code>INSTALLED_APPS</code> for the next step to work. <code>STATICFILES_DIRS</code> tells the icon install where to put the downloaded files and lets Django serve them.</p>
+<p>On startup, formwork imports the <code>forms</code> module of every installed app, so a form with a server-side search registers it before the first request.</p>
+<p><code>manage.py check</code> reports two setup mistakes: <code>django_formwork.E001</code> when a form declares a server-side search but the URLconf does not include <code>django_formwork.urls</code>, and <code>django_formwork.E002</code> when <code>"django.forms"</code> is missing from <code>INSTALLED_APPS</code>.</p>
+<h2 id="3-install-the-icons">3. Install the icons<a class="headerlink" href="#3-install-the-icons" title="Permanent link">&para;</a></h2>
+<p>Formwork's widgets use <a href="https://lucide.dev/">Lucide</a> icons, fetched at setup time rather than bundled. Run:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>manage.py<span class="w"> </span>formwork<span class="w"> </span>install
+</span></code></pre></div>
+<p>The command downloads the Lucide SVGs through django-iconx into <code>&lt;first STATICFILES_DIRS entry&gt;/icons/lucide/</code>. Then it generates <code>iconx/icons.css</code> in your static directory, with one CSS class per icon that points at the served SVG.</p>
+<p>A second run downloads and generates the files again in place. Both output directories (<code>static/icons/</code> and <code>static/iconx/</code>) are generated artifacts: gitignore them and run <code>formwork install</code> in CI and on fresh checkouts, or commit them if you prefer vendoring.</p>
+<h3 id="command-reference-formwork-install">Command reference: <code>formwork install</code><a class="headerlink" href="#command-reference-formwork-install" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python manage.py formwork install [--output DIR]
+</span></code></pre></div>
+<ul>
+<li><code>--output DIR</code>: directory to write the generated CSS into (the file lands at <code>DIR/iconx/icons.css</code>). By default the command resolves your project static directory: the first entry of <code>STATICFILES_DIRS</code> if set, otherwise <code>BASE_DIR/static</code>. Use <code>--output</code> when your CSS build inputs live elsewhere.</li>
+</ul>
+<p>The icon SVGs always go into the first <code>STATICFILES_DIRS</code> entry, because django-iconx downloads them there, so <code>--output</code> moves only the generated CSS. Without <code>STATICFILES_DIRS</code> the command uses <code>BASE_DIR/static</code> and prints a warning; add that directory to <code>STATICFILES_DIRS</code>, or Django does not serve the icons. With neither setting, the command stops with an error.</p>
+<h2 id="4-build-the-css">4. Build the CSS<a class="headerlink" href="#4-build-the-css" title="Permanent link">&para;</a></h2>
+<p>Formwork uses <a href="https://daisyui.com/">DaisyUI</a> 5 for component styling and <a href="https://tailwindcss.com/">Tailwind CSS</a> 4+ for the build step. Formwork ships <code>formwork.css</code>, the Tailwind source. It contains <code>@apply</code> directives, <code>@import "tailwindcss"</code> and the DaisyUI <code>@plugin</code>, so build it with the Tailwind CLI or the PostCSS plugin, and import neither Tailwind nor DaisyUI a second time next to it.</p>
+<p>Install the build tools:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>npm<span class="w"> </span>install<span class="w"> </span>-D<span class="w"> </span>tailwindcss<span class="w"> </span>@tailwindcss/cli<span class="w"> </span>daisyui@5
+</span></code></pre></div>
+<p>Create your Tailwind input (say <code>app.css</code> in your project root):</p>
+<div class="language-css highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c">/* Formwork's Tailwind source (already includes Tailwind + the DaisyUI plugin). */</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">"path/to/site-packages/django_formwork/static/formwork/formwork.css"</span><span class="p">;</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c">/* The icon classes generated by `manage.py formwork install` (step 3).</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c">   In a layer, so that size-* utilities override the 1em icon size. */</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">"./static/iconx/icons.css"</span><span class="w"> </span><span class="nt">layer</span><span class="o">(</span><span class="nt">components</span><span class="o">)</span><span class="p">;</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c">/* Your own templates. */</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">@</span><span class="k">source</span><span class="w"> </span><span class="s2">"./templates/"</span><span class="p">;</span>
+</span></code></pre></div>
+<p>Tailwind 4 only emits utility classes it finds in scanned sources. <code>formwork.css</code> registers the package templates, widgets and scripts with <code>@source</code> itself, and it safelists the <code>{select,input,textarea}-{color}</code> and <code>badge-{color}</code> classes, so your entry point lists only your own sources. Add an <code>@source</code> or an <code>@source inline(...)</code> for a class name that your code builds at render time, such as <code>f"badge-{status}"</code>.</p>
+<p>To find the site-packages path for the import line:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import django_formwork; print(django_formwork.__path__[0])"</span>
+</span></code></pre></div>
+<p>Then build:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>npx<span class="w"> </span>@tailwindcss/cli<span class="w"> </span>-i<span class="w"> </span>app.css<span class="w"> </span>-o<span class="w"> </span>static/dist.css
+</span></code></pre></div>
+<p>And link the built file in your base template:</p>
+<div class="language-html highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>{% load static %}
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">"stylesheet"</span> <span class="na">href</span><span class="o">=</span><span class="s">"{% static 'dist.css' %}"</span><span class="p">&gt;</span>
+</span></code></pre></div>
+<p>The <code>examples/full</code> app in the repository is a working copy of exactly this setup.</p>
+<h3 id="daisyui-version">DaisyUI version<a class="headerlink" href="#daisyui-version" title="Permanent link">&para;</a></h3>
+<p>Formwork requires DaisyUI 5. DaisyUI 4 and earlier use a different component API and do not work with formwork. The CI builds the CSS with the DaisyUI 5 release pinned in the repository's <code>package-lock.json</code>.</p>
+<h2 id="5-htmx-and-alpinejs">5. htmx and Alpine.js<a class="headerlink" href="#5-htmx-and-alpinejs" title="Permanent link">&para;</a></h2>
+<p>The dynamic widgets (dropdowns, server-side search, password reveal, steppers, drop zones, validated textarea) need htmx 4, htmx's alpine-compat extension and Alpine.js 3. Load them yourself, in this order:</p>
+<div class="language-html highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>{% load formwork %}
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">src</span><span class="o">=</span><span class="s">"https://unpkg.com/htmx.org@4.0.1/dist/htmx.min.js"</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">src</span><span class="o">=</span><span class="s">"https://unpkg.com/htmx.org@4.0.1/dist/ext/hx-alpine-compat.min.js"</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>{% formwork_js %}
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="p">&lt;</span><span class="nt">script</span> <span class="na">defer</span> <span class="na">src</span><span class="o">=</span><span class="s">"https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</span></code></pre></div>
+<ol>
+<li>htmx comes first, because the formwork modules register htmx extensions.</li>
+<li>The alpine-compat extension comes after htmx. It is required: without it a morph strips what Alpine bindings (<code>x-show</code>, <code>x-text</code>, <code>:class</code>, <code>:aria-selected</code>) wrote into the DOM.</li>
+<li><code>{% formwork_js %}</code> comes before Alpine. Module scripts and <code>defer</code> scripts run in document order, and each formwork module registers its component in an <code>alpine:init</code> listener, which must exist when Alpine starts.</li>
+</ol>
+<p>htmx 4 sends the server-side search and validation requests, and its built-in <code>outerMorph</code> swap morphs a re-rendered form into the page. <code>{% formwork_js %}</code> loads <code>formwork.js</code> as an ES module, which imports <code>formwork-core.js</code> (the <code>formwork-morph</code> htmx extension, dirty-field tracking, and native-validation disabling) plus each widget's Alpine.data component.</p>
+<h3 id="htmx-extensions">htmx extensions<a class="headerlink" href="#htmx-extensions" title="Permanent link">&para;</a></h3>
+<p>htmx 4 runs every registered extension on the whole page. If you restrict them with an <code>htmx.config.extensions</code> whitelist, list <code>alpine-compat</code> and <code>formwork-morph</code>, plus <code>formwork-sections</code> on a page that loads <a href="../../reference/forms/#section-forms">section forms</a>.</p>
+<p><code>formwork-core.js</code> adds <code>open</code> to <code>htmx.config.morphIgnore</code>, so a morph leaves an open dropdown or disclosure as the user left it. For the same reason a server response cannot open or close a <code>&lt;details&gt;</code> or a <code>&lt;dialog&gt;</code> by morph; change the <code>open</code> state in the browser.</p>
+<h3 id="js-loading-paths">JS loading paths<a class="headerlink" href="#js-loading-paths" title="Permanent link">&para;</a></h3>
+<p>The <code>{% formwork_js %}</code> bundle is one tag and loads the core and every widget component. Two other paths load the same files.</p>
+<p>For per-form loading via Django's <code>Media</code>, use <code>{{ form.media }}</code> for the widget JS the form actually contains, and add <code>{% formwork_core_js %}</code> for the page-global core (morph, dirty-tracking, validation disabling). <code>Select</code>, <code>SelectMultiple</code>, <code>ComboBox</code>, <code>DatePicker</code>, <code>StepperNumberInput</code>, <code>PasswordInput</code>, <code>SearchInput</code>, <code>FileDropzoneInput</code>, <code>ImageDropzoneInput</code>, <code>InputMask</code> and <code>ValidatedTextarea</code> each declare a <code>Media</code> class that points at their Alpine component file. Place both tags where <code>{% formwork_js %}</code> would go, before Alpine.</p>
+<p>For a JS bundler (vite, webpack or esbuild), import <code>formwork.js</code> by its file path in the installed package, under the directory that the command in <a href="#4-build-the-css">step 4</a> prints: <code>import "path/to/site-packages/django_formwork/static/formwork/formwork.js";</code>. The bundler follows the relative imports and emits one bundle, so the page needs no formwork template tag. The bundle must run after htmx and before Alpine, like the tag.</p>
+<p>ES modules are deduplicated by URL, so mixing tags is harmless. Combining <code>{% formwork_js %}</code> and <code>{% formwork_core_js %}</code> on the same page still executes the core only once.</p>
+<p><code>{% formwork_sections_js %}</code> loads <code>sections.js</code> for section forms. The bundle leaves it out. Load it after htmx; it does not need Alpine.</p>
+<h2 id="translations">Translations<a class="headerlink" href="#translations" title="Permanent link">&para;</a></h2>
+<p>Every string that formwork shows (placeholders, button labels, the "N selected" counts, error messages) goes through Django's translation machinery. Formwork ships no message catalog: run <code>makemessages</code> in your project to collect the strings and translate them there. The JavaScript reads its translated texts from <code>data-*</code> attributes that the templates render, so the pages need no JavaScript catalog either.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.sections", "navigation.expand", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>
