@@ -52,8 +52,9 @@
       `FormworkJinja2ModelForm`, `formwork_jinja2_environment` and the `jinja2/`
       templates). So are the `search_choices_<field>` form methods,
       `FormworkAutoSearchView` and the `widget_type` tokens, and
-      `FormworkModelChoiceField` and `FormworkModelMultipleChoiceField` with their
-      `icon_from_instance` and `description_from_instance` arguments. Return a
+      `FormworkModelChoiceField`, `FormworkModelMultipleChoiceField` and
+      `FormworkModelChoiceIterator` with the `icon_from_instance` and
+      `description_from_instance` arguments of the fields. Return a
       `ChoiceLabel` from a plain `ModelChoiceField.label_from_instance()` instead.
       `ChoiceLabel` lives in `django_formwork.widgets.select`, and you can import it from
       `django_formwork` and `django_formwork.widgets`.
@@ -73,7 +74,8 @@
       [Section forms](forms.md#section-forms).
     - `Meta.mandatory` marks a field that a save accepts empty but a later step needs.
       Its label gets the red `*` and its widget gets `aria-required`, as on a required
-      field.
+      field. A string in place of a list, or a name that is not a field of the form,
+      raises `ImproperlyConfigured` when Python creates the form class.
     - Every string formwork shows goes through Django's translation functions, plurals
       included. Formwork ships no catalog, so run `makemessages` in your project. The
       JavaScript reads its texts from `data-*` attributes and needs no JavaScript
@@ -117,7 +119,24 @@
 - **Editable tables.** `as_row()` renders a `FormworkForm`/`FormworkModelForm` as a
   table `<tbody>`, and `as_rows()` renders a formset as one editable `<table>`. Pair
   them with the new `FormworkRowSaveMixin` view mixin for per-row htmx autosave: each
-  row posts only its own changes (keyed on the posted pk) and re-renders in place.
+  row posts only its own changes (keyed on the posted pk) and re-renders in place. The
+  view needs `queryset` or `get_queryset(request)` with the rows the user can change, and
+  a pk outside it gets a 404. The form gets `request.FILES`, and the view takes URL
+  kwargs. Override the markup at `formwork/tables/row.html` and
+  `formwork/tables/table.html`.
+- **Model formsets that check uniqueness in one query per check.**
+  `formwork_modelformset_factory` and `formwork_inlineformset_factory` build formsets
+  whose `unique`, `unique_together` and `unique_for_date` checks against the database run
+  once for all rows, not once per row. The errors, their messages and their placement
+  match Django's. The forms they build are exempt from `FORMWORK_FORCE_ASYNC`: in an
+  async view, wrap `formset.is_valid()` and `save()` in `sync_to_async`. See
+  [Formsets](formsets.md).
+- **System checks for the setup.** `manage.py check` reports `django_formwork.E001` when
+  a form declares a server-side search but the URLconf does not include
+  `django_formwork.urls`, and `django_formwork.E002` when `"django.forms"` is missing
+  from `INSTALLED_APPS`. Both mistakes used to show up only on the first search or
+  render.
+- **Django 6.1 support.** CI runs the suite on Django 6.0 and 6.1.
 - **Native `<select multiple>` keeps Django's rendering.** A plain
   `forms.SelectMultiple` rendered through the formwork renderer stays a native
   `<select multiple>`. Use `widgets.SelectMultiple` for the dropdown.
@@ -127,7 +146,8 @@
   the icon and the toggle of the help text. `"tooltip"` uses the DaisyUI tooltip, and
   `"auto"` picks inline when the field has help text and the tooltip otherwise. The
   collapsed line shows only the truncated error, and the `[more]` toggle expands the
-  full error and the help text. See [Forms](forms.md#error_display).
+  full error and the help text. Another value raises `ImproperlyConfigured` when Python
+  creates the form class. See [Forms](forms.md#error_display).
 - **`ImageDropzoneInput` shows the stored image.** The widget previews the field's
   stored file, or `preview_url` when set. On an optional field its remove button posts
   `clear_<name>`, so the field cleans to `False` and a model form empties it, as with
@@ -146,7 +166,9 @@
   `clean_<field>()` method and the model checks, and keeps its stored value. On a
   `FormworkModelForm` the model needs `get_dirty_fields()`: inherit the new abstract
   `FormworkModel`, or mix in `filthyfields.DirtyFieldsMixin`. The package adds a
-  dependency on `django-filthyfields`. See [Forms](forms.md#validate_dirty_only).
+  dependency on `django-filthyfields`. A model form whose model lacks
+  `get_dirty_fields()` raises `ImproperlyConfigured` when Python creates the form class.
+  See [Forms](forms.md#validate_dirty_only).
 
 ### Security
 
@@ -162,7 +184,12 @@
   the same model with the same `search_fields` got one registry key, and the form that
   registered last won. A public form could drop the `search_decorator` of another form or
   replace its scoped queryset with an unfiltered one. The key comes from the module,
-  the class and the field name of the form.
+  the class and the field name of the form, and from where `search_queryset` and
+  `search_decorator` are defined, so forms that a factory builds over one model keep
+  their own search. `search_queryset` must be a callable that filters through the
+  request it gets. A second form of the same name whose `search_queryset` closes over
+  other values raises `ImproperlyConfigured`, and so does a `search_queryset` that is not
+  callable (the message names the field).
 - **The search endpoint renders only formwork's own row templates.** The `widget` query
   parameter must be `select`, `select_multiple` or `combo_box`, and the endpoint returns
   404 for any other value. The `type` parameter and the
@@ -174,11 +201,17 @@
 
 ### Changed
 
-- **Targets the stable htmx 4.0.0 release.** The installation guide, the full example, and
-  the e2e harness load `htmx.org@4.0.0` (was `4.0.0-beta3`). If you load htmx yourself,
+- **Targets the stable htmx 4.0.1 release.** The installation guide, the full example, and
+  the e2e harness load `htmx.org@4.0.1` (was `4.0.0-beta3`). If you load htmx yourself,
   bump your pin; formwork's templates and `formwork-core.js` need no changes. npm still
-  tags htmx 2 as `latest`, so pin `@4.0.0` explicitly instead of loading an unversioned
+  tags htmx 2 as `latest`, so pin `@4.0.1` explicitly instead of loading an unversioned
   `htmx.org` URL.
+- **`{% formwork_css %}` is deprecated and goes away in 0.2.0.** The tag links
+  `formwork.css` as it ships, but the file is Tailwind input, so the browser applies none
+  of its styles. Import `formwork.css` from your Tailwind input and link the built CSS.
+  The tag raises a `DeprecationWarning`.
+- **`django_formwork.FormworkChoiceLabel` from 0.1.0a2 still imports.** It resolves to
+  `ChoiceLabel` with a `DeprecationWarning` and goes away in 0.2.0. Use `ChoiceLabel`.
 - **`DatePicker` and `InputMask` bind to shipped Alpine.data components.** If you override
   their widget templates, copy them again: `x-data` holds only the component name. The
   components are `formworkDatePicker` and `formworkInputMask` in
@@ -260,6 +293,19 @@
   not `0.30000000000000004`.
 - **`FormworkValidateView` emits no empty `<mark>`** when an error span lies entirely
   outside the submitted text. The view drops a span that clamps to nothing.
+- **`FormworkValidateView` works behind a URL with kwargs.** A validate view routed as
+  `validate/<field>/` raised a `TypeError` on every post. The URL kwargs reach the view
+  as `self.kwargs`.
+- **`ais_valid()` runs a sync `clean_<field>()` or `clean()` that queries the
+  database.** Such a method raised `SynchronousOnlyOperation`, because `ais_valid()`
+  called it inside the event loop. Sync methods run in a worker thread, and async ones
+  are still awaited.
+- **Your own `<details class="dropdown">` keeps its behavior.** `formwork.css` laid a
+  full-page click overlay over every open DaisyUI `details.dropdown` and removed the
+  focus ring of every input inside a `.dropdown-content`. Both rules apply only to the
+  formwork `Select` and `SelectMultiple` now. A project dropdown that relied on the
+  overlay to close on an outside click needs its own handler, for example
+  `@click.outside="$el.open = false"` with Alpine.
 
 ### Removed
 
