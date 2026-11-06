@@ -306,6 +306,54 @@
   formwork `Select` and `SelectMultiple` now. A project dropdown that relied on the
   overlay to close on an outside click needs its own handler, for example
   `@click.outside="$el.open = false"` with Alpine.
+- **`InputMask` keeps its text through a morph.** A morph emptied the visible text of
+  every `InputMask` without focus. Backspace after a literal removes the character
+  before it, typing in the middle shifts the rest, and a `+1` mask no longer reads its
+  own `1` as a typed digit.
+- **Typing fast sends the last keystrokes.** Text typed into the search box of a
+  `Select`, into a `ComboBox` or into a `ValidatedTextarea` while a request was pending
+  never reached the server, so the list showed the results of an older query. The newest
+  request now waits in a queue and runs after the pending one.
+- **A `Select` or `SelectMultiple` takes the server's answer to a pick.** After a pick
+  the widget turned away every morph whose value differed from the pick, so a server
+  that changed or reset the value was ignored. Only the answer to a request sent before
+  the latest pick is turned away now.
+- **Escape closes only the dropdown.** Escape in an open `Select`, `SelectMultiple`,
+  `ComboBox` or `DatePicker` panel inside a `<dialog>` closed the dialog too. It closes
+  the panel and puts the focus back on the trigger. Moving the focus to another control
+  closes the panel.
+- **Screen readers announce the picked and the highlighted option.** `aria-selected` sits
+  on the option row, and the search box of a `Select` and the `ComboBox` input point at
+  the highlighted row with `aria-activedescendant`. A `Select` with its own `id` in
+  `attrs` is named by its label and its value; it pointed `aria-labelledby` at an id no
+  element had.
+- **Labels name the `DatePicker` and the floating `PasswordInput` alone.** Screen readers
+  read "Due date Toggle calendar" and "Password Show password", because the toggle
+  button sat inside the label.
+- **A `Select` keeps the attrs you pass.** `data-*`, `hx-*`, `autofocus`, `title` and
+  other attrs were dropped. `data-*` and `hx-*` go on the hidden input that holds the
+  value and fires `change`; the rest go on the trigger.
+- **A `SelectMultiple` with one malformed past-page key keeps its other selections.**
+  The bad key hid every selection past the first page. A `Select` no longer posts a value that no option holds behind the placeholder, so an
+  optional field can be saved again.
+- **A `Select` on a `ModelChoiceField` without a blank choice runs one query.** Django's
+  required-attribute check ran the queryset a second time.
+- **`TextInput(attrs={"type": "email"})` renders `type="email"`.** The widget and
+  subclasses that set `input_type` rendered `type="text"`.
+- **`ValidatedTextarea` keeps a leading blank line.** The value lost it on every render,
+  and autosave posted the shorter text.
+- **`DatePicker(format="%d/%m/%Y")` opens the calendar on the stored date.** It opened on
+  the current month with no day picked.
+- **The `StepperNumberInput` buttons leave a readonly value alone**, and a decimal `min`
+  works under a locale with a decimal comma.
+- **`Rating` can go back to unrated.** The clear radio never rendered checked and stayed
+  enabled on a disabled field. The stars get `required`, `aria-invalid`, `aria-required`
+  and a caller class.
+- **`SuffixNumberInput` keeps a caller `style`.** The prefix padding replaced it.
+- **`ComboBox` sends the typed text as `q` only.** The request also carried it under the
+  field name, so a field named like a search param broke the search. A `(value, label)`
+  pair in the suggestions raises `ImproperlyConfigured`; it rendered as a group with one
+  suggestion per letter.
 
 ### Removed
 
