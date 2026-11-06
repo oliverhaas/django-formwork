@@ -26,8 +26,8 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 {% load formwork static %}
 <head>
   <link rel="stylesheet" href="{% static 'dist.css' %}">
-  <script src="https://unpkg.com/htmx.org@4.0.0/dist/htmx.min.js"></script>
-  <script src="https://unpkg.com/htmx.org@4.0.0/dist/ext/hx-alpine-compat.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@4.0.1/dist/htmx.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@4.0.1/dist/ext/hx-alpine-compat.min.js"></script>
   {% formwork_js %}
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 </head>
