@@ -70,6 +70,16 @@ def test_password_input_floating_wraps_the_toggle_in_the_label():
     assert label.select_one("span").get_text() == "Password"
 
 
+@pytest.mark.e2e
+def test_password_input_floating_is_named_by_its_label_alone(page):
+    """The reveal button inside the floating label stays out of the input's name."""
+    from playwright.sync_api import expect
+
+    widget = PasswordInput(attrs={"placeholder": "Password"}, floating=True)
+    page.set_content(widget.render("password", None, attrs={"id": "id_password"}))
+    expect(page.locator("input[name=password]")).to_have_accessible_name("Password")
+
+
 @pytest.mark.integration
 def test_password_input_renders_via_form(renderer):
     """Field renders an input named after the form field, targeted by the label."""

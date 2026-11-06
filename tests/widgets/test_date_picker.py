@@ -181,6 +181,17 @@ def test_date_picker_calendar_value_is_iso_under_any_format(value):
 
 
 @pytest.mark.e2e
+def test_date_picker_input_is_named_by_its_label_alone(new_widgets_page):
+    """The calendar toggle's name stays out of the input's name; a click on the box still focuses the input."""
+    from playwright.sync_api import expect
+
+    inp = new_widgets_page.locator("input[name='due_date']")
+    expect(inp).to_have_accessible_name("Due date")
+    new_widgets_page.locator("#id_due_date_datepicker .date-picker-label").click(position={"x": 4, "y": 4})
+    expect(inp).to_be_focused()
+
+
+@pytest.mark.e2e
 def test_date_picker_opens_and_picks_day(new_widgets_page):
     """Smoke: the calendar toggle opens the panel; picking a day fills the input."""
     import re

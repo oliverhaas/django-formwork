@@ -39,6 +39,11 @@ document.addEventListener("alpine:init", () => {
     toggle() {
       this.open = !this.open;
     },
+    // The box around the input is not a <label>, which would add the toggle's
+    // name to the input's, so a click on its padding focuses the input here.
+    focusInput() {
+      this.$refs.input.focus();
+    },
     // Escape closes an open calendar and goes no further, so a <dialog>
     // around the widget stays open.
     onEscape(event) {
