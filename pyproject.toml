@@ -1,6 +1,6 @@
 [project]
 name = "django-formwork"
-version = "0.1.0a2"
+version = "0.1.0a3"
 description = "An opinionated UI framework for Django, built on Django forms"
 readme = "README.md"
 license = "BSD-3-Clause"

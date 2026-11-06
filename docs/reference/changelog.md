@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0a3 (2026-11-06)
 
 ### Breaking changes
 
