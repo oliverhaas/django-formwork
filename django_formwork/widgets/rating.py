@@ -55,4 +55,8 @@ class Rating(forms.RadioSelect):
         context = super().get_context(name, value, attrs)
         context["widget"]["star_class"] = self.star_class
         context["widget"]["allow_clear"] = self.allow_clear
+        for _group, options, _index in context["widget"]["optgroups"]:
+            for option in options:
+                # The template owns the class list; attrs.html would render a second class.
+                option["css_class"] = option["attrs"].pop("class", "")
         return context
