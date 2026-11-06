@@ -8,7 +8,7 @@ The widgets are `Select`, `SelectMultiple`, `ComboBox`, `ComboBoxMultiple`, `Tex
 
 ## Requirements
 
-Python 3.14+, Django 6.0, [DaisyUI](https://daisyui.com/) 5, [Tailwind CSS](https://tailwindcss.com/) 4. DaisyUI and Tailwind are not bundled.
+Python 3.14+, Django 6.0 or 6.1, [DaisyUI](https://daisyui.com/) 5, [Tailwind CSS](https://tailwindcss.com/) 4. DaisyUI and Tailwind are not bundled.
 
 ## Quick start
 

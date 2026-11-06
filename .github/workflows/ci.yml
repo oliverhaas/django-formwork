@@ -36,6 +36,13 @@ jobs:
   test:
     # Playwright 1.58 cannot install Chromium on Ubuntu 26.04 (ubuntu-latest).
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        django: ["6.0", "6.1"]
+    env:
+      # Keep `uv run` from syncing the locked Django back over the matrix one.
+      UV_NO_SYNC: "1"
     steps:
       - uses: actions/checkout@v7
 
@@ -51,7 +58,9 @@ jobs:
           node-version: "22"
 
       - name: Install Python dependencies
-        run: uv sync --group dev
+        run: |
+          uv sync --group dev
+          uv pip install "django~=${{ matrix.django }}.0"
 
       - name: Install Node dependencies
         run: npm ci
@@ -75,6 +84,7 @@ jobs:
         run: uv run pytest tests/ -m "not screenshot and not benchmark" -n auto
 
       - name: Upload coverage to Codecov
+        if: matrix.django == '6.1'
         uses: codecov/codecov-action@v7
         with:
           files: ./coverage.xml

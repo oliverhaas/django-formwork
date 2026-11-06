@@ -51,7 +51,7 @@ Keep the scripts in this order. htmx's alpine-compat extension is required: with
 
 ## Requirements
 
-Python 3.14+, Django 6.0, DaisyUI 5, Tailwind CSS 4. DaisyUI and Tailwind are not bundled.
+Python 3.14+, Django 6.0 or 6.1, DaisyUI 5, Tailwind CSS 4. DaisyUI and Tailwind are not bundled.
 
 ## Development
 
