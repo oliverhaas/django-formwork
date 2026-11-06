@@ -1029,7 +1029,11 @@ def test_select_multiple_answer_to_an_older_submit_keeps_the_newer_toggles(selec
     expect(rows.first).to_be_attached(timeout=10000)
     values = rows.evaluate_all("rows => rows.slice(0, 2).map((row) => row.dataset.value)")
     held = []
-    page.route("**/select-multiple/", lambda route: held.append(route))
+
+    def hold(route):
+        held.append(route)
+
+    page.route("**/select-multiple/", hold)
 
     multi.locator(f"label[data-value='{values[0]}']").click()
     with page.expect_request(lambda request: request.method == "POST"):
