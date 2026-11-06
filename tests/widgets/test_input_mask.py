@@ -7,7 +7,7 @@ from django.http import QueryDict
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import InputMask
 
-from .conftest import render_form, render_widget
+from .conftest import render_form, render_widget, submit
 
 
 class InputMaskForm(FormworkForm):
@@ -163,6 +163,44 @@ def test_input_mask_formats_typed_input(new_widgets_page):
     expect(hidden).to_have_value("(555) 123-4567")
 
 
+@pytest.mark.e2e
+def test_input_mask_initial_value_keeps_literal_digits(new_widgets_page):
+    """A mask's own literal digits are not read back as typed digits."""
+    from playwright.sync_api import expect
+
+    display = new_widgets_page.locator("#id_phone_intl")
+    expect(display).to_have_value("+1 (555) 123-4567")
+    expect(new_widgets_page.locator("input[name='phone_intl']")).to_have_value("+1 (555) 123-4567")
+
+
+@pytest.mark.e2e
+def test_input_mask_backspace_steps_over_literals(new_widgets_page):
+    """Backspace after a literal removes the digit before it."""
+    from playwright.sync_api import expect
+
+    display = new_widgets_page.locator("#id_phone_masked")
+    display.click()
+    new_widgets_page.keyboard.type("5551")
+    expect(display).to_have_value("(555) 1\u00b7\u00b7-\u00b7\u00b7\u00b7\u00b7")
+    new_widgets_page.keyboard.press("Backspace")
+    new_widgets_page.keyboard.press("Backspace")
+    expect(display).to_have_value("(55\u00b7) \u00b7\u00b7\u00b7-\u00b7\u00b7\u00b7\u00b7")
+    expect(new_widgets_page.locator("input[name='phone_masked']")).to_have_value("(55")
+
+
+@pytest.mark.e2e
+def test_input_mask_typing_into_the_middle_shifts_the_rest(new_widgets_page):
+    """A digit typed between two others lands there, not at the end."""
+    from playwright.sync_api import expect
+
+    display = new_widgets_page.locator("#id_phone_masked")
+    display.click()
+    new_widgets_page.keyboard.type("5512")
+    display.evaluate("el => el.setSelectionRange(3, 3)")
+    new_widgets_page.keyboard.type("9")
+    expect(new_widgets_page.locator("input[name='phone_masked']")).to_have_value("(559) 12")
+
+
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # Needs a page with a required InputMask; both masked fields on /new-widgets/
@@ -170,8 +208,33 @@ def test_input_mask_formats_typed_input(new_widgets_page):
 
 
 # ─── Level 7: E2e morph resilience ───────────────────────────────────────
-#
-# No morph test for InputMask yet.
+
+
+@pytest.mark.e2e
+def test_input_mask_morph_keeps_display(new_widgets_page):
+    """The masked text stays visible after the form re-renders."""
+    from playwright.sync_api import expect
+
+    display = new_widgets_page.locator("#id_phone_masked")
+    display.click()
+    new_widgets_page.keyboard.type("5551234567")
+    submit(new_widgets_page)
+    expect(display).to_have_value("(555) 123-4567")
+    expect(new_widgets_page.locator("#id_phone_masked_mask .input-mask-overlay")).to_have_text("(555) 123-4567")
+
+
+@pytest.mark.e2e
+def test_input_mask_server_reset_clears_display(new_widgets_page):
+    """A server-side reset (Delete) empties the masked display too."""
+    from playwright.sync_api import expect
+
+    display = new_widgets_page.locator("#id_phone_masked")
+    display.click()
+    new_widgets_page.keyboard.type("5551234567")
+    submit(new_widgets_page)
+    new_widgets_page.get_by_role("button", name="Delete").click()
+    expect(new_widgets_page.locator("input[name='phone_masked']")).to_have_value("")
+    expect(display).to_have_value("(\u00b7\u00b7\u00b7) \u00b7\u00b7\u00b7-\u00b7\u00b7\u00b7\u00b7")
 
 
 # ─── Level 8: Screenshot (visual regression) ─────────────────────────────

@@ -1014,63 +1014,50 @@ def test_select_multiple_htmx_select_creates_hidden_inputs(select_multiple_page)
     assert hidden.count() >= 2
 
 
-_ECHO = """async (selected) => {
-    const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
-    const echo = dd.cloneNode(true);
-    echo.dataset.selected = JSON.stringify(selected);
-    const values = selected.map(([v]) => v);
-    for (const cb of echo.querySelectorAll('input[type="checkbox"]')) cb.toggleAttribute('checked', values.includes(cb.value));
-    const holder = echo.querySelector('[x-ref="values"]');
-    holder.replaceChildren(...values.map((value) => Object.assign(document.createElement('input'),
-        {type: 'hidden', name: holder.dataset.name, value})));
-    await htmx.swap({text: echo.outerHTML, target: dd, swap: 'outerMorph'});
-}"""
-
-
 @pytest.mark.e2e
-def test_select_multiple_htmx_stale_echo_keeps_local_state(select_multiple_page):
-    """A stale morph keeps the newer local selection; a confirming morph re-arms server updates.
+def test_select_multiple_answer_to_an_older_submit_keeps_the_newer_toggles(select_multiple_page):
+    """The answer to a submit sent before the latest toggle keeps the local selection.
 
-    Checkboxes and hidden inputs keep tracking the local selection, so the next submit carries all of it.
+    Checkboxes and hidden inputs keep tracking it, so the next submit carries all of it.
     """
-    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(2)
-    multi.locator("summary").click()
     from playwright.sync_api import expect
 
-    expect(multi.locator('input[type="checkbox"]').first).to_be_attached(timeout=10000)
-    values = select_multiple_page.evaluate("""() => {
-        const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
-        const cbs = dds[2].querySelectorAll('input[type="checkbox"]');
-        [cbs[0], cbs[1]].forEach(cb => {
-            cb.checked = true;
-            cb.dispatchEvent(new Event('change', {bubbles: true}));
-        });
-        return [cbs[0].value, cbs[1].value];
-    }""")
+    page = select_multiple_page
+    multi = page.locator("#id_languages_htmx_wrapper")
+    multi.locator("summary").click()
+    rows = multi.locator("li[role=option] label")
+    expect(rows.first).to_be_attached(timeout=10000)
+    values = rows.evaluate_all("rows => rows.slice(0, 2).map((row) => row.dataset.value)")
+    held = []
 
-    state = """() => {
-        const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[2];
-        const data = Alpine.$data(dd);
+    def hold(route):
+        held.append(route)
+
+    page.route("**/select-multiple/", hold)
+
+    multi.locator(f"label[data-value='{values[0]}']").click()
+    with page.expect_request(lambda request: request.method == "POST"):
+        page.evaluate("document.querySelector('form[hx-post]').requestSubmit()")
+    multi.locator(f"label[data-value='{values[1]}']").click()
+    page.evaluate("""() => {
+        window.__fwSwapped = false;
+        document.querySelector('form[hx-post]')
+            .addEventListener('htmx:after:swap', () => { window.__fwSwapped = true; }, {once: true});
+    }""")
+    held.pop(0).continue_()
+    page.wait_for_function("window.__fwSwapped === true")
+
+    state = page.evaluate("""() => {
+        const dd = document.querySelector('#id_languages_htmx_wrapper');
         return {
-            map: Object.keys(data.selected).sort(),
+            map: Object.keys(Alpine.$data(dd).selected).sort(),
             hidden: [...dd.querySelectorAll('input[type="hidden"][name="languages_htmx"]')]
                 .map(i => i.value).filter(Boolean).sort(),
             checked: [...dd.querySelectorAll('input[type="checkbox"]')].filter(b => b.checked).map(b => b.value).sort(),
         };
-    }"""
+    }""")
     both = sorted(values)
-    assert select_multiple_page.evaluate(state)["map"] == both
-
-    select_multiple_page.evaluate(_ECHO, [[values[0], "Stale"]])
-    result = select_multiple_page.evaluate(state)
-    assert result == {"map": both, "hidden": both, "checked": both}, "stale echo clobbered pending local selections"
-
-    select_multiple_page.evaluate(_ECHO, [[v, "Confirmed"] for v in values])
-    assert select_multiple_page.evaluate(state) == {"map": both, "hidden": both, "checked": both}
-
-    select_multiple_page.evaluate(_ECHO, [[values[0], "Server"]])
-    result = select_multiple_page.evaluate(state)
-    assert result == {"map": [values[0]], "hidden": [values[0]], "checked": [values[0]]}
+    assert state == {"map": both, "hidden": both, "checked": both}
 
 
 @pytest.mark.e2e

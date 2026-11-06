@@ -77,6 +77,16 @@ document.addEventListener("alpine:init", () => {
         const ic = this.iconMap[v.trim()] || "";
         return ic ? [{ text: v.trim(), icon: ic }] : [];
       },
+      // The icon overlay covers the input text while the input has no focus.
+      get showDisplay() {
+        return !this.focused && this.displayParts.length > 0;
+      },
+      get inputClass() {
+        return this.showDisplay ? "text-transparent" : "";
+      },
+      get dropdownClass() {
+        return this.open ? "dropdown-open" : "";
+      },
 
       focusInput() {
         this.$refs.input.focus();
@@ -98,6 +108,8 @@ document.addEventListener("alpine:init", () => {
       onBlur(event) {
         if (this.$root.contains(event.relatedTarget)) return;
         this.focused = false;
+        // Tabbing to another control closes the list; a click is @click.outside's.
+        if (event.relatedTarget) this.close();
         if (this.multiple) {
           const inp = this.$refs.input;
           inp.value = inp.value.replace(/,\s*$/, "");

@@ -19,11 +19,8 @@ document.addEventListener("alpine:init", () => {
         this.buildDays();
       };
       sync();
-      // htmx 4 morphs swapped-in content in place rather than replacing the
-      // node, so this x-data component (and thus init()) only ever runs
-      // once. Re-sync whenever the server updates data-value (e.g. after
-      // this widget's own htmx-triggered save) so the calendar popup
-      // doesn't highlight a stale day after the input's own swap.
+      // A morph keeps this component, so init() runs once. A data-value the
+      // server sends re-syncs the calendar, or it would highlight a stale day.
       new MutationObserver(sync).observe(el, {
         attributes: true,
         attributeFilter: ["data-value"],
@@ -38,6 +35,23 @@ document.addEventListener("alpine:init", () => {
     },
     toggle() {
       this.open = !this.open;
+    },
+    // The box around the input is not a <label>, which would add the toggle's
+    // name to the input's, so a click on its padding focuses the input here.
+    focusInput() {
+      this.$refs.input.focus();
+    },
+    // Escape closes an open calendar and goes no further, so a <dialog>
+    // around the widget stays open.
+    onEscape(event) {
+      if (!this.open) return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.close();
+    },
+    // Focus moving to another control closes the calendar.
+    onFocusOut(event) {
+      if (event.relatedTarget && !this.$root.contains(event.relatedTarget)) this.close();
     },
     onInput() {
       this.value = this.$refs.input.value;

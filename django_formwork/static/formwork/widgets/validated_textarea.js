@@ -18,7 +18,7 @@ document.addEventListener("alpine:init", () => {
       this.$refs.backdrop.scrollTop = this.$refs.textarea.scrollTop;
     },
 
-    // htmx 4 posts the whole enclosing form; the endpoint reads only these three values.
+    // htmx 4 posts the whole enclosing form; the endpoint reads only the text and where its errors go.
     onValidateConfig(event) {
       const body = event.detail.ctx.request.body;
       for (const key of [...body.keys()]) body.delete(key);

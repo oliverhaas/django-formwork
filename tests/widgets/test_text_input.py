@@ -25,6 +25,17 @@ def test_text_input_input_type(input_type):
 
 
 @pytest.mark.unit
+def test_text_input_keeps_the_type_from_attrs_and_the_class():
+    """A ``type`` in attrs and a subclass's ``input_type`` survive, as with Django's own widget."""
+
+    class SearchInput(TextInput):
+        input_type = "search"
+
+    assert render_widget(TextInput(attrs={"type": "email"}), name="f").select_one("input")["type"] == "email"
+    assert render_widget(SearchInput(), name="f").select_one("input")["type"] == "search"
+
+
+@pytest.mark.unit
 def test_text_input_without_hint_renders_like_django():
     """Without a pattern hint the widget renders exactly like Django's own."""
     stock = forms.TextInput(attrs={"placeholder": "X"}).render("f", "v", attrs={"id": "id_f"})

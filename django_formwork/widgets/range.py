@@ -8,10 +8,9 @@ from django import forms
 class Range(forms.NumberInput):
     """HTML5 range slider styled with DaisyUI.
 
-    CSS targets ``input[type="range"]`` directly; no extra attributes
-    needed.
-
     Usage::
+
+        from django_formwork.widgets import Range
 
         volume = forms.IntegerField(widget=Range(attrs={"min": 0, "max": 100}))
     """

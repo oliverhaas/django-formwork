@@ -57,6 +57,9 @@ class ComboBox(forms.TextInput):
             raise ImproperlyConfigured(msg)
         super().__init__(attrs)
         self.suggestions = list(suggestions or [])
+        if any(isinstance(entry, (tuple, list)) and isinstance(entry[1], str) for entry in self.suggestions):
+            msg = "ComboBox suggestions are the text a pick fills in, not (value, label) pairs."
+            raise ImproperlyConfigured(msg)
         self.show_spinner = show_spinner
         self.search_key = search_key
         self.search_params = dict(search_params or {})

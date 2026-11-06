@@ -36,6 +36,20 @@ class _UnsetDecorator:
 
 _UNSET_DECORATOR = _UnsetDecorator()
 
+# Attrs the select templates place themselves.
+_TEMPLATE_ATTRS = frozenset(
+    {
+        "id",
+        "class",
+        "placeholder",
+        "disabled",
+        "aria-invalid",
+        "aria-required",
+        "aria-labelledby",
+        "aria-label",
+        "aria-describedby",
+    }
+)
 
 BadgeColor = Literal["neutral", "primary", "secondary", "accent", "info", "success", "warning", "error"]
 
@@ -110,6 +124,11 @@ class SearchableSelectMixin(_SelectBase):
         # The trigger is a <summary>, which `<label for>` cannot target.
         return ""
 
+    def use_required_attribute(self, initial: object) -> bool:  # noqa: ARG002
+        # No control renders `required` (the trigger gets aria-required), and
+        # forms.Select would read the first choice for it: a query on a model field.
+        return False
+
     def __init__(  # noqa: PLR0913
         self,
         attrs: dict[str, Any] | None = None,
@@ -182,6 +201,13 @@ class SearchableSelectMixin(_SelectBase):
         widget["aria_label"] = widget["attrs"].get("aria-label")
         widget["aria_describedby"] = widget["attrs"].get("aria-describedby")
         widget["disabled"] = bool(widget["attrs"].get("disabled"))
+        # The hidden input holds the value and fires `change` on a pick. Data and
+        # htmx attrs go there, the rest go on the trigger, which takes focus.
+        rest = {key: val for key, val in widget["attrs"].items() if key not in _TEMPLATE_ATTRS}
+        if widget["disabled"]:
+            rest.pop("tabindex", None)
+        widget["input_attrs"] = {key: val for key, val in rest.items() if key.startswith(("data-", "hx-"))}
+        widget["trigger_attrs"] = {key: val for key, val in rest.items() if key not in widget["input_attrs"]}
         # A list that fits one page filters in the browser.
         widget["search_url"] = None
         widget["shown"] = None
@@ -221,11 +247,16 @@ class SearchableSelectMixin(_SelectBase):
             # One extra row tells whether more exist, so no COUNT runs.
             page = list(choices.queryset[: limit + 1])
             shown = {str(getattr(obj, key)) for obj in page[:limit]}
-            try:
-                rest = list(choices.queryset.filter(**{f"{key}__in": chosen - shown}))
-            except ValueError, TypeError, ValidationError:
-                # A bound value the key column cannot hold matches no row.
-                rest = []
+            # One value the key column cannot hold must not drop the others.
+            # filter() converts it without a query, as ModelMultipleChoiceField checks.
+            wanted = []
+            for subvalue in chosen - shown:
+                try:
+                    choices.queryset.filter(**{key: subvalue})
+                except ValueError, TypeError, ValidationError:
+                    continue
+                wanted.append(subvalue)
+            rest = list(choices.queryset.filter(**{f"{key}__in": wanted}))
             self.selected_past_page = [str(getattr(obj, key)) for obj in rest]
             pairs = [*blank, *(choices.choice(obj) for obj in [*page[:limit], *rest])]
         else:
@@ -256,7 +287,7 @@ class SearchableSelectMixin(_SelectBase):
         if not placeholder:
             msg = f"{type(self).__name__}(floating=True) needs a placeholder: it is the label text."
             raise ImproperlyConfigured(msg)
-        # The placeholder is the label now, so the empty trigger shows the default text.
+        # The placeholder text is the label, so an empty trigger shows the default text.
         widget["trigger_placeholder"] = ""
         id_ = widget["attrs"].get("id")
         if id_:
@@ -287,6 +318,10 @@ class Select(SearchableSelectMixin, forms.Select):
         if isinstance(fmt_value, (list, tuple)):
             widget["value"] = fmt_value[0] if fmt_value else ""
         first = widget["selected_options"][0] if widget["selected_options"] else {}
+        # A value no option holds (a deleted row, an edited post) shows the
+        # placeholder, so it must not post again. Empty choices can't tell.
+        if not first and (widget["options"] or isinstance(self.choices, ModelChoiceIterator)):
+            widget["value"] = ""
         widget["selected_label"] = first.get("label", "")
         widget["selected_icon"] = first.get("icon", "")
         widget["selected_label_html"] = first.get("label_html", "")

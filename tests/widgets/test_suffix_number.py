@@ -27,6 +27,14 @@ def test_suffix_number_prefix_pads_the_input_by_its_length():
 
 
 @pytest.mark.unit
+def test_suffix_number_prefix_padding_joins_the_caller_style():
+    """A caller style and the prefix padding share one style attribute."""
+    html = str(render_widget(SuffixNumberInput(attrs={"style": "width: 8rem"}, prefix="$"), name="price"))
+    assert html.count("style=") == 1
+    assert 'style="padding-inline-start: calc(1.25rem + 1ch); width: 8rem"' in html
+
+
+@pytest.mark.unit
 def test_suffix_number_without_affixes_renders_the_bare_input():
     """Without prefix or suffix only the input renders."""
     soup = render_widget(SuffixNumberInput(), name="n")

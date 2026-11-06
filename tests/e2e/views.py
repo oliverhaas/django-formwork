@@ -1095,6 +1095,13 @@ class NewWidgetsForm(FormworkForm):
         label="Phone (masked)",
         help_text="Masked input with pattern formatting.",
     )
+    phone_intl = forms.CharField(
+        widget=InputMask(mask="+1 (###) ###-####"),
+        required=False,
+        initial="+1 (555) 123-4567",
+        label="Phone (+1)",
+        help_text="Masked input whose mask starts with a literal digit.",
+    )
 
 
 class ComplexForm(FormworkForm):

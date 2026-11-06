@@ -17,6 +17,8 @@ class InputMask(forms.TextInput):
 
     Usage::
 
+        from django_formwork.widgets import InputMask
+
         phone = forms.CharField(widget=InputMask(mask="(###) ###-####"))
         zip_code = forms.CharField(widget=InputMask(mask="#####"))
     """

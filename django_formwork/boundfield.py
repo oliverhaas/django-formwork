@@ -44,5 +44,6 @@ class FormworkBoundField(forms.BoundField):
         # at the label instead, but only where field.html renders one to point at.
         if self.label and self.auto_id and not self.use_fieldset and not widget.id_for_label(self.auto_id):
             # Label first, then the trigger, so the value is announced after the name.
-            attrs["aria-labelledby"] = f"{self.auto_id}_label {self.auto_id}"
+            trigger = widget.attrs.get("id") or self.auto_id
+            attrs["aria-labelledby"] = f"{self.auto_id}_label {trigger}"
         return attrs

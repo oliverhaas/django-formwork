@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from django import forms
 from django.http import QueryDict
@@ -10,7 +12,7 @@ from django.utils.safestring import mark_safe
 from django_formwork import ChoiceLabel
 from django_formwork.forms import FormworkForm
 from django_formwork.search import SEARCH_PAGE_SIZE
-from django_formwork.widgets import Select
+from django_formwork.widgets import ComboBox, Select
 
 from .conftest import open_dropdown, render_form, render_widget, server_widget, submit
 
@@ -792,13 +794,23 @@ def test_select_icon_span_cloaked_without_selection():
     assert span.find("svg") is None
 
 
-@pytest.mark.unit
-def test_select_summary_class_binding_includes_selected_toggle_class():
-    """The summary :class array binds selectedToggleClass so Alpine can swap it live."""
-    widget = Select(choices=[("a", "Alpha")])
-    soup = render_widget(widget, name="test")
-    summary = soup.find("summary")
-    assert "selectedToggleClass" in summary.get(":class", "")
+@pytest.mark.e2e
+def test_select_trigger_takes_the_picked_option_class(select_page):
+    """The closed trigger wears the picked option's class and drops the placeholder style."""
+    import re
+
+    from playwright.sync_api import expect
+
+    trigger = select_page.locator("#id_priority")
+    expect(trigger).to_have_class(re.compile(r"\bformwork-placeholder\b"))
+    trigger.click()
+    select_page.locator("#id_priority_listbox button[data-value='high']").click()
+    expect(trigger).to_have_class(re.compile(r"\bselect-error\b"))
+    expect(trigger).not_to_have_class(re.compile(r"\bformwork-placeholder\b"))
+    trigger.click()
+    select_page.locator("#id_priority_listbox button[data-value='low']").click()
+    expect(trigger).to_have_class(re.compile(r"\bselect-success\b"))
+    expect(trigger).not_to_have_class(re.compile(r"\bselect-error\b"))
 
 
 @pytest.mark.unit
@@ -948,6 +960,49 @@ def test_select_form_error_state_shows_tooltip(renderer):
     assert "required" in tooltip.text.lower()
 
 
+@pytest.mark.unit
+def test_select_caller_attrs_reach_the_trigger_and_the_value():
+    """Focus and naming attrs land on the trigger; data and htmx attrs on the input that posts and fires change."""
+    attrs = {
+        "autofocus": True,
+        "title": "Pick one",
+        "aria-roledescription": "picker",
+        "data-row": "3",
+        "hx-post": "/s/",
+    }
+    widget = Select(choices=[("a", "A")], attrs=attrs)
+    soup = render_widget(widget, value="a", attrs={"id": "id_test"})
+    summary = soup.select_one("summary")
+    assert (summary["autofocus"], summary["title"], summary["aria-roledescription"]) == ("", "Pick one", "picker")
+    hidden = soup.select_one("input[type=hidden]")
+    assert (hidden["data-row"], hidden["hx-post"]) == ("3", "/s/")
+    assert not summary.has_attr("hx-post")
+    assert not hidden.has_attr("title")
+
+
+@pytest.mark.unit
+def test_select_disabled_trigger_keeps_out_of_the_tab_order():
+    """A caller tabindex doesn't put a disabled trigger back in the tab order."""
+    widget = Select(choices=[("a", "A")], attrs={"disabled": True, "tabindex": "3"})
+    html = str(render_widget(widget, value="a"))
+    assert html.count("tabindex=") == 1
+    assert 'tabindex="-1"' in html
+
+
+@pytest.mark.integration
+def test_select_bound_value_no_option_holds_posts_blank(renderer):
+    """A posted value the choices lack shows the placeholder, so it does not post again."""
+
+    class CityForm(FormworkForm):
+        city = forms.ChoiceField(choices=[("nyc", "New York"), ("ldn", "London")], widget=Select, required=False)
+
+    form = CityForm(data={"city": "par"})
+    assert not form.is_valid()
+    soup = render_form(form, renderer=renderer)
+    assert soup.find("input", {"type": "hidden", "name": "city"})["value"] == ""
+    assert soup.find("details", class_="formwork-select")["data-value"] == ""
+
+
 @pytest.mark.integration
 def test_select_form_prefix_handling(renderer):
     """Form prefix propagates to the hidden input name and widget id."""
@@ -980,13 +1035,20 @@ def test_select_option_data_attrs_round_trip_raw(renderer):
     assert btn["data-label"] == "O'Brien & Sons"
 
 
-@pytest.mark.integration
-def test_select_checkmark_follows_aria_selected(renderer):
-    """The checkmark reads aria-selected, which the component derives from the raw data-value."""
-    soup = render_form(RoundTripSelectForm(), renderer=renderer)
-    btn = soup.find("button", attrs={"data-value": "uuid-1234"})
-    assert btn[":aria-selected"] == "isSelected($el)"
-    assert "group-aria-selected/option:opacity-100" in btn.find("span", class_="formwork-check")["class"]
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "widget",
+    [Select(choices=[("go", "Go"), ("zig", "Zig")]), ComboBox(suggestions=["Go", "Zig"])],
+    ids=["select", "combo"],
+)
+def test_listbox_aria_selected_sits_on_the_option(widget):
+    """Screen readers read aria-selected from the role=option element, not from a button inside it."""
+    soup = render_widget(widget, name="language")
+    options = soup.select("[role=option]")
+    assert len(options) == 2
+    assert all(li[":aria-selected"] == "isSelected($el)" for li in options)
+    assert all("group/option" in li["class"] for li in options)
+    assert not soup.select("button[\\:aria-selected]")
 
 
 @pytest.mark.integration
@@ -1527,6 +1589,23 @@ def test_select_keyboard_arrowdown_navigates(select_page):
 
 
 @pytest.mark.e2e
+def test_select_search_box_names_the_highlighted_option(select_page):
+    """Focus stays in the search box, so aria-activedescendant tells screen readers which row the arrows reached."""
+    from playwright.sync_api import expect
+
+    sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
+    search = sel.locator('.dropdown-content input[type="search"]')
+    search.press("ArrowDown")
+    search.press("ArrowDown")
+    active = sel.locator("li.highlighted")
+    expect(active).to_have_attribute("role", "option")
+    expect(search).to_have_attribute("aria-activedescendant", active.get_attribute("id"))
+    expect(select_page.locator("[role=option][id]")).to_have_count(1)
+    search.press("Escape")
+    expect(search).not_to_have_attribute("aria-activedescendant", re.compile("."))
+
+
+@pytest.mark.e2e
 def test_select_keyboard_arrowdown_wraps_to_first(select_page):
     """ArrowDown past the last option wraps to the first."""
     sel = open_dropdown(select_page, "formwork-select", 6, settle_ms=200)
@@ -1600,6 +1679,56 @@ def test_select_keyboard_close_clears_highlight(select_page):
     sel.locator("summary").click()
     select_page.wait_for_timeout(150)
     assert sel.locator("li.highlighted > [data-value]").count() == 0
+
+
+@pytest.mark.e2e
+def test_select_escape_in_a_dialog_closes_only_the_panel(select_page):
+    """Escape shuts the open panel, keeps the modal dialog around it open and refocuses the trigger."""
+    from playwright.sync_api import expect
+
+    select_page.evaluate("""() => {
+        const dialog = document.createElement("dialog");
+        dialog.id = "e2e_dialog";
+        document.body.append(dialog);
+        dialog.append(document.getElementById("id_city_grouped_field"));
+        dialog.showModal();
+    }""")
+    select_page.locator("#id_city_grouped").click()
+    search = select_page.locator("#id_city_grouped_wrapper input[type=search]")
+    expect(search).to_be_focused()
+    search.fill("par")
+    search.press("Escape")
+    expect(select_page.locator("#id_city_grouped_wrapper[open]")).to_have_count(0)
+    expect(select_page.locator("#e2e_dialog[open]")).to_have_count(1)
+    expect(select_page.locator("#id_city_grouped")).to_be_focused()
+    expect(search).to_have_value("")
+    select_page.keyboard.press("Escape")
+    expect(select_page.locator("#e2e_dialog[open]")).to_have_count(0)
+
+
+@pytest.mark.e2e
+def test_select_focus_leaving_the_widget_closes_the_panel(select_page):
+    """Tabbing to another control closes the panel, as a click elsewhere does."""
+    from playwright.sync_api import expect
+
+    select_page.locator("#id_city_plain").click()
+    expect(select_page.locator("#id_city_plain_wrapper[open]")).to_have_count(1)
+    select_page.locator("#id_city_icons").focus()
+    expect(select_page.locator("#id_city_plain_wrapper[open]")).to_have_count(0)
+
+
+@pytest.mark.e2e
+def test_select_outside_click_leaves_other_details_alone(select_page):
+    """Only formwork dropdowns close on an outside click; a page's own <details> keeps its state."""
+    from playwright.sync_api import expect
+
+    select_page.evaluate("""() => document.body.insertAdjacentHTML(
+        "afterbegin", '<details class="dropdown" id="e2e_menu" open><summary>Menu</summary></details>',
+    )""")
+    select_page.locator("#id_city_plain").click()
+    select_page.mouse.click(2, 300)
+    expect(select_page.locator("#id_city_plain_wrapper[open]")).to_have_count(0)
+    expect(select_page.locator("#e2e_menu[open]")).to_have_count(1)
 
 
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────

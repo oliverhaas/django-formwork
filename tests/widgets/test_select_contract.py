@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,19 @@ class _SearchForm(FormworkForm):
 class _ModelSearchForm(FormworkForm):
     one = forms.ModelChoiceField(
         queryset=User.objects.order_by("pk"),
+        widget=Select(search_fields=["email"], search_queryset=_users, search_decorator=None),
+    )
+    many = forms.ModelMultipleChoiceField(
+        queryset=User.objects.order_by("pk"),
+        widget=SelectMultiple(search_fields=["email"], search_queryset=_users, search_decorator=None),
+    )
+
+
+class _NoBlankModelForm(FormworkForm):
+    listed = forms.ModelChoiceField(queryset=User.objects.order_by("pk"), empty_label=None, widget=Select)
+    searched = forms.ModelChoiceField(
+        queryset=User.objects.order_by("pk"),
+        empty_label=None,
         widget=Select(search_fields=["email"], search_queryset=_users, search_decorator=None),
     )
 
@@ -145,6 +159,26 @@ def test_a_bound_value_the_key_cannot_hold_renders_no_selection() -> None:
     assert len(_values(form, "one")) == 20
 
 
+@pytest.mark.django_db
+def test_a_malformed_value_keeps_the_valid_selections_past_the_page() -> None:
+    User.objects.bulk_create(User(username=f"user{i}", email=f"user{i}@example.com") for i in range(22))
+    last = str(User.objects.order_by("pk").values_list("pk", flat=True).last())
+
+    form = _ModelSearchForm(data={"many": ["not-a-pk", last]})
+
+    assert _values(form, "many")[-1] == last
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("field", ["listed", "searched"])
+def test_a_model_select_without_a_blank_choice_queries_once(field: str, django_assert_num_queries) -> None:
+    User.objects.bulk_create(User(username=f"user{i}", email=f"user{i}@example.com") for i in range(22))
+    form = _NoBlankModelForm()
+
+    with django_assert_num_queries(1):
+        str(form[field])
+
+
 @pytest.mark.unit
 @pytest.mark.parametrize("field", ["one", "many"])
 def test_client_side_filtering_keeps_every_option(field: str) -> None:
@@ -161,6 +195,33 @@ def test_widget_templates_carry_no_script() -> None:
     assert templates
     for template in templates:
         assert "<script" not in template.read_text(), template.name
+
+
+_BINDING = re.compile(r'\s((?:x-|:|@)[\w:.-]+|hx-on[\w:.-]*)="([^"]*)"')
+_PATH = r"[A-Za-z_$][\w$]*(?:\??\.[A-Za-z_$][\w$]*|\[\d+\])*"
+_ARG = rf"(?:{_PATH}|-?\d+|'[^']*')"
+_CALL_OR_PROPERTY = re.compile(rf"!?{_PATH}(?:\((?:{_ARG}(?:, {_ARG})*)?\))?")
+
+
+@pytest.mark.unit
+def test_widget_template_bindings_hold_one_call_or_property() -> None:
+    """Logic lives in the Alpine components: a binding names a property or makes one call (D4)."""
+    for template in sorted(WIDGET_TEMPLATES.rglob("*.html")):
+        source = re.sub(r"{%.*?%}|{{.*?}}", "x", template.read_text())
+        for name, value in _BINDING.findall(source):
+            if name != "x-for" and value:
+                assert _CALL_OR_PROPERTY.fullmatch(value), f"{template.name}: {name}={value}"
+
+
+@pytest.mark.unit
+def test_requests_fired_while_typing_queue_the_newest_one() -> None:
+    """The default sync keeps the first request behind a pending one and drops the rest, losing the last keystrokes."""
+    typed = 0
+    for template in sorted(WIDGET_TEMPLATES.rglob("*.html")):
+        for tag in re.findall(r"<[^<>]*hx-trigger=\"input changed[^<>]*>", template.read_text()):
+            typed += 1
+            assert 'hx-sync="this:queue last"' in tag, template.name
+    assert typed == 3
 
 
 @pytest.mark.unit

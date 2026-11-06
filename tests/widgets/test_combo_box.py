@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 from django import forms
+from django.core.exceptions import ImproperlyConfigured
 from django.http import QueryDict
 from django.utils.safestring import mark_safe
 
@@ -136,6 +137,13 @@ def test_combo_box_flat_suggestions_have_no_group():
 
 
 @pytest.mark.unit
+def test_combo_box_rejects_value_label_pairs():
+    """A Django-style ``(value, label)`` pair fails at once instead of turning into a group of letters."""
+    with pytest.raises(ImproperlyConfigured, match="not \\(value, label\\) pairs"):
+        ComboBox(suggestions=[("py", "Python")])
+
+
+@pytest.mark.unit
 def test_combo_box_grouped_suggestions_keep_their_group():
     """Grouped suggestions ``[(name, [items])]`` keep their order and group name."""
     widget = ComboBox(suggestions=[("Italian", ["Pizza", "Pasta"]), ("Asian", ["Sushi"])])
@@ -184,6 +192,15 @@ def test_combo_box_renders_without_id():
     soup = render_widget(widget, name="field", attrs={})
     div = soup.find("div", class_="formwork-combobox")
     assert div is not None
+
+
+@pytest.mark.unit
+def test_combo_box_input_points_at_the_highlighted_option():
+    """The input keeps focus during arrow keys, so it names the highlighted row through aria-activedescendant."""
+    soup = render_widget(ComboBox(suggestions=["Go", "Zig"]), name="language", attrs={"id": "id_language"})
+    inp = soup.select_one("input[role=combobox]")
+    assert inp["aria-controls"] == "id_language_listbox"
+    assert inp[":aria-activedescendant"] == "activeOption"
 
 
 # ─── Level 2: Widget rendering (HTML output) ─────────────────────────────
@@ -1032,6 +1049,64 @@ def test_combo_box_keyboard_escape_closes_dropdown(combobox_page):
     assert is_open is False
 
 
+@pytest.mark.e2e
+def test_combo_box_escape_in_a_dialog_closes_the_list_first(combobox_page):
+    """The first Escape closes the list; the next one reaches the modal dialog around it."""
+    from playwright.sync_api import expect
+
+    combobox_page.evaluate("""() => {
+        const dialog = document.createElement("dialog");
+        dialog.id = "e2e_dialog";
+        document.body.append(dialog);
+        dialog.append(document.getElementById("id_language_single_field"));
+        dialog.showModal();
+    }""")
+    inp = combobox_page.locator("#id_language_single")
+    inp.click()
+    listbox = combobox_page.locator("#id_language_single_listbox")
+    expect(listbox).to_be_visible()
+    inp.press("Escape")
+    expect(listbox).to_be_hidden()
+    expect(combobox_page.locator("#e2e_dialog[open]")).to_have_count(1)
+    inp.press("Escape")
+    expect(combobox_page.locator("#e2e_dialog[open]")).to_have_count(0)
+
+
+@pytest.mark.e2e
+def test_combo_box_focus_leaving_the_widget_closes_the_list(combobox_page):
+    """Tabbing to another control closes the list."""
+    from playwright.sync_api import expect
+
+    combobox_page.locator("#id_language_single").click()
+    listbox = combobox_page.locator("#id_language_single_listbox")
+    expect(listbox).to_be_visible()
+    combobox_page.locator("#id_toppings_multi").focus()
+    expect(listbox).to_be_hidden()
+
+
+@pytest.mark.e2e
+def test_combo_box_icon_overlay_covers_the_input_while_unfocused(combobox_page):
+    """With focus elsewhere the overlay lists the picks with their icons; focus brings the text back."""
+    import re
+
+    from playwright.sync_api import expect
+
+    inp = combobox_page.locator("#id_language_icons_multi")
+    overlay = combobox_page.locator("#id_language_icons_multi_wrapper .combobox-display")
+    listbox = combobox_page.locator("#id_language_icons_multi_listbox")
+    inp.click()
+    listbox.locator("button[data-value='Python']").click()
+    listbox.locator("button[data-value='Go']").click()
+    combobox_page.locator("#id_language_single").focus()
+    expect(overlay).to_be_visible()
+    expect(overlay.locator(":scope > span:nth-of-type(1) > span:first-child")).to_be_hidden()
+    expect(overlay.locator(":scope > span:nth-of-type(2) > span:first-child")).to_be_visible()
+    expect(inp).to_have_class(re.compile(r"\btext-transparent\b"))
+    inp.focus()
+    expect(overlay).to_be_hidden()
+    expect(inp).not_to_have_class(re.compile(r"\btext-transparent\b"))
+
+
 # ─── Level 6: E2e error flow ─────────────────────────────────────────────
 #
 # Needs a page with a required ComboBox; /combobox/ has none.
@@ -1047,6 +1122,53 @@ def test_combo_box_server_search_fills_the_list_on_first_focus(combobox_page):
     expect(rows).to_have_count(0)
     combobox_page.locator('input[name="language_htmx"]').click()
     expect(rows).to_have_count(20, timeout=10000)
+
+
+@pytest.mark.e2e
+def test_combo_box_search_query_leaves_out_the_field_name(combobox_page):
+    """The typed text goes out as ``q`` only, so a field named like a search param can't override it."""
+    from urllib.parse import parse_qs, urlsplit
+
+    inp = combobox_page.locator('input[name="language_htmx"]')
+    inp.click()
+    with combobox_page.expect_request(lambda request: "q=Ge" in request.url) as request_info:
+        inp.press_sequentially("Ge")
+    query = parse_qs(urlsplit(request_info.value.url).query)
+    assert query["q"] == ["Ge"]
+    assert "language_htmx" not in query
+
+
+@pytest.mark.e2e
+def test_combo_box_newest_query_runs_after_a_pending_search(combobox_page):
+    """Queries typed while a search is pending end with the newest one, not the first one queued."""
+    from urllib.parse import parse_qs, urlsplit
+
+    from playwright.sync_api import expect
+
+    inp = combobox_page.locator('input[name="language_htmx"]')
+    rows = combobox_page.locator("#id_language_htmx_listbox button[data-value]")
+    inp.click()
+    expect(rows).to_have_count(20)
+    combobox_page.evaluate(
+        """() => {
+          window.__fwQueries = [];
+          document.addEventListener("htmx:config:request", (e) => window.__fwQueries.push(e.detail.ctx.request.body.get("q")));
+        }"""
+    )
+    held = []
+
+    def hold(route):
+        held.append(route)
+
+    combobox_page.route(lambda url: parse_qs(urlsplit(url).query).get("q") == ["G"], hold)
+    with combobox_page.expect_request(lambda request: "q=G" in request.url):
+        inp.press_sequentially("G")
+    inp.press_sequentially("o")
+    combobox_page.wait_for_function("q => window.__fwQueries.includes(q)", arg="Go")
+    inp.fill("Z")
+    combobox_page.wait_for_function("q => window.__fwQueries.includes(q)", arg="Z")
+    held[0].continue_()
+    expect(rows).to_have_text(["Zig"])
 
 
 @pytest.mark.e2e
