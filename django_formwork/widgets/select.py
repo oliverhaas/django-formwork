@@ -36,6 +36,20 @@ class _UnsetDecorator:
 
 _UNSET_DECORATOR = _UnsetDecorator()
 
+# Attrs the select templates place themselves.
+_TEMPLATE_ATTRS = frozenset(
+    {
+        "id",
+        "class",
+        "placeholder",
+        "disabled",
+        "aria-invalid",
+        "aria-required",
+        "aria-labelledby",
+        "aria-label",
+        "aria-describedby",
+    }
+)
 
 BadgeColor = Literal["neutral", "primary", "secondary", "accent", "info", "success", "warning", "error"]
 
@@ -187,6 +201,13 @@ class SearchableSelectMixin(_SelectBase):
         widget["aria_label"] = widget["attrs"].get("aria-label")
         widget["aria_describedby"] = widget["attrs"].get("aria-describedby")
         widget["disabled"] = bool(widget["attrs"].get("disabled"))
+        # The hidden input holds the value and fires `change` on a pick. Data and
+        # htmx attrs go there, the rest go on the trigger, which takes focus.
+        rest = {key: val for key, val in widget["attrs"].items() if key not in _TEMPLATE_ATTRS}
+        if widget["disabled"]:
+            rest.pop("tabindex", None)
+        widget["input_attrs"] = {key: val for key, val in rest.items() if key.startswith(("data-", "hx-"))}
+        widget["trigger_attrs"] = {key: val for key, val in rest.items() if key not in widget["input_attrs"]}
         # A list that fits one page filters in the browser.
         widget["search_url"] = None
         widget["shown"] = None

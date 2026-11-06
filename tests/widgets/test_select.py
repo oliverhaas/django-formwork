@@ -960,6 +960,35 @@ def test_select_form_error_state_shows_tooltip(renderer):
     assert "required" in tooltip.text.lower()
 
 
+@pytest.mark.unit
+def test_select_caller_attrs_reach_the_trigger_and_the_value():
+    """Focus and naming attrs land on the trigger; data and htmx attrs on the input that posts and fires change."""
+    attrs = {
+        "autofocus": True,
+        "title": "Pick one",
+        "aria-roledescription": "picker",
+        "data-row": "3",
+        "hx-post": "/s/",
+    }
+    widget = Select(choices=[("a", "A")], attrs=attrs)
+    soup = render_widget(widget, value="a", attrs={"id": "id_test"})
+    summary = soup.select_one("summary")
+    assert (summary["autofocus"], summary["title"], summary["aria-roledescription"]) == ("", "Pick one", "picker")
+    hidden = soup.select_one("input[type=hidden]")
+    assert (hidden["data-row"], hidden["hx-post"]) == ("3", "/s/")
+    assert not summary.has_attr("hx-post")
+    assert not hidden.has_attr("title")
+
+
+@pytest.mark.unit
+def test_select_disabled_trigger_keeps_out_of_the_tab_order():
+    """A caller tabindex doesn't put a disabled trigger back in the tab order."""
+    widget = Select(choices=[("a", "A")], attrs={"disabled": True, "tabindex": "3"})
+    html = str(render_widget(widget, value="a"))
+    assert html.count("tabindex=") == 1
+    assert 'tabindex="-1"' in html
+
+
 @pytest.mark.integration
 def test_select_bound_value_no_option_holds_posts_blank(renderer):
     """A posted value the choices lack shows the placeholder, so it does not post again."""
