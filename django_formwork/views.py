@@ -114,16 +114,19 @@ class FormworkSearchView(View):
         query = request.GET.get("q", "").strip()[: self.MAX_QUERY_LENGTH]
         to_field_name = getattr(field, "to_field_name", None) or "pk"
         queryset = widget.search_queryset(request, **params)
+        meta = queryset.model._meta  # noqa: SLF001
+        target = meta.pk if to_field_name == "pk" else meta.get_field(to_field_name)
         try:
-            queryset = queryset.exclude(**{f"{to_field_name}__in": request.GET.getlist("exclude")})
+            excluded = [target.get_prep_value(value) for value in request.GET.getlist("exclude")]
         except ValueError, ValidationError:
             raise Http404 from None
+        # SQLite raises on these, while PostgreSQL compares them as numeric and excludes nothing.
+        if any(isinstance(value, int) and abs(value) > _DB_INT_MAX for value in excluded):
+            raise Http404
+        queryset = queryset.exclude(**{f"{to_field_name}__in": excluded})
         queryset = self.search(queryset, widget=widget, query=query)
         # One row past the cap: cheaper than a COUNT and enough to say "there are more".
-        try:
-            rows = list(queryset[offset : offset + SEARCH_PAGE_SIZE + 1])
-        except OverflowError:  # SQLite: an exclude value past a 64-bit integer
-            raise Http404 from None
+        rows = list(queryset[offset : offset + SEARCH_PAGE_SIZE + 1])
         truncated = len(rows) > SEARCH_PAGE_SIZE
         del rows[SEARCH_PAGE_SIZE:]
         # ModelChoiceField provides label_from_instance; a free-text ComboBox over a
