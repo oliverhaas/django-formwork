@@ -13,6 +13,7 @@ document.addEventListener("alpine:init", () => {
     // The input holds the value, so a morph that changes it needs no sync.
     step(direction) {
       const input = this.$refs.input;
+      if (input.readOnly) return;
       const value = (Number(input.value) || 0) + direction * (Number(input.step) || 1);
       this.commit(roundToStep(value, input.step));
       input.dispatchEvent(new Event("change", { bubbles: true }));
