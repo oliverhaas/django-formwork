@@ -72,7 +72,7 @@ def test_image_dropzone_stored_preview_has_a_clear_button():
     soup = render_widget(ImageDropzoneInput(), name="logo", value=STORED, attrs={"id": "id_logo"})
     button = soup.select_one("#id_logo_clear")
     assert button["type"] == "button"
-    assert button["@click"] == "clear()"
+    assert button["@click.stop"] == "clear()"
     assert button["aria-label"] == "Remove image"
     clear = soup.select_one('input[type="hidden"]')
     assert clear["name"] == "clear_logo"
@@ -267,7 +267,7 @@ def test_image_dropzone_stored_image_can_be_replaced(uploads_page):
     from playwright.sync_api import expect
 
     field = uploads_page.locator("#id_avatar_stored_field")
-    stored = field.locator("img[src^='data:image/gif']")
+    stored = field.locator("img[src^='data:image/svg+xml']")
     drop_area = field.get_by_text("Drag and drop an image here")
     clear = field.locator('input[name="clear_avatar_stored"]')
     expect(stored).to_be_visible()
