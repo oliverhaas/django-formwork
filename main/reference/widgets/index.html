@@ -2436,14 +2436,23 @@ property name on <code>ChoiceWidget</code>.</p>
 <h2 id="files">Files<a class="headerlink" href="#files" title="Permanent link">&para;</a></h2>
 <h3 id="filedropzoneinput">FileDropzoneInput<a class="headerlink" href="#filedropzoneinput" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.FileInput</code></p>
-<p>Dashed drop area that takes dragged files or opens the file picker. Pass
-<code>multiple</code> in <code>attrs</code> for several files; that needs a list-aware field, as in
-Django's "Uploading multiple files" topic. <code>max_size</code> (bytes) rejects larger
-files in the browser.</p>
+<p>Dashed drop area that takes dragged files or opens the file picker. <code>max_size</code>
+(bytes) rejects larger files in the browser.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">docs</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span>
 </span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">FileDropzoneInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"accept"</span><span class="p">:</span> <span class="s2">".pdf"</span><span class="p">},</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">),</span>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="p">)</span>
 </span></code></pre></div>
+<p>For several files, use <code>MultipleFileField</code>. Its default widget is this drop
+area with <code>multiple</code>, and it cleans to a list of files. A plain <code>FileField</code>
+rejects the list that a <code>multiple</code> input sends.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultipleFileField</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="n">attachments</span> <span class="o">=</span> <span class="n">MultipleFileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span></code></pre></div>
+<p><code>required</code> demands at least one file, and each file gets the <code>FileField</code> checks,
+such as the one for an empty file. No model field holds several files, so save
+each one yourself, for example as a row of a related model. For other widget
+options, pass <code>widget=widgets.FileDropzoneInput(attrs={"multiple": True, ...})</code>.</p>
 <h3 id="imagedropzoneinput">ImageDropzoneInput<a class="headerlink" href="#imagedropzoneinput" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.FileInput</code></p>
 <p>Drop area that previews the stored image, with a button that clears it.
@@ -2499,23 +2508,23 @@ size on the server as well.</p>
 <p>A value the user cannot change, in the box of a filled field. It posts nothing,
 so put it on a <code>disabled</code> field. Each item is a string or a <code>ChoiceLabel</code>; with
 <code>badges=True</code>, each item is a badge in its <code>color</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="n">status</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">Field</span><span class="p">(</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>    <span class="n">disabled</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Display</span><span class="p">(</span><span class="n">badges</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="p">)</span>
-</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="n">form</span> <span class="o">=</span> <span class="n">OrderForm</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Paid"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"success"</span><span class="p">)]})</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">status</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">Field</span><span class="p">(</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>    <span class="n">disabled</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Display</span><span class="p">(</span><span class="n">badges</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="p">)</span>
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="n">form</span> <span class="o">=</span> <span class="n">OrderForm</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Paid"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"success"</span><span class="p">)]})</span>
 </span></code></pre></div>
 <hr />
 <h2 id="patternhintmixin">PatternHintMixin<a class="headerlink" href="#patternhintmixin" title="Permanent link">&para;</a></h2>
 <p>Shows the class attribute <code>pattern_hint</code> under a text control while its value
 misses the <code>pattern</code> attribute. CSS reads the browser's verdict, so it needs no
 JavaScript. Pair it with a server-side validator.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostcodeInput</span><span class="p">(</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">):</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>    <span class="n">pattern_hint</span> <span class="o">=</span> <span class="n">_</span><span class="p">(</span><span class="s2">"Five digits, for example 10115"</span><span class="p">)</span>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">({</span><span class="s2">"pattern"</span><span class="p">:</span> <span class="s2">"[0-9]</span><span class="si">{5}</span><span class="s2">"</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">attrs</span> <span class="ow">or</span> <span class="p">{})})</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostcodeInput</span><span class="p">(</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">):</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>    <span class="n">pattern_hint</span> <span class="o">=</span> <span class="n">_</span><span class="p">(</span><span class="s2">"Five digits, for example 10115"</span><span class="p">)</span>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">({</span><span class="s2">"pattern"</span><span class="p">:</span> <span class="s2">"[0-9]</span><span class="si">{5}</span><span class="s2">"</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">attrs</span> <span class="ow">or</span> <span class="p">{})})</span>
 </span></code></pre></div>
 <hr />
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>

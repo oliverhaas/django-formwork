@@ -727,6 +727,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -766,7 +777,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -838,7 +849,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -888,7 +899,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_2" class="md-nav__link">
+  <a href="#added_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -958,6 +969,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -997,7 +1019,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1069,7 +1091,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1119,7 +1141,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_2" class="md-nav__link">
+  <a href="#added_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1156,6 +1178,13 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>MultipleFileField</code> for several uploads in one field. A plain <code>FileField</code> with a
+  <code>multiple</code> <code>FileDropzoneInput</code> failed validation with "No file was submitted" as soon
+  as a file was picked. <code>MultipleFileField</code> uses that drop area by default and cleans to
+  a list of files.</li>
+</ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>ImageDropzoneInput</code> looks like <code>FileDropzoneInput</code> again: the same dashed area,
@@ -1283,7 +1312,7 @@
   help text that needs markup with <code>format_html()</code> or <code>mark_safe()</code>. A help text built
   from user data cannot inject markup. See <a href="../forms/#help-text">Forms</a>.</li>
 </ul>
-<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Editable tables.</strong> <code>as_row()</code> renders a <code>FormworkForm</code>/<code>FormworkModelForm</code> as a
   table <code>&lt;tbody&gt;</code>, and <code>as_rows()</code> renders a formset as one editable <code>&lt;table&gt;</code>. Pair
@@ -1544,7 +1573,7 @@
   your own <code>_apost_clean</code>.</li>
 </ul>
 <h2 id="010a2-2026-05-18">0.1.0a2 (2026-05-18)<a class="headerlink" href="#010a2-2026-05-18" title="Permanent link">&para;</a></h2>
-<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
+<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Documentation for six widgets that already shipped in 0.1.0a1 but were missing from the reference: <code>CountryInput</code>, <code>DatePicker</code>, <code>InputMask</code>, <code>InputNumber</code>, <code>OTPInput</code>, <code>PhoneInput</code>.</li>
 </ul>
@@ -1574,7 +1603,7 @@
 </ul>
 <h2 id="010a1-2026-03-15">0.1.0a1 (2026-03-15)<a class="headerlink" href="#010a1-2026-03-15" title="Permanent link">&para;</a></h2>
 <p>First alpha release.</p>
-<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">&para;</a></h3>
+<h3 id="added_3">Added<a class="headerlink" href="#added_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>FormworkRenderer</strong> — Custom form renderer that applies DaisyUI-styled templates to all forms via <code>FORM_RENDERER</code> setting</li>
 <li><strong>FormworkForm / FormworkModelForm</strong> — Convenience base classes for per-form styling</li>
