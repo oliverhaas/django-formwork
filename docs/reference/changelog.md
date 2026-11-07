@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `ImageDropzoneInput` looks like `FileDropzoneInput` again: the same dashed area,
+  height, "Drag and drop an image here or browse" prompt and round × remove button. The
+  "Upload Image" button is gone, since a click anywhere on the area opens the file
+  picker, and a click on the preview picks another image. The preview has a thin border,
+  so a white image shows its edge, and the checkerboard behind transparent images is
+  lighter. If you override `formwork/widgets/image_dropzone.html`, copy it again.
+
 ## 0.1.0a3 (2026-11-06)
 
 ### Breaking changes

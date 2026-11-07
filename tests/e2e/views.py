@@ -1,5 +1,7 @@
 """Views for e2e testing. widget showcase with one page per topic."""
 
+import base64
+
 from django import forms
 from django.db.models import QuerySet
 from django.forms.models import construct_instance
@@ -987,6 +989,19 @@ class SectionExtrasForm(FormworkModelForm):
         validate_dirty_only = True
 
 
+_STORED_IMAGE = (
+    "data:image/svg+xml;base64,"
+    + base64.b64encode(
+        b'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200">'
+        b'<rect width="320" height="200" fill="#7cb7e6"/>'
+        b'<circle cx="230" cy="70" r="28" fill="#f6d36b"/>'
+        b'<path d="M0 150Q80 100 160 140T320 130V200H0Z" fill="#5f9e5a"/>'
+        b'<path d="M0 175Q100 145 200 170T320 165V200H0Z" fill="#3f7a44"/>'
+        b"</svg>"
+    ).decode()
+)
+
+
 class UploadsForm(FormworkForm):
     """File upload widgets with variations."""
 
@@ -1016,9 +1031,7 @@ class UploadsForm(FormworkForm):
         label="Avatar (PNG/JPEG, 2 MB max)",
     )
     avatar_stored = forms.ImageField(
-        widget=ImageDropzoneInput(
-            preview_url="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-        ),
+        widget=ImageDropzoneInput(preview_url=_STORED_IMAGE),
         required=False,
         label="Avatar (stored)",
     )

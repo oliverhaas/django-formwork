@@ -227,7 +227,7 @@ def test_image_dropzone_preview_and_remove(uploads_page):
     expect(preview).to_be_visible()
     field.get_by_role("button", name="Remove image").click()
     expect(preview).not_to_be_attached()
-    expect(field.get_by_text("Drag your image here")).to_be_visible()
+    expect(field.get_by_text("Drag and drop an image here")).to_be_visible()
     assert uploads_page.locator('input[name="avatar"]').evaluate("el => el.files.length") == 0
 
 
@@ -268,7 +268,7 @@ def test_image_dropzone_stored_image_can_be_replaced(uploads_page):
 
     field = uploads_page.locator("#id_avatar_stored_field")
     stored = field.locator("img[src^='data:image/gif']")
-    drop_area = field.get_by_text("Drag your image here")
+    drop_area = field.get_by_text("Drag and drop an image here")
     clear = field.locator('input[name="clear_avatar_stored"]')
     expect(stored).to_be_visible()
     expect(drop_area).to_be_hidden()

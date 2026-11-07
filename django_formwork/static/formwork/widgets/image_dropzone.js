@@ -11,7 +11,7 @@ document.addEventListener("alpine:init", () => {
     error: "",
 
     get dragClass() {
-      return { "border-primary bg-base-100": this.dragging };
+      return { dragging: this.dragging };
     },
 
     // The stored image shows until the user clears it or picks a new one.
@@ -29,6 +29,10 @@ document.addEventListener("alpine:init", () => {
 
     onDragLeave() {
       this.dragging = false;
+    },
+
+    browse() {
+      this.$refs.input.click();
     },
 
     // A drop fills the real file input, so the form posts the file and a section form saves at once.
