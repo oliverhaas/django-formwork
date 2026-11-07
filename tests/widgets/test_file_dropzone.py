@@ -7,6 +7,7 @@ from django import forms
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
+from django_formwork.fields import MultipleFileField
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import FileDropzoneInput
 
@@ -17,6 +18,13 @@ class FileDropzoneForm(FormworkForm):
     """Form fixture for FileDropzoneInput integration tests."""
 
     upload = forms.FileField(widget=FileDropzoneInput, required=True)
+
+
+def _multiple_file_form(*uploads, required=False):
+    class MultipleFileForm(FormworkForm):
+        files = MultipleFileField(required=required)
+
+    return MultipleFileForm(data={}, files=MultiValueDict({"files": list(uploads)}))
 
 
 def _root(soup):
@@ -136,6 +144,34 @@ def test_file_dropzone_single_upload_form_is_valid():
 
 
 @pytest.mark.integration
+def test_multiple_file_field_cleans_every_upload_to_a_list():
+    """The default multi-file dropzone hands over every file, and the field keeps them all."""
+    form = _multiple_file_form(SimpleUploadedFile("a.txt", b"a"), SimpleUploadedFile("b.txt", b"b"))
+    assert form.is_valid(), form.errors
+    assert [upload.name for upload in form.cleaned_data["files"]] == ["a.txt", "b.txt"]
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(("required", "errors"), [(True, ["required"]), (False, [])])
+def test_multiple_file_field_without_files(required, errors):
+    """No upload fails a required field and cleans to an empty list otherwise."""
+    form = _multiple_file_form(required=required)
+    assert form.is_valid() is (not errors)
+    assert [error["code"] for error in form.errors.get_json_data().get("files", [])] == errors
+    assert form.has_changed() is False
+    if not errors:
+        assert form.cleaned_data["files"] == []
+
+
+@pytest.mark.integration
+def test_multiple_file_field_checks_each_file():
+    """An empty file among several fails the field like a single empty upload would."""
+    form = _multiple_file_form(SimpleUploadedFile("a.txt", b"a"), SimpleUploadedFile("empty.txt", b""))
+    assert not form.is_valid()
+    assert form.errors.get_json_data()["files"][0]["code"] == "empty"
+
+
+@pytest.mark.integration
 def test_file_dropzone_error_state_aria_invalid(renderer):
     """Bound form with errors adds aria-invalid='true' to the file input."""
     form = FileDropzoneForm(data={})
@@ -201,6 +237,21 @@ def test_file_dropzone_multiple_files_show_a_count(uploads_page):
     zone = uploads_page.locator("#id_dropzone_dropzone")
     expect(zone.locator(".dropzone-file-name")).to_have_text("2 files selected")
     expect(zone.locator(".dropzone-file-size")).to_have_text("a.txt, b.txt")
+
+
+@pytest.mark.e2e
+def test_file_dropzone_multiple_files_submit(uploads_page):
+    """Several files picked in the browser reach a MultipleFileField and the form saves."""
+    from playwright.sync_api import expect
+
+    uploads_page.locator('input[name="dropzone"]').set_input_files(
+        [
+            {"name": "a.txt", "mimeType": "text/plain", "buffer": b"a"},
+            {"name": "b.txt", "mimeType": "text/plain", "buffer": b"b"},
+        ],
+    )
+    uploads_page.get_by_role("button", name="Submit").click()
+    expect(uploads_page.get_by_role("button", name="Delete")).to_be_visible()
 
 
 @pytest.mark.e2e

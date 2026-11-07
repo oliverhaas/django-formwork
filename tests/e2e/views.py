@@ -10,7 +10,7 @@ from django.template import engines
 from django.utils import translation
 from e2e.models import AutoSaveFormData, BasicFormData, City, Region, SearchOption, SectionRecord
 
-from django_formwork import ChoiceLabel, section_forms
+from django_formwork import ChoiceLabel, MultipleFileField, section_forms
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkValidateView
 from django_formwork.widgets import (
@@ -1005,11 +1005,7 @@ _STORED_IMAGE = (
 class UploadsForm(FormworkForm):
     """File upload widgets with variations."""
 
-    dropzone = forms.FileField(
-        widget=FileDropzoneInput(attrs={"multiple": True}),
-        required=False,
-        label="Drop zone (multi)",
-    )
+    dropzone = MultipleFileField(required=False, label="Drop zone (multi)")
     dropzone_restricted = forms.FileField(
         widget=FileDropzoneInput(
             attrs={"accept": ".pdf"},
@@ -1046,7 +1042,7 @@ class TranslatedForm(FormworkForm):
         initial=["red", "green", "blue", "black"],
         required=False,
     )
-    files = forms.FileField(widget=FileDropzoneInput(attrs={"multiple": True}), required=False)
+    files = MultipleFileField(required=False)
     note = forms.CharField(required=False, help_text="Hilfe " * 60)
 
 
@@ -1399,6 +1395,8 @@ def _to_session(cleaned_data):
     for key, val in cleaned_data.items():
         if hasattr(val, "read"):
             result[key] = val.name if hasattr(val, "name") else "[file]"
+        elif isinstance(val, list) and val and all(hasattr(item, "read") for item in val):
+            result[key] = [item.name for item in val]
         elif hasattr(val, "isoformat"):
             result[key] = val.isoformat()
         elif isinstance(val, SearchOption):

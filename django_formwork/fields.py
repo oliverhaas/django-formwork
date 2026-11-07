@@ -8,11 +8,14 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from django_formwork.widgets.date_input import DateRangeInput
+from django_formwork.widgets.file_dropzone import FileDropzoneInput
 
 if TYPE_CHECKING:
     import datetime as dt
 
-__all__ = ["DateRange", "DateRangeField"]
+    from django.core.files.uploadedfile import UploadedFile
+
+__all__ = ["DateRange", "DateRangeField", "MultipleFileField"]
 
 
 class DateRange(NamedTuple):
@@ -51,3 +54,26 @@ class DateRangeField(forms.MultiValueField):
             raise forms.ValidationError(self.error_messages["start_after_end"], code="start_after_end")
         if self.max_span is not None and end > start + self.max_span:
             raise forms.ValidationError(self.error_messages["max_span"], code="max_span")
+
+
+class MultipleFileField(forms.FileField):
+    """Cleans the files of a ``multiple`` file input to a list.
+
+    The default widget is ``FileDropzoneInput`` with ``multiple``. ``required`` demands at least one
+    file, and each file passes the ``FileField`` checks.
+    """
+
+    def __init__(self, **kwargs: Any) -> None:
+        kwargs["widget"] = kwargs.get("widget") or FileDropzoneInput(attrs={"multiple": True})
+        super().__init__(**kwargs)
+
+    def clean(self, data: Any, initial: Any = None) -> list[UploadedFile]:  # noqa: ANN401, ARG002 (widget data)
+        files = data if isinstance(data, list | tuple) else [data] if data else []
+        clean_file = super().clean
+        if not files:
+            clean_file(None)
+            return []
+        return [clean_file(file) for file in files]
+
+    def has_changed(self, initial: Any, data: Any) -> bool:  # noqa: ANN401, ARG002 (widget data)
+        return not self.disabled and bool(data)

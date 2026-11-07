@@ -43,6 +43,7 @@ def test_top_level_names_match_submodule_objects():
 
     assert django_formwork.DateRange is fields.DateRange
     assert django_formwork.DateRangeField is fields.DateRangeField
+    assert django_formwork.MultipleFileField is fields.MultipleFileField
     assert django_formwork.FormworkForm is forms.FormworkForm
     assert django_formwork.FormworkModelForm is forms.FormworkModelForm
     assert django_formwork.FormworkModel is models.FormworkModel

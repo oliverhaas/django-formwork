@@ -566,16 +566,29 @@ rating = forms.TypedChoiceField(
 
 **Parent class:** `forms.FileInput`
 
-Dashed drop area that takes dragged files or opens the file picker. Pass
-`multiple` in `attrs` for several files; that needs a list-aware field, as in
-Django's "Uploading multiple files" topic. `max_size` (bytes) rejects larger
-files in the browser.
+Dashed drop area that takes dragged files or opens the file picker. `max_size`
+(bytes) rejects larger files in the browser.
 
 ```python
 docs = forms.FileField(
     widget=widgets.FileDropzoneInput(attrs={"accept": ".pdf"}, max_size=10 * 1024 * 1024),
 )
 ```
+
+For several files, use `MultipleFileField`. Its default widget is this drop
+area with `multiple`, and it cleans to a list of files. A plain `FileField`
+rejects the list that a `multiple` input sends.
+
+```python
+from django_formwork import MultipleFileField
+
+attachments = MultipleFileField(required=False)
+```
+
+`required` demands at least one file, and each file gets the `FileField` checks,
+such as the one for an empty file. No model field holds several files, so save
+each one yourself, for example as a row of a related model. For other widget
+options, pass `widget=widgets.FileDropzoneInput(attrs={"multiple": True, ...})`.
 
 ### ImageDropzoneInput
 

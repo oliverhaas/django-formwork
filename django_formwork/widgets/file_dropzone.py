@@ -17,7 +17,7 @@ def _files_selected_text(count: int) -> str:
 class FileDropzoneInput(_DropzoneMixin, forms.FileInput):
     """Dashed drop area for one file, or for several with ``multiple`` in ``attrs``.
 
-    Several files need a list-aware field, as in Django's "Uploading multiple files" topic.
+    Several files need ``MultipleFileField``, which cleans to a list.
     ``accept`` and ``max_size`` are client-side hints only; validate the upload in the form.
     """
 

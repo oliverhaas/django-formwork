@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- `MultipleFileField` for several uploads in one field. A plain `FileField` with a
+  `multiple` `FileDropzoneInput` failed validation with "No file was submitted" as soon
+  as a file was picked. `MultipleFileField` uses that drop area by default and cleans to
+  a list of files.
+
 ### Changed
 
 - `ImageDropzoneInput` looks like `FileDropzoneInput` again: the same dashed area,
