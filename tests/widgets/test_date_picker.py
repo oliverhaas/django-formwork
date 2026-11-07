@@ -3,7 +3,9 @@ from __future__ import annotations
 import datetime as dt
 
 import pytest
+from bs4 import BeautifulSoup
 from django import forms
+from django.utils import translation
 
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import DatePicker
@@ -15,6 +17,13 @@ class DatePickerForm(FormworkForm):
     """Form fixture for DatePicker integration tests."""
 
     due_date = forms.DateField(widget=DatePicker, required=True)
+
+
+class DayFirstForm(FormworkForm):
+    """A day-first DatePicker next to a field that can fail on its own."""
+
+    day = forms.DateField(widget=DatePicker(format="%d.%m.%Y"))
+    note = forms.CharField()
 
 
 @pytest.mark.unit
@@ -176,6 +185,26 @@ def test_date_picker_calendar_value_is_iso_under_any_format(value):
     assert soup.select_one("[x-data=formworkDatePicker]")["data-value"] == "2026-11-06"
 
 
+@pytest.mark.integration
+@pytest.mark.parametrize("text", ["13.07.2026", "2026-07-13"])
+def test_date_picker_reads_its_format_where_the_language_lacks_it(text):
+    """A date in the widget's format validates on an English page, as ISO does."""
+    with translation.override("en"):
+        form = DayFirstForm(data={"day": text, "note": "x"})
+        assert form.is_valid(), form.errors
+    assert form.cleaned_data["day"] == dt.date(2026, 7, 13)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("text", ["13.07.2026", "2026-07-13"])
+def test_date_picker_shows_a_submitted_date_in_its_format(text):
+    """After a failed submit the input shows the date in the widget's format, however it was sent."""
+    form = DayFirstForm(data={"day": text, "note": ""})
+    assert not form.is_valid()
+    inp = BeautifulSoup(str(form["day"]), "html.parser").find("input", attrs={"name": "day"})
+    assert inp["value"] == "13.07.2026"
+
+
 @pytest.mark.e2e
 def test_date_picker_input_is_named_by_its_label_alone(new_widgets_page):
     """The calendar toggle's name stays out of the input's name; a click on the box still focuses the input."""
@@ -202,6 +231,23 @@ def test_date_picker_opens_and_picks_day(new_widgets_page):
     inp = new_widgets_page.locator("input[name='due_date']")
     expect(inp).to_have_value(re.compile(r"^\d{4}-\d{2}-15$"))
     expect(panel).not_to_be_visible()
+
+
+@pytest.mark.e2e
+def test_date_picker_writes_and_reads_its_format(new_widgets_page):
+    """A picked day lands in the widget's format, and a day typed in that format is the one the calendar marks."""
+    import re
+
+    from playwright.sync_api import expect
+
+    picker = new_widgets_page.locator("#id_delivery_date_datepicker")
+    inp = picker.locator("input[name='delivery_date']")
+    panel = picker.locator("div.dropdown-content")
+    picker.locator("button.date-picker-toggle").click()
+    panel.get_by_role("button", name="15", exact=True).click()
+    expect(inp).to_have_value(re.compile(r"^15\.\d{2}\.\d{4}$"))
+    inp.fill("14" + inp.input_value()[2:])
+    expect(panel.get_by_role("button", name="14", exact=True)).to_have_class(re.compile(r"\bbtn-primary\b"))
 
 
 @pytest.mark.e2e

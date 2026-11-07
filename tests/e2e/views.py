@@ -1072,6 +1072,11 @@ class NewWidgetsForm(FormworkForm):
         required=False,
         help_text="Calendar date picker with month navigation.",
     )
+    delivery_date = forms.DateField(
+        widget=DatePicker(format="%d.%m.%Y"),
+        required=False,
+        help_text='DatePicker with format="%d.%m.%Y": typed and picked days use that format.',
+    )
     period = DateRangeField(
         required=False,
         max_span=dt.timedelta(days=90),

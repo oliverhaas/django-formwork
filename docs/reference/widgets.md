@@ -476,12 +476,18 @@ period = DateRangeField(
 **Parent class:** `forms.DateInput`
 
 Text date input with an Alpine calendar dropdown, for a page where the native
-`DateInput` does not fit. The calendar writes `YYYY-MM-DD`; `format` sets how
-the server renders the value, and the placeholder shows that format.
+`DateInput` does not fit. `format` sets how the input shows the date, both
+when the server renders it and after a pick in the calendar, and the
+placeholder shows that format. The widget reads the format back, and also
+`YYYY-MM-DD`, so the field needs no matching `input_formats`.
 
 ```python
 due_date = forms.DateField(widget=widgets.DatePicker)
+delivery = forms.DateField(widget=widgets.DatePicker(format="%d.%m.%Y"))
 ```
+
+Month and weekday names (`%B`, `%b`, `%A`, `%a`) are the English ones that
+Python's `strftime` writes.
 
 ---
 

@@ -18,6 +18,15 @@
   so a white image shows its edge, and the checkerboard behind transparent images is
   lighter. If you override `formwork/widgets/image_dropzone.html`, copy it again.
 
+### Fixed
+
+- `DatePicker(format="%d.%m.%Y")` keeps its format after a pick in the calendar. The
+  input showed `13.07.2026`, and a click on a day changed it to `2026-07-13`. A date in
+  the widget's format also validates where the language has no such input format: on
+  an English page, an unchanged `13.07.2026` failed with "Enter a valid date." The
+  widget reads its format back and hands the field an ISO date. If you override
+  `formwork/widgets/date_picker.html`, copy it again for the new `data-format`.
+
 ## 0.1.0a3 (2026-11-06)
 
 ### Breaking changes

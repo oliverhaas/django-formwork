@@ -39,7 +39,9 @@ _lazy_format_placeholder = lazy(_format_placeholder, str)
 class DatePicker(forms.DateInput):
     """Text date input with a calendar dropdown, opt-in where the native ``DateInput`` does not fit.
 
-    The calendar writes ``YYYY-MM-DD``; ``format`` sets how the server renders the value.
+    ``format`` sets how the input shows the date, both from the server and after a pick in the
+    calendar. The widget reads that format back and hands the field an ISO date, so the field
+    needs no matching ``input_formats``.
     """
 
     template_name = "formwork/widgets/date_picker.html"
@@ -64,14 +66,25 @@ class DatePicker(forms.DateInput):
         # Sunday first, like Date.getDay() in the calendar grid.
         widget["weekdays"] = [WEEKDAYS_ABBR[day] for day in (6, 0, 1, 2, 3, 4, 5)]
         widget["iso_value"] = self._iso_value(value)
+        widget["date_format"] = self.format
         return context
+
+    def value_from_datadict(self, data: Any, files: Any, name: str) -> Any:  # noqa: ANN401 (widget data)
+        # The language's DATE_INPUT_FORMATS can lack ``format``, but every DateField reads ISO.
+        value = super().value_from_datadict(data, files, name)
+        return self._iso_value(value) or value
+
+    def format_value(self, value: Any) -> str | None:  # noqa: ANN401 (widget data)
+        # Bound data is ISO text from value_from_datadict; show it in ``format`` again.
+        if isinstance(value, str) and (iso_value := self._iso_value(value)):
+            value = dt.date.fromisoformat(iso_value)
+        return super().format_value(value)
 
     def _iso_value(self, value: object) -> str:
         """The calendar parses only ``YYYY-MM-DD``, whatever ``format`` renders."""
         if isinstance(value, dt.date):
             return value.strftime("%Y-%m-%d")
         if isinstance(value, str):
-            # A day picked in the calendar comes back as ISO text after a failed submit.
             for date_format in (self.format or "%Y-%m-%d", "%Y-%m-%d"):
                 try:
                     return dt.datetime.strptime(value, date_format).date().isoformat()  # noqa: DTZ007

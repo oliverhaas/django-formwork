@@ -1,4 +1,4 @@
-{% load i18n %}<div class="date-picker" :data-open="open"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datepicker"{% endif %} x-data="formworkDatePicker" data-value="{{ widget.iso_value }}" @click.outside="close()" @keydown.escape="onEscape($event)" @focusout="onFocusOut($event)">
+{% load i18n %}<div class="date-picker" :data-open="open"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datepicker"{% endif %} x-data="formworkDatePicker" data-value="{{ widget.iso_value }}" data-format="{{ widget.date_format }}" @click.outside="close()" @keydown.escape="onEscape($event)" @focusout="onFocusOut($event)">
   <div class="date-picker-label" @click="focusInput()">
     <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default:'' }}"{% include "django/forms/widgets/attrs.html" %} @focus="show()" @input="onInput()" autocomplete="off" class="grow{% if widget.extra_class %} {{ widget.extra_class }}{% endif %}">
     <button type="button" class="date-picker-toggle" @click.stop="toggle()" aria-label="{% translate 'Open calendar' %}">
