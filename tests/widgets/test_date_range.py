@@ -108,3 +108,19 @@ def test_the_pair_inputs_keep_their_ids_and_error_state():
     inputs = BeautifulSoup(str(form["period"].as_field_group()), "html.parser").select("input")
     assert [i["id"] for i in inputs] == ["id_period_0", "id_period_1"]
     assert all(i["aria-invalid"] == "true" for i in inputs)
+
+
+@pytest.mark.e2e
+def test_a_saved_range_fills_both_inputs_after_a_reload(new_widgets_page):
+    """A range picked in the browser saves, and the next visit renders both dates from it."""
+    from playwright.sync_api import expect
+
+    start = new_widgets_page.locator("input[name='period_0']")
+    end = new_widgets_page.locator("input[name='period_1']")
+    start.fill("2026-03-01")
+    end.fill("2026-03-10")
+    new_widgets_page.get_by_role("button", name="Submit").click()
+    expect(new_widgets_page.get_by_role("button", name="Delete")).to_be_visible()
+    new_widgets_page.reload()
+    expect(start).to_have_value("2026-03-01")
+    expect(end).to_have_value("2026-03-10")
