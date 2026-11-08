@@ -1066,6 +1066,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#clearablefileinput" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClearableFileInput
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#filedropzoneinput" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1685,6 +1696,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#clearablefileinput" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClearableFileInput
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#filedropzoneinput" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1774,7 +1796,7 @@ shadow <code>django.forms</code> on purpose, so import the module:</p>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">country</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="s2">"de"</span><span class="p">,</span> <span class="s2">"Germany"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"fr"</span><span class="p">,</span> <span class="s2">"France"</span><span class="p">)],</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>TextInput</code>, <code>Textarea</code>, <code>PasswordInput</code>, <code>DateInput</code>, <code>CheckboxInput</code>,
-<code>CheckboxSelectMultiple</code>, <code>Select</code> and <code>SelectMultiple</code> are drop-ins for the
+<code>CheckboxSelectMultiple</code>, <code>Select</code>, <code>SelectMultiple</code> and <code>ClearableFileInput</code> are drop-ins for the
 Django widgets of the same name: validation is unchanged. Formwork never
 overrides a built-in widget template, so Django's own widgets keep their
 markup and get their DaisyUI look from <code>formwork.css</code>.</p>
@@ -2532,20 +2554,62 @@ property name on <code>ChoiceWidget</code>.</p>
 </span></code></pre></div>
 <hr />
 <h2 id="files">Files<a class="headerlink" href="#files" title="Permanent link">&para;</a></h2>
+<p>Django's own <code>ClearableFileInput</code> works without changes: <code>formwork.css</code> puts the
+stored file and the clear box on one line and the file input under them.</p>
+<h3 id="clearablefileinput">ClearableFileInput<a class="headerlink" href="#clearablefileinput" title="Permanent link">&para;</a></h3>
+<p><strong>Parent class:</strong> <code>forms.ClearableFileInput</code></p>
+<p>A file upload in one row, as high as a text input. The row shows the stored
+file as a link, with an icon for its type, and a click anywhere on it opens the
+file picker.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="n">delivery_note</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ClearableFileInput</span><span class="p">)</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>attrs</code></td>
+<td><code>dict \| None</code></td>
+<td><code>None</code></td>
+<td>HTML attributes; <code>{"multiple": True}</code> picks several files and needs <code>MultipleFileField</code></td>
+</tr>
+<tr>
+<td><code>max_size</code></td>
+<td><code>int \| None</code></td>
+<td><code>None</code></td>
+<td>Largest file in bytes, checked in the browser</td>
+</tr>
+</tbody>
+</table>
+<p>On an optional field, the × button checks Django's clear box, and the field
+cleans to <code>False</code>. Until the save, the name is struck through and a second
+button keeps the file. A file picked after the clear unchecks the box again, so
+Django gets the new file and no "submit a file or check the clear checkbox"
+error. A required field has no clear box, as in Django's widget.</p>
+<p>The icon follows the extension. PDF files, documents, spreadsheets,
+presentations, images, archives, audio, video and code each have their own
+icon, and other files get a plain file icon. <code>FileDropzoneInput</code> uses the same
+icons.</p>
 <h3 id="filedropzoneinput">FileDropzoneInput<a class="headerlink" href="#filedropzoneinput" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.FileInput</code></p>
 <p>Dashed drop area that takes dragged files or opens the file picker. <code>max_size</code>
 (bytes) rejects larger files in the browser.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="n">docs</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">FileDropzoneInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"accept"</span><span class="p">:</span> <span class="s2">".pdf"</span><span class="p">},</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">),</span>
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="n">docs</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">FileDropzoneInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"accept"</span><span class="p">:</span> <span class="s2">".pdf"</span><span class="p">},</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">),</span>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>For several files, use <code>MultipleFileField</code>. Its default widget is this drop
 area with <code>multiple</code>, and it cleans to a list of files. A plain <code>FileField</code>
 rejects the list that a <code>multiple</code> input sends.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultipleFileField</span>
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="n">attachments</span> <span class="o">=</span> <span class="n">MultipleFileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultipleFileField</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="n">attachments</span> <span class="o">=</span> <span class="n">MultipleFileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>required</code> demands at least one file, and each file gets the <code>FileField</code> checks,
 such as the one for an empty file. No model field holds several files, so save
@@ -2606,30 +2670,31 @@ size on the server as well.</p>
 <p>A value the user cannot change, in the box of a filled field. It posts nothing,
 so put it on a <code>disabled</code> field. Each item is a string or a <code>ChoiceLabel</code>; with
 <code>badges=True</code>, each item is a badge in its <code>color</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="n">status</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">Field</span><span class="p">(</span>
-</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>    <span class="n">disabled</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Display</span><span class="p">(</span><span class="n">badges</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="p">)</span>
-</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a><span class="n">form</span> <span class="o">=</span> <span class="n">OrderForm</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Paid"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"success"</span><span class="p">)]})</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="n">status</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">Field</span><span class="p">(</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>    <span class="n">disabled</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Display</span><span class="p">(</span><span class="n">badges</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="p">)</span>
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="n">form</span> <span class="o">=</span> <span class="n">OrderForm</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Paid"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"success"</span><span class="p">)]})</span>
 </span></code></pre></div>
 <hr />
 <h2 id="patternhintmixin">PatternHintMixin<a class="headerlink" href="#patternhintmixin" title="Permanent link">&para;</a></h2>
 <p>Shows the class attribute <code>pattern_hint</code> under a text control while its value
 misses the <code>pattern</code> attribute. CSS reads the browser's verdict, so it needs no
 JavaScript. Pair it with a server-side validator.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostcodeInput</span><span class="p">(</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">):</span>
-</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>    <span class="n">pattern_hint</span> <span class="o">=</span> <span class="n">_</span><span class="p">(</span><span class="s2">"Five digits, for example 10115"</span><span class="p">)</span>
-</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>
-</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">({</span><span class="s2">"pattern"</span><span class="p">:</span> <span class="s2">"[0-9]</span><span class="si">{5}</span><span class="s2">"</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">attrs</span> <span class="ow">or</span> <span class="p">{})})</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostcodeInput</span><span class="p">(</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">):</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>    <span class="n">pattern_hint</span> <span class="o">=</span> <span class="n">_</span><span class="p">(</span><span class="s2">"Five digits, for example 10115"</span><span class="p">)</span>
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>
+</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">({</span><span class="s2">"pattern"</span><span class="p">:</span> <span class="s2">"[0-9]</span><span class="si">{5}</span><span class="s2">"</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">attrs</span> <span class="ow">or</span> <span class="p">{})})</span>
 </span></code></pre></div>
 <hr />
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <p>Every widget with a <code>Media</code> class needs Alpine.js on the page: <code>Select</code>,
 <code>SelectMultiple</code>, <code>ComboBox</code>, <code>DatePicker</code>, <code>DateRangePicker</code>,
 <code>DateTimeRangePicker</code>, <code>StepperNumberInput</code>, <code>PasswordInput</code>, <code>SearchInput</code>,
-<code>FileDropzoneInput</code>, <code>ImageDropzoneInput</code>, <code>InputMask</code> and <code>ValidatedTextarea</code>.
+<code>ClearableFileInput</code>, <code>FileDropzoneInput</code>, <code>ImageDropzoneInput</code>, <code>InputMask</code> and
+<code>ValidatedTextarea</code>.
 A server search and <code>ValidatedTextarea</code> need htmx as well. The <a href="../../getting-started/installation/#5-htmx-and-alpinejs">installation guide</a>
 shows the script order.</p>
 
