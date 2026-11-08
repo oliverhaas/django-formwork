@@ -103,25 +103,29 @@ const initDirtyTracking = (form) => {
     }
   };
 
+  const changed = (el) => {
+    if (el.type === "radio") {
+      const current = form.querySelector(`input[name="${CSS.escape(el.name)}"]:checked`)?.value ?? "";
+      return current !== (baseline.get(el.name) ?? "");
+    }
+    return getFieldValue(el) !== (baseline.get(el.id || el.name) ?? "");
+  };
+
+  // A field with several inputs (a date range) is dirty while any of them
+  // differs, whichever one the event came from.
   const check = (el) => {
     const selectMultiple = el.closest?.("details.formwork-select-multiple");
-    const target = selectMultiple || el;
-    const fieldset = target.closest("fieldset.fieldset");
+    const fieldset = (selectMultiple || el).closest?.("fieldset.fieldset");
     if (!fieldset) return;
-    let key;
-    let current;
     if (selectMultiple) {
-      key = selectMultiple;
-      current = getSelectMultipleValue(selectMultiple);
-    } else if (el.type === "radio") {
-      key = el.name;
-      current = form.querySelector(`input[name="${el.name}"]:checked`)?.value ?? "";
-    } else {
-      key = el.id || el.name;
-      current = getFieldValue(el);
+      fieldset.classList.toggle(DIRTY_CLS, getSelectMultipleValue(selectMultiple) !== (baseline.get(selectMultiple) ?? ""));
+      return;
     }
-    const initial = baseline.get(key) ?? "";
-    fieldset.classList.toggle(DIRTY_CLS, current !== initial);
+    const controls = [...fieldset.querySelectorAll("input[name], select[name], textarea[name]")];
+    const dirty = controls.some(
+      (control) => control.form === form && !control.closest("details.formwork-select-multiple") && changed(control),
+    );
+    fieldset.classList.toggle(DIRTY_CLS, dirty);
   };
 
   snapshot();

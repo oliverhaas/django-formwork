@@ -555,6 +555,100 @@ i.icon {
     @apply opacity-100;
 }
 
+/* DateRangePicker and DateTimeRangePicker: the trigger button draws the input box. */
+.date-range-picker {
+    @apply relative w-full;
+}
+
+.date-range-trigger {
+    @apply input w-full cursor-pointer text-start;
+}
+
+.date-range-part {
+    @apply min-w-0 truncate decoration-primary decoration-2 underline-offset-4;
+}
+
+/* An empty end reads as a placeholder; the end the next pick sets is underlined. */
+.date-range-part[data-empty] {
+    @apply text-base-content/50;
+}
+
+.date-range-part[data-active] {
+    @apply underline;
+}
+
+/* Calendar panel of the date pickers, sized after DaisyUI's calendar styles
+   for Cally and react-day-picker: 2.25rem days and muted weekday names. The
+   selection is in primary, with a tint of it as the band between range ends. */
+.calendar-panel {
+    @apply absolute z-10 mt-1 w-max max-w-[calc(100vw-1rem)] overflow-y-auto p-3;
+}
+
+.calendar-caption {
+    @apply mb-1 flex items-center justify-between gap-1;
+}
+
+.calendar-row {
+    @apply grid grid-cols-7;
+}
+
+.calendar-weekday {
+    @apply flex h-8 items-center justify-center text-xs font-medium opacity-60;
+}
+
+.calendar-weekday abbr {
+    @apply no-underline;
+}
+
+.calendar-cell {
+    @apply flex size-9 items-center justify-center;
+}
+
+.calendar-outside {
+    @apply opacity-50;
+}
+
+/* The band runs behind the days between the ends of a range, and rounds off
+   at the edges of a week. The template rows start with Alpine's <template>,
+   so the first and last day of a week are the first and last div. */
+.calendar-cell.range-middle {
+    @apply bg-primary/15;
+}
+
+.calendar-cell.range-middle:first-of-type {
+    @apply rounded-s-field;
+}
+
+.calendar-cell.range-middle:last-of-type {
+    @apply rounded-e-field;
+}
+
+.calendar-cell.range-middle.range-preview {
+    @apply bg-primary/8;
+}
+
+/* The preview band ends under the hovered day. */
+.calendar-cell.range-last {
+    @apply rounded-e-field;
+}
+
+.calendar-times {
+    @apply mt-2 grid grid-cols-2 gap-3 border-t border-base-200 pt-3;
+}
+
+.calendar-time {
+    @apply flex flex-col gap-1 text-xs font-medium text-base-content/70;
+}
+
+/* The month and year choices fill the space of the day grid. */
+.calendar-choices {
+    @apply grid grow grid-cols-3 content-center gap-1;
+}
+
+.calendar-footer {
+    @apply mt-2 flex items-center gap-2 border-t border-base-200 pt-2;
+}
+
 /* StepperNumberInput: minus and plus buttons sit inside the input's
    padding.  The trailing-buttons variant resets the padding with utilities. */
 .input-stepper {
@@ -1084,7 +1178,8 @@ fieldset.formwork-dirty .otp {
     @apply otp-accent;
 }
 
-fieldset.formwork-dirty .date-picker-label {
+fieldset.formwork-dirty .date-picker-label,
+fieldset.formwork-dirty .date-range-trigger {
     @apply input-accent;
 }
 
@@ -1221,7 +1316,8 @@ details.formwork-select-multiple [data-value]:active,
 @supports selector(:popover-open) {
     details.dropdown.formwork-select-multiple > .dropdown-content[popover],
     details.dropdown.formwork-select > .dropdown-content[popover],
-    .dropdown.formwork-combobox > .dropdown-content[popover] {
+    .dropdown.formwork-combobox > .dropdown-content[popover],
+    .calendar-panel[popover] {
         position: fixed;
         min-width: 0;
         margin: 0;
@@ -1238,6 +1334,14 @@ details.formwork-select-multiple [data-value]:active,
         /* Symmetric so the gap survives a flip. */
         margin: 0.25rem 0;
         min-width: anchor-size(width);
+    }
+
+    /* A calendar keeps its own width, however wide the field. */
+    .calendar-panel[popover] {
+        position-area: block-end span-inline-end;
+        position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+        position-visibility: anchors-visible;
+        margin: 0.25rem 0;
     }
 }
 
@@ -1262,7 +1366,8 @@ input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type=
 }
 
 /* DatePicker: style the wrapper label based on the inner input's state. */
-.date-picker-label:has(> input[aria-invalid="true"]) {
+.date-picker-label:has(> input[aria-invalid="true"]),
+.date-range-trigger[aria-invalid="true"] {
     @apply input-error;
 }
 

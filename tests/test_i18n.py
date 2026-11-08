@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING
 import pytest
 from django import forms
 from django.utils import translation
-from django.utils.dates import WEEKDAYS_ABBR
+from django.utils.dates import MONTHS, MONTHS_3, MONTHS_ALT, MONTHS_AP, WEEKDAYS, WEEKDAYS_ABBR
 
-from django_formwork.fields import DateRangeField
+from django_formwork.fields import DateRangeField, DateTimeRangeField
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import (
     CardCheckboxSelectMultiple,
@@ -214,6 +214,7 @@ class _EveryWidgetForm(FormworkForm):
     f26 = forms.FileField(widget=FileDropzoneInput(attrs={"accept": "image/*", "multiple": True}), required=False)
     f27 = forms.ImageField(widget=ImageDropzoneInput(max_size=1536), required=False)
     f28 = forms.CharField(widget=Display, disabled=True, required=False, initial="1")
+    f29 = DateTimeRangeField(required=False)
 
 
 @pytest.mark.unit
@@ -225,5 +226,8 @@ def test_every_widget_shows_only_translated_text(field):
         bound.label = "1"
     with translation.override("de"):
         html = str(form[field].as_field_group())
-        translated_by_django = frozenset(str(day) for day in WEEKDAYS_ABBR.values())
+        tables = (WEEKDAYS, WEEKDAYS_ABBR, MONTHS, MONTHS_3, MONTHS_AP, MONTHS_ALT)
+        names = [str(name) for table in tables for name in table.values()]
+        meridiems = [translation.gettext(text) for text in ("a.m.", "p.m.", "AM", "PM", "midnight", "noon")]
+        translated_by_django = frozenset([*names, *(name.title() for name in names), *meridiems])
     assert _english(html, translated_by_django) == []

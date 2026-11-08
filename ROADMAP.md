@@ -86,9 +86,9 @@ screenshot coverage, dropdown a11y, a settings page, and the config surface.
   `{{ form }}` can only produce one-column stacks; every non-trivial CRUD screen loses to
   crispy/manual templates. Design the API deliberately rather than rushing into the
   freeze. (large)
-- [ ] **`TimePicker` / `DateTimePicker` / `DateRangePicker`.** `DatePicker`, `DateInput`
-  and `DateRangeInput` handle dates only; `TimeField`/`DateTimeField` are among the most
-  common Django fields. A calendar range picker reuses the existing calendar. (medium)
+- [ ] **`TimePicker` / `DateTimePicker`.** `DateRangePicker` and `DateTimeRangePicker`
+  landed on the shared calendar; a single `DateTimeField` still has only the native input.
+  `TimeField`/`DateTimeField` are among the most common Django fields. (medium)
 - [ ] **Tags/token input, plus color, slug, and JSON widgets.** The most frequently
   hand-rolled widgets in Django projects. (medium)
 - [ ] **`FormworkWizardView` + an htmx form-submit mixin/helper.** The docs advertise a

@@ -105,14 +105,14 @@ def test_date_picker_closes_through_click_outside():
 
 
 @pytest.mark.unit
-def test_date_picker_weekday_names_come_from_django():
-    """The weekday header is rendered by the server, so it follows the active language (D8)."""
-    from django.utils import translation
-
-    with translation.override("de"):
+@pytest.mark.parametrize(("language", "first_days"), [("en", ["Sun", "Mon"]), ("de", ["Mo", "Di"])])
+def test_date_picker_weekdays_follow_the_language(language, first_days):
+    """The weekday header has the language's names and starts on its FIRST_DAY_OF_WEEK."""
+    with translation.override(language):
         soup = render_widget(DatePicker(), attrs={"id": "id_due_date"})
-    header = [span.get_text() for span in soup.select("div.grid-cols-7 > span")]
-    assert header[:2] == ["So", "Mo"]
+    header = [cell.get_text() for cell in soup.select("[role=columnheader]")]
+    assert header[:2] == first_days
+    assert len(header) == 7
 
 
 @pytest.mark.unit
@@ -227,7 +227,7 @@ def test_date_picker_opens_and_picks_day(new_widgets_page):
     picker.locator("button.date-picker-toggle").click()
     panel = picker.locator("div.dropdown-content")
     expect(panel).to_be_visible()
-    panel.get_by_role("button", name="15", exact=True).click()
+    panel.locator("button[data-date$='-15']").click()
     inp = new_widgets_page.locator("input[name='due_date']")
     expect(inp).to_have_value(re.compile(r"^\d{4}-\d{2}-15$"))
     expect(panel).not_to_be_visible()
@@ -244,10 +244,10 @@ def test_date_picker_writes_and_reads_its_format(new_widgets_page):
     inp = picker.locator("input[name='delivery_date']")
     panel = picker.locator("div.dropdown-content")
     picker.locator("button.date-picker-toggle").click()
-    panel.get_by_role("button", name="15", exact=True).click()
+    panel.locator("button[data-date$='-15']").click()
     expect(inp).to_have_value(re.compile(r"^15\.\d{2}\.\d{4}$"))
     inp.fill("14" + inp.input_value()[2:])
-    expect(panel.get_by_role("button", name="14", exact=True)).to_have_class(re.compile(r"\bbtn-primary\b"))
+    expect(panel.locator("button[data-date$='-14']")).to_have_class(re.compile(r"\bcalendar-selected\b"))
 
 
 @pytest.mark.e2e

@@ -34,7 +34,7 @@ Most `formwork.css` rules sit in `@layer components`, so the Tailwind utilities 
 
 ## Progressive enhancements
 
-The dropdown panels of `Select`, `SelectMultiple` and `ComboBox` open in the top layer through the Popover API, and CSS anchor positioning places them next to the trigger. Without anchor positioning, the JavaScript sets the position of the panel. Without the Popover API, the panel stays absolutely positioned below its trigger.
+The dropdown panels of `Select`, `SelectMultiple`, `ComboBox`, `DatePicker` and the range pickers open in the top layer through the Popover API, and CSS anchor positioning places them next to the trigger. Without anchor positioning, the JavaScript sets the position of the panel. Without the Popover API, the panel stays absolutely positioned below its trigger.
 
 `field-sizing: content` lets the text input of `DatePicker` and a native `<select>` fit an auto-width table column. A browser without it keeps the default width.
 

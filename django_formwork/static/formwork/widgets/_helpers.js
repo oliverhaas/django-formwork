@@ -126,6 +126,12 @@ const baseData = () => ({
   hasError: false,
   _unfollow: null,
 
+  // The panel's height cap, the height below which it flips up, and whether
+  // it is at least as wide as its trigger. The calendar panels change them.
+  panelMaxHeight: PANEL_MAX_HEIGHT,
+  panelUsableHeight: PANEL_USABLE_HEIGHT,
+  panelMatchesTrigger: true,
+
   // The <details> element owns the open state; the combobox is a plain <div>
   // and overrides this.
   get isOpen() {
@@ -232,15 +238,15 @@ const baseData = () => ({
     }
     const rect = this.$root.getBoundingClientRect();
     // Width first: it decides how the options wrap, so the measured height.
-    if (!supportsAnchor) panel.style.minWidth = `${rect.width}px`;
+    if (!supportsAnchor && this.panelMatchesTrigger) panel.style.minWidth = `${rect.width}px`;
     const reserved = PANEL_OFFSET + VIEWPORT_MARGIN;
     const below = window.innerHeight - rect.bottom - reserved;
     const above = rect.top - reserved;
     // A searched list arrives after the open.
     // scrollHeight is the padding box; max-height caps the border box.
     const measured = panel.scrollHeight + borderHeight(panel);
-    const wanted = this.hasSearchUrl ? PANEL_MAX_HEIGHT : Math.min(measured, PANEL_MAX_HEIGHT);
-    this.dropUp = below < Math.min(wanted, PANEL_USABLE_HEIGHT) && above > below;
+    const wanted = this.hasSearchUrl ? this.panelMaxHeight : Math.min(measured, this.panelMaxHeight);
+    this.dropUp = below < Math.min(wanted, this.panelUsableHeight) && above > below;
     const room = this.dropUp ? above : below;
     panel.style.maxHeight = `${Math.max(Math.min(wanted, room), 0)}px`;
     if (supportsAnchor) {

@@ -11,7 +11,15 @@ from django.template import engines
 from django.utils import translation
 from e2e.models import AutoSaveFormData, BasicFormData, City, Region, SearchOption, SectionRecord
 
-from django_formwork import ChoiceLabel, DateRange, DateRangeField, MultipleFileField, section_forms
+from django_formwork import (
+    ChoiceLabel,
+    DateRange,
+    DateRangeField,
+    DateTimeRange,
+    DateTimeRangeField,
+    MultipleFileField,
+    section_forms,
+)
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkValidateView
 from django_formwork.widgets import (
@@ -1065,7 +1073,7 @@ class TextareaForm(FormworkForm):
 
 
 class NewWidgetsForm(FormworkForm):
-    """DatePicker, DateRangeField, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons."""
+    """DatePicker, the range pickers, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons."""
 
     due_date = forms.DateField(
         widget=DatePicker,
@@ -1081,7 +1089,11 @@ class NewWidgetsForm(FormworkForm):
         required=False,
         max_span=dt.timedelta(days=90),
         error_messages={"max_span": "Pick at most 90 days."},
-        help_text="Start and end date under one label, at most 90 days apart.",
+        help_text="DateRangePicker: start and end in one two-month calendar, at most 90 days apart.",
+    )
+    stay = DateTimeRangeField(
+        required=False,
+        help_text="DateTimeRangePicker: a start and an end, each a day and a time.",
     )
     quantity = forms.IntegerField(
         widget=StepperNumberInput(attrs={"min": "1", "max": "99", "step": "1"}),
@@ -1409,8 +1421,8 @@ def _to_session(cleaned_data):
             result[key] = val.name if hasattr(val, "name") else "[file]"
         elif isinstance(val, list) and val and all(hasattr(item, "read") for item in val):
             result[key] = [item.name for item in val]
-        elif isinstance(val, DateRange):
-            result[key] = [day.isoformat() if day else None for day in val]
+        elif isinstance(val, (DateRange, DateTimeRange)):
+            result[key] = [end.isoformat() if end else None for end in val]
         elif hasattr(val, "isoformat"):
             result[key] = val.isoformat()
         elif isinstance(val, SearchOption):
@@ -1581,7 +1593,7 @@ _PAGES = [
         "new-widgets",
         "/new-widgets/",
         "New Widgets",
-        "DatePicker, DateRangeField, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons",
+        "DatePicker, DateRangePicker, DateTimeRangePicker, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons",
     ),
     (
         "complex",

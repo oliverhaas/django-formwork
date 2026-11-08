@@ -1,21 +1,15 @@
-{% load i18n %}<div class="date-picker" :data-open="open"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datepicker"{% endif %} x-data="formworkDatePicker" data-value="{{ widget.iso_value }}" data-format="{{ widget.date_format }}" @click.outside="close()" @keydown.escape="onEscape($event)" @focusout="onFocusOut($event)">
+{% load i18n %}<div class="date-picker" :data-open="open"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datepicker"{% endif %} x-data="formworkDatePicker" data-value="{{ widget.iso_value }}" data-format="{{ widget.date_format }}" data-first-day="{{ widget.calendar.first_day }}" data-months="1" data-names="{{ widget.calendar.names_json }}" data-formats="{{ widget.calendar.formats_json }}" @click.outside="close()" @keydown.escape="onEscape($event)" @focusout="onFocusOut($event)">
   <div class="date-picker-label" @click="focusInput()">
-    <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default:'' }}"{% include "django/forms/widgets/attrs.html" %} @focus="show()" @input="onInput()" autocomplete="off" class="grow{% if widget.extra_class %} {{ widget.extra_class }}{% endif %}">
-    <button type="button" class="date-picker-toggle" @click.stop="toggle()" aria-label="{% translate 'Open calendar' %}">
+    <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default:'' }}"{% include "django/forms/widgets/attrs.html" %} @focus="onInputFocus()" @input="onInput()" @keydown.down="onInputDown($event)" autocomplete="off" class="grow{% if widget.extra_class %} {{ widget.extra_class }}{% endif %}">
+    <button type="button" class="date-picker-toggle" @click.stop="toggle()" aria-label="{% translate 'Open calendar' %}" :aria-expanded="open"{% if widget.attrs.id %} aria-controls="{{ widget.attrs.id }}_calendar"{% endif %}>
       <i class="icon icon-calendar size-4" aria-hidden="true"></i>
     </button>
   </div>
-  <div x-show="open" x-cloak class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 p-3 w-72 z-10 absolute">
-    <div class="flex items-center justify-between mb-2">
-      <button type="button" @click.stop="prev()" class="btn btn-ghost btn-xs" aria-label="{% translate 'Previous month' %}"><i class="icon icon-chevron-left" aria-hidden="true"></i></button>
-      <span class="font-medium text-sm" x-text="title"></span>
-      <button type="button" @click.stop="next()" class="btn btn-ghost btn-xs" aria-label="{% translate 'Next month' %}"><i class="icon icon-chevron-right" aria-hidden="true"></i></button>
-    </div>
-    <div class="grid grid-cols-7 gap-0.5 text-center text-xs mb-1">{% for weekday in widget.weekdays %}<span class="text-base-content/50">{{ weekday }}</span>{% endfor %}</div>
-    <div class="grid grid-cols-7 gap-0.5 text-center text-sm">
-      <template x-for="(day, i) in days" :key="i">
-        <div><button type="button" x-show="day" x-text="day" @click.stop="pick(day)" class="btn btn-ghost btn-xs" :class="dayClass(day)"></button></div>
-      </template>
+  <div x-ref="panel" popover="manual" x-show="open" x-cloak{% if widget.attrs.id %} id="{{ widget.attrs.id }}_calendar"{% endif %} role="dialog" aria-label="{% translate 'Calendar' %}" class="dropdown-content calendar-panel bg-base-100 rounded-box shadow-lg border border-base-300" @mousedown="keepInputFocus($event)">
+    {% include "formwork/widgets/partials/calendar.html" with calendar=widget.calendar %}
+    <div class="calendar-footer justify-between">
+      <button type="button" class="btn btn-ghost btn-sm" @click="pickToday()">{% translate "Today" %}</button>
+      <button type="button" class="btn btn-ghost btn-sm" @click="clear()">{% translate "Clear" %}</button>
     </div>
   </div>
 </div>

@@ -1,6 +1,9 @@
 // Alpine.data component for the formwork DatePicker widget.
 // Loaded as an ES module via Media.js or imported by formwork.js.
 
+import { dropdownBase } from "./_helpers.js";
+import { isoDate, pad, parseIso, SELECTED, withCalendar } from "./_calendar.js";
+
 // The names Python's strftime writes for %B, %b, %A and %a, so a picked day
 // reads the same as a date the server rendered.
 const MONTHS = [
@@ -11,7 +14,6 @@ const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
 const SHORT_MONTHS = MONTHS.map((name) => name.slice(0, 3));
 const SHORT_WEEKDAYS = WEEKDAYS.map((name) => name.slice(0, 3));
 
-const pad = (number, width = 2) => String(number).padStart(width, "0");
 const nameIndex = (names, text) => names.findIndex((name) => name.toLowerCase() === text.toLowerCase());
 
 // The strftime codes the calendar writes and reads. Any other code stays as text.
@@ -52,8 +54,6 @@ const CODES = {
   "%": { pattern: "%", write: () => "%" },
 };
 
-const isoDate = (date) => formatDate(date, "%Y-%m-%d");
-
 function formatDate(date, format) {
   return format.replace(/%(.)/g, (text, code) => (CODES[code] ? CODES[code].write(date) : text));
 }
@@ -76,115 +76,122 @@ function parseDate(text, format) {
 }
 
 document.addEventListener("alpine:init", () => {
-  Alpine.data("formworkDatePicker", () => ({
-    open: false,
-    // The picked day as YYYY-MM-DD; the input shows it in `format`.
-    value: "",
-    format: "%Y-%m-%d",
-    month: null,
-    year: null,
-    days: [],
+  Alpine.data("formworkDatePicker", () =>
+    dropdownBase(
+      withCalendar({
+        open: false,
+        // The picked day as YYYY-MM-DD; the input shows it in `format`.
+        value: "",
+        format: "%Y-%m-%d",
+        _quietFocus: false,
 
-    init() {
-      const el = this.$el;
-      this.format = el.dataset.format || this.format;
-      const sync = () => {
-        this.value = el.dataset.value || "";
-        const d = this.value ? new Date(this.value + "T00:00:00") : new Date();
-        this.month = d.getMonth();
-        this.year = d.getFullYear();
-        this.buildDays();
-      };
-      sync();
-      // A morph keeps this component, so init() runs once. A data-value the
-      // server sends re-syncs the calendar, or it would highlight a stale day.
-      new MutationObserver(sync).observe(el, {
-        attributes: true,
-        attributeFilter: ["data-value"],
-      });
-    },
+        init() {
+          const el = this.$el;
+          this.format = el.dataset.format || this.format;
+          this.initCalendar();
+          this.anchorPanel();
+          // Open after x-show has run: a hidden panel has no height to measure.
+          this.$watch("open", (open) => (open ? this.$nextTick(() => this.showPanel()) : this.hidePanel()));
+          const sync = () => {
+            this.value = el.dataset.value || "";
+          };
+          sync();
+          // A morph keeps this component, so init() runs once. A data-value the
+          // server sends re-syncs the calendar, or it would mark a stale day.
+          new MutationObserver(sync).observe(el, { attributes: true, attributeFilter: ["data-value"] });
+        },
 
-    show() {
-      this.open = true;
-    },
-    close() {
-      this.open = false;
-    },
-    toggle() {
-      this.open = !this.open;
-    },
-    // The box around the input is not a <label>, which would add the toggle's
-    // name to the input's, so a click on its padding focuses the input here.
-    focusInput() {
-      this.$refs.input.focus();
-    },
-    // Escape closes an open calendar and goes no further, so a <dialog>
-    // around the widget stays open.
-    onEscape(event) {
-      if (!this.open) return;
-      event.preventDefault();
-      event.stopPropagation();
-      this.close();
-    },
-    // Focus moving to another control closes the calendar.
-    onFocusOut(event) {
-      if (event.relatedTarget && !this.$root.contains(event.relatedTarget)) this.close();
-    },
-    // Typed text counts in `format` or as ISO, like the server reads it.
-    onInput() {
-      const text = this.$refs.input.value;
-      this.value = parseDate(text, this.format) || parseDate(text, "%Y-%m-%d");
-    },
+        get isOpen() {
+          return this.open;
+        },
 
-    buildDays() {
-      const first = new Date(this.year, this.month, 1);
-      const last = new Date(this.year, this.month + 1, 0);
-      const startDay = first.getDay();
-      this.days = [];
-      for (let i = 0; i < startDay; i++) this.days.push(null);
-      for (let d = 1; d <= last.getDate(); d++) this.days.push(d);
-    },
-    prev() {
-      if (this.month === 0) {
-        this.month = 11;
-        this.year--;
-      } else {
-        this.month--;
-      }
-      this.buildDays();
-    },
-    next() {
-      if (this.month === 11) {
-        this.month = 0;
-        this.year++;
-      } else {
-        this.month++;
-      }
-      this.buildDays();
-    },
-    pick(day) {
-      const date = new Date(this.year, this.month, day);
-      this.value = isoDate(date);
-      this.open = false;
-      this.$refs.input.value = formatDate(date, this.format);
-      this.$refs.input.dispatchEvent(new Event("change", { bubbles: true }));
-    },
-    isSelected(day) {
-      if (!this.value || !day) return false;
-      return this.value === isoDate(new Date(this.year, this.month, day));
-    },
-    isToday(day) {
-      if (!day) return false;
-      const t = new Date();
-      return day === t.getDate() && this.month === t.getMonth() && this.year === t.getFullYear();
-    },
-    dayClass(day) {
-      return { "btn-primary": this.isSelected(day), "font-bold": this.isToday(day) };
-    },
-    // Month and year in the page's language, so they match the translated labels.
-    get title() {
-      const lang = document.documentElement.lang || undefined;
-      return new Date(this.year, this.month).toLocaleString(lang, { month: "long", year: "numeric" });
-    },
-  }));
+        show() {
+          if (this.open) return;
+          this.resetView(this.value);
+          this.open = true;
+        },
+        close() {
+          this.open = false;
+          this.hidePanel();
+        },
+        toggle() {
+          if (this.open) this.close();
+          else this.show();
+        },
+        // The box around the input is not a <label>, which would add the toggle's
+        // name to the input's, so a click on its padding focuses the input here.
+        focusInput() {
+          this.$refs.input.focus();
+        },
+        // Back in the input after a pick, without opening the calendar again.
+        refocusInput() {
+          this._quietFocus = true;
+          this.$refs.input.focus();
+          this._quietFocus = false;
+        },
+        onInputFocus() {
+          if (!this._quietFocus) this.show();
+        },
+        // Arrow Down moves from the input into the open calendar.
+        onInputDown(event) {
+          event.preventDefault();
+          this.show();
+          this.focusGrid();
+        },
+        // A click on a day leaves the focus in the input, so typing goes on.
+        keepInputFocus(event) {
+          if (event.target.closest("button") && this.$refs.input === document.activeElement) event.preventDefault();
+        },
+        // Escape closes an open calendar and goes no further, so a <dialog>
+        // around the widget stays open.
+        onEscape(event) {
+          if (!this.open) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const refocus = this.$refs.panel.contains(document.activeElement);
+          this.close();
+          if (refocus) this.refocusInput();
+        },
+        // Typed text counts in `format` or as ISO, like the server reads it.
+        onInput() {
+          const text = this.$refs.input.value;
+          this.value = parseDate(text, this.format) || parseDate(text, "%Y-%m-%d");
+          const date = parseIso(this.value);
+          if (date && this.open && this.view === "days") {
+            this.focusIso = this.value;
+            this.showMonth(date);
+          }
+        },
+
+        write(iso) {
+          this.value = iso;
+          const date = parseIso(iso);
+          this.$refs.input.value = date ? formatDate(date, this.format) : "";
+          this.$refs.input.dispatchEvent(new Event("change", { bubbles: true }));
+          this.close();
+          this.refocusInput();
+        },
+        pickDay(cell) {
+          this.write(cell.iso);
+        },
+        pickToday() {
+          this.write(isoDate(new Date()));
+        },
+        clear() {
+          this.write("");
+        },
+        hover() {},
+
+        isSelected(cell) {
+          return cell.iso === this.value;
+        },
+        cellClass() {
+          return "";
+        },
+        dayClass(cell) {
+          return cell.iso === this.value ? SELECTED : this.dayTone(cell);
+        },
+      }),
+    ),
+  );
 });

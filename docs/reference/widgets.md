@@ -449,12 +449,18 @@ Native date input. Django's own widget renders `type="text"` with a locale
 format; the native control accepts only ISO, so `format` defaults to
 `"%Y-%m-%d"`.
 
-### DateRangeInput and DateRangeField
+### DateRangePicker and DateRangeField
 
-`DateRangeInput` puts a start and an end `DateInput` side by side under one
-field label, with "From" and "To" names for screen readers. Use it through
-`DateRangeField`, which cleans to a
-`DateRange(start, end)`:
+`DateRangePicker` shows a start and an end date in one control. A click
+opens a calendar with two months side by side, one on a phone. The first
+click on a day sets the start, the second the end, and the days in between
+fill in while the pointer moves. A click before the start begins the range
+again there. A click on the end date in the closed control opens the
+calendar to change the end alone. The footer counts the days and has a
+Clear button.
+
+Use it through `DateRangeField`, which cleans to a `DateRange(start, end)`
+and uses the picker by default:
 
 ```python
 from datetime import timedelta
@@ -471,6 +477,46 @@ period = DateRangeField(
 (`start_after_end`) and, with `max_span`, a range longer than that
 (`max_span`).
 
+The widget posts each date as ISO in a hidden input (`period_0`,
+`period_1`). `format` sets how the control shows them: a Django format
+setting name or a format string, `DATE_FORMAT` by default. Month and
+weekday names follow the active language, and the week starts on
+`FIRST_DAY_OF_WEEK`.
+
+```python
+period = DateRangeField(widget=widgets.DateRangePicker(format="SHORT_DATE_FORMAT"))
+```
+
+`data-*` and `hx-*` attrs go on the end input, which fires one `change`
+when a range is complete. The other attrs go on the button that opens the
+calendar.
+
+### DateTimeRangePicker and DateTimeRangeField
+
+`DateTimeRangeField` cleans to a `DateTimeRange(start, end)` of two
+datetimes and uses `DateTimeRangePicker`. The calendar works as above, with
+a start time and an end time under it and a Done button that closes it. The
+times start at 00:00 and 23:59. The inputs post `YYYY-MM-DDTHH:MM` in the
+current time zone, and an aware value shows in it.
+
+```python
+from django_formwork import DateTimeRangeField
+
+stay = DateTimeRangeField(max_span=timedelta(days=14))
+```
+
+`format` defaults to `DATETIME_FORMAT`.
+
+### DateRangeInput
+
+Two native `DateInput`s side by side under one field label, with "From" and
+"To" names for screen readers. Pass it to `DateRangeField` to use the
+browser's own date controls:
+
+```python
+period = DateRangeField(widget=widgets.DateRangeInput)
+```
+
 ### DatePicker
 
 **Parent class:** `forms.DateInput`
@@ -485,6 +531,12 @@ placeholder shows that format. The widget reads the format back, and also
 due_date = forms.DateField(widget=widgets.DatePicker)
 delivery = forms.DateField(widget=widgets.DatePicker(format="%d.%m.%Y"))
 ```
+
+A click on the month title switches to a month grid, and a click on the
+year to a year grid. The arrow keys move a day or a week, Page Up and Page
+Down a month, with Shift a year. The calendar follows the active language
+and `FIRST_DAY_OF_WEEK`, like the range pickers, and has Today and Clear
+buttons.
 
 Month and weekday names (`%B`, `%b`, `%A`, `%a`) are the English ones that
 Python's `strftime` writes.
@@ -659,8 +711,8 @@ class PostcodeInput(widgets.TextInput):
 ## Requirements
 
 Every widget with a `Media` class needs Alpine.js on the page: `Select`,
-`SelectMultiple`, `ComboBox`, `DatePicker`, `StepperNumberInput`,
-`PasswordInput`, `SearchInput`, `FileDropzoneInput`, `ImageDropzoneInput`,
-`InputMask` and `ValidatedTextarea`. A server search and `ValidatedTextarea`
-need htmx as well. The [installation guide](../getting-started/installation.md#5-htmx-and-alpinejs)
+`SelectMultiple`, `ComboBox`, `DatePicker`, `DateRangePicker`,
+`DateTimeRangePicker`, `StepperNumberInput`, `PasswordInput`, `SearchInput`,
+`FileDropzoneInput`, `ImageDropzoneInput`, `InputMask` and `ValidatedTextarea`.
+A server search and `ValidatedTextarea` need htmx as well. The [installation guide](../getting-started/installation.md#5-htmx-and-alpinejs)
 shows the script order.

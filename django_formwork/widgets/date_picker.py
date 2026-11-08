@@ -7,11 +7,11 @@ import re
 from typing import Any
 
 from django import forms
-from django.utils.dates import WEEKDAYS_ABBR
 from django.utils.functional import lazy
 from django.utils.translation import pgettext_lazy
 
 from ._base import _ModuleScript
+from ._calendar import calendar_context
 
 #: strftime code -> human placeholder token, for turning a date format into a
 #: hint like ``DD/MM/YYYY``.  Unmapped codes are left as-is.
@@ -63,8 +63,7 @@ class DatePicker(forms.DateInput):
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
         widget["extra_class"] = widget["attrs"].pop("class", "")
-        # Sunday first, like Date.getDay() in the calendar grid.
-        widget["weekdays"] = [WEEKDAYS_ABBR[day] for day in (6, 0, 1, 2, 3, 4, 5)]
+        widget["calendar"] = calendar_context()
         widget["iso_value"] = self._iso_value(value)
         widget["date_format"] = self.format
         return context

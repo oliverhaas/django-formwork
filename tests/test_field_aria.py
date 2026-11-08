@@ -9,7 +9,7 @@ import pytest
 from bs4 import BeautifulSoup
 from django import forms
 
-from django_formwork.fields import DateRangeField
+from django_formwork.fields import DateRangeField, DateTimeRangeField
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import (
     CardCheckboxSelectMultiple,
@@ -112,6 +112,7 @@ class _EveryWidgetForm(FormworkForm):
     day = forms.DateField(widget=DateInput, help_text=HELP_TEXT)
     due = forms.DateField(widget=DatePicker, help_text=HELP_TEXT)
     period = DateRangeField(help_text=HELP_TEXT)
+    stay = DateTimeRangeField(help_text=HELP_TEXT)
     quantity = forms.IntegerField(widget=StepperNumberInput, help_text=HELP_TEXT)
     weight = forms.IntegerField(widget=SuffixNumberInput(suffix="kg"), help_text=HELP_TEXT)
     volume = forms.IntegerField(widget=Range, help_text=HELP_TEXT)

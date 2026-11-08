@@ -8,9 +8,24 @@
   `multiple` `FileDropzoneInput` failed validation with "No file was submitted" as soon
   as a file was picked. `MultipleFileField` uses that drop area by default and cleans to
   a list of files.
+- `DateRangePicker`: a start and an end date in one control, picked in a calendar with
+  two months side by side. The days between the two picks fill in, and the footer counts
+  them. `DateTimeRangePicker` adds a start and an end time under the calendar.
+- `DateTimeRangeField`, which cleans to a `DateTimeRange(start, end)` of two datetimes
+  and uses `DateTimeRangePicker`.
 
 ### Changed
 
+- `DateRangeField` shows one control with a range calendar instead of two native date
+  inputs. It posts the same `<name>_0` and `<name>_1` ISO dates, so views and tests that
+  post the form need no change. Browser tests that fill the two inputs do. To keep the
+  native inputs, pass `widget=widgets.DateRangeInput`.
+- The `DatePicker` calendar is larger and has a month and a year view, Today and Clear
+  buttons and arrow-key navigation. The week starts on `FIRST_DAY_OF_WEEK` instead of
+  Sunday. The picked day is filled in the primary color, and today's number is in
+  primary text. The panel opens in the top layer, so a container with hidden overflow
+  no longer clips it. If you override `formwork/widgets/date_picker.html`, copy it
+  again.
 - `ImageDropzoneInput` looks like `FileDropzoneInput` again: the same dashed area,
   height, "Drag and drop an image here or browse" prompt and round × remove button. The
   "Upload Image" button is gone, since a click anywhere on the area opens the file

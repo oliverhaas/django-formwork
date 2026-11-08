@@ -12,6 +12,7 @@ from django_formwork.widgets.combo_box import ComboBox, ComboBoxMultiple
 from django_formwork.widgets.datalist import DataList
 from django_formwork.widgets.date_input import DateInput, DateRangeInput
 from django_formwork.widgets.date_picker import DatePicker
+from django_formwork.widgets.date_range_picker import DateRangePicker, DateTimeRangePicker
 from django_formwork.widgets.display import Display
 from django_formwork.widgets.file_dropzone import FileDropzoneInput
 from django_formwork.widgets.image_dropzone import ImageDropzoneInput
@@ -42,6 +43,8 @@ __all__ = [
     "DateInput",
     "DatePicker",
     "DateRangeInput",
+    "DateRangePicker",
+    "DateTimeRangePicker",
     "Display",
     "FileDropzoneInput",
     "ImageDropzoneInput",
