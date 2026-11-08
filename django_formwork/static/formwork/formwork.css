@@ -277,15 +277,15 @@ fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidd
     @apply inline-flex items-center gap-1.5 cursor-pointer;
 }
 
-/* MultiWidget (SplitDateTimeWidget, SelectDateWidget): Django's
-   multiwidget template outputs bare <input>/<select> elements with
+/* MultiWidget (SplitDateTimeWidget, SelectDateWidget, two DateInputs):
+   Django's multiwidget template outputs bare <input>/<select> elements with
    no wrapper.  The fieldset grid would stack them vertically; switch
    to explicit multi-column layout so sub-widgets sit side by side.
    Legend and help text span all columns.
    MUST be unlayered to beat DaisyUI's .fieldset grid-template-columns
    (in @layer utilities). */
-fieldset.fieldset:has(> input[type="date"] + input[type="time"]),
-fieldset.fieldset:has(> .tooltip > input[type="date"] + input[type="time"]) {
+fieldset.fieldset:has(> input[type="date"] + input:is([type="date"], [type="time"])),
+fieldset.fieldset:has(> .tooltip > input[type="date"] + input:is([type="date"], [type="time"])) {
     grid-template-columns: 1fr 1fr;
     column-gap: 0.5rem;
 }
@@ -296,10 +296,10 @@ fieldset.fieldset:has(> .tooltip > select + select + select) {
     column-gap: 0.5rem;
 }
 
-fieldset.fieldset:has(> input[type="date"] + input[type="time"]) > .fieldset-legend,
-fieldset.fieldset:has(> input[type="date"] + input[type="time"]) > .label,
-fieldset.fieldset:has(> .tooltip > input[type="date"] + input[type="time"]) > .fieldset-legend,
-fieldset.fieldset:has(> .tooltip > input[type="date"] + input[type="time"]) > .label,
+fieldset.fieldset:has(> input[type="date"] + input:is([type="date"], [type="time"])) > .fieldset-legend,
+fieldset.fieldset:has(> input[type="date"] + input:is([type="date"], [type="time"])) > .label,
+fieldset.fieldset:has(> .tooltip > input[type="date"] + input:is([type="date"], [type="time"])) > .fieldset-legend,
+fieldset.fieldset:has(> .tooltip > input[type="date"] + input:is([type="date"], [type="time"])) > .label,
 fieldset.fieldset:has(> select + select + select) > .fieldset-legend,
 fieldset.fieldset:has(> select + select + select) > .label,
 fieldset.fieldset:has(> .tooltip > select + select + select) > .fieldset-legend,
@@ -309,7 +309,7 @@ fieldset.fieldset:has(> .tooltip > select + select + select) > .label {
 
 /* Error tooltip inside a multi-widget fieldset: span all columns
    and use subgrid so child inputs keep the parent's column layout. */
-fieldset.fieldset > .tooltip:has(> input[type="date"] + input[type="time"]),
+fieldset.fieldset > .tooltip:has(> input[type="date"] + input:is([type="date"], [type="time"])),
 fieldset.fieldset > .tooltip:has(> select + select + select) {
     grid-column: 1 / -1;
     display: grid;

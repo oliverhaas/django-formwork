@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- `DateRangeInput` and its `formwork/widgets/date_range.html` template are removed, so a
+  form that uses `widgets.DateRangeInput` fails at import. `DateRangeField` takes
+  Django's own `MultiWidget`, and two `DateInput`s in one show the same native inputs
+  side by side:
+
+  ```python
+  period = DateRangeField(
+      widget=forms.MultiWidget(
+          [
+              widgets.DateInput(attrs={"aria-label": _("From")}),
+              widgets.DateInput(attrs={"aria-label": _("To")}),
+          ]
+      ),
+  )
+  ```
+
 ### Added
 
 - `MultipleFileField` for several uploads in one field. A plain `FileField` with a
@@ -19,7 +37,7 @@
 - `DateRangeField` shows one control with a range calendar instead of two native date
   inputs. It posts the same `<name>_0` and `<name>_1` ISO dates, so views and tests that
   post the form need no change. Browser tests that fill the two inputs do. To keep the
-  native inputs, pass `widget=widgets.DateRangeInput`.
+  native inputs, pass the `MultiWidget` from Breaking changes.
 - The `DatePicker` calendar is larger and has a month and a year view, Today and Clear
   buttons and arrow-key navigation. The week starts on `FIRST_DAY_OF_WEEK` instead of
   Sunday. The picked day is filled in the primary color, and today's number is in

@@ -1,4 +1,4 @@
-"""DateRangeField and DateTimeRangeField, their range pickers, and the DateRangeInput pair."""
+"""DateRangeField and DateTimeRangeField, their range pickers, and a plain MultiWidget pair."""
 
 from __future__ import annotations
 
@@ -9,12 +9,13 @@ import zoneinfo
 
 import pytest
 from bs4 import BeautifulSoup
+from django import forms
 from django.utils import dateformat, timezone, translation
 from django.utils.formats import date_format
 
 from django_formwork.fields import DateRange, DateRangeField, DateTimeRange, DateTimeRangeField
 from django_formwork.forms import FormworkForm
-from django_formwork.widgets import DateInput, DateRangeInput, DateRangePicker
+from django_formwork.widgets import DateInput, DateRangePicker
 
 from .conftest import render_widget
 
@@ -28,7 +29,10 @@ class _Form(FormworkForm):
 
 
 class _PairForm(FormworkForm):
-    period = DateRangeField(widget=DateRangeInput, label="Period")
+    period = DateRangeField(
+        widget=forms.MultiWidget([DateInput(attrs={"aria-label": "From"}), DateInput(attrs={"aria-label": "To"})]),
+        label="Period",
+    )
 
 
 class _StayForm(FormworkForm):
@@ -172,7 +176,7 @@ def test_htmx_and_data_attrs_go_on_the_end_input_and_the_rest_on_the_trigger():
 @pytest.mark.unit
 def test_the_input_pair_renders_both_native_inputs_from_one_value():
     """One value renders both native inputs, each named for screen readers."""
-    html = _PairForm(initial={"period": [dt.date(2026, 3, 1), dt.date(2026, 3, 10)]})["period"].as_widget()
+    html = _PairForm(initial={"period": DateRange(dt.date(2026, 3, 1), dt.date(2026, 3, 10))})["period"].as_widget()
     inputs = _soup(html).select("input")
     assert [i["type"] for i in inputs] == ["date", "date"]
     assert [i["name"] for i in inputs] == ["period_0", "period_1"]
@@ -186,6 +190,17 @@ def test_the_input_pair_renders_as_one_labelled_group():
     soup = _soup(_PairForm()["period"].as_field_group())
     assert [legend.get_text(strip=True) for legend in soup.select("legend")] == ["Period*"]
     assert soup.select("label") == []
+    assert [i.get("value") for i in soup.select("input")] == [None, None]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("end", "changed"), [("2026-03-10", False), ("2026-03-11", True)])
+def test_the_input_pair_compares_posted_dates_with_the_initial_range(end, changed):
+    form = _PairForm(
+        data={"period_0": "2026-03-01", "period_1": end},
+        initial={"period": DateRange(dt.date(2026, 3, 1), dt.date(2026, 3, 10))},
+    )
+    assert form.has_changed() is changed
 
 
 @pytest.mark.unit

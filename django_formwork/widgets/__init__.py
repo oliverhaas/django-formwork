@@ -10,7 +10,7 @@ from django_formwork.widgets.checkbox import CheckboxInput
 from django_formwork.widgets.checkbox_select_multiple import CheckboxSelectMultiple
 from django_formwork.widgets.combo_box import ComboBox, ComboBoxMultiple
 from django_formwork.widgets.datalist import DataList
-from django_formwork.widgets.date_input import DateInput, DateRangeInput
+from django_formwork.widgets.date_input import DateInput
 from django_formwork.widgets.date_picker import DatePicker
 from django_formwork.widgets.date_range_picker import DateRangePicker, DateTimeRangePicker
 from django_formwork.widgets.display import Display
@@ -42,7 +42,6 @@ __all__ = [
     "DataList",
     "DateInput",
     "DatePicker",
-    "DateRangeInput",
     "DateRangePicker",
     "DateTimeRangePicker",
     "Display",

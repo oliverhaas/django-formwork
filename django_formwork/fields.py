@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, cast
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
@@ -12,6 +12,7 @@ from django_formwork.widgets.file_dropzone import FileDropzoneInput
 
 if TYPE_CHECKING:
     import datetime as dt
+    from collections.abc import Iterable
 
     from django.core.files.uploadedfile import UploadedFile
 
@@ -42,6 +43,15 @@ class _RangeField(forms.MultiValueField):
         if not data_list:
             return self.range_type(None, None)
         return self.range_type(*data_list)
+
+    # Django's MultiWidget decompresses any value that is not a pair, and its own
+    # decompress raises. The widget always gets a pair, so a plain MultiWidget works.
+    def prepare_value(self, value: object) -> object:
+        return value or self.range_type(None, None)
+
+    def has_changed(self, initial: object, data: object) -> bool:
+        pair = list(cast("Iterable[object]", initial)) if initial else None
+        return super().has_changed(pair, data)
 
     def validate(self, value: DateRange | DateTimeRange) -> None:
         super().validate(value)

@@ -507,15 +507,28 @@ stay = DateTimeRangeField(max_span=timedelta(days=14))
 
 `format` defaults to `DATETIME_FORMAT`.
 
-### DateRangeInput
+### Two native date inputs
 
-Two native `DateInput`s side by side under one field label, with "From" and
-"To" names for screen readers. Pass it to `DateRangeField` to use the
-browser's own date controls:
+`DateRangeField` also takes Django's own `MultiWidget`. With two `DateInput`s
+it shows the browser's date controls side by side under one field label. The
+label names the pair, so give each input an `aria-label`:
 
 ```python
-period = DateRangeField(widget=widgets.DateRangeInput)
+from django import forms
+from django.utils.translation import gettext_lazy as _
+from django_formwork import DateRangeField, widgets
+
+period = DateRangeField(
+    widget=forms.MultiWidget(
+        [
+            widgets.DateInput(attrs={"aria-label": _("From")}),
+            widgets.DateInput(attrs={"aria-label": _("To")}),
+        ]
+    ),
+)
 ```
+
+The inputs post `period_0` and `period_1`, like `DateRangePicker`.
 
 ### DatePicker
 
