@@ -57,7 +57,7 @@ dev = [
 docs = ["mkdocs==1.6.1", "mkdocs-material==9.8.0", "mike==2.2.0"]
 
 [build-system]
-requires = ["hatchling>=1.27"]
+requires = ["hatchling>=1.33.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
