@@ -2355,10 +2355,15 @@ field label, with "From" and "To" names for screen readers. Use it through
 <h3 id="datepicker">DatePicker<a class="headerlink" href="#datepicker" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.DateInput</code></p>
 <p>Text date input with an Alpine calendar dropdown, for a page where the native
-<code>DateInput</code> does not fit. The calendar writes <code>YYYY-MM-DD</code>; <code>format</code> sets how
-the server renders the value, and the placeholder shows that format.</p>
+<code>DateInput</code> does not fit. <code>format</code> sets how the input shows the date, both
+when the server renders it and after a pick in the calendar, and the
+placeholder shows that format. The widget reads the format back, and also
+<code>YYYY-MM-DD</code>, so the field needs no matching <code>input_formats</code>.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">due_date</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DatePicker</span><span class="p">)</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="n">delivery</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DatePicker</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"</span><span class="si">%d</span><span class="s2">.%m.%Y"</span><span class="p">))</span>
 </span></code></pre></div>
+<p>Month and weekday names (<code>%B</code>, <code>%b</code>, <code>%A</code>, <code>%a</code>) are the English ones that
+Python's <code>strftime</code> writes.</p>
 <hr />
 <h2 id="choices">Choices<a class="headerlink" href="#choices" title="Permanent link">&para;</a></h2>
 <h3 id="checkboxinput">CheckboxInput<a class="headerlink" href="#checkboxinput" title="Permanent link">&para;</a></h3>
