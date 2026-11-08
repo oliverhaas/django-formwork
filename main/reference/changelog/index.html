@@ -727,6 +727,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -777,7 +788,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#breaking-changes" class="md-nav__link">
+  <a href="#breaking-changes_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Breaking changes
@@ -980,6 +991,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1030,7 +1052,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#breaking-changes" class="md-nav__link">
+  <a href="#breaking-changes_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Breaking changes
@@ -1200,15 +1222,46 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="breaking-changes">Breaking changes<a class="headerlink" href="#breaking-changes" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>DateRangeInput</code> and its <code>formwork/widgets/date_range.html</code> template are removed, so a
+  form that uses <code>widgets.DateRangeInput</code> fails at import. <code>DateRangeField</code> takes
+  Django's own <code>MultiWidget</code>, and two <code>DateInput</code>s in one show the same native inputs
+  side by side:</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">period</span> <span class="o">=</span> <span class="n">DateRangeField</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">MultiWidget</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        <span class="p">[</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>            <span class="n">widgets</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"aria-label"</span><span class="p">:</span> <span class="n">_</span><span class="p">(</span><span class="s2">"From"</span><span class="p">)}),</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>            <span class="n">widgets</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"aria-label"</span><span class="p">:</span> <span class="n">_</span><span class="p">(</span><span class="s2">"To"</span><span class="p">)}),</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="p">]</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="p">),</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+</span></code></pre></div>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>MultipleFileField</code> for several uploads in one field. A plain <code>FileField</code> with a
   <code>multiple</code> <code>FileDropzoneInput</code> failed validation with "No file was submitted" as soon
   as a file was picked. <code>MultipleFileField</code> uses that drop area by default and cleans to
   a list of files.</li>
+<li><code>DateRangePicker</code>: a start and an end date in one control, picked in a calendar with
+  two months side by side. The days between the two picks fill in, and the footer counts
+  them. <code>DateTimeRangePicker</code> adds a start and an end time under the calendar.</li>
+<li><code>DateTimeRangeField</code>, which cleans to a <code>DateTimeRange(start, end)</code> of two datetimes
+  and uses <code>DateTimeRangePicker</code>.</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li><code>DateRangeField</code> shows one control with a range calendar instead of two native date
+  inputs. It posts the same <code>&lt;name&gt;_0</code> and <code>&lt;name&gt;_1</code> ISO dates, so views and tests that
+  post the form need no change. Browser tests that fill the two inputs do. To keep the
+  native inputs, pass the <code>MultiWidget</code> from Breaking changes.</li>
+<li>The <code>DatePicker</code> calendar is larger and has a month and a year view, Today and Clear
+  buttons and arrow-key navigation. The week starts on <code>FIRST_DAY_OF_WEEK</code> instead of
+  Sunday. The picked day is filled in the primary color, and today's number is in
+  primary text. The panel opens in the top layer, so a container with hidden overflow
+  no longer clips it. If you override <code>formwork/widgets/date_picker.html</code>, copy it
+  again.</li>
 <li><code>ImageDropzoneInput</code> looks like <code>FileDropzoneInput</code> again: the same dashed area,
   height, "Drag and drop an image here or browse" prompt and round × remove button. The
   "Upload Image" button is gone, since a click anywhere on the area opens the file
@@ -1226,7 +1279,7 @@
   <code>formwork/widgets/date_picker.html</code>, copy it again for the new <code>data-format</code>.</li>
 </ul>
 <h2 id="010a3-2026-11-06">0.1.0a3 (2026-11-06)<a class="headerlink" href="#010a3-2026-11-06" title="Permanent link">&para;</a></h2>
-<h3 id="breaking-changes">Breaking changes<a class="headerlink" href="#breaking-changes" title="Permanent link">&para;</a></h3>
+<h3 id="breaking-changes_1">Breaking changes<a class="headerlink" href="#breaking-changes_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
 <p><strong>Widget, search and setup rework.</strong> Every project needs code changes for this
