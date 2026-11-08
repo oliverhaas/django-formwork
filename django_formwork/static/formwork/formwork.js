@@ -38,6 +38,7 @@
 import "./formwork-core.js";
 import "./widgets/select.js";
 import "./widgets/select_multiple.js";
+import "./widgets/clearable_file_input.js";
 import "./widgets/combo_box.js";
 import "./widgets/date_picker.js";
 import "./widgets/date_range_picker.js";

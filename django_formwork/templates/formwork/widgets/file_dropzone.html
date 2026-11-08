@@ -1,4 +1,4 @@
-{% load i18n %}<div class="dropzone"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_dropzone"{% endif %} x-data="formworkFileDropzone"{% if widget.max_size %} data-max-size="{{ widget.max_size }}"{% endif %} data-type-error="{% translate 'File type not accepted' %}" data-size-error="{% translate 'File too large' %}" data-count-text="{{ widget.count_text }}" @dragover.prevent="onDragOver()" @dragleave.prevent="onDragLeave()" @drop.prevent="drop($event)">
+{% load i18n %}<div class="dropzone"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_dropzone"{% endif %} x-data="formworkFileDropzone"{% if widget.max_size %} data-max-size="{{ widget.max_size }}"{% endif %} data-type-error="{% translate 'File type not accepted' %}" data-size-error="{% translate 'File too large' %}" data-count-text="{{ widget.count_text }}" data-file-icons="{{ widget.file_icons }}" @dragover.prevent="onDragOver()" @dragleave.prevent="onDragLeave()" @drop.prevent="drop($event)">
   <div class="dropzone-area" :class="dragClass">
     <input x-ref="input" type="file" name="{{ widget.name }}" class="sr-only" @change="onChange()"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
     <div x-show="!files.length" @click="browse()">
@@ -9,7 +9,7 @@
     <div x-show="files.length" x-cloak class="dropzone-preview-area">
       <button type="button" class="dropzone-remove" @click.stop="clear()" aria-label="{% translate 'Remove file' %}"><i class="icon icon-x dropzone-remove-icon" aria-hidden="true"></i></button>
       <div class="dropzone-file-preview" @click="browse()">
-        <i class="icon icon-file dropzone-file-icon" aria-hidden="true"></i>
+        <i class="icon dropzone-file-icon" :class="fileIcon" aria-hidden="true"></i>
         <p class="dropzone-file-name" x-text="summary"></p>
         <p class="dropzone-file-size" x-text="details"></p>
       </div>

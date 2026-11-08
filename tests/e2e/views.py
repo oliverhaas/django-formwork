@@ -23,6 +23,7 @@ from django_formwork import (
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkValidateView
 from django_formwork.widgets import (
+    ClearableFileInput,
     ComboBox,
     ComboBoxMultiple,
     DataList,
@@ -1011,9 +1012,43 @@ _STORED_IMAGE = (
 )
 
 
+class _StoredFile:
+    """A file a model already stores, as a FileField's initial value."""
+
+    url = "#"
+
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return self.name
+
+
 class UploadsForm(FormworkForm):
     """File upload widgets with variations."""
 
+    document = forms.FileField(widget=ClearableFileInput, required=False)
+    document_restricted = forms.FileField(
+        widget=ClearableFileInput(attrs={"accept": ".pdf"}, max_size=5 * 1024 * 1024),
+        required=False,
+        label="Document (PDF only, 5 MB max)",
+    )
+    document_stored = forms.FileField(
+        widget=ClearableFileInput,
+        required=False,
+        initial=_StoredFile("delivery-notes/2026/delivery-note-0042.pdf"),
+        label="Document (stored)",
+    )
+    contract = forms.FileField(
+        widget=ClearableFileInput,
+        initial=_StoredFile("contracts/framework-agreement.docx"),
+        label="Contract (stored, required)",
+    )
+    documents = MultipleFileField(
+        widget=ClearableFileInput(attrs={"multiple": True}),
+        required=False,
+        label="Documents (multi)",
+    )
     dropzone = MultipleFileField(required=False, label="Drop zone (multi)")
     dropzone_restricted = forms.FileField(
         widget=FileDropzoneInput(
@@ -1587,7 +1622,7 @@ _PAGES = [
         "Read-only Dropdowns",
         "The dropdowns inside a disabled fieldset",
     ),
-    ("uploads", "/uploads/", "File Uploads", "Drag-and-drop file and image uploads with size and type restrictions"),
+    ("uploads", "/uploads/", "File Uploads", "File inputs and drag-and-drop uploads with size and type restrictions"),
     ("textarea", "/textarea/", "ValidatedTextarea", "Server-side validation with inline word highlighting via htmx"),
     (
         "new-widgets",

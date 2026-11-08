@@ -20,6 +20,7 @@ from django_formwork.widgets import (
     CardRadioSelect,
     CheckboxInput,
     CheckboxSelectMultiple,
+    ClearableFileInput,
     ComboBox,
     ComboBoxMultiple,
     DataList,
@@ -70,6 +71,7 @@ _TEXT_ATTRS = {
     "title",
 }
 _TEXT_EXPRESSIONS = {"x-text", "x-html", ":alt", ":aria-label", ":placeholder", ":title"}
+_VALUE_DATA_ATTRS = {"data-file-icons"}
 
 
 def _json_strings(value: object) -> list[str]:
@@ -106,7 +108,7 @@ class _VisibleText(HTMLParser):
                 continue
             if name in _TEXT_ATTRS:
                 self.texts.append(value)
-            elif name.startswith("data-"):
+            elif name.startswith("data-") and name not in _VALUE_DATA_ATTRS:
                 self.texts.extend(_data_texts(value))
             elif name in _TEXT_EXPRESSIONS:
                 self.texts.extend(next(g for g in m.groups() if g is not None) for m in _JS_STRING.finditer(value))
@@ -170,6 +172,7 @@ def test_untranslated_text_is_found(source):
         '<span x-text="displayText || placeholder" :class="open && \'is-open\'">{{ label }} · 5</span>',
         "<script>const label = 'Close';</script>",
         '<div data-forms="{&quot;other&quot;: &quot;⟦files⟧&quot;}" data-selected="[]"></div>',
+        '<div data-file-icons="{&quot;file-text&quot;: &quot;pdf&quot;}"></div>',
     ],
 )
 def test_translated_text_and_values_pass(source):
@@ -183,6 +186,13 @@ def test_makemessages_extracts_without_warnings(tmp_path):
 
 
 _CHOICES = [("a", "1"), ("b", "2")]
+
+
+class _StoredFile:
+    url = "/1/"
+
+    def __str__(self) -> str:
+        return "1"
 
 
 class _EveryWidgetForm(FormworkForm):
@@ -215,6 +225,9 @@ class _EveryWidgetForm(FormworkForm):
     f27 = forms.ImageField(widget=ImageDropzoneInput(max_size=1536), required=False)
     f28 = forms.CharField(widget=Display, disabled=True, required=False, initial="1")
     f29 = DateTimeRangeField(required=False)
+    f30 = forms.FileField(
+        widget=ClearableFileInput(attrs={"accept": "image/*"}, max_size=1536), required=False, initial=_StoredFile()
+    )
 
 
 @pytest.mark.unit

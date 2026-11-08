@@ -12,7 +12,7 @@ country = forms.ChoiceField(choices=[("de", "Germany"), ("fr", "France")], widge
 ```
 
 `TextInput`, `Textarea`, `PasswordInput`, `DateInput`, `CheckboxInput`,
-`CheckboxSelectMultiple`, `Select` and `SelectMultiple` are drop-ins for the
+`CheckboxSelectMultiple`, `Select`, `SelectMultiple` and `ClearableFileInput` are drop-ins for the
 Django widgets of the same name: validation is unchanged. Formwork never
 overrides a built-in widget template, so Django's own widgets keep their
 markup and get their DaisyUI look from `formwork.css`.
@@ -633,6 +633,37 @@ rating = forms.TypedChoiceField(
 
 ## Files
 
+Django's own `ClearableFileInput` works without changes: `formwork.css` puts the
+stored file and the clear box on one line and the file input under them.
+
+### ClearableFileInput
+
+**Parent class:** `forms.ClearableFileInput`
+
+A file upload in one row, as high as a text input. The row shows the stored
+file as a link, with an icon for its type, and a click anywhere on it opens the
+file picker.
+
+```python
+delivery_note = forms.FileField(required=False, widget=widgets.ClearableFileInput)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `attrs` | `dict \| None` | `None` | HTML attributes; `{"multiple": True}` picks several files and needs `MultipleFileField` |
+| `max_size` | `int \| None` | `None` | Largest file in bytes, checked in the browser |
+
+On an optional field, the × button checks Django's clear box, and the field
+cleans to `False`. Until the save, the name is struck through and a second
+button keeps the file. A file picked after the clear unchecks the box again, so
+Django gets the new file and no "submit a file or check the clear checkbox"
+error. A required field has no clear box, as in Django's widget.
+
+The icon follows the extension. PDF files, documents, spreadsheets,
+presentations, images, archives, audio, video and code each have their own
+icon, and other files get a plain file icon. `FileDropzoneInput` uses the same
+icons.
+
 ### FileDropzoneInput
 
 **Parent class:** `forms.FileInput`
@@ -726,6 +757,7 @@ class PostcodeInput(widgets.TextInput):
 Every widget with a `Media` class needs Alpine.js on the page: `Select`,
 `SelectMultiple`, `ComboBox`, `DatePicker`, `DateRangePicker`,
 `DateTimeRangePicker`, `StepperNumberInput`, `PasswordInput`, `SearchInput`,
-`FileDropzoneInput`, `ImageDropzoneInput`, `InputMask` and `ValidatedTextarea`.
+`ClearableFileInput`, `FileDropzoneInput`, `ImageDropzoneInput`, `InputMask` and
+`ValidatedTextarea`.
 A server search and `ValidatedTextarea` need htmx as well. The [installation guide](../getting-started/installation.md#5-htmx-and-alpinejs)
 shows the script order.

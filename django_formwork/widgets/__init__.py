@@ -8,6 +8,7 @@ All widgets are importable from ``django_formwork.widgets``::
 from django_formwork.widgets.card_choice import CardCheckboxSelectMultiple, CardRadioSelect
 from django_formwork.widgets.checkbox import CheckboxInput
 from django_formwork.widgets.checkbox_select_multiple import CheckboxSelectMultiple
+from django_formwork.widgets.clearable_file_input import ClearableFileInput
 from django_formwork.widgets.combo_box import ComboBox, ComboBoxMultiple
 from django_formwork.widgets.datalist import DataList
 from django_formwork.widgets.date_input import DateInput
@@ -37,6 +38,7 @@ __all__ = [
     "CheckboxInput",
     "CheckboxSelectMultiple",
     "ChoiceLabel",
+    "ClearableFileInput",
     "ComboBox",
     "ComboBoxMultiple",
     "DataList",

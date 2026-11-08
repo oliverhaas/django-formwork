@@ -1,0 +1,20 @@
+{% load i18n %}<div class="clearable-file-input"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_picker"{% endif %} x-data="formworkClearableFileInput"{% if widget.is_initial %} data-stored{% endif %}{% if widget.max_size %} data-max-size="{{ widget.max_size }}"{% endif %} data-type-error="{% translate 'File type not accepted' %}" data-size-error="{% translate 'File too large' %}" data-count-text="{{ widget.count_text }}" data-file-icons="{{ widget.file_icons }}">
+  <div class="clearable-file-input-row" :class="rowClass" @click="browse()">
+    <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" class="sr-only" @click.stop @change="onChange()"{% for name, value in widget.attrs.items %}{% if value is not False and name != "class" %} {{ name }}{% if value is not True %}="{{ value|stringformat:'s' }}"{% endif %}{% endif %}{% endfor %}>
+    {% if widget.is_initial and not widget.required %}<input type="checkbox" x-ref="clear" class="hidden" name="{{ widget.checkbox_name }}" id="{{ widget.checkbox_id }}" :checked="clearChecked"{% if widget.clear_checked %} checked{% endif %}{% if widget.attrs.disabled %} disabled{% endif %}>{% endif %}
+    <i class="icon icon-upload shrink-0 text-base text-base-content/50" x-show="empty"{% if widget.is_initial %} x-cloak{% endif %} aria-hidden="true"></i>
+    {% if widget.is_initial %}<i class="icon icon-{{ widget.file_icon }} shrink-0 text-base text-base-content/70" x-show="storedShown" aria-hidden="true"></i>{% endif %}
+    <i class="icon shrink-0 text-base text-base-content/70" :class="fileIcon" x-show="files.length" x-cloak aria-hidden="true"></i>
+    <span class="min-w-0 flex-1 truncate">
+      <span class="text-base-content/50" x-show="empty"{% if widget.is_initial %} x-cloak{% endif %}>{% translate "No file chosen" %}</span>
+      {% if widget.is_initial %}<a href="{{ widget.value.url }}" target="_blank" rel="noopener" class="link link-hover{% if widget.clear_checked %} line-through text-base-content/50{% endif %}" :class="storedClass" x-show="storedShown" @click.stop>{{ widget.file_name }}</a>{% endif %}
+      <span x-show="files.length" x-text="summary" :title="names" x-cloak></span>
+    </span>
+    <span class="shrink-0 text-xs text-base-content/50" x-show="files.length" x-text="size" x-cloak></span>
+    {% if widget.accept_display or widget.max_size_display %}<span class="shrink-0 text-xs text-base-content/50" x-show="empty"{% if widget.is_initial %} x-cloak{% endif %}>{{ widget.accept_display }}{% if widget.accept_display and widget.max_size_display %} · {% endif %}{% if widget.max_size_display %}{% blocktranslate with size=widget.max_size_display %}Max {{ size }}{% endblocktranslate %}{% endif %}</span>{% endif %}
+    {% if not widget.attrs.disabled %}<span class="btn btn-xs shrink-0" aria-hidden="true"><span x-show="empty"{% if widget.is_initial %} x-cloak{% endif %}>{% translate "Browse" %}</span><span x-show="!empty"{% if not widget.is_initial %} x-cloak{% endif %}>{% translate "Replace" %}</span></span>
+    <button type="button"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_remove"{% endif %} class="btn btn-ghost btn-xs btn-circle -me-1.5 text-base-content/60" x-show="removable"{% if not widget.is_initial or widget.required or widget.clear_checked %} x-cloak{% endif %} @click.stop="remove()" aria-label="{% translate 'Remove file' %}" title="{% translate 'Remove file' %}"><i class="icon icon-x" aria-hidden="true"></i></button>
+    {% if widget.is_initial and not widget.required %}<button type="button"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_restore"{% endif %} class="btn btn-ghost btn-xs btn-circle -me-1.5 text-base-content/60" x-show="restorable"{% if not widget.clear_checked %} x-cloak{% endif %} @click.stop="restore()" aria-label="{% translate 'Keep file' %}" title="{% translate 'Keep file' %}"><i class="icon icon-undo-2" aria-hidden="true"></i></button>{% endif %}{% endif %}
+  </div>
+  <p class="mt-1 text-sm text-error" role="alert" x-show="error" x-text="error" x-cloak></p>
+</div>

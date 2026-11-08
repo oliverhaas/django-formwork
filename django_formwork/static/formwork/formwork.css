@@ -264,17 +264,39 @@ fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidd
     display: none;
 }
 
-/* ClearableFileInput: custom template wraps everything in .clearable-file-info.
-   Line 1: "Currently: file.jpg"
-   Line 2: [checkbox] Clear
-   Line 3: "Change:"
-   Then the file input is a sibling outside the wrapper. */
-.clearable-file-info {
-    @apply text-sm space-y-1;
+/* Django's ClearableFileInput renders loose text between inline elements:
+   "Currently: <a>name</a> [ ] Clear <br> Change: <input type=file>".
+   The field template wraps it in .clearable-file, and a grid lays the parts
+   out in two rows, the "Currently" and "Change" texts in the first column.
+   A required field has no clear box.  Without a stored file only the file
+   input renders, and the wrapper stays a block. */
+.clearable-file:has(> a) {
+    @apply grid items-center gap-x-2 gap-y-1.5 text-sm;
+    grid-template-columns: auto minmax(0, max-content) auto 1fr;
 }
 
-.clearable-file-clear {
-    @apply inline-flex items-center gap-1.5 cursor-pointer;
+.clearable-file:has(> a):not(:has(> input[type="checkbox"])) {
+    grid-template-columns: auto 1fr;
+}
+
+.clearable-file > br {
+    display: none;
+}
+
+.clearable-file > a {
+    @apply link link-hover truncate;
+}
+
+.clearable-file > input[type="checkbox"]:not(.toggle):not(.hidden) {
+    @apply checkbox-sm;
+}
+
+.clearable-file > label {
+    @apply cursor-pointer;
+}
+
+.clearable-file:has(> a) > input[type="file"] {
+    grid-column: 2 / -1;
 }
 
 /* MultiWidget (SplitDateTimeWidget, SelectDateWidget, two DateInputs):
@@ -822,6 +844,13 @@ input.combobox-input {
     padding-inline: calc(var(--border, 1px) + 0.75rem);
 }
 
+/* formwork's ClearableFileInput: the row draws the input box, and a click on
+   it opens the file picker.  The file input inside it is visually hidden and
+   takes the keyboard focus, which .input:focus-within shows on the row. */
+.clearable-file-input-row {
+    @apply input w-full cursor-pointer;
+}
+
 /* FileDropzoneInput: fill the container width. */
 .dropzone {
     @apply w-full;
@@ -1179,7 +1208,8 @@ fieldset.formwork-dirty .otp {
 }
 
 fieldset.formwork-dirty .date-picker-label,
-fieldset.formwork-dirty .date-range-trigger {
+fieldset.formwork-dirty .date-range-trigger,
+fieldset.formwork-dirty .clearable-file-input-row {
     @apply input-accent;
 }
 
@@ -1367,7 +1397,8 @@ input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type=
 
 /* DatePicker: style the wrapper label based on the inner input's state. */
 .date-picker-label:has(> input[aria-invalid="true"]),
-.date-range-trigger[aria-invalid="true"] {
+.date-range-trigger[aria-invalid="true"],
+.clearable-file-input-row:has(> input[aria-invalid="true"]) {
     @apply input-error;
 }
 

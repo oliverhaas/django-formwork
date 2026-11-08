@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from django import forms
 from django.forms.widgets import FILE_INPUT_CONTRADICTION, CheckboxInput
 
-from ._base import _DropzoneMixin, _ModuleScript
+from ._base import _ModuleScript, _UploadHintsMixin
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from django.utils.datastructures import MultiValueDict
 
 
-class ImageDropzoneInput(_DropzoneMixin, forms.FileInput):
+class ImageDropzoneInput(_UploadHintsMixin, forms.FileInput):
     """Dashed drop area that previews the stored image, with a button that clears it.
 
     ``preview_url`` replaces the stored file's URL; ``""`` hides the preview. ``accept`` and

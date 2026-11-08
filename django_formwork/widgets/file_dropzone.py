@@ -5,16 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from django import forms
-from django.utils.translation import ngettext
 
-from ._base import _DropzoneMixin, _ModuleScript, _plural_forms
-
-
-def _files_selected_text(count: int) -> str:
-    return ngettext("%(count)s file selected", "%(count)s files selected", count)
+from ._base import _FILE_ICONS_JSON, _files_selected_text, _ModuleScript, _plural_forms, _UploadHintsMixin
 
 
-class FileDropzoneInput(_DropzoneMixin, forms.FileInput):
+class FileDropzoneInput(_UploadHintsMixin, forms.FileInput):
     """Dashed drop area for one file, or for several with ``multiple`` in ``attrs``.
 
     Several files need ``MultipleFileField``, which cleans to a list.
@@ -39,4 +34,5 @@ class FileDropzoneInput(_DropzoneMixin, forms.FileInput):
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         context["widget"]["count_text"] = _plural_forms(_files_selected_text)
+        context["widget"]["file_icons"] = _FILE_ICONS_JSON
         return context

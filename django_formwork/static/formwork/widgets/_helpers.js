@@ -36,6 +36,69 @@ export const countText = (el, count) => {
   return form.replace("%(count)s", count);
 };
 
+// --- File pickers ------------------------------------------------------
+// The base of formworkFileDropzone and formworkClearableFileInput: the picked
+// files, the client-side accept and size checks, and their text and icon.
+
+// A byte count in B, KB or MB, in the page's language.
+export const formatSize = (bytes) => {
+  if (bytes < 1024) return `${bytes} B`;
+  const [value, unit] = bytes < 1048576 ? [bytes / 1024, "KB"] : [bytes / 1048576, "MB"];
+  return `${value.toLocaleString(pageLang(), { maximumFractionDigits: 1, useGrouping: false })} ${unit}`;
+};
+
+// The icon class for a file name, from the extension lists in `data-file-icons`,
+// which the widget keys by icon name.
+const iconFor = (el, name) => {
+  const dot = name.lastIndexOf(".");
+  const extension = dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
+  const icons = Object.entries(JSON.parse(el.dataset.fileIcons || "{}"));
+  const match = icons.find(([, extensions]) => extension && extensions.split(" ").includes(extension));
+  return `icon-${match ? match[0] : "file"}`;
+};
+
+const filePickerData = () => ({
+  files: [],
+  error: "",
+
+  // One file shows its name, several their count.
+  get summary() {
+    if (this.files.length === 1) return this.files[0].name;
+    return countText(this.$root, this.files.length);
+  },
+
+  get fileIcon() {
+    if (this.files.length > 1) return "icon-files";
+    return this.files.length ? iconFor(this.$root, this.files[0].name) : "";
+  },
+
+  browse() {
+    this.$refs.input.click();
+  },
+
+  // Keeps the accepted files in the input and reports the rest. Client-side hints only.
+  onChange() {
+    const input = this.$refs.input;
+    const { maxSize, typeError, sizeError } = this.$root.dataset;
+    const picked = [...input.files];
+    const accepted = picked.filter((file) => acceptsFile(file, input.accept));
+    const kept = maxSize ? accepted.filter((file) => file.size <= Number(maxSize)) : accepted;
+    this.error = accepted.length < picked.length ? typeError : kept.length < accepted.length ? sizeError : "";
+    if (kept.length < picked.length) input.files = fileList(kept);
+    this.files = kept;
+  },
+});
+
+// Same descriptor merge as dropdownBase below.
+export const filePickerBase = (component) =>
+  Object.defineProperties(
+    {},
+    {
+      ...Object.getOwnPropertyDescriptors(filePickerData()),
+      ...Object.getOwnPropertyDescriptors(component),
+    },
+  );
+
 let highlightIds = 0;
 
 const visibleOptions = (component) =>

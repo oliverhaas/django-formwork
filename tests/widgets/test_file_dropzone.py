@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 from django import forms
@@ -198,7 +199,7 @@ def test_file_dropzone_form_prefix_handling(renderer):
 
 @pytest.mark.e2e
 def test_file_dropzone_selecting_file_shows_preview(uploads_page):
-    """Choosing a file shows its name and formatted size; remove empties the input."""
+    """Choosing a file shows its name, formatted size and type icon; remove empties the input."""
     from playwright.sync_api import expect
 
     inp = uploads_page.locator('input[name="dropzone"]')
@@ -206,6 +207,7 @@ def test_file_dropzone_selecting_file_shows_preview(uploads_page):
     zone = uploads_page.locator("#id_dropzone_dropzone")
     expect(zone.locator(".dropzone-file-name")).to_have_text("notes.txt")
     expect(zone.locator(".dropzone-file-size")).to_have_text("8 B")
+    expect(zone.locator(".dropzone-file-icon")).to_have_class(re.compile(r"\bicon-file-type\b"))
     zone.locator(".dropzone-remove").click()
     expect(zone.locator(".dropzone-browse")).to_be_visible()
     assert inp.evaluate("el => el.files.length") == 0
@@ -225,7 +227,7 @@ def test_file_dropzone_field_label_names_a_focusable_input(uploads_page):
 
 @pytest.mark.e2e
 def test_file_dropzone_multiple_files_show_a_count(uploads_page):
-    """Several files show their count and names."""
+    """Several files show their count, their names and the icon for several files."""
     from playwright.sync_api import expect
 
     uploads_page.locator('input[name="dropzone"]').set_input_files(
@@ -237,6 +239,7 @@ def test_file_dropzone_multiple_files_show_a_count(uploads_page):
     zone = uploads_page.locator("#id_dropzone_dropzone")
     expect(zone.locator(".dropzone-file-name")).to_have_text("2 files selected")
     expect(zone.locator(".dropzone-file-size")).to_have_text("a.txt, b.txt")
+    expect(zone.locator(".dropzone-file-icon")).to_have_class(re.compile(r"\bicon-files\b"))
 
 
 @pytest.mark.e2e

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.utils.formats import number_format
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -18,6 +19,21 @@ _MB = 1024 * 1024
 _PLURAL_SAMPLES = {"zero": 0, "one": 1, "two": 2, "few": 3, "many": 11, "other": 100}
 
 _ACCEPT_WILDCARDS = {"audio": _("Audio files"), "image": _("Images"), "video": _("Videos")}
+
+# The Lucide icon for each common kind of file, with the extensions it covers.
+_FILE_ICONS = {
+    "file-text": "pdf",
+    "file-type": "doc docx odt rtf txt md pages",
+    "file-spreadsheet": "xls xlsx xlsm ods csv tsv numbers",
+    "file-chart-pie": "ppt pptx odp key",
+    "file-image": "jpg jpeg png gif webp svg avif heic heif bmp tif tiff",
+    "file-archive": "zip rar 7z tar gz tgz bz2 xz",
+    "file-music": "mp3 wav ogg oga m4a flac aac",
+    "file-video-camera": "mp4 m4v mov avi mkv webm",
+    "file-code": "json xml html htm css js ts py yaml yml sql",
+}
+# The component picks the icon of a file the user picks from the same lists.
+_FILE_ICONS_JSON = json.dumps(_FILE_ICONS)
 
 
 class _ModuleScript(str):
@@ -49,6 +65,10 @@ def _plural_forms(text_for: Callable[[int], str]) -> str:
     return json.dumps({**forms, "other": other}, ensure_ascii=False)
 
 
+def _files_selected_text(count: int) -> str:
+    return ngettext("%(count)s file selected", "%(count)s files selected", count)
+
+
 def _format_size(size: int) -> str:
     """Format a byte count for human-readable display, in the active locale."""
     if size < _KB:
@@ -74,8 +94,8 @@ def _format_accept(accept: str) -> str:
     return ", ".join(labels)
 
 
-class _DropzoneMixin:
-    """Shared get_context logic for FileDropzoneInput and ImageDropzoneInput."""
+class _UploadHintsMixin:
+    """Adds the readable ``accept`` list and the ``max_size`` limit of an upload widget to its context."""
 
     max_size: int | None
 

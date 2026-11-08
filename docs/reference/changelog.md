@@ -31,6 +31,11 @@
   them. `DateTimeRangePicker` adds a start and an end time under the calendar.
 - `DateTimeRangeField`, which cleans to a `DateTimeRange(start, end)` of two datetimes
   and uses `DateTimeRangePicker`.
+- `ClearableFileInput`: a file upload in one row, as high as a text input. It shows the
+  stored file as a link with an icon for its type, a Browse or Replace button, and a ×
+  button that clears the stored file, with a second button to keep it before the save.
+  It posts the same fields as Django's widget, so `widget=widgets.ClearableFileInput`
+  is the only change a form needs.
 
 ### Changed
 
@@ -50,6 +55,13 @@
   picker, and a click on the preview picks another image. The preview has a thin border,
   so a white image shows its edge, and the checkerboard behind transparent images is
   lighter. If you override `formwork/widgets/image_dropzone.html`, copy it again.
+- Django's own `ClearableFileInput` took four lines: the stored file name, the clear box,
+  "Change:", and the file input. It takes two now: the file name and a
+  smaller clear box, and the file input under the name. If you override
+  `formwork/forms/field.html`, copy it again.
+- `FileDropzoneInput` shows an icon for the type of the picked file, such as a PDF,
+  a spreadsheet or an image, where it showed the same file icon for every file. If you
+  override `formwork/widgets/file_dropzone.html`, copy it again.
 
 ### Fixed
 
