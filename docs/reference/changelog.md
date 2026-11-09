@@ -26,9 +26,13 @@
   `multiple` `FileDropzoneInput` failed validation with "No file was submitted" as soon
   as a file was picked. `MultipleFileField` uses that drop area by default and cleans to
   a list of files.
-- `DateRangePicker`: a start and an end date in one control, picked in a calendar with
-  two months side by side. The days between the two picks fill in, and the footer counts
-  them. `DateTimeRangePicker` adds a start and an end time under the calendar.
+- `DateRangePicker`: a start and an end date in one control, typed or picked in a
+  calendar with two months side by side. The days between the two picks fill in, and the
+  footer counts them. A typed date can be in the format the input shows, in a
+  `DATE_INPUT_FORMATS` format or ISO, and month names can be short or lowercase.
+  `presets=True` adds Today, Past 7 days, This month and This year buttons, and a
+  function of today gives other ranges. `DateTimeRangePicker` adds a start and an end
+  time under the calendar.
 - `DateTimeRangeField`, which cleans to a `DateTimeRange(start, end)` of two datetimes
   and uses `DateTimeRangePicker`.
 - `ClearableFileInput`: a file upload in one row, as high as a text input. It shows the
@@ -62,6 +66,13 @@
 - `FileDropzoneInput` shows an icon for the type of the picked file, such as a PDF,
   a spreadsheet or an image, where it showed the same file icon for every file. If you
   override `formwork/widgets/file_dropzone.html`, copy it again.
+- A focused input, select or textarea draws its border and focus ring in the primary
+  color, like its floating label. DaisyUI draws them in the text color, so focus showed
+  as a black or white ring. This covers the built-in widgets and `.input`, `.select` and
+  `.textarea` written in your own markup. A color modifier such as `input-error` or the
+  accent of a changed field still wins.
+- A link in a field's help text or error message is underlined. Tailwind's preflight
+  showed it as plain text.
 
 ### Fixed
 

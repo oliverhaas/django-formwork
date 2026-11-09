@@ -7,7 +7,7 @@
     <i class="icon shrink-0 text-base text-base-content/70" :class="fileIcon" x-show="files.length" x-cloak aria-hidden="true"></i>
     <span class="min-w-0 flex-1 truncate">
       <span class="text-base-content/50" x-show="empty"{% if widget.is_initial %} x-cloak{% endif %}>{% translate "No file chosen" %}</span>
-      {% if widget.is_initial %}<a href="{{ widget.value.url }}" target="_blank" rel="noopener" class="link link-hover{% if widget.clear_checked %} line-through text-base-content/50{% endif %}" :class="storedClass" x-show="storedShown" @click.stop>{{ widget.file_name }}</a>{% endif %}
+      {% if widget.is_initial %}<a href="{{ widget.value.url }}" target="_blank" rel="noopener" class="link{% if widget.clear_checked %} line-through text-base-content/50{% endif %}" :class="storedClass" x-show="storedShown" @click.stop>{{ widget.file_name }}</a>{% endif %}
       <span x-show="files.length" x-text="summary" :title="names" x-cloak></span>
     </span>
     <span class="shrink-0 text-xs text-base-content/50" x-show="files.length" x-text="size" x-cloak></span>

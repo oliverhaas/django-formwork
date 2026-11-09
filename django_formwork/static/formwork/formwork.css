@@ -45,6 +45,30 @@
 /* Display(badges=True) renders badge-{{ item.color }}. */
 @source inline("badge-{neutral,primary,secondary,accent,info,success,warning,error}");
 
+/* Focus ring in primary, like the floating label above a focused field.
+   DaisyUI draws it in base-content.  Formwork's widget rules @apply it
+   next to input/select/textarea, so it carries their specificity and the
+   more specific error and dirty-field variants still win. */
+@utility focus-primary {
+    &:focus,
+    &:focus-within,
+    &:open {
+        --input-color: var(--color-primary);
+    }
+}
+
+/* The same for .input, .select and .textarea written in markup.  It sits in
+   DaisyUI's base sub-layer, after its own :focus rule, so the color
+   modifiers (input-error, select-accent) in the next sub-layer still win. */
+@layer utilities {
+    @layer daisyui.l1.l2.l3 {
+        :is(.input, .select, .textarea):is(:focus, :focus-within),
+        .select:open {
+            --input-color: var(--color-primary);
+        }
+    }
+}
+
 /* Checkerboard behind image previews, so transparent areas show. */
 @utility bg-transparency-checkerboard {
     background: repeating-conic-gradient(#e5e5e5 0 25%, #ffffff 0 50%) top left / 16px 16px;
@@ -284,7 +308,14 @@ fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidd
 }
 
 .clearable-file > a {
-    @apply link link-hover truncate;
+    @apply link truncate;
+}
+
+/* Links in help and error text come from Python strings, so they get the
+   link style here. Preflight would leave them looking like plain text. */
+.formwork-disclosure-text a,
+.formwork-disclosure-body a {
+    @apply link;
 }
 
 .clearable-file > input[type="checkbox"]:not(.toggle):not(.hidden) {
@@ -474,8 +505,8 @@ details.formwork-select[open] > summary.formwork-placeholder {
    Excludes ComboBox, the dropdown search inputs and inputs that a compound
    widget styles itself (OTPInput draws its boxes on the <label class="otp">,
    DateInput and InputMask style their own wrappers). */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.otp > input):not(.date-picker-label *):not(.input-mask *) {
-    @apply input w-full;
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.otp > input):not(.date-picker-label *):not(.input-mask *):not(.date-range-field *) {
+    @apply input w-full focus-primary;
 }
 
 /* Hide the native number spinners everywhere: StepperNumberInput renders
@@ -542,7 +573,7 @@ i.icon {
 /* DatePicker: the label wrapper draws the input box around the text input
    and the icon button. */
 .date-picker-label {
-    @apply input w-full;
+    @apply input w-full focus-primary;
 }
 
 /* The inner text input keeps the UA default size=20 intrinsic width
@@ -577,26 +608,27 @@ i.icon {
     @apply opacity-100;
 }
 
-/* DateRangePicker and DateTimeRangePicker: the trigger button draws the input box. */
+/* DateRangePicker and DateTimeRangePicker: the box draws the input around
+   the start and end inputs.  Each input is as wide as the longest date the
+   format writes (--date-range-width, set by the widget), so the end keeps
+   its place whatever the start holds; both shrink in a narrow box. */
 .date-range-picker {
     @apply relative w-full;
 }
 
-.date-range-trigger {
-    @apply input w-full cursor-pointer text-start;
+.date-range-field {
+    @apply input w-full cursor-text focus-primary;
 }
 
-.date-range-part {
-    @apply min-w-0 truncate decoration-primary decoration-2 underline-offset-4;
+.date-range-input {
+    @apply min-w-0;
+    flex: 0 1 var(--date-range-width, 12ch);
 }
 
-/* An empty end reads as a placeholder; the end the next pick sets is underlined. */
-.date-range-part[data-empty] {
-    @apply text-base-content/50;
-}
-
-.date-range-part[data-active] {
-    @apply underline;
+/* A bar under the end the next pick sets, while the calendar is open.
+   Browsers draw no text-decoration on an input's value. */
+.date-range-input[data-active] {
+    box-shadow: inset 0 -2px 0 var(--color-primary);
 }
 
 /* Calendar panel of the date pickers, sized after DaisyUI's calendar styles
@@ -671,6 +703,11 @@ i.icon {
     @apply mt-2 flex items-center gap-2 border-t border-base-200 pt-2;
 }
 
+/* DateRangePicker presets: buttons that pick a whole range. */
+.calendar-presets {
+    @apply mt-2 flex flex-wrap gap-1 border-t border-base-200 pt-2;
+}
+
 /* StepperNumberInput: minus and plus buttons sit inside the input's
    padding.  The trailing-buttons variant resets the padding with utilities. */
 .input-stepper {
@@ -716,26 +753,28 @@ i.icon {
 }
 
 textarea {
-    @apply textarea w-full;
+    @apply textarea w-full focus-primary;
 }
 
 select {
-    @apply select w-full;
+    @apply select w-full focus-primary;
 }
 
 /* SelectMultiple / Select summary triggers: DaisyUI .select
    applied via @apply to avoid @layer utilities conflict. */
 details.formwork-select > summary,
 details.formwork-select-multiple > summary {
-    @apply select w-full text-left;
+    @apply select w-full text-left focus-primary;
     list-style: none;
     cursor: pointer;
 }
 
 /* DaisyUI turns the caret up on :focus and on a native select's :open.
-   Keep it up while the dropdown is open: the search box takes focus. */
+   Keep it up, and the ring primary, while the dropdown is open: the
+   search box takes focus. */
 details.formwork-select[open] > summary,
 details.formwork-select-multiple[open] > summary {
+    --input-color: var(--color-primary);
     background-image: linear-gradient(135deg, #0000 50%, currentColor 50%), linear-gradient(45deg, currentColor 50%, #0000 50%);
 }
 
@@ -791,7 +830,7 @@ input[type="radio"]:not(.mask):not(.rating-hidden) {
 /* File inputs.  Excludes the upload widgets' inputs: FileDropzoneInput hides its
    input, ImageDropzoneInput keeps an sr-only input inside its drop label. */
 input[type="file"]:not(.dropzone *):not(.sr-only) {
-    @apply file-input w-full;
+    @apply file-input w-full focus-primary;
 }
 
 input[type="range"] {
@@ -831,7 +870,7 @@ input.toggle {
    root's fit-content measurement; min-width stretches it back to the
    root's final width. */
 input.combobox-input {
-    @apply input;
+    @apply input focus-primary;
     width: 0;
     min-width: 100%;
 }
@@ -848,7 +887,7 @@ input.combobox-input {
    it opens the file picker.  The file input inside it is visually hidden and
    takes the keyboard focus, which .input:focus-within shows on the row. */
 .clearable-file-input-row {
-    @apply input w-full cursor-pointer;
+    @apply input w-full cursor-pointer focus-primary;
 }
 
 /* FileDropzoneInput: fill the container width. */
@@ -1199,7 +1238,7 @@ details.formwork-disclosure[open] > summary > .formwork-disclosure-row > .icon {
    DaisyUI's -accent variants highlight the modified input.
    ================================================================ */
 
-fieldset.formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.otp > input):not(.date-picker-label *) {
+fieldset.formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.otp > input):not(.date-picker-label *):not(.date-range-field *) {
     @apply input-accent;
 }
 
@@ -1208,7 +1247,7 @@ fieldset.formwork-dirty .otp {
 }
 
 fieldset.formwork-dirty .date-picker-label,
-fieldset.formwork-dirty .date-range-trigger,
+fieldset.formwork-dirty .date-range-field,
 fieldset.formwork-dirty .clearable-file-input-row {
     @apply input-accent;
 }
@@ -1386,7 +1425,7 @@ details.formwork-select-multiple [data-value]:active,
    of specificity. The error recolor has to beat those classes too.
    ================================================================ */
 
-input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.otp > input):not(.date-picker-label *) {
+input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.otp > input):not(.date-picker-label *):not(.date-range-field *) {
     @apply input-error;
 }
 
@@ -1397,7 +1436,7 @@ input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type=
 
 /* DatePicker: style the wrapper label based on the inner input's state. */
 .date-picker-label:has(> input[aria-invalid="true"]),
-.date-range-trigger[aria-invalid="true"],
+.date-range-field:has(> input[aria-invalid="true"]),
 .clearable-file-input-row:has(> input[aria-invalid="true"]) {
     @apply input-error;
 }

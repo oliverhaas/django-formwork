@@ -4,15 +4,21 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from django.utils import dateformat
 from django.utils.dates import MONTHS, MONTHS_3, MONTHS_ALT, MONTHS_AP, WEEKDAYS, WEEKDAYS_ABBR
 from django.utils.formats import get_format
 from django.utils.translation import gettext
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 # Django's date format codes, as django.utils.dateformat reads them.
 _FORMAT_CODE = re.compile(r"(?<!\\)([aAbcdDeEfFgGhHiIjlLmMnNoOPrsStTUuwWyYzZ])")
+
+# The names a typed date can hold for each strftime code of an input format.
+_INPUT_NAMES = {"a": {"D", "l"}, "A": {"D", "l"}, "p": {"a", "A"}}
 
 
 def _names() -> dict[str, list[str]]:
@@ -32,17 +38,20 @@ def _names() -> dict[str, list[str]]:
     }
 
 
-def calendar_context(months: int = 1, **formats: str) -> dict[str, Any]:
-    """What the calendar template and script need to show ``months`` months and write dates like the server.
+def calendar_context(months: int = 1, *, input_formats: Sequence[str] = (), **formats: str) -> dict[str, Any]:
+    """What the calendar needs to show ``months`` months and read and write dates like the server.
 
-    Each keyword names a format the script writes with: a Django format setting such as
-    ``"DATE_FORMAT"``, or a format string. Only the names those formats use are sent.
-    """
+    Each keyword is a format setting or a format string; ``input_formats`` are strftime formats it reads."""
     formats = {"title": "YEAR_MONTH_FORMAT", "label": "DATE_FORMAT", **formats}
     resolved = {key: str(get_format(value)) for key, value in formats.items()}
     codes = set(_FORMAT_CODE.findall("".join(resolved.values()))) | {"M"}
-    if "P" in codes:
-        codes.add("a")
+    if input_formats:
+        # A typed month can be a full name whatever the formats write.
+        codes.add("F")
+        for code in re.findall(r"%(.)", "".join(input_formats)):
+            codes |= _INPUT_NAMES.get(code, set())
+    if codes & {"a", "A", "P"}:
+        codes |= {"a", "A"}
     names = {code: names for code, names in _names().items() if code in codes}
     first_day = int(get_format("FIRST_DAY_OF_WEEK"))
     # Django counts weekdays from Monday, the calendar's FIRST_DAY_OF_WEEK from Sunday.
@@ -54,6 +63,7 @@ def calendar_context(months: int = 1, **formats: str) -> dict[str, Any]:
         "names_json": json.dumps(names, ensure_ascii=False),
         "formats_json": json.dumps(resolved, ensure_ascii=False),
         "formats": resolved,
+        "input_formats_json": json.dumps(list(input_formats), ensure_ascii=False),
     }
 
 

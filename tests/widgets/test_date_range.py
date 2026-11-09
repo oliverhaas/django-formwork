@@ -121,12 +121,12 @@ def test_a_datetime_range_rejects_an_end_before_the_start_on_the_same_day():
 
 @pytest.mark.unit
 def test_the_picker_posts_iso_and_shows_each_date_in_the_locale_format():
-    """The hidden inputs hold ISO dates; the trigger shows them as DATE_FORMAT."""
+    """The hidden inputs hold ISO dates; the text inputs show them as DATE_FORMAT."""
     start, end = dt.date(2026, 3, 1), dt.date(2026, 3, 10)
     soup = _soup(_Form(initial={"period": DateRange(start, end)})["period"].as_widget())
     assert [i["value"] for i in soup.select("input[type=hidden]")] == ["2026-03-01", "2026-03-10"]
-    parts = [part.get_text(strip=True) for part in soup.select("button .date-range-part")]
-    assert parts == [date_format(start, "DATE_FORMAT"), date_format(end, "DATE_FORMAT")]
+    texts = [i["value"] for i in soup.select("input.date-range-input")]
+    assert texts == [date_format(start, "DATE_FORMAT"), date_format(end, "DATE_FORMAT")]
 
 
 @pytest.mark.unit
@@ -141,36 +141,109 @@ def test_the_datetime_picker_shows_a_stored_range_in_the_current_time_zone():
 
 @pytest.mark.unit
 @pytest.mark.parametrize(("form_class", "end"), [(_Form, "2026-13-45"), (_StayForm, "2026-02-30T10:00")])
-def test_posted_text_that_names_no_date_renders_an_empty_range(form_class, end):
+def test_posted_text_that_names_no_date_renders_as_typed_with_an_error(form_class, end):
+    """Text the field rejects stays in its input, so the user can fix it."""
     name = next(iter(form_class.base_fields))
-    soup = _soup(form_class(data={f"{name}_0": "junk", f"{name}_1": end})[name].as_widget())
-    assert [i["value"] for i in soup.select("input[type=hidden]")] == ["", ""]
-    assert all(part.has_attr("data-empty") for part in soup.select("button .date-range-part"))
+    form = form_class(data={f"{name}_0": "junk", f"{name}_1": end})
+    assert not form.is_valid()
+    soup = _soup(form[name].as_widget())
+    assert [i["value"] for i in soup.select("input[type=hidden]")] == ["junk", end]
+    assert [i["value"] for i in soup.select("input.date-range-input")] == ["junk", end]
 
 
 @pytest.mark.unit
-def test_the_trigger_is_named_by_the_field_label_and_carries_the_error_state():
-    """The button points back at the field's label, and an error marks it invalid."""
+def test_the_inputs_are_grouped_under_the_field_label_and_both_carry_the_error_state():
+    """The field label names the group of the two inputs, and an error marks both invalid."""
     form = _bound("2026-03-10", "2026-03-01")
     form.is_valid()
     soup = _soup(form["period"].as_field_group())
-    trigger = soup.select_one("button#id_period")
-    assert trigger["aria-labelledby"] == "id_period_label id_period"
+    assert soup.select_one("[role=group]")["aria-labelledby"] == "id_period_label"
     assert soup.select_one("#id_period_label").get_text(strip=True) == "Period*"
-    assert trigger["aria-invalid"] == "true"
+    inputs = soup.select("input.date-range-input")
+    assert [i["id"] for i in inputs] == ["id_period", "id_period_end"]
+    assert [i["aria-label"] for i in inputs] == ["Start date", "End date"]
+    assert all(i["aria-invalid"] == "true" for i in inputs)
 
 
 @pytest.mark.unit
-def test_htmx_and_data_attrs_go_on_the_end_input_and_the_rest_on_the_trigger():
-    """The end input fires ``change`` for the range, so request attrs ride on it."""
+def test_htmx_and_data_attrs_go_on_the_end_input_and_the_rest_on_the_start_input():
+    """The end's hidden input fires ``change`` for the range, so request attrs ride on it."""
     widget = DateRangePicker(attrs={"hx-post": "/save/", "data-role": "range", "title": "Stay"})
     soup = render_widget(widget, name="period", attrs={"id": "id_period"})
     start, end = soup.select("input[type=hidden]")
     assert (end["hx-post"], end["data-role"]) == ("/save/", "range")
     assert "hx-post" not in start.attrs
-    trigger = soup.select_one("button#id_period")
-    assert trigger["title"] == "Stay"
-    assert "hx-post" not in trigger.attrs
+    typed = soup.select_one("input#id_period")
+    assert typed["title"] == "Stay"
+    assert "hx-post" not in typed.attrs
+
+
+def _presets(widget):
+    return [
+        (button.get_text(strip=True), button["data-start"], button["data-end"])
+        for button in render_widget(widget, name="period").select(".calendar-presets button")
+    ]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("now", "zone", "expected"),
+    [
+        (
+            dt.datetime(2026, 11, 9, 12, tzinfo=dt.UTC),
+            "UTC",
+            [
+                ("Today", "2026-11-09", "2026-11-09"),
+                ("Past 7 days", "2026-11-03", "2026-11-09"),
+                ("This month", "2026-11-01", "2026-11-30"),
+                ("This year", "2026-01-01", "2026-12-31"),
+            ],
+        ),
+        (
+            dt.datetime(2026, 12, 31, 23, 30, tzinfo=dt.UTC),
+            "Europe/Berlin",
+            [
+                ("Today", "2027-01-01", "2027-01-01"),
+                ("Past 7 days", "2026-12-26", "2027-01-01"),
+                ("This month", "2027-01-01", "2027-01-31"),
+                ("This year", "2027-01-01", "2027-12-31"),
+            ],
+        ),
+    ],
+    ids=["mid_month", "new_year_in_the_current_time_zone"],
+)
+def test_presets_cover_today_the_past_week_this_month_and_this_year(monkeypatch, now, zone, expected):
+    """The days count in the current time zone, as Django's admin date filter counts them."""
+    monkeypatch.setattr(timezone, "now", lambda: now)
+    with timezone.override(zoneinfo.ZoneInfo(zone)), translation.override("en"):
+        assert _presets(DateRangePicker(presets=True)) == expected
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("presets", "expected"),
+    [
+        (False, []),
+        (
+            lambda today: [("Next week", today + dt.timedelta(days=1), today + dt.timedelta(days=7))],
+            [("Next week", "2026-11-10", "2026-11-16")],
+        ),
+    ],
+    ids=["off_by_default", "function_of_today"],
+)
+def test_presets_come_from_a_function_of_today(monkeypatch, presets, expected):
+    monkeypatch.setattr(timezone, "now", lambda: dt.datetime(2026, 11, 9, 12, tzinfo=dt.UTC))
+    with timezone.override(zoneinfo.ZoneInfo("UTC")):
+        assert _presets(DateRangePicker(presets=presets)) == expected
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("language", "longest"), [("en", "Sept. 28, 2026"), ("de", "28. September 2026")])
+def test_each_input_is_as_wide_as_the_longest_date_the_format_writes(language, longest):
+    """The end input keeps its place whatever the start holds."""
+    with translation.override(language):
+        field = render_widget(DateRangePicker(), name="period").select_one(".date-range-field")
+    assert field["style"] == f"--date-range-width: {len(longest) + 1}ch"
 
 
 @pytest.mark.unit
@@ -242,7 +315,7 @@ def test_a_range_picked_in_the_calendar_saves_and_renders_after_a_reload(new_wid
     page.reload()
     expect(page.locator("input[name='period_0']")).to_have_value(start)
     expect(page.locator("input[name='period_1']")).to_have_value(end)
-    expect(trigger).not_to_contain_text("Start date")
+    expect(trigger).to_have_value(date_format(dt.date.fromisoformat(start), "DATE_FORMAT"))
 
 
 @pytest.mark.e2e
@@ -300,11 +373,145 @@ def test_a_click_on_the_end_date_changes_the_end_alone(new_widgets_page):
     later, end = _first_month_day(panel, "20")
     first.click()
     last.click()
-    trigger.locator(".date-range-part").last.click()
+    page.locator("#id_period_end").click()
     later.click()
     expect(panel).to_be_hidden()
     expect(page.locator("input[name='period_0']")).to_have_value(start)
     expect(page.locator("input[name='period_1']")).to_have_value(end)
+
+
+@pytest.mark.e2e
+def test_typed_dates_post_as_iso_and_read_back_in_the_locale_format(new_widgets_page):
+    """A typed start moves the calendar to its month; Tab goes on to the end, and leaving commits."""
+    from playwright.sync_api import expect
+
+    page = new_widgets_page
+    start = page.locator("#id_period")
+    end = page.locator("#id_period_end")
+    start.fill("3/1/2030")
+    expect(page.locator("#id_period_calendar [data-date='2030-03-01']")).to_have_class(re.compile("calendar-selected"))
+    start.press("Tab")
+    expect(end).to_be_focused()
+    end.press_sequentially("mar 10 2030")
+    end.press("Tab")
+    expect(page.locator("#id_period_calendar")).to_be_hidden()
+    expect(page.locator("input[name='period_0']")).to_have_value("2030-03-01")
+    expect(page.locator("input[name='period_1']")).to_have_value("2030-03-10")
+    expect(start).to_have_value(date_format(dt.date(2030, 3, 1), "DATE_FORMAT"))
+    expect(end).to_have_value(date_format(dt.date(2030, 3, 10), "DATE_FORMAT"))
+
+
+@pytest.mark.e2e
+def test_a_preset_picks_its_range_and_closes_the_calendar(new_widgets_page):
+    from playwright.sync_api import expect
+
+    page = new_widgets_page
+    today = timezone.localdate()
+    page.locator("#id_period").click()
+    page.get_by_role("button", name="Past 7 days").click()
+    expect(page.locator("#id_period_calendar")).to_be_hidden()
+    expect(page.locator("input[name='period_0']")).to_have_value((today - dt.timedelta(days=6)).isoformat())
+    expect(page.locator("input[name='period_1']")).to_have_value(today.isoformat())
+    page.locator("#id_period").click()
+    expect(page.get_by_role("button", name="Past 7 days")).to_have_attribute("aria-current", "true")
+    expect(page.get_by_role("button", name="Today")).not_to_have_attribute("aria-current", "true")
+
+
+@pytest.mark.e2e
+def test_an_end_typed_before_the_start_posts_as_typed_and_gets_the_field_error(new_widgets_page):
+    """The picker never swaps the ends: the field reports the order."""
+    from playwright.sync_api import expect
+
+    page = new_widgets_page
+    page.locator("#id_period").fill("3/10/2030")
+    page.locator("#id_period_end").fill("3/1/2030")
+    page.locator("#id_period_end").press("Enter")
+    expect(page.locator("input[name='period_0']")).to_have_value("2030-03-10")
+    expect(page.locator("input[name='period_1']")).to_have_value("2030-03-01")
+    page.get_by_role("button", name="Submit").click()
+    expect(page.locator("#id_period_field")).to_contain_text("Start date must be before end date")
+    expect(page.locator("#id_period")).to_have_attribute("aria-invalid", "true")
+
+
+@pytest.mark.e2e
+def test_a_datetime_range_reads_typed_times(new_widgets_page):
+    from playwright.sync_api import expect
+
+    page = new_widgets_page
+    page.locator("#id_stay").fill("3/1/2030 14:30")
+    page.locator("#id_stay_end").fill("Mar. 3, 2030, 9 a.m.")
+    page.locator("#id_stay_end").press("Enter")
+    expect(page.locator("input[name='stay_0']")).to_have_value("2030-03-01T14:30")
+    expect(page.locator("input[name='stay_1']")).to_have_value("2030-03-03T09:00")
+
+
+_READ_CASES = {
+    "en": [
+        ("Nov. 8, 2026", "2026-11-08"),
+        ("nov 8 2026", "2026-11-08"),
+        ("November 8, 2026", "2026-11-08"),
+        ("Sept 30 2026", "2026-09-30"),
+        ("11/8/2026", "2026-11-08"),
+        ("11/08/26", "2026-11-08"),
+        ("2026-11-08", "2026-11-08"),
+        ("8 November 2026", "2026-11-08"),
+        ("Nov. 31, 2026", None),
+        ("Nov. 8", None),
+        ("2026-11-08x", None),
+        ("soon", None),
+    ],
+    "de": [
+        ("8.11.2026", "2026-11-08"),
+        ("08.11.26", "2026-11-08"),
+        ("3. märz 2026", "2026-03-03"),
+        ("3 März 2026", "2026-03-03"),
+        ("2026-03-03", "2026-03-03"),
+        ("30.2.2026", None),
+    ],
+}
+
+
+def _read_dates(page, widget, texts):
+    """What the calendar script reads from each text, with the formats and names the widget renders."""
+    data = render_widget(widget, name="period").select_one("[data-names]")
+    return page.evaluate(
+        """async ([texts, formats, inputFormats, names]) => {
+            const { readDate } = await import("/static/formwork/widgets/_calendar.js");
+            return texts.map((text) => readDate(text, [formats.value, formats.label], inputFormats, names));
+        }""",
+        [texts, *(json.loads(data[key]) for key in ("data-formats", "data-input-formats", "data-names"))],
+    )
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("language", ["en", "de"])
+def test_the_calendar_script_reads_dates_typed_in_the_locale_formats(new_widgets_page, language):
+    """Typed text in the display format or an input format reads as its day; case and dots do not matter."""
+    with translation.override(language):
+        read = _read_dates(new_widgets_page, DateRangePicker(), [text for text, _ in _READ_CASES[language]])
+    assert [day and day["iso"] for day in read] == [iso for _, iso in _READ_CASES[language]]
+
+
+@pytest.mark.e2e
+def test_the_calendar_script_reads_the_times_of_typed_datetimes(new_widgets_page):
+    from django_formwork.widgets import DateTimeRangePicker
+
+    texts = [
+        "Nov. 8, 2026, 3:30 p.m.",
+        "Nov. 8, 2026, midnight",
+        "Nov. 8, 2026, noon",
+        "2026-11-08 14:30",
+        "Nov. 8, 2026",
+    ]
+    with translation.override("en"):
+        read = _read_dates(new_widgets_page, DateTimeRangePicker(), texts)
+    assert read == [
+        {"iso": "2026-11-08", "time": "15:30"},
+        {"iso": "2026-11-08", "time": "00:00"},
+        {"iso": "2026-11-08", "time": "12:00"},
+        {"iso": "2026-11-08", "time": "14:30"},
+        {"iso": "2026-11-08", "time": ""},
+    ]
 
 
 _EVERY_CODE = "a A b d D E f F g G h H i j l L m M n N o P s S t w W y Y z c"

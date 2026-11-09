@@ -251,6 +251,23 @@ def test_date_picker_writes_and_reads_its_format(new_widgets_page):
 
 
 @pytest.mark.e2e
+def test_date_picker_year_view_marks_and_picks_one_year(new_widgets_page):
+    """The year view marks only the shown year, and a picked year opens its months."""
+    from playwright.sync_api import expect
+
+    picker = new_widgets_page.locator("#id_due_date_datepicker")
+    picker.locator("button.date-picker-toggle").click()
+    panel = picker.locator("div.dropdown-content")
+    panel.locator(".calendar-days .calendar-caption button:has(span)").click()
+    panel.locator(".calendar-months .calendar-caption button:has(span)").click()
+    years = panel.locator(".calendar-years .calendar-choices button")
+    expect(panel.locator(".calendar-years .calendar-selected")).to_have_count(1)
+    first_year = years.first.inner_text()
+    years.first.click()
+    expect(panel.locator(".calendar-months .calendar-caption button:has(span)")).to_have_text(first_year)
+
+
+@pytest.mark.e2e
 def test_date_picker_escape_and_focus_leaving_close_the_calendar(new_widgets_page):
     """Escape closes the open calendar, and so does tabbing to another control."""
     from playwright.sync_api import expect

@@ -41,8 +41,8 @@
       <button type="button" class="btn btn-ghost btn-sm btn-square" @click="page(1)" aria-label="{% translate 'Later years' %}"><i class="icon icon-chevron-right rtl:rotate-180" aria-hidden="true"></i></button>
     </div>
     <div class="calendar-choices">
-      <template x-for="year in years" :key="year">
-        <button type="button" class="btn btn-sm font-normal" :class="yearClass(year)" @click="pickYear(year)" x-text="year"></button>
+      <template x-for="choice in years" :key="choice">
+        <button type="button" class="btn btn-sm font-normal" :class="yearClass(choice)" @click="pickYear(choice)" x-text="choice"></button>
       </template>
     </div>
   </div>

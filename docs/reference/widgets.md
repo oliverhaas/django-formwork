@@ -451,13 +451,21 @@ format; the native control accepts only ISO, so `format` defaults to
 
 ### DateRangePicker and DateRangeField
 
-`DateRangePicker` shows a start and an end date in one control. A click
-opens a calendar with two months side by side, one on a phone. The first
-click on a day sets the start, the second the end, and the days in between
-fill in while the pointer moves. A click before the start begins the range
-again there. A click on the end date in the closed control opens the
-calendar to change the end alone. The footer counts the days and has a
-Clear button.
+`DateRangePicker` shows a start and an end date as two text inputs in one
+box. A click or the focus opens a calendar with two months side by side, one
+on a phone. The first click on a day sets the start, the second the end, and
+the days in between fill in while the pointer moves. A click before the start
+begins the range again there. A click into the end input opens the calendar
+to change the end alone. The footer counts the days and has a Clear button.
+
+The inputs also take typed dates. A date an input can read moves the
+calendar to its month and marks it, and Tab goes on from the start to the
+end. An input reads the format it shows, the formats in `DATE_INPUT_FORMATS`
+and ISO. Month names can be full or short, in any case, with or without the
+dot, so `nov 8 2026` reads as November 8, 2026. When the focus leaves an
+input, a date it read shows in the display format. Text that names no date
+posts as typed: the field reports it and the input keeps the text. An end
+typed before the start is not swapped, and the field reports the order.
 
 Use it through `DateRangeField`, which cleans to a `DateRange(start, end)`
 and uses the picker by default:
@@ -478,18 +486,42 @@ period = DateRangeField(
 (`max_span`).
 
 The widget posts each date as ISO in a hidden input (`period_0`,
-`period_1`). `format` sets how the control shows them: a Django format
+`period_1`). `format` sets how the inputs show them: a Django format
 setting name or a format string, `DATE_FORMAT` by default. Month and
 weekday names follow the active language, and the week starts on
-`FIRST_DAY_OF_WEEK`.
+`FIRST_DAY_OF_WEEK`. Each input is as wide as the longest date the format
+writes, so the end keeps its place whatever the start holds. A short format
+fits a narrow column:
 
 ```python
 period = DateRangeField(widget=widgets.DateRangePicker(format="SHORT_DATE_FORMAT"))
 ```
 
-`data-*` and `hx-*` attrs go on the end input, which fires one `change`
-when a range is complete. The other attrs go on the button that opens the
-calendar.
+`presets=True` adds four buttons under the calendar: Today, Past 7 days,
+This month and This year. A preset picks its whole range and closes the
+calendar. The days count in the current time zone, as in Django's admin date
+filter, and Past 7 days is today and the six days before it. For other
+ranges, pass a function that takes today and returns `(label, start, end)`
+tuples. `DateRangePicker.default_presets` returns the four above:
+
+```python
+from datetime import timedelta
+
+from django.utils.translation import gettext as _
+
+
+def presets(today):
+    past_30_days = (_("Past 30 days"), today - timedelta(days=29), today)
+    return [*widgets.DateRangePicker.default_presets(today), past_30_days]
+
+
+period = DateRangeField(widget=widgets.DateRangePicker(presets=presets))
+```
+
+The field label names the two inputs as a group. `data-*` and `hx-*` attrs
+go on the end's hidden input, which fires one `change` when the range
+changes. `aria-describedby`, `aria-invalid` and `aria-required` go on both
+text inputs, and the other attrs on the start input.
 
 ### DateTimeRangePicker and DateTimeRangeField
 
@@ -498,6 +530,11 @@ datetimes and uses `DateTimeRangePicker`. The calendar works as above, with
 a start time and an end time under it and a Done button that closes it. The
 times start at 00:00 and 23:59. The inputs post `YYYY-MM-DDTHH:MM` in the
 current time zone, and an aware value shows in it.
+
+A typed date can carry a time, in the display format or in a format from
+`DATETIME_INPUT_FORMATS`: `3/1/2030 14:30` or `Mar. 1, 2030, 2:30 p.m.`. A
+date typed without a time takes the time under the calendar. A preset picks
+its days from 00:00 to 23:59.
 
 ```python
 from django_formwork import DateTimeRangeField

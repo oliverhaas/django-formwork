@@ -28,6 +28,7 @@ from django_formwork.widgets import (
     ComboBoxMultiple,
     DataList,
     DatePicker,
+    DateRangePicker,
     FileDropzoneInput,
     ImageDropzoneInput,
     InputMask,
@@ -1122,9 +1123,10 @@ class NewWidgetsForm(FormworkForm):
     )
     period = DateRangeField(
         required=False,
+        widget=DateRangePicker(presets=True),
         max_span=dt.timedelta(days=90),
         error_messages={"max_span": "Pick at most 90 days."},
-        help_text="DateRangePicker: start and end in one two-month calendar, at most 90 days apart.",
+        help_text="DateRangePicker: start and end in one two-month calendar, at most 90 days apart, with presets.",
     )
     stay = DateTimeRangeField(
         required=False,
