@@ -71,6 +71,11 @@
   an English page, an unchanged `13.07.2026` failed with "Enter a valid date." The
   widget reads its format back and hands the field an ISO date. If you override
   `formwork/widgets/date_picker.html`, copy it again for the new `data-format`.
+- The error icon next to a `pattern_hint` was blank after `manage.py formwork install`
+  fetched Lucide 1.68 or later, which renamed `circle-alert` to
+  `circle-exclamation-point`. The hint uses the new name. Run `formwork install` again
+  if your icon set is older than 1.68. If you override
+  `formwork/widgets/partials/pattern_hint.html`, copy it again.
 
 ## 0.1.0a3 (2026-11-06)
 

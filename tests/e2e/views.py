@@ -1538,7 +1538,7 @@ _ICON_MODIFIERS_INNER = (
     '<p class="text-xs font-semibold uppercase tracking-wide text-base-content/40">alert-icon / alert-col / alert-soft</p>\n'
     '<div class="grid gap-3 mt-1">\n'
     '  <div id="alert-icon-default" class="alert alert-success alert-icon">Saved successfully.</div>\n'
-    '  <div id="alert-icon-custom" class="alert alert-warning alert-icon icon-triangle-alert">Check input.</div>\n'
+    '  <div id="alert-icon-custom" class="alert alert-warning alert-icon icon-triangle-exclamation-point">Check input.</div>\n'
     '  <div id="alert-soft" class="alert alert-info alert-soft alert-icon">Tip: drag to reorder.</div>\n'
     '  <div id="alert-col" class="alert alert-info alert-col alert-icon icon-search">\n'
     "    <strong>No matches</strong>\n"

@@ -1537,10 +1537,10 @@ input.combobox-input[aria-invalid="true"] {
 .icon-chevron-right  { --icon-url: url("../icons/lucide/chevron-right.svg"); }
 .icon-search         { --icon-url: url("../icons/lucide/search.svg"); }
 .icon-info           { --icon-url: url("../icons/lucide/info.svg"); }
-.icon-circle-alert   { --icon-url: url("../icons/lucide/circle-alert.svg"); }
+.icon-circle-exclamation-point { --icon-url: url("../icons/lucide/circle-exclamation-point.svg"); }
 .icon-circle-check   { --icon-url: url("../icons/lucide/circle-check.svg"); }
 .icon-circle-x       { --icon-url: url("../icons/lucide/circle-x.svg"); }
-.icon-triangle-alert { --icon-url: url("../icons/lucide/triangle-alert.svg"); }
+.icon-triangle-exclamation-point { --icon-url: url("../icons/lucide/triangle-exclamation-point.svg"); }
 
 
 /* ================================================================
