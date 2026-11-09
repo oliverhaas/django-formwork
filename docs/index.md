@@ -1,10 +1,16 @@
 # django-formwork
 
-django-formwork is an opinionated UI framework for Django, built on Django forms. Forms are the central building block of most Django apps (CRUD pages, admin, search filters, sign-ups, content editors), so formwork treats the form as the primary UI surface: define a `Form` or `ModelForm` and you get DaisyUI styling, widgets that go beyond Django's built-ins, and the htmx + Alpine wiring that makes them dynamic without bespoke per-page JS. Set `FORM_RENDERER` once, build the CSS with Tailwind as the [installation guide](getting-started/installation.md#4-build-the-css) shows, include the JS template tag, and `{{ form }}` produces the full DaisyUI markup. The admin is unaffected; it renders widgets directly, never `{{ form }}` or `as_field_group()`.
+django-formwork is an opinionated UI framework for Django, built on Django forms. Forms are the central building block of most Django apps (CRUD pages, admin, search filters, sign-ups, content editors), so formwork treats the form as the primary UI surface: define a `Form` or `ModelForm` and you get DaisyUI styling, widgets that go beyond Django's built-ins, and the htmx + Alpine wiring that makes them dynamic without bespoke per-page JS. Set `FORM_RENDERER` once, build the CSS with Tailwind as the [installation guide](getting-started/installation.md#4-build-the-css) shows, include the JS template tag, and `{{ form }}` produces the full DaisyUI markup. Django's admin is unaffected, since it renders widgets directly, never `{{ form }}` or `as_field_group()`. The package also ships [its own admin](#admin), built on these forms.
 
 The widgets are `Select`, `SelectMultiple`, `ComboBox`, `ComboBoxMultiple`, `TextInput`, `Textarea`, `PasswordInput`, `SearchInput`, `DateInput`, `DatePicker`, `DateRangePicker`, `DateTimeRangePicker`, `StepperNumberInput`, `SuffixNumberInput`, `CheckboxInput`, `ToggleInput`, `CheckboxSelectMultiple`, `CardRadioSelect`, `CardCheckboxSelectMultiple`, `ClearableFileInput`, `FileDropzoneInput`, `ImageDropzoneInput`, `OTPInput`, `InputMask`, `Range`, `Rating`, `DataList`, `ValidatedTextarea` and `Display`. `Select`, `SelectMultiple`, `ComboBox` and `ComboBoxMultiple` search on the server when the widget gets a `search_queryset`, and the validated textarea posts to a view you write.
 
 `{% formwork_js %}` loads an ES module that imports `formwork-core.js` (the `formwork-morph` htmx extension, dirty-field tracking, native-validation disabling) and the Alpine.data component of each widget. `{{ form.media }}` loads the same files per form, and a JS bundler can import them. The [installation guide](getting-started/installation.md#js-loading-paths) describes the three paths.
+
+## Admin
+
+`django_formwork.admin` is a Django admin built on formwork forms, django-filter, htmx and Jinja2. It keeps the options, hooks, URL names and permissions of `django.contrib.admin`, so most `admin.py` modules port by changing `from django.contrib import admin` to `from django_formwork import admin`. The admin is experimental; [Admin](reference/admin.md) covers the setup and every option.
+
+![The ticket list with a status filter set](img/admin/changelist.webp)
 
 ## Requirements
 

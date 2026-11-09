@@ -1,0 +1,121 @@
+{% extends "formwork_admin/base.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block bodyclass %}formwork-admin-changelist app-{{ opts.app_label }} model-{{ opts.model_name }}{% endblock %}
+
+{% block extrahead %}
+{{ super() }}
+{#- The first frame waits for the whole table, so columns.js fits the columns to all rows. #}
+<link rel="expect" href="#changelist-footer" blocking="render">
+{% endblock %}
+
+{% block breadcrumbs %}
+<li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>
+<li><a href="{{ url(site.name ~ ":app_list", app_label=opts.app_label) }}" class="text-base-content/60">{{ opts.app_config.verbose_name }}</a></li>
+<li class="font-medium">{{ cl.title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+  <div class="flex min-w-0 items-center gap-3" x-data>
+    <span class="hidden size-11 shrink-0 place-items-center rounded-box bg-primary/10 text-primary sm:grid">{{ icon(model_admin.get_icon(), "size-5") }}</span>
+    <h1 class="truncate text-2xl font-semibold tracking-tight">{{ cl.title }}</h1>
+    {% block info %}
+    {% set info_label = _("About %(name)s", name=opts.verbose_name_plural) %}
+    <button type="button" class="btn btn-ghost btn-sm btn-circle -ml-1 shrink-0 text-base-content/50 hover:text-base-content" aria-label="{{ info_label }}" title="{{ info_label }}"
+            aria-haspopup="dialog" aria-controls="changelist-info" @click="$refs.info.showModal()"
+            hx-get="{{ url(model_admin.url_name("info")) }}" hx-trigger="click once" hx-target="#changelist-info-body" hx-swap="innerHTML">{{ icon("info", "size-5") }}</button>
+    <dialog id="changelist-info" class="modal modal-bottom sm:modal-middle" x-ref="info" aria-labelledby="changelist-info-title">
+      <div class="modal-box max-w-3xl p-0">
+        <div class="sticky top-0 z-10 flex items-start gap-3 border-b border-base-300 bg-base-100 px-6 py-4">
+          <div class="min-w-0 flex-1">
+            <h2 id="changelist-info-title" class="text-lg font-semibold">{{ opts.verbose_name_plural|capfirst }}</h2>
+            <code class="font-mono text-xs text-base-content/55">{{ opts.label }}</code>
+          </div>
+          <form method="dialog"><button class="btn btn-ghost btn-sm btn-circle" aria-label="{{ _("Close") }}">{{ icon("x") }}</button></form>
+        </div>
+        {# The info loads once per page; a morph of the list keeps it instead of the spinner. #}
+        <div id="changelist-info-body" class="px-6 py-5" hx-morph-skip-children>
+          <div class="grid place-items-center py-12"><span class="loading loading-spinner text-base-content/40" aria-label="{{ _("Loading") }}"></span></div>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button tabindex="-1">{{ _("Close") }}</button></form>
+    </dialog>
+    {% endblock %}
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    {% block object_tools %}
+    {% if import_url %}
+    <a href="{{ import_url }}{% if preserved_filters %}?{{ preserved_filters }}{% endif %}" class="btn gap-2">{{ icon("upload") }} {{ _("Import") }}</a>
+    {% endif %}
+    {{ m.export_menu(cl, export_formats, export_url, csrf_input) }}
+    {% if has_add_permission %}
+    {% set add_url = url(model_admin.url_name("add")) %}
+    {#- "Add" alone keeps the button the same width on every list; the screen reader still hears the model. #}
+    <a href="{{ add_url }}{% if preserved_filters %}?{{ preserved_filters }}{% endif %}" class="btn btn-primary"
+       aria-label="{{ _("Add %(name)s", name=opts.verbose_name) }}">
+      {{ icon("plus") }} {{ _("Add") }}
+    </a>
+    {% endif %}
+    {% endblock %}
+  </div>
+</div>
+
+{% block filters %}
+{#- Every list has the search row and the Filters button in the same place, with or without filters. #}
+{% set filters_open = cl.has_active_filters %}
+<form id="changelist-filters" method="get" action="{{ request.path }}" role="search" class="mb-4"
+      hx-get="{{ request.path }}" hx-target="#content" hx-swap="innerMorph" hx-push-url="true"
+      x-data="formworkFilters" data-open="{{ "1" if filters_open else "" }}" @input="typed()" @change="changed()">
+  <div class="flex items-center gap-2">
+    {% if cl.search_field is not none %}
+    <div class="min-w-0 flex-1" data-search>{{ cl.search_field }}</div>
+    {% else %}
+    <div class="flex-1"></div>
+    {% endif %}
+    <button type="button" class="btn btn-soft shrink-0 gap-2" :class="open && 'btn-primary'" @click="toggle()"
+            aria-controls="changelist-filter-row" aria-expanded="{{ "true" if filters_open else "false" }}" :aria-expanded="open">
+      {{ icon("list-filter") }}<span class="max-sm:sr-only">{{ _("Filters") }}</span>
+      {# Always shown, "0" included, so the button keeps its width when a filter comes or goes. #}
+      <span id="changelist-filter-count" class="badge badge-sm ml-0.5 tabular-nums {{ "badge-primary" if cl.active_filter_count else "text-base-content/60" }}">{{ number(cl.active_filter_count) }}</span>
+    </button>
+    {% if cl.filter_form is not none %}
+    <noscript><button type="submit" class="btn">{{ _("Filter") }}</button></noscript>
+    {% endif %}
+  </div>
+  <div id="changelist-filter-row" x-show="open" class="mt-3 rounded-box border border-base-300 bg-base-100 px-4 py-3"{% if not filters_open %} style="display: none"{% endif %}>
+    {% if cl.has_filters %}
+    {# The link stays in place, dimmed while no filter is set. Like Django's, it keeps the search and the sort. #}
+    <div class="mb-2 flex items-center justify-between gap-3 border-b border-base-200 pb-2">
+      <span class="text-sm text-base-content/60">{% if cl.has_active_filters %}{% trans trimmed count=cl.active_filter_count, total=number(cl.active_filter_count) %}{{ total }} filter active{% pluralize %}{{ total }} filters active{% endtrans %}{% else %}{{ _("No filters active") }}{% endif %}</span>
+      {% if cl.has_active_filters %}
+      <a {{ m.list_link(cl.clear_all_filters_qs) }} data-clear-filters class="btn btn-ghost btn-sm -me-3 gap-1.5 text-base-content/70">{{ icon("x") }}{{ _("Clear all filters") }}</a>
+      {% else %}
+      <a role="link" aria-disabled="true" class="btn btn-ghost btn-sm pointer-events-none -me-3 gap-1.5 text-base-content/70 opacity-35">{{ icon("x") }}{{ _("Clear all filters") }}</a>
+      {% endif %}
+    </div>
+    <div class="grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+      {% for field in cl.filter_fields %}
+      <div data-filter>{{ field.as_field_group() }}</div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center gap-3 py-6 text-center">
+      <span class="grid size-10 place-items-center rounded-full bg-base-200 text-base-content/40">{{ icon("list-filter", "size-5") }}</span>
+      <div>
+        <p class="font-medium">{{ _("No filters") }}</p>
+        <p class="mt-1 text-sm text-base-content/60">{{ _("There are no filters for %(name)s.", name=opts.verbose_name_plural) }}</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}
+
+{% block result_list %}
+{# The selection lives outside #changelist, so a morph that brings in new rows keeps it. #}
+<div x-data="formworkChangelist">
+  {% include "formwork_admin/change_list_results.html" %}
+</div>
+{% endblock %}
+{% endblock %}

@@ -2,6 +2,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
 
+from django_formwork.admin import site
+
 from . import views
 
 urlpatterns = [
@@ -16,6 +18,7 @@ urlpatterns = [
     path("wizard/confirm/", views.wizard_confirm, name="wizard_confirm"),
     path("settings/", views.settings_page, name="settings"),
     path("__formwork__/", include("django_formwork.urls")),
+    path("admin/", site.urls),
 ]
 
 if settings.DEBUG:

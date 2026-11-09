@@ -1,0 +1,57 @@
+/*
+ * admin.css: the Tailwind input for django_formwork.admin.
+ *
+ * Import it after formwork.css in your Tailwind entry:
+ *
+ *   @import "path/to/django_formwork/static/formwork/formwork.css";
+ *   @import "path/to/django_formwork/admin/static/formwork_admin/admin.css";
+ *
+ * The admin's templates and Python sources are registered with @source
+ * below, relative to this file.  The templates carry DaisyUI and Tailwind
+ * classes; the rules here reach markup that Django or a widget renders.
+ */
+
+@source "../../";
+
+/* Links in HTML the admin does not render itself (format_html() cells,
+   read-only values, fieldset descriptions) are underlined like its own. */
+#content a:not([class]) {
+  @apply link;
+}
+
+/* list_editable cells: the widget renders the control, the cell fits it to the row. */
+[data-editable] :is(input:not([type="hidden"], [type="checkbox"], [type="radio"]), select, summary) {
+  @apply w-full max-w-64 min-w-24 text-sm [--size:2rem];
+}
+
+[data-editable] input[type="number"] {
+  @apply ms-auto max-w-32 text-end;
+}
+
+/* An inline row marked for deletion fades and strikes its values. */
+[data-inline-row]:has([name$="-DELETE"]:checked) :is(td:not(:last-child), [data-inline-fields]) {
+  @apply line-through opacity-45;
+}
+
+/* The changelist's column toggle stays hidden until columns.js finds columns that don't fit.
+   Without the script, the table scrolls sideways as in Django's admin. */
+#changelist-table [data-col-toggle] {
+  display: none;
+}
+
+/* A line parts each app in the sidebar from the app shown above it, also while the model filter hides some. */
+[data-nav-app]:not([style*="display: none"]) ~ [data-nav-app]:not([style*="display: none"]) {
+  @apply relative mt-2 pt-3 before:absolute before:inset-x-3 before:top-0 before:border-t before:border-base-300;
+}
+
+/* The date range filter drops its calendar icon in a narrow filter column,
+   so both dates keep their room. */
+.date-range-filter {
+  container-type: inline-size;
+}
+
+@container (width < 15rem) {
+  .date-range-filter .date-range-field > .icon {
+    display: none;
+  }
+}

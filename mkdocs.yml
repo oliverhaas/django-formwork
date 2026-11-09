@@ -61,5 +61,6 @@ nav:
       - Formsets: reference/formsets.md
       - Widgets: reference/widgets.md
       - Views: reference/views.md
+      - Admin: reference/admin.md
       - Browser Support: reference/browser-support.md
       - Changelog: reference/changelog.md

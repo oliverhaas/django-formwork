@@ -1,0 +1,44 @@
+<nav class="flex h-full w-72 flex-col border-r border-base-300 bg-base-100" x-data="formworkNav" aria-label="{{ _("Models") }}">
+  {# The brand row matches the height and border of the top bar; only the model list scrolls. #}
+  <div class="shrink-0 border-b border-base-300">
+    <a href="{{ url(site.name ~ ":index") }}" class="flex h-14 items-center gap-3 px-5">
+      <span class="grid size-8 place-items-center rounded-field bg-primary text-primary-content">{{ icon("layout-dashboard", "size-4.5") }}</span>
+      <span class="min-w-0">
+        <span class="block truncate text-sm font-semibold leading-tight">{{ site_header }}</span>
+        <span class="block truncate text-xs leading-tight text-base-content/50">{{ site_title }}</span>
+      </span>
+    </a>
+  </div>
+  <div class="shrink-0 px-3 pt-3 pb-1">
+    <label class="input input-sm w-full">
+      {{ icon("search", "size-4 opacity-50") }}
+      <input type="search" id="formwork-admin-nav-filter" x-model="query" @keydown.escape="query = ''" @keydown.enter.prevent="open()"
+             placeholder="{{ _("Filter models") }}" aria-label="{{ _("Filter models") }}" autocomplete="off">
+      <kbd class="kbd kbd-xs hidden lg:inline-flex">Ctrl K</kbd>
+    </label>
+  </div>
+  <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-6 [scrollbar-color:var(--color-base-300)_transparent] [scrollbar-width:thin]">
+    {% for app in available_apps %}
+    <ul data-nav-app class="menu menu-sm w-full [--menu-active-bg:color-mix(in_oklab,var(--color-primary)_10%,transparent)] [--menu-active-fg:var(--color-primary)]" x-show="appMatches($el)">
+      <li class="menu-title">
+        <a href="{{ app.app_url }}" class="text-xs font-semibold tracking-wide text-base-content/60 uppercase transition-colors hover:text-base-content">{{ app.name }}</a>
+      </li>
+      {% for model in app.models %}
+      {% set active = model.admin_url and request.path.startswith(model.admin_url) %}
+      <li data-name="{{ model.name|lower }} {{ app.name|lower }}" x-show="matches($el)">
+        {% if model.admin_url %}
+        <a href="{{ model.admin_url }}" class="group gap-3 shadow-none{% if active %} font-medium{% endif %}"{% if active %} aria-current="page"{% endif %}>
+          {{ icon(model.icon, "size-4 opacity-60 group-aria-[current=page]:opacity-100") }}
+          <span class="flex-1 truncate">{{ model.name }}</span>
+          {% if model.view_only %}<span class="opacity-40" title="{{ _("View only") }}">{{ icon("eye", "size-3.5") }}</span>{% endif %}
+        </a>
+        {% else %}
+        <span class="gap-3 text-base-content/50">{{ icon(model.icon, "size-4") }}<span class="flex-1 truncate">{{ model.name }}</span></span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endfor %}
+    <p class="px-4 py-6 text-center text-sm text-base-content/50" x-show="query && !anyMatch()" x-cloak>{{ _("No models match.") }}</p>
+  </div>
+</nav>

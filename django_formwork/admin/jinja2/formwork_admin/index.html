@@ -1,0 +1,51 @@
+{% extends "formwork_admin/base.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block breadcrumbs %}<li class="font-medium">{{ _("Home") }}</li>{% endblock %}
+
+{% block content %}
+{{ m.page_header(title, site_header) }}
+<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+  <div class="columns-1 gap-6 md:columns-2 *:mb-6 *:break-inside-avoid">
+    {% include "formwork_admin/app_list.html" %}
+  </div>
+  {% block sidebar %}
+  <section class="card h-fit border border-base-300 bg-base-100" aria-labelledby="recent-actions">
+    <div class="flex items-center gap-2 border-b border-base-300 px-5 py-3">
+      {{ icon("rotate-ccw-clock", "size-4 text-base-content/50") }}
+      <h2 id="recent-actions" class="font-semibold">{{ _("Recent actions") }}</h2>
+    </div>
+    <div class="p-3">
+      {% if not log_entries_enabled %}
+      <p class="px-2 py-1 text-sm text-base-content/60">{{ _("Add django.contrib.admin to INSTALLED_APPS to record changes.") }}</p>
+      {% elif not recent_actions %}
+      <div class="py-6 text-center text-sm text-base-content/50">
+        {{ icon("inbox", "mx-auto mb-2 block size-8 opacity-40") }}
+        {{ _("Nothing changed yet.") }}
+      </div>
+      {% else %}
+      <ul>
+        {% for action in recent_actions %}
+        {% set entry = action.entry %}
+        <li>
+          <{{ "a" if action.url else "div" }}{% if action.url %} href="{{ action.url }}"{% endif %} class="flex items-start gap-3 rounded-field px-2 py-1.5{% if action.url %} transition-colors hover:bg-base-200{% endif %}">
+            <span class="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full {{ {"add": "bg-success/15 text-success", "change": "bg-info/15 text-info", "delete": "bg-error/15 text-error"}[action.kind] }}">
+              {{ icon({"add": "plus", "change": "pencil", "delete": "trash"}[action.kind], "size-3.5") }}
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm{% if action.kind == "delete" %} text-base-content/60 line-through{% endif %}">{{ entry.object_repr }}</span>
+              <span class="block truncate text-xs text-base-content/50">
+                {{ entry.content_type.name|capfirst if entry.content_type else _("Unknown content") }}
+                · <time datetime="{{ entry.action_time.isoformat() }}" title="{{ entry.action_time|datetime }}">{{ entry.action_time|ago }}</time>
+              </span>
+            </span>
+          </{{ "a" if action.url else "div" }}>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </section>
+  {% endblock %}
+</div>
+{% endblock %}

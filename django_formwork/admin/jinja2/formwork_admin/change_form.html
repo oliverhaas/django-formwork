@@ -1,0 +1,72 @@
+{% extends "formwork_admin/base.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block bodyclass %}formwork-admin-changeform app-{{ opts.app_label }} model-{{ opts.model_name }}{% endblock %}
+
+{% block breadcrumbs %}
+<li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>
+<li><a href="{{ url(site.name ~ ":app_list", app_label=opts.app_label) }}" class="text-base-content/60">{{ opts.app_config.verbose_name }}</a></li>
+{% if has_view_permission or has_change_permission %}
+<li><a href="{{ changelist_url }}" class="text-base-content/60">{{ opts.verbose_name_plural|capfirst }}</a></li>
+{% else %}
+<li class="text-base-content/60">{{ opts.verbose_name_plural|capfirst }}</li>
+{% endif %}
+<li class="min-w-0 font-medium"><span class="block truncate">{{ original if original is not none and not add else _("Add %(name)s", name=opts.verbose_name) }}</span></li>
+{% endblock %}
+
+{% block content %}
+<form id="{{ opts.model_name }}_form" method="post" action="{{ form_url }}"{% if has_file_field %} enctype="multipart/form-data"{% endif %} novalidate
+      class="mx-auto max-w-5xl" x-data="formworkChangeForm" data-prepopulated="{{ adminform.prepopulated_fields|tojson_attr }}" data-add="{{ "1" if add else "" }}">
+  {{ csrf_input }}
+
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+    <div class="flex min-w-0 items-center gap-3">
+      <span class="hidden size-11 shrink-0 place-items-center rounded-box bg-primary/10 text-primary sm:grid">{{ icon(model_admin.get_icon(), "size-5") }}</span>
+      <div class="min-w-0">
+        <h1 class="truncate text-2xl font-semibold tracking-tight">{{ subtitle if subtitle else title }}</h1>
+        <p class="mt-0.5 truncate text-sm text-base-content/60">{{ title if subtitle else opts.verbose_name_plural|capfirst }}</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-1">
+      {% block object_tools %}
+      {% if history_url %}
+      <a href="{{ history_url }}" class="btn btn-ghost btn-sm">{{ icon("rotate-ccw-clock") }} {{ _("History") }}</a>
+      {% endif %}
+      {% if view_on_site_url %}
+      <a href="{{ view_on_site_url }}" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">{{ icon("external-link") }} {{ _("View on site") }}</a>
+      {% endif %}
+      {% endblock %}
+    </div>
+  </div>
+
+  {{ m.errors_alert(error_count, adminform.non_field_errors) }}
+
+  {% if save_on_top %}
+  <div class="mb-6">{% include "formwork_admin/submit_line.html" %}</div>
+  {% endif %}
+
+  {% for hidden in adminform.hidden_fields %}{{ hidden }}{% endfor %}
+
+  <div class="grid grid-cols-1 gap-6">
+    {% block field_sets %}
+    {% for fieldset in adminform %}
+    {{ m.fieldset_card(fieldset) }}
+    {% endfor %}
+    {% endblock %}
+
+    {% block inline_field_sets %}
+    {% for inline in inline_admin_formsets %}
+    {% include inline.opts.template or ("formwork_admin/edit_inline/tabular.html" if inline.is_tabular else "formwork_admin/edit_inline/stacked.html") %}
+    {% endfor %}
+    {% endblock %}
+
+    {% block after_related_objects %}{% endblock %}
+  </div>
+
+  {% block submit_buttons_bottom %}
+  <div class="sticky bottom-3 z-10 mt-6 rounded-box border border-base-300 bg-base-100/90 px-4 py-3 shadow-lg backdrop-blur">
+    {% include "formwork_admin/submit_line.html" %}
+  </div>
+  {% endblock %}
+</form>
+{% endblock %}

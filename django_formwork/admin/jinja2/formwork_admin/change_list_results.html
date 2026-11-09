@@ -1,0 +1,170 @@
+{% import "formwork_admin/macros.html" as m %}
+{% set editable = formset is not none %}
+{# Columns that don't fit hide from the right behind a toggle; the first and the link columns stay. #}
+{% set collapsible = cl.columns|length > 1 %}
+{% set columns = cl.columns|length + (1 if actions else 0) + (1 if collapsible else 0) %}
+{% set filtered = cl.has_active_filters or cl.query %}
+{# A neutral box that turns primary when checked, like the rest of the selection. #}
+{% set checkbox = "checkbox checkbox-sm text-primary-content checked:[--input-color:var(--color-primary)] indeterminate:[--input-color:var(--color-primary)]" %}
+{# Opaque row colors, so a pinned column takes its row's color over the columns that scroll under it. #}
+{% set head_bg = "bg-[color-mix(in_srgb,var(--color-base-200)_50%,var(--color-base-100))]" %}
+{% set row_bg = "bg-base-100 hover:bg-[color-mix(in_srgb,var(--color-base-200)_60%,var(--color-base-100))]" %}
+{% set selected_bg = "bg-[color-mix(in_srgb,var(--color-primary)_7%,var(--color-base-100))] hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,var(--color-base-100))]" %}
+<div id="changelist">
+<div id="changelist-{{ cl.state_key }}" x-init="reset($el)" data-total="{{ cl.result_count }}">
+  {% if cl.current_order %}<input type="hidden" name="o" value="{{ cl.current_order }}" form="changelist-filters">{% endif %}
+
+  <div class="card overflow-hidden border border-base-300 bg-base-100">
+    {% if editable %}
+    <form id="changelist-form" method="post"{% if formset.is_multipart() %} enctype="multipart/form-data"{% endif %} novalidate>
+      {{ csrf_input }}
+      {{ formset.management_form }}
+      {% if formset.non_form_errors() %}
+      <div role="alert" class="alert alert-error alert-soft m-3">{{ icon("circle-exclamation-point", "size-5") }}<span>{{ formset.non_form_errors()|join(" ") }}</span></div>
+      {% endif %}
+    {% endif %}
+    {# columns.js fits the columns to this box. #}
+    <div id="changelist-scroll" class="overflow-x-auto"{% if collapsible %} data-columns="{{ opts.label_lower }}"{% endif %}>
+      <table id="changelist-table" class="table table-sm">
+        <thead>
+          <tr class="{{ head_bg }}">
+            {% if actions %}
+            <th class="w-10" data-pin>
+              <input type="checkbox" class="{{ checkbox }}" aria-label="{{ _("Select all on this page") }}"
+                     :checked="allChecked" :indeterminate="someChecked" @change="toggleAll($event.target.checked)"
+                     {% if not cl.result_list %}disabled{% endif %}>
+            </th>
+            {% endif %}
+            {% for column in cl.columns %}
+            <th class="font-medium{{ " text-right" if column.numeric }}" data-col{% if loop.first or column.linked %} data-pin{% endif %}{% if column.direction %} aria-sort="{{ "ascending" if column.direction == "asc" else "descending" }}"{% endif %}>
+              {% if column.sort_url %}
+              <a {{ m.list_link(column.sort_url) }} class="group inline-flex items-center gap-1 whitespace-nowrap transition-colors hover:text-base-content{% if column.numeric %} flex-row-reverse{% endif %}{% if column.direction %} text-base-content{% endif %}">
+                {{ column.label }}
+                {% if column.direction == "asc" %}{{ icon("arrow-up", "size-3.5 text-primary") }}
+                {% elif column.direction == "desc" %}{{ icon("arrow-down", "size-3.5 text-primary") }}
+                {% else %}{{ icon("chevrons-up-down", "size-3.5 opacity-0 transition-opacity group-hover:opacity-60") }}{% endif %}
+              </a>
+              {% else %}
+              <span class="whitespace-nowrap">{{ column.label }}</span>
+              {% endif %}
+            </th>
+            {% endfor %}
+            {% if collapsible %}
+            <th class="w-px px-1 text-center" data-col-toggle>
+              {% set more, less = _("Show all columns"), _("Show fewer columns") %}
+              <button type="button" class="btn btn-ghost btn-sm w-14 gap-0.5 px-0 font-medium tabular-nums text-base-content/70"
+                      aria-controls="changelist-table" aria-expanded="false" aria-label="{{ more }}" title="{{ more }}" data-more="{{ more }}" data-less="{{ less }}">
+                <span data-col-more class="inline-flex items-center gap-0.5">+<span data-col-count></span>{{ icon("chevrons-right", "size-3.5") }}</span>
+                <span data-col-less class="inline-flex">{{ icon("chevrons-left", "size-3.5") }}</span>
+              </button>
+            </th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in cl.rows %}
+          <tr data-pk="{{ row.value }}" class="transition-colors" :class="selected.includes($el.dataset.pk) ? '{{ selected_bg }}' : '{{ row_bg }}'">
+            {% if actions %}
+            <td>
+              <input type="checkbox" class="{{ checkbox }}" name="{{ action_checkbox_name }}" value="{{ row.value }}"
+                     form="changelist-actions" x-model="selected" @click="range($event)" @mousedown.shift.prevent data-index="{{ row.index }}"
+                     aria-label="{{ _("Select row") }}">
+            </td>
+            {% endif %}
+            {% for c in row.cells %}
+            <td class="{{ "min-w-48" if c.wrap else "whitespace-nowrap" }}{{ " text-right" if c.numeric }}"{% if c.field is not none %} data-editable{% endif %}{% if c.field is not none and c.field.errors %} data-invalid{% endif %}>
+              {% if c.field is not none %}
+              {{ c.field.as_widget(attrs={"aria-label": c.field.label}) }}
+              {% if c.field.errors %}<p class="mt-1 text-xs text-error">{{ c.field.errors|join(" ") }}</p>{% endif %}
+              {% elif c.link %}
+              <a href="{{ c.link }}" class="link link-primary font-medium">{{ m.cell(c) }}</a>
+              {% else %}
+              {{ m.cell(c) }}
+              {% endif %}
+            </td>
+            {% endfor %}
+            {% if row.form is not none %}
+            <td class="hidden">{% for hidden in row.form.hidden_fields() %}{{ hidden }}{% endfor %}</td>
+            {% endif %}
+            {% if collapsible %}<td data-col-toggle></td>{% endif %}
+          </tr>
+          {% else %}
+          <tr data-empty>
+            <td colspan="{{ columns }}">
+              <div class="flex flex-col items-center gap-3 py-16 text-center">
+                <span class="grid size-12 place-items-center rounded-full bg-base-200 text-base-content/40">{{ icon("search-x" if filtered else "inbox", "size-6") }}</span>
+                <div>
+                  <p class="font-medium">{{ _("No %(name)s found", name=opts.verbose_name_plural) if filtered else _("No %(name)s yet", name=opts.verbose_name_plural) }}</p>
+                  <p class="mt-1 text-sm text-base-content/60">
+                    {{ _("Nothing matches the search and filters.") if filtered else _("Once added, they appear here.") }}
+                  </p>
+                </div>
+                {% if cl.has_active_filters %}
+                <a {{ m.list_link(cl.clear_all_filters_qs) }} data-clear-filters class="btn btn-sm">{{ _("Clear all filters") }}</a>
+                {% elif has_add_permission and not filtered %}
+                <a href="{{ url(model_admin.url_name("add")) }}" class="btn btn-primary btn-sm"
+                   aria-label="{{ _("Add %(name)s", name=opts.verbose_name) }}">{{ icon("plus") }} {{ _("Add") }}</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if editable and cl.result_list %}
+    <div class="flex items-center justify-end gap-2 border-t border-base-300 bg-base-200/40 px-4 py-2.5">
+      <button type="submit" name="_save" value="1" class="btn btn-primary btn-sm">{{ icon("check") }} {{ _("Save changes") }}</button>
+    </div>
+    {% endif %}
+    {% if editable %}</form>{% endif %}
+
+    <div id="changelist-footer" class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-4 py-3">
+      <p class="text-sm text-base-content/60">
+        {% if cl.result_count %}
+        {% if cl.show_all or not cl.multi_page %}
+        {% trans trimmed count=cl.result_count, total=number(cl.result_count) %}{{ total }} result{% pluralize %}{{ total }} results{% endtrans %}
+        {% elif cl.is_estimate %}
+        {% trans trimmed start=number(cl.page.start_index()), end=number(cl.page.end_index()), total=number(cl.result_count) %}{{ start }}&#8211;{{ end }} of about {{ total }}{% endtrans %}
+        {% else %}
+        {% trans trimmed start=number(cl.page.start_index()), end=number(cl.page.end_index()), total=number(cl.result_count) %}{{ start }}&#8211;{{ end }} of {{ total }}{% endtrans %}
+        {% endif %}
+        {% if cl.full_result_count is not none %}
+        <span class="text-base-content/40">({{ _("%(total)s total", total=number(cl.full_result_count)) }})</span>
+        {% endif %}
+        {% endif %}
+      </p>
+      <div class="flex items-center gap-2">
+        {% if cl.multi_page and cl.can_show_all and not cl.show_all %}
+        <a {{ m.list_link(cl.get_query_string({"all": "", "p": none})) }} class="btn btn-ghost btn-sm">{{ _("Show all") }}</a>
+        {% endif %}
+        {{ m.pagination(cl) }}
+      </div>
+    </div>
+  </div>
+
+  {% if actions %}
+  <form id="changelist-actions" method="post" x-show="count" x-cloak x-transition.opacity.duration.150ms
+        class="sticky bottom-4 z-10 mx-auto mt-4 flex w-fit max-w-full flex-wrap items-center gap-1 rounded-box border border-base-300 bg-base-100 p-1.5 pl-4 shadow-xl">
+    {{ csrf_input }}
+    <input type="hidden" name="select_across" :value="across ? '1' : '0'" value="0">
+    <span class="mr-1 text-sm font-medium tabular-nums">
+      <span x-show="!across"><span x-text="count"></span> {{ _("selected") }}</span>
+      <span x-show="across" x-cloak>{{ _("All %(count)s selected", count=number(cl.result_count)) }}</span>
+    </span>
+    {% if cl.result_count > cl.result_list|length %}
+    <button type="button" class="btn btn-link btn-sm px-1" x-show="allChecked && !across" @click="across = true">
+      {{ _("Select all %(count)s", count=number(cl.result_count)) }}
+    </button>
+    {% endif %}
+    <button type="button" class="btn btn-ghost btn-sm btn-square" @click="clear()" aria-label="{{ _("Clear selection") }}" title="{{ _("Clear selection") }}">{{ icon("x") }}</button>
+    <span class="mx-1 h-6 w-px bg-base-300" aria-hidden="true"></span>
+    {% for action in actions %}
+    <button type="submit" name="action" value="{{ action.name }}" class="btn btn-sm {{ "btn-error btn-soft" if action.danger else "btn-ghost" }}">
+      {% if action.icon %}{{ icon(action.icon) }}{% endif %}{{ action.label }}
+    </button>
+    {% endfor %}
+  </form>
+  {% endif %}
+</div>
+</div>

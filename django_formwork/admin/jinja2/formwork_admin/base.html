@@ -1,0 +1,83 @@
+{% import "formwork_admin/macros.html" as m %}
+{% if content_only %}
+{#- An htmx morph of the page content: the content block, and the messages as toasts. #}
+{{ self.content() }}
+{{ m.toasts(messages, oob=True) }}
+{% else %}
+<!DOCTYPE html>
+<html lang="{{ request.LANGUAGE_CODE|default("en") }}" class="formwork-admin [scrollbar-gutter:stable]">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}{% if title is defined and title %}{{ title }} | {% endif %}{{ site_title }}{% endblock %}</title>
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("formwork-admin-theme");
+        if (theme) document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    })();
+  </script>
+  {% for href in stylesheets %}
+  <link rel="stylesheet" href="{{ href if "//" in href else static(href) }}">
+  {% endfor %}
+  {% block extrastyle %}{% endblock %}
+  {% for src in scripts %}
+  <script src="{{ src if "//" in src else static(src) }}"></script>
+  {% endfor %}
+  {#- A classic script, so it fits the changelist's columns while the page parses. #}
+  <script src="{{ static("formwork_admin/columns.js") }}"></script>
+  <script type="module" src="{{ static("formwork/formwork.js") }}"></script>
+  <script type="module" src="{{ static("formwork_admin/admin.js") }}"></script>
+  {% if media is defined %}{{ media }}{% endif %}
+  {% block extrahead %}{% endblock %}
+  <script defer src="{{ alpine_script }}"></script>
+</head>
+<body class="min-h-screen bg-base-200 text-base-content antialiased {% block bodyclass %}{% endblock %}"
+      x-data="formworkAdmin"
+      @keydown.window="shortcut($event)">
+{% block shell %}
+{% set sidebar = has_permission and is_nav_sidebar_enabled %}
+{#- The sidebar's column is sized up front: the sidebar comes after the content and a long page paints before it is parsed. #}
+<div class="drawer lg:drawer-open{% if sidebar %} lg:grid-cols-[18rem_minmax(0,1fr)]{% endif %}">
+  <input id="formwork-admin-nav" type="checkbox" class="drawer-toggle">
+  <div class="drawer-content flex min-h-screen min-w-0 flex-col">
+    <header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/85 backdrop-blur supports-[backdrop-filter]:bg-base-100/70">
+      <div class="flex h-14 items-center gap-2 px-4 lg:px-8">
+        <label for="formwork-admin-nav" class="btn btn-ghost btn-sm btn-square lg:hidden" aria-label="{{ _("Open navigation") }}">
+          {{ icon("menu") }}
+        </label>
+        <nav class="breadcrumbs min-w-0 flex-1 py-0 text-sm" aria-label="{{ _("Breadcrumbs") }}">
+          {# A phone keeps the last two crumbs: the parent to go back to and the page. #}
+          <ul class="max-sm:[&>li:nth-last-child(2)]:before:hidden max-sm:[&>li:nth-last-child(n+3)]:hidden">
+            {% block breadcrumbs %}
+            <li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>
+            {% if title is defined and title %}<li class="min-w-0 font-medium"><span class="block truncate">{{ title }}</span></li>{% endif %}
+            {% endblock %}
+          </ul>
+        </nav>
+        {% block usertools %}
+        {% if has_permission %}
+        {{ m.user_menu(request, site, site_url, csrf_input) }}
+        {% endif %}
+        {% endblock %}
+      </div>
+    </header>
+    <main id="content" class="mx-auto w-full max-w-[100rem] flex-1 px-4 pt-6 pb-16 lg:px-8">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  {% if sidebar %}
+  <aside class="drawer-side z-30">
+    <label for="formwork-admin-nav" aria-label="{{ _("Close navigation") }}" class="drawer-overlay"></label>
+    {% include "formwork_admin/nav_sidebar.html" %}
+  </aside>
+  {% endif %}
+</div>
+{% endblock %}
+{{ m.toasts(messages) }}
+{% block footer %}{% endblock %}
+</body>
+</html>
+{% endif %}

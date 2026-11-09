@@ -40,6 +40,15 @@
   button that clears the stored file, with a second button to keep it before the save.
   It posts the same fields as Django's widget, so `widget=widgets.ClearableFileInput`
   is the only change a form needs.
+- `django_formwork.admin` (experimental): a Django admin on formwork forms, django-filter,
+  htmx and Jinja2, styled with DaisyUI. It keeps the options, hooks, URL names and
+  permissions of `django.contrib.admin`, so an `admin.py` ports by importing
+  `from django_formwork import admin`. Install it with `django-formwork[admin]` and see
+  [Admin](admin.md) for the setup. A list exports to CSV, Excel or JSON, and a long list
+  exports in a background task, so run `migrate` after you add the app. With
+  `import_formats` set, a list also imports CSV, Excel or JSON files: a preview shows
+  the new, changed and invalid rows before anything is saved. Columns that do
+  not fit the width of a list hide behind a button that shows them all.
 
 ### Changed
 

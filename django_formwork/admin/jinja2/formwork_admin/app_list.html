@@ -1,0 +1,35 @@
+{% for app in app_list %}
+<section class="card h-fit border border-base-300 bg-base-100" aria-labelledby="app-{{ app.app_label }}">
+  <div class="flex items-center justify-between gap-3 border-b border-base-300 px-5 py-3">
+    <h2 id="app-{{ app.app_label }}" class="truncate font-semibold">
+      <a href="{{ app.app_url }}" class="hover:text-primary">{{ app.name }}</a>
+    </h2>
+    <span class="badge badge-ghost badge-sm tabular-nums">{{ app.models|length }}</span>
+  </div>
+  <ul class="divide-y divide-base-200">
+    {% for model in app.models %}
+    <li class="group relative flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-base-200/50">
+      <span class="grid size-8 shrink-0 place-items-center rounded-field bg-base-200 text-base-content/70 transition-colors group-hover:bg-primary/10 group-hover:text-primary">{{ icon(model.icon) }}</span>
+      {% if model.admin_url %}
+      <a href="{{ model.admin_url }}" class="min-w-0 flex-1 truncate text-sm font-medium after:absolute after:inset-0">{{ model.name }}</a>
+      {% else %}
+      <span class="min-w-0 flex-1 truncate text-sm font-medium text-base-content/60">{{ model.name }}</span>
+      {% endif %}
+      {% if model.view_only %}
+      <span class="badge badge-ghost badge-sm gap-1">{{ icon("eye", "size-3") }} {{ _("View") }}</span>
+      {% endif %}
+      {% if model.add_url %}
+      <a href="{{ model.add_url }}" class="btn btn-ghost btn-xs btn-square relative z-10 opacity-60 group-hover:opacity-100" aria-label="{{ _("Add %(name)s", name=model.name) }}" title="{{ _("Add") }}">{{ icon("plus") }}</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% else %}
+<div class="card border border-dashed border-base-300 bg-base-100 md:col-span-2 [column-span:all]">
+  <div class="card-body items-center py-16 text-center">
+    {{ icon("lock", "size-10 opacity-30") }}
+    <p class="text-base-content/60">{{ _("You don't have permission to view or edit anything.") }}</p>
+  </div>
+</div>
+{% endfor %}

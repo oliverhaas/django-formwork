@@ -1,0 +1,34 @@
+{# The body of both delete confirmations. Reads ``to_delete``, ``model_count``, ``perms_lacking`` and ``protected``. #}
+{% import "formwork_admin/macros.html" as m %}
+{% if perms_lacking %}
+<div role="alert" class="alert alert-warning alert-soft items-start">
+  {{ icon("lock", "size-5 mt-0.5") }}
+  <div>
+    <p class="font-medium">{{ _("Your account lacks permission to delete these related objects:") }}</p>
+    <ul class="mt-1 list-inside list-disc text-sm">{% for name in perms_lacking %}<li>{{ name|capfirst }}</li>{% endfor %}</ul>
+  </div>
+</div>
+{% elif protected %}
+<div role="alert" class="alert alert-error alert-soft">
+  {{ icon("shield-exclamation-point", "size-5") }}
+  <span class="text-sm font-medium">{{ _("These related objects are protected:") }}</span>
+</div>
+<div class="max-h-96 overflow-y-auto rounded-box border border-base-300 px-4 py-3">{{ m.nested(protected, delete_confirmation_max_display) }}</div>
+{% else %}
+{% if model_count %}
+<div class="flex flex-wrap gap-2">
+  {% for name, count in model_count %}
+  <span class="badge gap-1.5 border-base-300 bg-base-200/60">
+    {{ name|capfirst }} <span class="font-semibold tabular-nums">{{ number(count) }}</span>
+  </span>
+  {% endfor %}
+</div>
+{% endif %}
+<details class="group/del rounded-box border border-base-300"{% if to_delete|length < 12 %} open{% endif %}>
+  <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
+    {{ icon("chevron-right", "size-4 text-base-content/50 transition-transform group-open/del:rotate-90") }}
+    {{ _("Objects that will be deleted") }}
+  </summary>
+  <div class="max-h-96 overflow-y-auto border-t border-base-300 px-4 py-3">{{ m.nested(to_delete, delete_confirmation_max_display) }}</div>
+</details>
+{% endif %}

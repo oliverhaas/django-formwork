@@ -1,0 +1,201 @@
+{% extends "formwork_admin/base.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block bodyclass %}formwork-admin-import app-{{ opts.app_label }} model-{{ opts.model_name }}{% endblock %}
+
+{% block breadcrumbs %}
+{{ m.model_crumbs(site, opts, changelist_url if has_view_permission or has_change_permission else None) }}
+<li class="font-medium">{{ _("Import") }}</li>
+{% endblock %}
+
+{% block content %}
+{% set head_bg = "bg-[color-mix(in_srgb,var(--color-base-200)_50%,var(--color-base-100))]" %}
+{{ m.page_header(title, _("Check a file to see what it adds and changes. Nothing is saved until you import it."), "upload") }}
+
+{#- "Check file" morphs the page over htmx and keeps the picked file; "Import" posts the same file again and goes to the list. #}
+<form id="import-form" method="post" action="{{ request.get_full_path() }}" enctype="multipart/form-data" novalidate
+      x-data="{ busy: '', picked: false }"
+      @change="if ($event.target.type === 'file') picked = true"
+      @htmx:finally:request="busy = ''; picked = false"
+      @submit="if (busy) { $event.preventDefault() } else { busy = 'import' }">
+  {{ csrf_input }}
+
+  <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+    <div class="card border border-base-300 bg-base-100">
+      <div class="card-body gap-4 p-6">
+        {% if form.non_field_errors() %}
+        <div role="alert" class="alert alert-error alert-soft items-start">{{ icon("circle-exclamation-point", "size-5 mt-0.5") }}<span>{{ form.non_field_errors()|join(" ") }}</span></div>
+        {% endif %}
+        {{ form.file.as_field_group() }}
+        <div>
+          <button type="submit" name="_check" value="1" class="btn{{ " btn-primary" if result is none or not result.can_import }}"
+                  hx-post="{{ request.get_full_path() }}" hx-target="#content" hx-swap="innerMorph" @click="busy = 'check'">
+            <span class="inline-flex" x-show="busy !== 'check'">{{ icon("file-search") }}</span>
+            <span class="loading loading-spinner loading-sm" x-show="busy === 'check'" x-cloak></span>
+            {{ _("Check file") }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {#- The morph keeps a details' open state, so the id changes with the first check to close the guide. #}
+    <details id="import-columns-{{ "checked" if result is not none else "open" }}" class="card border border-base-300 bg-base-100 [&[open]_[data-chevron]]:rotate-180"{% if result is none %} open{% endif %}>
+      <summary class="flex cursor-pointer list-none items-center gap-3 px-6 py-4 [&::-webkit-details-marker]:hidden">
+        <span class="min-w-0 flex-1">
+          <span class="block font-medium">{{ _("Columns") }}</span>
+          <span class="block text-sm text-base-content/60">{{ _("A header names a field or its label, in any case. A file exported from this list imports as it is.") }}</span>
+        </span>
+        <span data-chevron class="inline-flex shrink-0 text-base-content/50 transition-transform motion-reduce:transition-none">{{ icon("chevron-down") }}</span>
+      </summary>
+      <div class="overflow-x-auto border-t border-base-300">
+        <table class="table table-sm">
+          <thead>
+            <tr class="{{ head_bg }}">
+              <th class="font-medium">{{ _("Column") }}</th>
+              <th class="font-medium">{{ _("Field") }}</th>
+              <th class="font-medium">{{ _("Values") }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in guide %}
+            <tr>
+              <td class="whitespace-nowrap">
+                <code class="font-mono text-xs">{{ entry.name }}</code>{% if entry.required %}<span class="ml-0.5 text-error" title="{{ _("Required for new rows") }}">*</span>{% endif %}
+                {% if entry.key %}<span class="ml-1 inline-flex align-middle text-primary" title="{{ _("Finds the record to update") }}">{{ icon("key-round", "size-3.5") }}<span class="sr-only">{{ _("Finds the record to update") }}</span></span>{% endif %}
+              </td>
+              <td class="whitespace-nowrap">{{ entry.label }}</td>
+              <td class="min-w-48 text-base-content/70">{{ entry.hint }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="border-t border-base-300 px-6 py-3 text-sm text-base-content/60">
+        {{ _("A row whose key column matches a record changes it; the other rows add new %(name)s. Columns the file leaves out keep their values.", name=opts.verbose_name_plural) }}
+      </p>
+    </details>
+  </div>
+
+  {% if result is not none %}
+  {% set mapping = result.mapping %}
+  {% set columns = mapping.columns|length + (2 if mapping.key_shown else 1) %}
+  {% set tiles = [
+    ("new", _("New"), "circle-plus", "text-success"),
+    ("changed", _("Changed"), "pencil", "text-info"),
+    ("unchanged", _("Unchanged"), "equal", "text-base-content/50"),
+    ("error", _("Errors"), "circle-exclamation-point", "text-error"),
+  ] %}
+  {% set badges = {"new": "badge-success badge-soft", "changed": "badge-info badge-soft", "unchanged": "badge-ghost", "error": "badge-error badge-soft"} %}
+  {% set labels = {"new": _("New"), "changed": _("Changed"), "unchanged": _("Unchanged"), "error": _("Error")} %}
+  {#- A new check gives a new id, so the filter starts over. #}
+  <section id="import-preview-{{ result.digest[:16] }}" class="mt-8" x-data="{ show: '' }" x-show="!picked" aria-labelledby="import-preview-title">
+    <input type="hidden" name="digest" value="{{ result.digest }}">
+    <h2 id="import-preview-title" class="mb-3 text-lg font-semibold">{{ _("Preview") }}</h2>
+
+    {% if stale %}
+    <div role="alert" class="alert alert-warning alert-soft mb-4 items-start">
+      {{ icon("triangle-exclamation-point", "size-5 mt-0.5") }}
+      <span>{{ _("The file or the records changed since the last check, so nothing was imported. Look over the new preview and import again.") }}</span>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {% for status, label, icon_name, color in tiles %}
+      {% set count = result.counts[status] %}
+      <button type="button" class="card cursor-pointer border border-base-300 bg-base-100 px-4 py-3 text-left transition-colors hover:border-base-content/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-50 disabled:hover:border-base-300"
+              :class="show === '{{ status }}' && 'border-primary! ring-1 ring-primary'"
+              aria-pressed="false" :aria-pressed="(show === '{{ status }}').toString()"
+              @click="show = show === '{{ status }}' ? '' : '{{ status }}'"{% if not count %} disabled{% endif %}>
+        <span class="flex items-center gap-1.5 text-sm text-base-content/70"><span class="inline-flex {{ color }}">{{ icon(icon_name) }}</span>{{ label }}</span>
+        <span class="mt-0.5 block text-2xl font-semibold tabular-nums">{{ number(count) }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    {% if mapping.ignored or mapping.missing_keys %}
+    <div class="mt-4 space-y-1 text-sm text-base-content/70">
+      {% if mapping.missing_keys %}
+      <p class="flex items-start gap-1.5">{{ icon("info", "size-4 mt-0.5 shrink-0") }}<span>{{ _("The file has no %(key)s column, so every row adds a new %(name)s.", key=mapping.missing_keys|join(", "), name=opts.verbose_name) }}</span></p>
+      {% endif %}
+      {% if mapping.ignored %}
+      <p class="flex items-start gap-1.5">{{ icon("eye-off", "size-4 mt-0.5 shrink-0") }}<span>{{ _("Ignored, no field matches them:") }} {% for header in mapping.ignored %}<code class="font-mono text-xs">{{ header }}</code>{{ ", " if not loop.last }}{% endfor %}</span></p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card mt-4 overflow-hidden border border-base-300 bg-base-100">
+      <div class="max-h-[70vh] overflow-auto">
+        <table class="table table-sm table-pin-rows">
+          <thead>
+            <tr class="{{ head_bg }}">
+              <th class="w-px font-medium">{{ _("Row") }}</th>
+              {% if mapping.key_shown %}<th class="font-medium whitespace-nowrap">{{ mapping.key_label }}</th>{% endif %}
+              {% for column in mapping.columns %}
+              <th class="font-medium whitespace-nowrap" title="{{ column.header }}">{{ column.label }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in preview %}
+            {% set filter = "!show || show === '" ~ row.status ~ "'" %}
+            <tr :class="({{ filter }}) ? '' : '[visibility:collapse]'" class="align-top{{ " border-b-0" if row.messages }}">
+              <td>
+                <span class="flex items-center gap-2 whitespace-nowrap">
+                  <span class="min-w-6 text-right tabular-nums text-base-content/60">{{ row.number }}</span>
+                  <span data-status class="badge badge-sm {{ badges[row.status] }}">{{ labels[row.status] }}</span>
+                </span>
+              </td>
+              {% if mapping.key_shown %}
+              <td class="whitespace-nowrap">{% if row.url %}<a href="{{ row.url }}" class="link link-primary">{{ row.key }}</a>{% elif row.key %}{{ row.key }}{% else %}<span class="text-base-content/35">{{ model_admin.get_empty_value_display() }}</span>{% endif %}</td>
+              {% endif %}
+              {% for c in row.cells %}
+              <td class="{{ "bg-info/5" if c.old is not none }}"{% if c.errors %} data-invalid{% endif %}>
+                {% if c.old is not none %}
+                <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <del class="text-base-content/50">{{ m.cell(c.old) }}</del>
+                  <span class="inline-flex text-base-content/40">{{ icon("arrow-right", "size-3.5") }}<span class="sr-only">{{ _("to") }}</span></span>
+                  <ins class="no-underline">{{ m.cell(c.cell) }}</ins>
+                </span>
+                {% else %}
+                <span class="whitespace-nowrap">{{ m.cell(c.cell) }}</span>
+                {% endif %}
+                {% if c.errors %}<p class="mt-1 min-w-40 text-xs text-error">{{ c.errors|join(" ") }}</p>{% endif %}
+              </td>
+              {% endfor %}
+            </tr>
+            {% if row.messages %}
+            <tr :class="({{ filter }}) ? '' : '[visibility:collapse]'">
+              <td colspan="{{ columns }}" class="pt-0 pl-11">
+                <p class="flex items-start gap-1.5 text-xs text-error">{{ icon("circle-exclamation-point", "size-3.5 mt-px shrink-0") }}<span>{{ row.messages|join(" ") }}</span></p>
+              </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-4 py-3">
+        <div class="text-sm text-base-content/70">
+          {% if result.errors %}
+          <p class="flex items-center gap-1.5">{{ icon("circle-exclamation-point", "size-4 shrink-0 text-error") }}<span>{% trans trimmed count=result.errors, total=number(result.errors) %}Fix the row with an error in the file and check it again.{% pluralize %}Fix the {{ total }} rows with errors in the file and check it again.{% endtrans %}</span></p>
+          {% elif not result.pending %}
+          <p>{{ _("Nothing to import: every row matches its record.") }}</p>
+          {% else %}
+          <p>{{ _("Adds %(added)s and changes %(changed)s %(name)s in one go; unchanged rows are skipped.", added=number(result.counts["new"]), changed=number(result.counts["changed"]), name=opts.verbose_name_plural) }}</p>
+          {% endif %}
+          {% if preview|length < result.rows|length %}
+          <p class="text-base-content/50">{{ _("The table shows %(shown)s of %(total)s rows, the ones with errors first.", shown=number(preview|length), total=number(result.rows|length)) }}</p>
+          {% endif %}
+        </div>
+        <button type="submit" name="_import" value="1" class="btn btn-primary"{% if result.can_import %} :disabled="picked"{% else %} disabled{% endif %}>
+          <span class="inline-flex" x-show="busy !== 'import'">{{ icon("upload") }}</span>
+          <span class="loading loading-spinner loading-sm" x-show="busy === 'import'" x-cloak></span>
+          {% if result.pending %}{% trans trimmed count=result.pending, total=number(result.pending) %}Import {{ total }} row{% pluralize %}Import {{ total }} rows{% endtrans %}{% else %}{{ _("Import") }}{% endif %}
+        </button>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+</form>
+{% endblock %}

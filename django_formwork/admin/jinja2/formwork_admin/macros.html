@@ -1,0 +1,261 @@
+{# Pieces every admin page shares. Import with {% import "formwork_admin/macros.html" as m %}. #}
+
+{% macro page_header(title, subtitle=None, icon_name=None) %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+  <div class="flex min-w-0 items-center gap-3">
+    {% if icon_name %}
+    <span class="hidden size-11 shrink-0 place-items-center rounded-box bg-primary/10 text-primary sm:grid">{{ icon(icon_name, "size-5") }}</span>
+    {% endif %}
+    <div class="min-w-0">
+      <h1 class="truncate text-2xl font-semibold tracking-tight">{{ title }}</h1>
+      {% if subtitle %}<p class="mt-0.5 text-sm text-pretty text-base-content/60">{{ subtitle }}</p>{% endif %}
+    </div>
+  </div>
+  {% if caller is defined %}<div class="flex flex-wrap items-center gap-2">{{ caller() }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro cell(c) %}
+{% if c.kind == "empty" %}<span class="text-base-content/35">{{ c.text }}</span>
+{% elif c.kind == "boolean" %}{% if c.text %}<span class="inline-flex text-success" title="{{ _("Yes") }}">{{ icon("circle-check", "size-[1.125rem]") }}<span class="sr-only">{{ _("Yes") }}</span></span>{% else %}<span class="inline-flex text-base-content/30" title="{{ _("No") }}">{{ icon("circle-x", "size-[1.125rem]") }}<span class="sr-only">{{ _("No") }}</span></span>{% endif %}
+{% elif c.kind == "badge" %}<span class="badge badge-sm whitespace-nowrap {{ "badge-ghost" if c.color == "neutral" else "badge-soft badge-" ~ c.color }}">{{ c.text }}</span>
+{% elif c.kind == "number" %}<span class="tabular-nums">{{ c.text }}</span>
+{% elif c.kind == "date" %}<span class="whitespace-nowrap tabular-nums">{{ c.text }}</span>
+{% elif c.kind == "html" %}{{ c.text|safe }}
+{% elif c.kind == "file" %}{% if c.url %}<a class="link link-primary inline-flex items-center gap-1" href="{{ c.url }}">{{ icon("paperclip", "size-3.5") }}{{ c.text.rsplit("/", 1)[-1] }}</a>{% else %}{{ c.text }}{% endif %}
+{% elif c.kind == "json" %}<code class="block max-w-xs truncate font-mono text-xs text-base-content/70">{{ c.text }}</code>
+{% else %}{{ c.text }}
+{% endif %}
+{% endmacro %}
+
+{% macro admin_field(cell) %}
+{% if cell.field is not none %}
+{{ cell.field.as_field_group() }}
+{% else %}
+{{ readonly(cell.readonly) }}
+{% endif %}
+{% endmacro %}
+
+{% macro readonly(ro) %}
+<fieldset class="fieldset">
+  <span class="fieldset-legend">{{ ro.label }}</span>
+  <div class="min-h-10 py-2.5 text-sm wrap-anywhere">{{ ro.contents }}</div>
+  {% if ro.help_text %}<p class="label">{{ ro.help_text }}</p>{% endif %}
+</fieldset>
+{% endmacro %}
+
+{% macro errors_alert(count, non_field_errors=()) %}
+{% if count or non_field_errors %}
+<div role="alert" class="alert alert-error alert-soft mb-6 items-start">
+  {{ icon("circle-exclamation-point", "size-5 mt-0.5") }}
+  <div>
+    <p class="font-medium">{% trans trimmed count=count %}Please correct the error below.{% pluralize %}Please correct the {{ count }} errors below.{% endtrans %}</p>
+    {% for error in non_field_errors %}<p class="text-sm">{{ error }}</p>{% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro pagination(cl) %}
+{% if cl.page_links %}
+<nav class="join" aria-label="{{ _("Pages") }}">
+  {% if cl.page.has_previous() %}
+  <a class="join-item btn btn-sm btn-square" {{ list_link(cl.page_url(cl.page.previous_page_number())) }} rel="prev" aria-label="{{ _("Previous page") }}">{{ icon("chevron-left") }}</a>
+  {% else %}
+  <span class="join-item btn btn-sm btn-square btn-disabled" aria-hidden="true">{{ icon("chevron-left") }}</span>
+  {% endif %}
+  {% for n in cl.page_links %}
+  {% if n == cl.paginator.ELLIPSIS %}
+  <span class="join-item btn btn-sm btn-disabled pointer-events-none">&hellip;</span>
+  {% elif n == cl.page_num %}
+  <span class="join-item btn btn-sm btn-primary tabular-nums" aria-current="page">{{ number(n) }}</span>
+  {% else %}
+  <a class="join-item btn btn-sm tabular-nums" {{ list_link(cl.page_url(n)) }}>{{ number(n) }}</a>
+  {% endif %}
+  {% endfor %}
+  {% if cl.page.has_next() %}
+  <a class="join-item btn btn-sm btn-square" {{ list_link(cl.page_url(cl.page.next_page_number())) }} rel="next" aria-label="{{ _("Next page") }}">{{ icon("chevron-right") }}</a>
+  {% else %}
+  <span class="join-item btn btn-sm btn-square btn-disabled" aria-hidden="true">{{ icon("chevron-right") }}</span>
+  {% endif %}
+</nav>
+{% endif %}
+{% endmacro %}
+
+{# A changelist link that morphs the page content in place and pushes the URL. #}
+{% macro list_link(href) %}href="{{ href }}" hx-get="{{ href }}" hx-target="#content" hx-swap="innerMorph" hx-push-url="true"{% endmacro %}
+
+{# The export formats for the rows on screen. #}
+{% macro export_menu(cl, formats, export_url, csrf_input) %}
+{% if formats %}
+{% set format_icons = {"csv": "file-text", "xlsx": "file-spreadsheet", "json": "file-braces"} %}
+<form method="post" action="{{ export_url }}" class="dropdown dropdown-end">
+  {{ csrf_input }}
+  <input type="hidden" name="query" value="{{ cl.export_query }}">
+  <div tabindex="0" role="button" class="btn gap-2">{{ icon("download") }} {{ _("Export") }} {{ icon("chevron-down", "size-3.5 opacity-50") }}</div>
+  <ul tabindex="-1" class="dropdown-content menu z-30 mt-2 w-60 rounded-box border border-base-300 bg-base-100 p-1 shadow-lg">
+    <li class="menu-title text-xs font-normal">{% if cl.has_active_filters or cl.query %}{% trans trimmed count=cl.result_count, total=number(cl.result_count) %}The {{ total }} filtered row{% pluralize %}The {{ total }} filtered rows{% endtrans %}{% else %}{% trans trimmed count=cl.result_count, total=number(cl.result_count) %}All {{ total }} row{% pluralize %}All {{ total }} rows{% endtrans %}{% endif %}</li>
+    {% for format in formats %}
+    <li><button type="submit" name="format" value="{{ format.name }}">{{ icon(format_icons.get(format.name, "file")) }} {{ format.label }}<span class="ml-auto text-xs text-base-content/50">.{{ format.extension }}</span></button></li>
+    {% endfor %}
+  </ul>
+</form>
+{% endif %}
+{% endmacro %}
+
+{# Django's nested deletion list, cut after ``limit`` objects per level. #}
+{% macro nested(items, limit=100, depth=0) %}
+{% set ns = namespace(shown=0, hidden=0) %}
+<ul class="{{ "space-y-1" if depth == 0 else "mt-1 ml-1.5 space-y-1 border-l border-base-300 pl-4" }}">
+  {% for item in items %}
+  {% if item is string or item.__html__ is defined %}
+  {% if ns.shown < limit %}
+  <li class="text-sm [&_a]:link">{{ item }}</li>
+  {% set ns.shown = ns.shown + 1 %}
+  {% else %}
+  {% set ns.hidden = ns.hidden + 1 %}
+  {% endif %}
+  {% elif not ns.hidden %}
+  <li>{{ nested(item, limit, depth + 1) }}</li>
+  {% endif %}
+  {% endfor %}
+  {% if ns.hidden %}<li class="text-sm text-base-content/50">{{ _("and %(count)s more", count=number(ns.hidden)) }}</li>{% endif %}
+</ul>
+{% endmacro %}
+
+{# Home / app / model list, the first crumbs of every model page. #}
+{% macro model_crumbs(site, opts, changelist_url=None) %}
+<li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>
+<li><a href="{{ url(site.name ~ ":app_list", app_label=opts.app_label) }}" class="text-base-content/60">{{ opts.app_config.verbose_name }}</a></li>
+{% if changelist_url %}
+<li><a href="{{ changelist_url }}" class="text-base-content/60">{{ opts.verbose_name_plural|capfirst }}</a></li>
+{% else %}
+<li class="text-base-content/60">{{ opts.verbose_name_plural|capfirst }}</li>
+{% endif %}
+{% endmacro %}
+
+{# The centered card of the login and logout pages. #}
+{% macro auth_card(site_header) %}
+<main class="grid min-h-screen place-items-center px-4 py-12">
+  <div class="w-full max-w-sm">
+    <div class="mb-6 flex flex-col items-center gap-3 text-center">
+      <span class="grid size-12 place-items-center rounded-box bg-primary text-primary-content shadow-sm">{{ icon("layout-dashboard", "size-6") }}</span>
+      <p class="text-lg font-semibold tracking-tight">{{ site_header }}</p>
+    </div>
+    <div class="card border border-base-300 bg-base-100 shadow-sm">
+      <div class="card-body gap-5 p-6 sm:p-8">{{ caller() }}</div>
+    </div>
+  </div>
+</main>
+{% endmacro %}
+
+{# Django's messages as toasts under the top bar, clear of the sticky save and action bars.
+   Success and info leave after a few seconds, errors and warnings stay until dismissed.
+   An htmx partial passes oob=True, so the messages of that request join the toasts
+   already on the page. The class names are spelled out for Tailwind's scanner. #}
+{% macro toasts(messages, oob=False) %}
+{% if not oob or messages %}
+{% set levels = {
+  "error": ("alert-error", "circle-x"),
+  "warning": ("alert-warning", "triangle-exclamation-point"),
+  "success": ("alert-success", "circle-check"),
+  "info": ("alert-info", "info"),
+} %}
+<div id="formwork-admin-toasts" class="toast toast-end toast-top top-18 z-50 max-w-[calc(100vw-2rem)] sm:max-w-md"{% if oob %} hx-swap-oob="beforeend"{% else %} aria-live="polite"{% endif %}>
+  {% for message in messages %}
+  {% set tag = message.level_tag if message.level_tag in levels else "info" %}
+  {% set sticky = tag in ("error", "warning") %}
+  <div role="{{ "alert" if sticky else "status" }}" class="alert {{ levels[tag][0] }} alert-soft border border-current/15 shadow-lg" x-data="formworkToast" data-sticky="{{ "1" if sticky else "" }}" @mouseenter="pause()" @mouseleave="resume()" @focusin="pause()" @focusout="resume()"
+       x-show="open" x-transition.opacity.duration.200ms>
+    {{ icon(levels[tag][1], "size-5") }}
+    <span class="text-sm [&_a]:link">{{ message.message }}</span>
+    <button type="button" class="btn btn-ghost btn-xs btn-square" @click="close()" aria-label="{{ _("Dismiss") }}" title="{{ _("Dismiss") }}">{{ icon("x") }}</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{# Account, site link, theme and logout in one menu, so the header holds one control. #}
+{% macro user_menu(request, site, site_url, csrf_input) %}
+{% set user = request.user %}
+{% set name = (user.get_short_name() or user.get_username()) if user.get_short_name is defined else user.get_username() %}
+<div class="dropdown dropdown-end">
+  <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-2 pl-1" aria-label="{{ _("Account") }}">
+    <span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold uppercase text-primary-content" aria-hidden="true">{{ name[:1] }}</span>
+    <span class="hidden max-w-32 truncate md:inline">{{ name }}</span>
+    {{ icon("chevron-down", "size-3.5 opacity-50") }}
+  </div>
+  <div tabindex="-1" class="dropdown-content z-30 mt-2 w-60 rounded-box border border-base-300 bg-base-100 p-1 shadow-lg">
+    <div class="px-3 pt-2 pb-2.5">
+      <p class="truncate text-sm font-medium">{{ user.get_full_name() if user.get_full_name is defined and user.get_full_name() else user.get_username() }}</p>
+      {% if user.email is defined and user.email %}<p class="truncate text-xs text-base-content/60">{{ user.email }}</p>{% endif %}
+    </div>
+    <ul class="menu w-full border-t border-base-200 p-0 pt-1">
+      {% if site_url %}
+      <li><a href="{{ site_url }}">{{ icon("external-link") }} {{ _("View site") }}</a></li>
+      {% endif %}
+      <li><a href="{{ url(site.name ~ ":exports") }}">{{ icon("download") }} {{ _("Exports") }}</a></li>
+      {% if user.has_usable_password is defined and user.has_usable_password() %}
+      <li><a href="{{ url(site.name ~ ":password_change") }}">{{ icon("key-round") }} {{ _("Change password") }}</a></li>
+      {% endif %}
+    </ul>
+    <div class="mt-1 flex items-center justify-between gap-2 border-t border-base-200 py-1.5 ps-3 pe-1 text-sm">
+      <span id="formwork-admin-theme-label">{{ _("Theme") }}</span>
+      <div class="flex gap-0.5" role="group" aria-labelledby="formwork-admin-theme-label">
+        <button type="button" class="btn btn-sm btn-square" :class="theme === '' ? 'btn-primary' : 'btn-ghost'" :aria-pressed="theme === ''" @click="setTheme('')" aria-label="{{ _("System") }}" title="{{ _("System") }}">{{ icon("monitor") }}</button>
+        <button type="button" class="btn btn-sm btn-square" :class="theme === 'light' ? 'btn-primary' : 'btn-ghost'" :aria-pressed="theme === 'light'" @click="setTheme('light')" aria-label="{{ _("Light") }}" title="{{ _("Light") }}">{{ icon("sun") }}</button>
+        <button type="button" class="btn btn-sm btn-square" :class="theme === 'dark' ? 'btn-primary' : 'btn-ghost'" :aria-pressed="theme === 'dark'" @click="setTheme('dark')" aria-label="{{ _("Dark") }}" title="{{ _("Dark") }}">{{ icon("moon") }}</button>
+      </div>
+    </div>
+    <form id="formwork-admin-logout" method="post" action="{{ url(site.name ~ ":logout") }}" hidden>{{ csrf_input }}</form>
+    <ul class="menu w-full border-t border-base-200 p-0 pt-1">
+      <li><button type="submit" form="formwork-admin-logout">{{ icon("log-out") }} {{ _("Log out") }}</button></li>
+    </ul>
+  </div>
+</div>
+{% endmacro %}
+
+{# A toggle or a lone checkbox has its label beside it. Next to fields with their label
+   above, it moves down to their input line. #}
+{% macro fieldset_rows(fieldset) %}
+{% set grid = {1: "", 2: "sm:grid-cols-2", 3: "sm:grid-cols-3", 4: "sm:grid-cols-2 lg:grid-cols-4"} %}
+{% set offsets = {"toggle": "sm:pt-9", "checkbox": "sm:pt-10"} %}
+{% for row in fieldset.rows %}
+{% set visible = row|rejectattr("is_hidden")|list %}
+{% set align = visible|rejectattr("label_beside")|list and visible|selectattr("label_beside")|list %}
+{% for cell in row if cell.is_hidden %}{{ cell.field }}{% endfor %}
+{% if visible %}
+<div class="grid items-start gap-x-4 {{ grid.get(visible|length, "sm:grid-cols-2 lg:grid-cols-4") }}">
+  {% for cell in visible %}<div class="min-w-0{{ " " ~ offsets[cell.field.widget_type] if align and cell.label_beside }}" data-field="{{ cell.name }}">{{ admin_field(cell) }}</div>{% endfor %}
+</div>
+{% endif %}
+{% endfor %}
+{% endmacro %}
+
+{% macro fieldset_card(fieldset) %}
+{% set has_rows = fieldset.rows|length %}
+{% if fieldset.collapsible %}
+<details class="card group/fs border border-base-300 bg-base-100"{% if fieldset.has_errors %} open{% endif %}>
+  <summary class="flex cursor-pointer list-none items-center gap-3 px-6 py-4 select-none [&::-webkit-details-marker]:hidden">
+    <span class="min-w-0 flex-1">
+      <span class="block font-semibold">{{ fieldset.name or _("More") }}</span>
+      {% if fieldset.description %}<span class="block text-sm text-base-content/60">{{ fieldset.description }}</span>{% endif %}
+    </span>
+    {% if fieldset.has_errors %}<span class="badge badge-error badge-soft badge-sm">{{ _("Errors") }}</span>{% endif %}
+    {{ icon("chevron-down", "size-4 text-base-content/50 transition-transform group-open/fs:rotate-180") }}
+  </summary>
+  <div class="border-t border-base-300 px-6 pt-2 pb-5">{{ fieldset_rows(fieldset) }}</div>
+</details>
+{% else %}
+<section class="card border border-base-300 bg-base-100">
+  {% if fieldset.name %}
+  <header class="border-b border-base-300 px-6 py-4">
+    <h2 class="font-semibold">{{ fieldset.name }}</h2>
+    {% if fieldset.description %}<p class="mt-0.5 text-sm text-base-content/60">{{ fieldset.description }}</p>{% endif %}
+  </header>
+  {% endif %}
+  <div class="px-6 pt-2 pb-5">{{ fieldset_rows(fieldset) }}</div>
+</section>
+{% endif %}
+{% endmacro %}

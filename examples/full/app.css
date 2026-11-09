@@ -1,5 +1,6 @@
 /* Import formwork (includes Tailwind + DaisyUI). */
 @import "../../django_formwork/static/formwork/formwork.css";
+@import "../../django_formwork/admin/static/formwork_admin/admin.css";
 
 /* Icon classes generated into static/ by `manage.py formwork install`.
    layer(components) keeps the `.icon { width:1em }` base below Tailwind's

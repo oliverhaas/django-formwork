@@ -36,12 +36,21 @@ Documentation = "https://oliverhaas.github.io/django-formwork/"
 Repository = "https://github.com/oliverhaas/django-formwork.git"
 Changelog = "https://oliverhaas.github.io/django-formwork/reference/changelog/"
 
+[project.optional-dependencies]
+admin = [
+    "django-filter>=25.1",
+    "jinja2>=3.1.6",
+]
+
 [dependency-groups]
 dev = [
   "beautifulsoup4==4.15.0",
+  "django-filter>=25.1",
   "django-stubs==6.1.2",
+  "jinja2>=3.1.6",
   "mypy==2.4.1",
   "numpy>=2.5.4",
+  "openpyxl==3.1.5",
   "pillow>=13.0.0",
   "pre-commit==4.7.0",
   "psycopg[binary]==3.3.8",
@@ -98,12 +107,39 @@ allow-star-arg-any = true
 suppress-none-returning = true
 
 [tool.ruff.lint.per-file-ignores]
+"django_formwork/admin/**" = [
+  "ANN401",  # Model admins, sites and forms are passed around untyped, as in Django's admin
+  "ARG001",  # Hook signatures follow Django's admin, used or not
+  "ARG002",  # Hook signatures follow Django's admin, used or not
+  "C901",    # The views mirror Django's admin flow step by step
+  "FBT001",  # Positional booleans (change, add) follow Django's admin signatures
+  "FBT002",  # Positional booleans (change, add) follow Django's admin signatures
+  "PLR0911", # Value display branches per field type
+  "PLR0912", # The views mirror Django's admin flow step by step
+  "PLR0913", # Hook signatures follow Django's admin
+  "PLR0915", # The views mirror Django's admin flow step by step
+  "PLR0917", # Hook signatures follow Django's admin
+  "RUF001",  # Messages keep Django's typographic quotes, so its translations apply
+  "SLF001",  # Model _meta access
+]
+"django_formwork/**/migrations/**" = [
+  "RUF012", # makemigrations writes plain lists
+]
 "examples/**" = [
   "ANN",    # Type annotations not required in examples
   "EXE001", # Shebang on manage.py is conventional
   "RUF005", # List concatenation is clearer in Django choices
   "RUF012", # Mutable class defaults are standard Django patterns (Meta, choices)
   "S105",   # Hardcoded secret key is intentional (example only)
+]
+"examples/**/admin.py" = [
+  "ARG002", # Hook signatures follow Django's admin, used or not
+]
+"examples/**/{seed,sample_data}.py" = [
+  "C901",    # A seed function builds one app's rows top to bottom
+  "PERF401", # Building rows in a loop reads easier than a long comprehension
+  "PLR2004", # Odds and sizes of the sample data are literals on purpose
+  "TC003",   # random.Random is only annotated, the import stays readable
 ]
 "examples/**/migrations/**" = [
   "ARG001", # RunPython hooks take (apps, schema_editor) whether used or not
@@ -124,10 +160,12 @@ suppress-none-returning = true
   "PT011",   # Broad pytest.raises okay in some tests
   "PT013",   # pytest import style is preference
   "PT018",   # Compound assertions okay in tests
+  "RUF001",  # Django's messages use typographic quotes
   "RUF002",  # Unicode in docstrings is fine
   "RUF012",  # Mutable class defaults fine in test Layout classes
   "S101",    # assert in tests
   "S105",    # Hardcoded passwords in test settings
+  "S106",    # Hardcoded passwords for test users
   "SLF001",  # Private member access needed to test internal methods
   "T201",    # print used in benchmarks for output
 ]
@@ -141,6 +179,10 @@ show_error_context = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_unreachable = false
+
+[[tool.mypy.overrides]]
+module = ["django_filters", "django_filters.*", "openpyxl", "openpyxl.*"]
+ignore_missing_imports = true
 
 [tool.django-stubs]
 django_settings_module = "tests.settings.mypy"
@@ -186,6 +228,14 @@ include = ["django_formwork/widgets/*.py"]
 [tool.ty.overrides.rules]
 # _DropZoneMixin uses super().get_context() which resolves at runtime via MRO
 # but ty can't see the cooperative base class.
+unresolved-attribute = "ignore"
+
+[[tool.ty.overrides]]
+include = ["django_formwork/admin/decorators.py"]
+
+[tool.ty.overrides.rules]
+# @display and @action set Django's admin attributes (boolean, short_description,
+# ...) on the decorated function.
 unresolved-attribute = "ignore"
 
 [tool.pytest.ini_options]

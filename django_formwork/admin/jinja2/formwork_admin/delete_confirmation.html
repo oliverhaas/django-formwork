@@ -1,0 +1,47 @@
+{% extends "formwork_admin/base.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block bodyclass %}formwork-admin-delete-confirmation app-{{ opts.app_label }} model-{{ opts.model_name }}{% endblock %}
+
+{% block breadcrumbs %}
+{{ m.model_crumbs(site, opts, changelist_url if has_view_permission or has_change_permission else None) }}
+<li class="min-w-0"><a href="{{ change_url }}" class="block max-w-48 truncate text-base-content/60" title="{{ object }}">{{ object }}</a></li>
+<li class="font-medium">{{ _("Delete") }}</li>
+{% endblock %}
+
+{% block content %}
+{% set blocked = perms_lacking or protected %}
+{% set to_delete = deleted_objects %}
+<div class="mx-auto max-w-3xl">
+  <div class="card border border-base-300 bg-base-100">
+    <div class="card-body gap-5 p-6 sm:p-8">
+      <div class="flex items-start gap-4">
+        <span class="grid size-11 shrink-0 place-items-center rounded-full {{ "bg-warning/15 text-warning" if blocked else "bg-error/10 text-error" }}">{{ icon("lock" if blocked else "trash", "size-5") }}</span>
+        <div class="min-w-0">
+          <h1 class="text-xl font-semibold tracking-tight">
+            {% if blocked %}{{ _("Cannot delete %(name)s", name=object_name) }}{% else %}{{ _("Delete %(name)s?", name=object_name) }}{% endif %}
+          </h1>
+          <p class="mt-1 text-sm text-base-content/70">
+            {% if blocked %}
+            {{ _("Deleting “%(object)s” would remove related objects you cannot delete.", object=object) }}
+            {% else %}
+            {{ _("“%(object)s” and the related objects below will be deleted. This cannot be undone.", object=object) }}
+            {% endif %}
+          </p>
+        </div>
+      </div>
+
+      {% include "formwork_admin/delete_summary.html" %}
+
+      {% if not blocked %}
+      <form method="post" class="flex flex-wrap items-center gap-2 border-t border-base-300 pt-5">
+        {{ csrf_input }}
+        <input type="hidden" name="post" value="yes">
+        <button type="submit" class="btn btn-error">{{ _("Yes, I’m sure") }}</button>
+        <a href="{{ change_url }}" class="btn">{{ _("No, take me back") }}</a>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

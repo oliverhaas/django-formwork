@@ -1,86 +1,34 @@
-"""Seed the example database with realistic tasks + tags."""
+"""Reset the example database and fill every app with sample data."""
 
 from __future__ import annotations
 
 import random
-from datetime import timedelta
+from importlib import import_module
 
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
-from django.utils import timezone
+from django.db import transaction
 
-from taskmanager.models import Member, Tag, Task
+APPS = ["taskmanager", "people", "crm", "billing", "helpdesk", "recruiting", "events", "content"]
 
 
 class Command(BaseCommand):
-    help = "Reset the database and populate it with sample tasks."
+    help = "Reset the database and populate every example app with sample data."
 
-    def handle(self, *args, **options):  # noqa: ARG002
-        Task.objects.all().delete()
-        Tag.objects.all().delete()
-        Member.objects.all().delete()
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--scale", type=float, default=1.0, help="Multiply the row counts, e.g. 0.1 for a small set."
+        )
+        parser.add_argument("--seed", type=int, default=1, help="Random seed, so two runs give the same data.")
 
-        members = {
-            name.split()[0]: Member.objects.create(
-                name=name,
-                email=f"{name.split()[0].lower()}@example.com",
-            )
-            for name in [
-                "Devon Vega",
-                "Mira Chen",
-                "Sasha Petrov",
-                "Iris Okafor",
-                "Kai Tanaka",
-                "Robin Larsen",
-            ]
-        }
-
-        tag_names = [
-            "frontend",
-            "backend",
-            "design",
-            "infra",
-            "docs",
-            "bug",
-            "feature",
-            "polish",
-            "research",
-            "security",
-            "perf",
-            "a11y",
-        ]
-        tags = {n: Tag.objects.create(name=n) for n in tag_names}
-
-        seed_tasks = [
-            ("Move auth onto django-allauth", "in_progress", "high", "Devon", ["backend", "security"], -3),
-            ("Audit a11y on the dashboard", "review", "medium", "Mira", ["frontend", "a11y"], 1),
-            ("Migrate icons to django-iconx", "done", "low", "Sasha", ["frontend", "polish"], -8),
-            ("Onboarding wizard copy review", "todo", "medium", "Iris", ["design", "docs"], 4),
-            ("Tighten CSP headers", "todo", "high", "Kai", ["security", "infra"], 2),
-            ("Drop legacy /api/v1 endpoints", "in_progress", "critical", "Devon", ["backend"], -1),
-            ("Replace sentry-sdk with otel", "review", "high", "Robin", ["infra", "perf"], 6),
-            ("Settings: add 2FA enrolment flow", "todo", "high", "Mira", ["frontend", "security"], 7),
-            ("Investigate htmx morph flicker", "in_progress", "medium", "Sasha", ["frontend", "bug"], -2),
-            ("Write changelog for 0.2 release", "todo", "low", "Iris", ["docs"], 3),
-            ("Spike: server-sent events for tasks", "todo", "low", "Kai", ["research", "backend"], 10),
-            ("Tune Postgres pool size", "done", "medium", "Robin", ["infra", "perf"], -12),
-            ("Fix dropdown clipping in safari", "review", "medium", "Devon", ["frontend", "bug"], 0),
-            ("Add bulk-delete confirmation", "todo", "low", "", ["frontend"], 5),
-            ("Document deploy runbook", "in_progress", "medium", "Robin", ["docs", "infra"], 2),
-        ]
-
-        now = timezone.now()
-        created = 0
-        for title, status, priority, assignee, tag_keys, due_offset in seed_tasks:
-            task = Task.objects.create(
-                title=title,
-                description=f"Auto-generated example task. Owner: {assignee or 'unassigned'}.",
-                status=status,
-                priority=priority,
-                assignee=members[assignee] if assignee else None,
-                due_date=(now + timedelta(days=due_offset)).date() if due_offset is not None else None,
-                rating=random.choice([None, 3, 4, 4, 5]) if status == Task.Status.DONE else None,  # noqa: S311
-            )
-            task.tags.set([tags[n] for n in tag_keys])
-            created += 1
-
-        self.stdout.write(self.style.SUCCESS(f"Seeded {created} tasks, {len(tags)} tags, {len(members)} members."))
+    @transaction.atomic
+    def handle(self, *args, scale: float, seed: int, **options):  # noqa: ARG002
+        modules = [import_module(f"{app}.seed") for app in APPS]
+        for module in reversed(modules):
+            module.clear()
+        rng = random.Random(seed)  # noqa: S311
+        for app, module in zip(APPS, modules, strict=True):
+            self.stdout.write(f"{app}: {module.seed(rng, scale)}")
+        if not User.objects.filter(username="admin").exists():
+            User.objects.create_superuser("admin", "admin@example.com", "admin")
+        self.stdout.write(self.style.SUCCESS("Done. Log in to /admin/ as admin, password admin."))

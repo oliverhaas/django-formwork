@@ -1,0 +1,88 @@
+{% import "formwork_admin/macros.html" as m %}
+{% set formset = inline.formset %}
+{% set can_delete = formset.can_delete and inline.has_delete_permission %}
+
+{% macro row(admin_form, can_delete, columns) %}
+<tbody id="{{ admin_form.form.prefix }}" class="not-first-of-type:border-t not-first-of-type:border-base-content/5" data-inline-row>
+  {% if admin_form.form.non_field_errors() %}
+  <tr>
+    <td colspan="{{ columns }}" class="pb-0">
+      <p class="flex items-center gap-1.5 text-xs text-error">{{ icon("circle-exclamation-point", "size-3.5") }} {{ admin_form.form.non_field_errors()|join(" ") }}</p>
+    </td>
+  </tr>
+  {% endif %}
+  <tr class="align-top">
+    {% for cell in admin_form.cells %}
+    <td class="min-w-36" data-field="{{ cell.name }}">
+      {% if cell.field is not none %}
+      {{ cell.field.as_widget(attrs={"aria-label": cell.field.label}) }}
+      {% if cell.field.errors %}<p class="mt-1 text-xs text-error">{{ cell.field.errors|join(" ") }}</p>{% endif %}
+      {% else %}
+      <div class="min-h-10 py-2.5 text-sm">{{ cell.readonly.contents }}</div>
+      {% endif %}
+    </td>
+    {% endfor %}
+    <td class="w-px whitespace-nowrap">
+      {% for hidden in admin_form.hidden %}{{ hidden }}{% endfor %}
+      <div class="flex h-10 items-center justify-end gap-0.5">
+        {% if admin_form.change_url %}
+        <a href="{{ admin_form.change_url }}" class="btn btn-ghost btn-sm btn-square text-base-content/60" title="{{ _("Open") }}" aria-label="{{ _("Open") }}">{{ icon("square-arrow-out-up-right") }}</a>
+        {% endif %}
+        {% if admin_form.original is not none %}
+        {% if can_delete and admin_form.deletion_field is not none %}
+        {% set df = admin_form.deletion_field %}
+        <label class="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error has-checked:bg-error/10 has-checked:text-error" title="{{ _("Delete") }}">
+          <input type="checkbox" name="{{ df.html_name }}" id="{{ df.auto_id }}" class="sr-only"{% if df.value() %} checked{% endif %} aria-label="{{ _("Delete") }}">
+          {{ icon("trash") }}
+        </label>
+        {% endif %}
+        {% else %}
+        <button type="button" class="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error" x-show="canRemove" @click="remove($el)" title="{{ _("Remove") }}" aria-label="{{ _("Remove") }}">{{ icon("x") }}</button>
+        {% endif %}
+      </div>
+    </td>
+  </tr>
+</tbody>
+{% endmacro %}
+
+{% set columns = inline.headers|length + 1 %}
+<section id="{{ inline.prefix }}-group" class="card border border-base-300 bg-base-100"
+         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}">
+  <header class="flex items-center gap-2 border-b border-base-300 px-6 py-4">
+    <h2 class="font-semibold">{{ inline.verbose_name_plural|capfirst }}</h2>
+    {% if formset.initial_form_count() %}<span class="badge badge-ghost badge-sm tabular-nums">{{ number(formset.initial_form_count()) }}</span>{% endif %}
+    {% if inline.error_count() %}<span class="badge badge-error badge-soft badge-sm ml-auto">{{ _("Errors") }}</span>{% endif %}
+  </header>
+  {{ formset.management_form }}
+  {% if inline.non_form_errors %}
+  <div role="alert" class="alert alert-error alert-soft mx-4 mt-4">{{ icon("circle-exclamation-point", "size-5") }}<span>{{ inline.non_form_errors|join(" ") }}</span></div>
+  {% endif %}
+
+  <div class="overflow-x-auto" x-show="total"{% if not inline.forms %} x-cloak{% endif %}>
+    <table class="table table-sm" x-ref="rows">
+      <thead>
+        <tr>
+          {% for header in inline.headers %}
+          <th class="whitespace-nowrap">
+            {{ header.label|capfirst }}{% if header.required %} <span class="text-error" aria-hidden="true">*</span>{% endif %}
+            {% if header.help_text %}<span class="tooltip tooltip-bottom align-middle font-normal normal-case" data-tip="{{ header.help_text|striptags }}">{{ icon("info", "size-3.5 opacity-50") }}</span>{% endif %}
+          </th>
+          {% endfor %}
+          <th class="w-px"><span class="sr-only">{{ _("Actions") }}</span></th>
+        </tr>
+      </thead>
+      {% for admin_form in inline %}{{ row(admin_form, can_delete, columns) }}{% endfor %}
+    </table>
+  </div>
+  <template x-ref="empty">{{ row(inline.empty_form, can_delete, columns) }}</template>
+
+  <p class="px-6 py-8 text-center text-sm text-base-content/50" x-show="!total"{% if inline.forms %} x-cloak{% endif %}>
+    {{ _("No %(name)s yet.", name=inline.verbose_name_plural) }}
+  </p>
+
+  {% if inline.has_add_permission %}
+  <div class="border-t border-base-300 px-3 py-2" x-show="canAdd">
+    <button type="button" class="btn btn-ghost btn-sm text-primary" @click="add()">{{ icon("plus") }} {{ _("Add another %(name)s", name=inline.verbose_name) }}</button>
+  </div>
+  {% endif %}
+</section>

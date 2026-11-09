@@ -1,0 +1,38 @@
+{# The buttons, labels and order of Django's submit_line.html. #}
+{% set continue_label = _("Save and continue editing") if can_change else _("Save and view") %}
+{% set more = [
+  ("_saveasnew", _("Save as new")) if show_save_as_new else none,
+  ("_addanother", _("Save and add another")) if show_save_and_add_another else none,
+  ("_continue", continue_label) if show_save_and_continue else none,
+]|select|list %}
+<div class="flex flex-wrap items-center gap-2">
+  {% if show_save %}
+  <button type="submit" name="_save" value="1" class="btn btn-primary" data-save>{{ icon("check") }} {{ _("Save") }}</button>
+  {% endif %}
+  {% if more %}
+  {# A phone folds the other ways to save into one menu, so the bar stays a single row. #}
+  <div class="dropdown dropdown-top sm:hidden">
+    <div tabindex="0" role="button" class="btn btn-square" aria-label="{{ _("More ways to save") }}" title="{{ _("More ways to save") }}">{{ icon("ellipsis") }}</div>
+    <ul tabindex="-1" class="dropdown-content menu z-20 mb-2 w-56 rounded-box border border-base-300 bg-base-100 p-1.5 shadow-lg">
+      {% for name, label in more %}
+      <li><button type="submit" name="{{ name }}" value="1">{{ label }}</button></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if show_save_as_new %}
+  <button type="submit" name="_saveasnew" value="1" class="btn max-sm:hidden">{{ _("Save as new") }}</button>
+  {% endif %}
+  {% if show_save_and_add_another %}
+  <button type="submit" name="_addanother" value="1" class="btn max-sm:hidden">{{ _("Save and add another") }}</button>
+  {% endif %}
+  {% if show_save_and_continue %}
+  <button type="submit" name="_continue" value="1" class="btn max-sm:hidden" data-continue title="Ctrl+S">{{ continue_label }}</button>
+  {% endif %}
+  {% if show_close %}
+  <a href="{{ changelist_url }}" class="btn">{{ _("Close") }}</a>
+  {% endif %}
+  {% if delete_url %}
+  <a href="{{ delete_url }}" class="btn btn-ghost ml-auto text-error hover:bg-error/10" aria-label="{{ _("Delete") }}">{{ icon("trash") }}<span class="hidden sm:inline">{{ _("Delete") }}</span></a>
+  {% endif %}
+</div>

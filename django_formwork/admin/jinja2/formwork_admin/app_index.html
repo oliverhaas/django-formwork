@@ -1,0 +1,14 @@
+{% extends "formwork_admin/base.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block breadcrumbs %}
+<li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>
+<li class="font-medium">{{ app_list[0].name }}</li>
+{% endblock %}
+
+{% block content %}
+{{ m.page_header(app_list[0].name) }}
+<div class="max-w-2xl">
+  {% include "formwork_admin/app_list.html" %}
+</div>
+{% endblock %}

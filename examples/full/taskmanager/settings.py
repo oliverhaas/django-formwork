@@ -11,6 +11,7 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
+    "django.contrib.admin",
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "django.contrib.staticfiles",
@@ -20,11 +21,20 @@ INSTALLED_APPS = [
     "django_iconx",
     "django_filters",
     "django_formwork",
+    "django_formwork.admin",
     "taskmanager",
+    "people",
+    "crm",
+    "billing",
+    "helpdesk",
+    "recruiting",
+    "events",
+    "content",
 ]
 
 MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
 ]
 
@@ -38,6 +48,7 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "taskmanager.context_processors.nav",
             ],
@@ -46,6 +57,8 @@ TEMPLATES = [
 ]
 
 FORM_RENDERER = "django_formwork.FormworkRenderer"
+
+FORMWORK_ADMIN_SITE = "taskmanager.admin_site.TaskworkAdminSite"
 
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]

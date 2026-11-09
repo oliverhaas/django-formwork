@@ -1,0 +1,36 @@
+{% extends "formwork_admin/base.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block bodyclass %}formwork-admin-login{% endblock %}
+
+{% block shell %}
+{% call m.auth_card(site_header) %}
+<div>
+  <h1 class="text-xl font-semibold tracking-tight">{{ _("Log in") }}</h1>
+  <p class="mt-1 text-sm text-base-content/60">{{ _("Use your staff account to continue.") }}</p>
+</div>
+
+{% if form.non_field_errors() %}
+<div role="alert" class="alert alert-error alert-soft">
+  {{ icon("circle-exclamation-point", "size-5") }}
+  <span class="text-sm">{{ form.non_field_errors()|join(" ") }}</span>
+</div>
+{% elif request.user.is_authenticated %}
+<div role="alert" class="alert alert-warning alert-soft items-start">
+  {{ icon("lock", "size-5 mt-0.5") }}
+  <span class="text-sm">{{ _("You are signed in as %(username)s, but this account has no access to this page. Log in with another account?", username=username) }}</span>
+</div>
+{% endif %}
+
+<form method="post" action="{{ app_path }}" id="login-form" novalidate class="grid gap-1">
+  {{ csrf_input }}
+  {{ form.username.as_field_group() }}
+  {{ form.password.as_field_group() }}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% if password_reset_url %}
+  <a href="{{ password_reset_url }}" class="link justify-self-end text-sm text-base-content/60">{{ _("Forgot your password?") }}</a>
+  {% endif %}
+  <button type="submit" class="btn btn-primary mt-4 w-full">{{ _("Log in") }}</button>
+</form>
+{% endcall %}
+{% endblock %}

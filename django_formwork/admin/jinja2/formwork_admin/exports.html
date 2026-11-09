@@ -1,0 +1,16 @@
+{% extends "formwork_admin/base.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block bodyclass %}formwork-admin-exports{% endblock %}
+
+{% block breadcrumbs %}
+<li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>
+<li class="font-medium">{{ _("Exports") }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl">
+  {{ m.page_header(_("Exports"), _("Lists you exported, newest first. Large ones run in the background."), "download") }}
+  {% include "formwork_admin/export_list.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% import "formwork_admin/macros.html" as m %}
+{% set formset = inline.formset %}
+{% set can_delete = formset.can_delete and inline.has_delete_permission %}
+
+{% macro item(admin_form, inline, can_delete) %}
+<div id="{{ admin_form.form.prefix }}" class="px-6 pt-4 pb-5" data-inline-row>
+  <div class="flex items-center gap-2">
+    {% if admin_form.original is not none %}
+    <h3 class="min-w-0 flex-1 truncate text-sm font-medium">{{ admin_form.original }}</h3>
+    {% else %}
+    <h3 class="min-w-0 flex-1 truncate text-sm font-medium text-base-content/60">{{ _("New %(name)s", name=inline.verbose_name) }}</h3>
+    {% endif %}
+    {% if admin_form.has_errors %}<span class="badge badge-error badge-soft badge-sm">{{ _("Errors") }}</span>{% endif %}
+    {% if admin_form.change_url %}
+    <a href="{{ admin_form.change_url }}" class="btn btn-ghost btn-xs text-base-content/60">{{ icon("square-arrow-out-up-right", "size-3.5") }} {{ _("Open") }}</a>
+    {% endif %}
+    {% if admin_form.original is not none %}
+    {% if can_delete and admin_form.deletion_field is not none %}
+    {% set df = admin_form.deletion_field %}
+    <label class="btn btn-ghost btn-xs text-base-content/60 hover:text-error has-checked:bg-error/10 has-checked:text-error">
+      <input type="checkbox" name="{{ df.html_name }}" id="{{ df.auto_id }}" class="sr-only"{% if df.value() %} checked{% endif %}>
+      {{ icon("trash", "size-3.5") }} {{ _("Delete") }}
+    </label>
+    {% endif %}
+    {% else %}
+    <button type="button" class="btn btn-ghost btn-xs text-base-content/60 hover:text-error" x-show="canRemove" @click="remove($el)">{{ icon("x", "size-3.5") }} {{ _("Remove") }}</button>
+    {% endif %}
+  </div>
+  {% if admin_form.form.non_field_errors() %}
+  <p class="mt-2 flex items-center gap-1.5 text-sm text-error">{{ icon("circle-exclamation-point", "size-4") }} {{ admin_form.form.non_field_errors()|join(" ") }}</p>
+  {% endif %}
+  <div data-inline-fields>
+    {% for hidden in admin_form.hidden %}{{ hidden }}{% endfor %}
+    {% for fieldset in admin_form.fieldsets %}
+    {% if fieldset.name %}<h4 class="mt-4 text-xs font-semibold tracking-wide text-base-content/50 uppercase">{{ fieldset.name }}</h4>{% endif %}
+    {% if fieldset.description %}<p class="text-sm text-base-content/60">{{ fieldset.description }}</p>{% endif %}
+    {{ m.fieldset_rows(fieldset) }}
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}
+
+<section id="{{ inline.prefix }}-group" class="card border border-base-300 bg-base-100"
+         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}">
+  <header class="flex items-center gap-2 border-b border-base-300 px-6 py-4">
+    <h2 class="font-semibold">{{ inline.verbose_name_plural|capfirst }}</h2>
+    {% if formset.initial_form_count() %}<span class="badge badge-ghost badge-sm tabular-nums">{{ number(formset.initial_form_count()) }}</span>{% endif %}
+    {% if inline.error_count() %}<span class="badge badge-error badge-soft badge-sm ml-auto">{{ _("Errors") }}</span>{% endif %}
+  </header>
+  {{ formset.management_form }}
+  {% if inline.non_form_errors %}
+  <div role="alert" class="alert alert-error alert-soft mx-4 mt-4">{{ icon("circle-exclamation-point", "size-5") }}<span>{{ inline.non_form_errors|join(" ") }}</span></div>
+  {% endif %}
+
+  <div class="divide-y divide-base-300" x-ref="rows">
+    {% for admin_form in inline %}{{ item(admin_form, inline, can_delete) }}{% endfor %}
+  </div>
+  <template x-ref="empty">{{ item(inline.empty_form, inline, can_delete) }}</template>
+
+  <p class="px-6 py-8 text-center text-sm text-base-content/50" x-show="!total"{% if inline.forms %} x-cloak{% endif %}>
+    {{ _("No %(name)s yet.", name=inline.verbose_name_plural) }}
+  </p>
+
+  {% if inline.has_add_permission %}
+  <div class="border-t border-base-300 px-3 py-2" x-show="canAdd">
+    <button type="button" class="btn btn-ghost btn-sm text-primary" @click="add()">{{ icon("plus") }} {{ _("Add another %(name)s", name=inline.verbose_name) }}</button>
+  </div>
+  {% endif %}
+</section>

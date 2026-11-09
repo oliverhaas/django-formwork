@@ -1,0 +1,40 @@
+{% set format_icons = {"csv": "file-text", "xlsx": "file-spreadsheet", "json": "file-braces"} %}
+<div id="exports" class="card border border-base-300 bg-base-100"{% if polling %} hx-get="{{ request.path }}" hx-trigger="every 2s" hx-target="this" hx-swap="outerMorph"{% endif %}>
+  {% if rows %}
+  <ol class="divide-y divide-base-200">
+    {% for row in rows %}
+    {% set job = row.job %}
+    <li class="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3.5">
+      <span class="grid size-9 shrink-0 place-items-center rounded-field bg-base-200 text-base-content/70">{{ icon(format_icons.get(job.format, "file"), "size-4") }}</span>
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-medium">
+          {% if row.changelist_url %}<a href="{{ row.changelist_url }}" class="link">{{ row.name }}</a>{% else %}{{ row.name }}{% endif %}
+          {% if job.query %}<span class="badge badge-ghost badge-sm ml-1 align-middle">{{ _("filtered") }}</span>{% endif %}
+        </p>
+        <p class="mt-0.5 text-xs text-base-content/55">
+          <span class="uppercase">{{ job.format }}</span>
+          {% if job.row_count is not none %} · {% trans trimmed count=job.row_count, total=number(job.row_count) %}{{ total }} row{% pluralize %}{{ total }} rows{% endtrans %}{% endif %}
+          · <time datetime="{{ job.created_at.isoformat() }}" title="{{ job.created_at|datetime }}">{{ job.created_at|ago }}</time>
+        </p>
+        {% if job.status == "failed" and job.error %}<p class="mt-1 text-xs text-error">{{ job.error }}</p>{% endif %}
+      </div>
+      {% if job.status == "done" %}
+      <a href="{{ url(site.name ~ ":export_download", pk=job.pk) }}" class="btn btn-sm">{{ icon("download") }} {{ _("Download") }}</a>
+      {% elif job.status == "failed" %}
+      <span class="badge badge-soft badge-error">{{ icon("circle-x", "size-3.5") }} {{ job.get_status_display() }}</span>
+      {% else %}
+      <span class="badge badge-soft badge-info"><span class="loading loading-spinner loading-xs" aria-hidden="true"></span> {{ job.get_status_display() }}</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <div class="flex flex-col items-center gap-3 px-6 py-16 text-center">
+    <span class="grid size-12 place-items-center rounded-full bg-base-200 text-base-content/40">{{ icon("download", "size-6") }}</span>
+    <div>
+      <p class="font-medium">{{ _("No exports yet") }}</p>
+      <p class="mt-1 text-sm text-base-content/60">{{ _("Export a list from its Export menu. Large lists export in the background and show up here.") }}</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
