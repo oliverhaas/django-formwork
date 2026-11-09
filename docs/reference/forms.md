@@ -249,17 +249,17 @@ for example `instance=`. A POST that names no known section raises
 from django_formwork import section_forms
 
 
-def edit_product(request, pk):
-    product = get_object_or_404(Product, pk=pk)
+def edit_project(request, pk):
+    project = get_object_or_404(Project, pk=pk)
     sections = section_forms(
         request,
-        {"general": ProductGeneralForm, "extras": ProductExtrasForm},
-        instance=product,
+        {"general": ProjectGeneralForm, "extras": ProjectExtrasForm},
+        instance=project,
     )
     for form in sections.values():
         if form.is_bound and form.is_valid():
             form.save()
-    return render(request, "product_edit.html", {"sections": sections})
+    return render(request, "project_edit.html", {"sections": sections})
 ```
 
 ```html

@@ -11,7 +11,7 @@ page is importable from `django_formwork`.
 from django_formwork import formwork_inlineformset_factory, formwork_modelformset_factory
 
 TaskFormSet = formwork_modelformset_factory(Task, fields=["title", "status"], extra=0)
-LineFormSet = formwork_inlineformset_factory(Order, OrderLine, fields=["product", "quantity"])
+LineFormSet = formwork_inlineformset_factory(Invoice, InvoiceLine, fields=["description", "quantity"])
 ```
 
 Both take the arguments of Django's `modelformset_factory` and
