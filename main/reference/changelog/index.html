@@ -627,6 +627,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../browser-support/" class="md-nav__link">
         
   
@@ -1244,9 +1272,13 @@
   <code>multiple</code> <code>FileDropzoneInput</code> failed validation with "No file was submitted" as soon
   as a file was picked. <code>MultipleFileField</code> uses that drop area by default and cleans to
   a list of files.</li>
-<li><code>DateRangePicker</code>: a start and an end date in one control, picked in a calendar with
-  two months side by side. The days between the two picks fill in, and the footer counts
-  them. <code>DateTimeRangePicker</code> adds a start and an end time under the calendar.</li>
+<li><code>DateRangePicker</code>: a start and an end date in one control, typed or picked in a
+  calendar with two months side by side. The days between the two picks fill in, and the
+  footer counts them. A typed date can be in the format the input shows, in a
+  <code>DATE_INPUT_FORMATS</code> format or ISO, and month names can be short or lowercase.
+  <code>presets=True</code> adds Today, Past 7 days, This month and This year buttons, and a
+  function of today gives other ranges. <code>DateTimeRangePicker</code> adds a start and an end
+  time under the calendar.</li>
 <li><code>DateTimeRangeField</code>, which cleans to a <code>DateTimeRange(start, end)</code> of two datetimes
   and uses <code>DateTimeRangePicker</code>.</li>
 <li><code>ClearableFileInput</code>: a file upload in one row, as high as a text input. It shows the
@@ -1254,6 +1286,15 @@
   button that clears the stored file, with a second button to keep it before the save.
   It posts the same fields as Django's widget, so <code>widget=widgets.ClearableFileInput</code>
   is the only change a form needs.</li>
+<li><code>django_formwork.admin</code> (experimental): a Django admin on formwork forms, django-filter,
+  htmx and Jinja2, styled with DaisyUI. It keeps the options, hooks, URL names and
+  permissions of <code>django.contrib.admin</code>, so an <code>admin.py</code> ports by importing
+  <code>from django_formwork import admin</code>. Install it with <code>django-formwork[admin]</code> and see
+  <a href="../admin/">Admin</a> for the setup. A list exports to CSV, Excel or JSON, and a long list
+  exports in a background task, so run <code>migrate</code> after you add the app. With
+  <code>import_formats</code> set, a list also imports CSV, Excel or JSON files: a preview shows
+  the new, changed and invalid rows before anything is saved. Columns that do
+  not fit the width of a list hide behind a button that shows them all.</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1280,6 +1321,13 @@
 <li><code>FileDropzoneInput</code> shows an icon for the type of the picked file, such as a PDF,
   a spreadsheet or an image, where it showed the same file icon for every file. If you
   override <code>formwork/widgets/file_dropzone.html</code>, copy it again.</li>
+<li>A focused input, select or textarea draws its border and focus ring in the primary
+  color, like its floating label. DaisyUI draws them in the text color, so focus showed
+  as a black or white ring. This covers the built-in widgets and <code>.input</code>, <code>.select</code> and
+  <code>.textarea</code> written in your own markup. A color modifier such as <code>input-error</code> or the
+  accent of a changed field still wins.</li>
+<li>A link in a field's help text or error message is underlined. Tailwind's preflight
+  showed it as plain text.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1289,6 +1337,11 @@
   an English page, an unchanged <code>13.07.2026</code> failed with "Enter a valid date." The
   widget reads its format back and hands the field an ISO date. If you override
   <code>formwork/widgets/date_picker.html</code>, copy it again for the new <code>data-format</code>.</li>
+<li>The error icon next to a <code>pattern_hint</code> was blank after <code>manage.py formwork install</code>
+  fetched Lucide 1.68 or later, which renamed <code>circle-alert</code> to
+  <code>circle-exclamation-point</code>. The hint uses the new name. Run <code>formwork install</code> again
+  if your icon set is older than 1.68. If you override
+  <code>formwork/widgets/partials/pattern_hint.html</code>, copy it again.</li>
 </ul>
 <h2 id="010a3-2026-11-06">0.1.0a3 (2026-11-06)<a class="headerlink" href="#010a3-2026-11-06" title="Permanent link">&para;</a></h2>
 <h3 id="breaking-changes_1">Breaking changes<a class="headerlink" href="#breaking-changes_1" title="Permanent link">&para;</a></h3>

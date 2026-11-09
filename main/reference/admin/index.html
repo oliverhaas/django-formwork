@@ -1,0 +1,1802 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An opinionated UI framework for Django, built on Django forms">
+      
+      
+      
+        <link rel="canonical" href="https://oliverhaas.github.io/django-formwork/main/reference/admin/">
+      
+      
+        <link rel="prev" href="../views/">
+      
+      
+        <link rel="next" href="../browser-support/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Admin - Django Formwork</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#admin" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Django Formwork" class="md-header__button md-logo" aria-label="Django Formwork" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Django Formwork
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Admin
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/oliverhaas/django-formwork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    oliverhaas/django-formwork
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Django Formwork" class="md-nav__button md-logo" aria-label="Django Formwork" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Django Formwork
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/oliverhaas/django-formwork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    oliverhaas/django-formwork
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cookbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cookbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../forms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../formsets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formsets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../widgets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Widgets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Install
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-urls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. URLs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-css" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. CSS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-site" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The site
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modeladmin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ModelAdmin
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ModelAdmin">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Columns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#info-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Info dialog
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Actions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inlines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inlines
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#large-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Large exports
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#keyboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keyboard
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-supported-yet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not supported yet
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browser-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Install
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-urls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. URLs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-css" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. CSS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-site" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The site
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modeladmin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ModelAdmin
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ModelAdmin">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Columns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#info-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Info dialog
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Actions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inlines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inlines
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#large-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Large exports
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#keyboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keyboard
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-supported-yet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not supported yet
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="admin">Admin<a class="headerlink" href="#admin" title="Permanent link">&para;</a></h1>
+<p><code>django_formwork.admin</code> is a Django admin built on formwork forms, django-filter, htmx
+and Jinja2, styled with DaisyUI. It keeps the names, options, hooks, URL names and
+permissions of <code>django.contrib.admin</code>, so most <code>admin.py</code> modules port by changing one
+import:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># from django.contrib import admin</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">admin</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Ticket</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">list_display</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"subject"</span><span class="p">,</span> <span class="s2">"requester"</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">,</span> <span class="s2">"priority"</span><span class="p">]</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">list_filter</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"status"</span><span class="p">,</span> <span class="s2">"opened_at"</span><span class="p">]</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">search_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"subject"</span><span class="p">,</span> <span class="s2">"requester__email"</span><span class="p">]</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">inlines</span> <span class="o">=</span> <span class="p">[</span><span class="n">ReplyInline</span><span class="p">]</span>
+</span></code></pre></div>
+<p><img alt="The ticket list with a status filter set" src="../../img/admin/changelist.webp" /></p>
+<p>The classes are its own. A <code>ModelAdmin</code> does not subclass Django's, so an admin class
+written for <code>django.contrib.admin</code> that calls into Django's internals needs changes.</p>
+<div class="admonition warning">
+<p class="admonition-title">Experimental</p>
+<p>The admin is new and its API can change in any release before 1.0.</p>
+</div>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<h3 id="1-install">1. Install<a class="headerlink" href="#1-install" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"django-formwork[admin]"</span>
+</span></code></pre></div>
+<p>The <code>admin</code> extra installs django-filter and Jinja2.</p>
+<h3 id="2-settings">2. Settings<a class="headerlink" href="#2-settings" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="o">...</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="s2">"django.contrib.admin"</span><span class="p">,</span>  <span class="c1"># the history log (LogEntry)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="s2">"django.contrib.auth"</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="s2">"django.contrib.contenttypes"</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="s2">"django.contrib.messages"</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="s2">"django.contrib.staticfiles"</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="s2">"django.forms"</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="s2">"django_iconx"</span><span class="p">,</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="s2">"django_formwork"</span><span class="p">,</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="s2">"django_formwork.admin"</span><span class="p">,</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="p">]</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">MIDDLEWARE</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="s2">"django.contrib.sessions.middleware.SessionMiddleware"</span><span class="p">,</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="s2">"django.contrib.auth.middleware.AuthenticationMiddleware"</span><span class="p">,</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>    <span class="s2">"django.contrib.messages.middleware.MessageMiddleware"</span><span class="p">,</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    <span class="o">...</span><span class="p">,</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="p">]</span>
+</span></code></pre></div>
+<p>The admin writes its history to Django's <code>LogEntry</code>, so <code>django.contrib.admin</code> must be
+installed. Its system checks also ask for a <code>DjangoTemplates</code> backend with the <code>request</code>,
+<code>auth</code> and <code>messages</code> context processors. The admin pages themselves render through a
+private Jinja2 engine, so <code>TEMPLATES</code> needs no Jinja2 backend.</p>
+<p>Run <code>manage.py migrate</code> after you add the app.</p>
+<p><code>manage.py check</code> reports a missing app or middleware, and checks every registered
+<code>ModelAdmin</code> for the mistakes Django's admin checks catch, under the same numbers:
+<code>formwork_admin.E108</code> for an unknown <code>list_display</code> entry, <code>formwork_admin.E116</code> for a
+broken <code>list_filter</code> entry, and so on.</p>
+<h3 id="3-urls">3. URLs<a class="headerlink" href="#3-urls" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.urls</span><span class="w"> </span><span class="kn">import</span> <span class="n">include</span><span class="p">,</span> <span class="n">path</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">site</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">path</span><span class="p">(</span><span class="s2">"__formwork__/"</span><span class="p">,</span> <span class="n">include</span><span class="p">(</span><span class="s2">"django_formwork.urls"</span><span class="p">)),</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">path</span><span class="p">(</span><span class="s2">"admin/"</span><span class="p">,</span> <span class="n">site</span><span class="o">.</span><span class="n">urls</span><span class="p">),</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">]</span>
+</span></code></pre></div>
+<p><code>django_formwork.urls</code> serves the relation search of the dropdowns. The site's URL
+names match Django's, so <code>reverse("admin:helpdesk_ticket_change", args=[ticket.pk])</code> works as
+before. To run Django's admin next to this one, give one of the two sites another
+<code>name</code>, since both use the <code>admin</code> namespace by default.</p>
+<h3 id="4-css">4. CSS<a class="headerlink" href="#4-css" title="Permanent link">&para;</a></h3>
+<p>Import <code>admin.css</code> after <code>formwork.css</code> in your Tailwind entry and build it as in
+<a href="../../getting-started/installation/#4-build-the-css">Installation</a>:</p>
+<div class="language-css highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">"path/to/site-packages/django_formwork/static/formwork/formwork.css"</span><span class="p">;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">"path/to/site-packages/django_formwork/admin/static/formwork_admin/admin.css"</span><span class="p">;</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">@</span><span class="k">import</span><span class="w"> </span><span class="s2">"./static/iconx/icons.css"</span><span class="w"> </span><span class="nt">layer</span><span class="o">(</span><span class="nt">components</span><span class="o">)</span><span class="p">;</span>
+</span></code></pre></div>
+<p><code>admin.css</code> registers the admin's templates with <code>@source</code>, so Tailwind finds their
+classes. Then point the site at the built file:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># myproject/admin_site.py</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdminSite</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAdminSite</span><span class="p">(</span><span class="n">AdminSite</span><span class="p">):</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">site_header</span> <span class="o">=</span> <span class="s2">"Helpdesk"</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">stylesheets</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"dist.css"</span><span class="p">,)</span>
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># settings.py</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">FORMWORK_ADMIN_SITE</span> <span class="o">=</span> <span class="s2">"myproject.admin_site.MyAdminSite"</span>
+</span></code></pre></div>
+<p>The navigation and the actions use Lucide icons, so run <code>manage.py formwork install</code>
+once, as for the widgets.</p>
+<h3 id="5-scripts">5. Scripts<a class="headerlink" href="#5-scripts" title="Permanent link">&para;</a></h3>
+<p>The site loads htmx 4, its Alpine bridge and Alpine.js from a CDN. To serve them
+yourself, override <code>scripts</code> (htmx and the bridge) and <code>alpine_script</code> on your site
+class.</p>
+<h2 id="the-site">The site<a class="headerlink" href="#the-site" title="Permanent link">&para;</a></h2>
+<p><code>django_formwork.admin.site</code> is the default site. <code>FORMWORK_ADMIN_SITE</code> names its class,
+and every app's <code>admin</code> module is imported at startup (<code>FORMWORK_ADMIN_AUTODISCOVER</code>
+changes the module name). Attributes of <code>AdminSite</code> that Django's site does not have:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stylesheets</code></td>
+<td><code>("formwork/formwork-dist.css",)</code></td>
+<td>Static paths of the built CSS.</td>
+</tr>
+<tr>
+<td><code>scripts</code></td>
+<td>htmx 4 and <code>hx-alpine-compat</code></td>
+<td>Scripts loaded before the admin's own.</td>
+</tr>
+<tr>
+<td><code>alpine_script</code></td>
+<td>Alpine.js 3.15</td>
+<td>Loaded last, with <code>defer</code>.</td>
+</tr>
+<tr>
+<td><code>themes</code></td>
+<td><code>("light", "dark")</code></td>
+<td>The DaisyUI themes the theme menu offers. The first is the default.</td>
+</tr>
+</tbody>
+</table>
+<p><code>site_title</code>, <code>site_header</code>, <code>index_title</code>, <code>site_url</code>, <code>empty_value_display</code>,
+<code>enable_nav_sidebar</code>, <code>login_form</code>, <code>password_change_form</code>, the <code>*_template</code> attributes,
+<code>each_context()</code>, <code>get_app_list()</code>, <code>admin_view()</code>, <code>has_permission()</code>, <code>add_action()</code>
+and <code>disable_action()</code> work as in Django.</p>
+<p><img alt="The deal list in the dark theme" src="../../img/admin/changelist-dark.webp" /></p>
+<h2 id="modeladmin">ModelAdmin<a class="headerlink" href="#modeladmin" title="Permanent link">&para;</a></h2>
+<p>The list, add, change, delete and history pages read the same options as Django's
+admin: <code>list_display</code>, <code>list_display_links</code>, <code>list_filter</code>, <code>list_select_related</code>,
+<code>list_per_page</code>, <code>list_max_show_all</code>, <code>list_editable</code>, <code>search_fields</code>,
+<code>search_help_text</code>, <code>date_hierarchy</code>, <code>ordering</code>, <code>sortable_by</code>, <code>fields</code>, <code>exclude</code>,
+<code>fieldsets</code>, <code>readonly_fields</code>, <code>prepopulated_fields</code>, <code>radio_fields</code>,
+<code>autocomplete_fields</code>, <code>raw_id_fields</code>, <code>formfield_overrides</code>, <code>form</code>, <code>inlines</code>,
+<code>actions</code>, <code>save_as</code>, <code>save_on_top</code>, <code>preserve_filters</code>, <code>view_on_site</code>, the
+<code>has_*_permission()</code> methods, and the <code>get_*()</code>, <code>save_model()</code>, <code>save_formset()</code>,
+<code>delete_model()</code> and <code>response_*()</code> hooks.</p>
+<p>The forms are formwork forms, so every field renders with formwork's widgets and
+templates. A date field gets a <code>DatePicker</code>, a relation a <code>Select</code> or <code>SelectMultiple</code>.</p>
+<p><img alt="The change form of an employee" src="../../img/admin/change-form.webp" /></p>
+<p>Options this admin adds:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>icon</code></td>
+<td>The Lucide icon next to the model in the navigation and the page title. Unset, the model gets a placeholder shape, see below.</td>
+</tr>
+<tr>
+<td><code>list_badges</code></td>
+<td>Badge colors per value, by column: <code>{"status": {"active": "success", "archived": "warning"}}</code>.</td>
+</tr>
+<tr>
+<td><code>list_only_fields</code></td>
+<td>Load only these columns on the list page.</td>
+</tr>
+<tr>
+<td><code>list_defer_fields</code></td>
+<td>Skip these columns on the list page, for a large JSON or text column that no column shows.</td>
+</tr>
+</tbody>
+</table>
+<p><code>list_only_fields</code> is opt-in. A <code>__str__</code> that reads a deferred field runs one query per
+row.</p>
+<p>A model without an <code>icon</code> gets a plain shape instead: a circle, triangle, square, diamond,
+pentagon, hexagon or star. The shape comes from a hash of the model's label, so it stays
+the same across restarts, and the models of one app get different shapes while there
+are no more than seven of them. Set <code>icon</code> on the models you want to tell apart at a
+glance and leave the rest to the shapes.</p>
+<h3 id="filters">Filters<a class="headerlink" href="#filters" title="Permanent link">&para;</a></h3>
+<p>The filter bar is a django-filter <code>FilterSet</code> that the admin builds from <code>list_filter</code>.
+An entry can be:</p>
+<ul>
+<li>a field name. Choices, booleans and relations get a dropdown, dates a range picker.
+  Its calendar has the ranges of Django's date filter: Today, Past 7 days, This month
+  and This year.</li>
+<li>a <code>SimpleListFilter</code> subclass, as in Django.</li>
+<li>a tuple such as <code>("field", admin.EmptyFieldListFilter)</code> or
+  <code>("category", admin.RelatedOnlyFieldListFilter)</code>.</li>
+<li>a <code>django_filters.Filter</code> with its <code>field_name</code> set, for any lookup django-filter
+  supports. A <code>django_filters.RangeFilter</code> shows a min and a max input in one field.</li>
+</ul>
+<p>The filters sit in a row under the search box, in the order of <code>list_filter</code>. The
+Filters button opens the row and shows how many filters are active. The row is open
+when the page loads with an active filter. A list without <code>list_filter</code> keeps the button
+in the same place, and its row says that the list has no filters.</p>
+<p>The search box filters the same way, through <code>get_search_results()</code>, so <code>^</code>, <code>=</code> and <code>@</code>
+prefixes in <code>search_fields</code> work as in Django. A filter on a many-to-many relation picks
+one row, as Django's related filter does.</p>
+<p>The list updates as the user types or picks, and the URL keeps every filter, the
+search, the sort and the page.</p>
+<h3 id="columns">Columns<a class="headerlink" href="#columns" title="Permanent link">&para;</a></h3>
+<p>When the columns of <code>list_display</code> do not fit the width of the list, the list hides
+columns from the right and shows a "+N" button at the end of the header. The checkbox,
+the first column and the columns of <code>list_display_links</code> always show. The tooltip of
+the button names the hidden columns.</p>
+<p>The button shows all columns. The table then scrolls sideways, and the checkbox and the
+first column stay in view. The browser stores the choice per model, so the list opens
+the same way next time.</p>
+<p>A <code>list_editable</code> error in a hidden column shows all columns and scrolls the first error
+into view. Without JavaScript, the table scrolls sideways as in Django's admin.</p>
+<h3 id="info-dialog">Info dialog<a class="headerlink" href="#info-dialog" title="Permanent link">&para;</a></h3>
+<p>The info button next to the list's title opens a dialog about the model:</p>
+<ul>
+<li>the row count, from the same paginator as the list, so a large PostgreSQL table
+  shows its estimate.</li>
+<li>every entry of <code>search_fields</code> with its label and how a word matches: contains,
+  starts with, is or full text. <code>search_help_text</code> shows above them.</li>
+<li>every field with its type, the related model and flags such as unique, indexed or
+  null, and the list's default order.</li>
+</ul>
+<p>A superuser also sees the table: its name, the database and its version, the model
+and admin classes, the indexes and constraints the database has, and the size of the
+rows and the indexes on PostgreSQL, MySQL and on SQLite builds with the <code>dbstat</code>
+table. The dialog loads from the
+<code>info/</code> URL the first time it opens, so the list page runs no extra queries. Override
+<code>formwork_admin/change_list_info.html</code> to change what it shows.</p>
+<h3 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h3>
+<p><code>@admin.action</code> takes two more arguments:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">action</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Archive selected tickets"</span><span class="p">,</span> <span class="n">icon</span><span class="o">=</span><span class="s2">"archive"</span><span class="p">,</span> <span class="n">danger</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">archive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">queryset</span><span class="p">):</span> <span class="o">...</span>
+</span></code></pre></div>
+<p><code>icon</code> names a Lucide icon for the action bar, and <code>danger</code> draws the button in the
+error color. Actions run as in Django: a function gets <code>(modeladmin, request, queryset)</code>
+and a name resolves to a method of the admin. The bar appears when a row is selected,
+and shift-click selects a range.</p>
+<h3 id="inlines">Inlines<a class="headerlink" href="#inlines" title="Permanent link">&para;</a></h3>
+<p><code>TabularInline</code> and <code>StackedInline</code> take Django's options (<code>extra</code>, <code>min_num</code>,
+<code>max_num</code>, <code>fk_name</code>, <code>can_delete</code>, <code>show_change_link</code>, <code>classes</code>, <code>formset</code>). Rows are
+added and removed in the browser, and the formset indexes stay contiguous.</p>
+<h3 id="export">Export<a class="headerlink" href="#export" title="Permanent link">&para;</a></h3>
+<p>The Export menu next to the add button writes the list as a CSV, Excel or JSON file. The
+file holds every row that the filters and the search let through, in the list's sort
+order, not only the current page.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Ticket</span><span class="p">)</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">export_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"subject"</span><span class="p">,</span> <span class="s2">"requester__email"</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">,</span> <span class="s2">"opened_at"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">]</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">export_formats</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"csv"</span><span class="p">,</span> <span class="s2">"xlsx"</span><span class="p">)</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>export_fields</code></td>
+<td>every field</td>
+<td>The columns: field names, <code>__</code> lookups, admin methods and callables, as in <code>list_display</code>.</td>
+</tr>
+<tr>
+<td><code>export_formats</code></td>
+<td><code>("csv", "xlsx", "json")</code></td>
+<td>The formats the menu offers. An empty tuple hides the menu.</td>
+</tr>
+<tr>
+<td><code>export_background_threshold</code></td>
+<td><code>5000</code></td>
+<td>Above this many rows the export runs as a task. <code>None</code> keeps every export in the request.</td>
+</tr>
+</tbody>
+</table>
+<p>A foreign key exports the primary key of the related row, a many-to-many field the
+sorted primary keys. Excel keeps numbers, dates and booleans as such. JSON writes dates
+and decimals as text, as <code>DjangoJSONEncoder</code> does. A JSON field stays structured in JSON
+and becomes JSON text in CSV and Excel. Excel shows
+a datetime in the site's time zone, since Excel has no time zones. The CSV file starts
+with a byte order mark, so Excel reads it as UTF-8.</p>
+<p>Excel files need openpyxl. Without it, the menu leaves Excel out.</p>
+<p>Whoever can see the list can export it. <code>has_export_permission()</code> changes that, and
+<code>get_export_fields()</code>, <code>get_export_queryset()</code> and <code>get_export_formats()</code> take the
+request like the other <code>get_*()</code> hooks. A new format subclasses <code>formats.FileFormat</code>,
+implements <code>write()</code> and <code>read()</code>, and goes into <code>formats.FORMATS</code> under its <code>name</code>.</p>
+<h4 id="large-exports">Large exports<a class="headerlink" href="#large-exports" title="Permanent link">&para;</a></h4>
+<p>Above <code>export_background_threshold</code>, the admin saves an <code>ExportJob</code> and queues it on
+Django's task framework after the request's transaction commits. The list then shows a
+message with a link to the Exports page. That page is in the account menu. It lists the
+user's last 50 exports and refreshes while one still runs. The file goes to the default
+storage under <code>formwork_admin/exports/</code>, and only the user who started the export can
+download it.</p>
+<p>The job runs as that user with the list's filters, search and sort, so a
+<code>get_queryset()</code> that limits the rows per user limits the file too.</p>
+<p>Django's default task backend, <code>ImmediateBackend</code>, runs the job inside the request, so
+the file is ready when the list loads again. For a real background run, set <code>TASKS</code> to
+a backend with a worker. To use another queue, override <code>enqueue_export()</code> on your site:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">celery</span><span class="w"> </span><span class="kn">import</span> <span class="n">shared_task</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdminSite</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin.exports</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_export_job</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="nd">@shared_task</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">run_admin_export</span><span class="p">(</span><span class="n">job_id</span><span class="p">):</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="n">run_export_job</span><span class="p">(</span><span class="n">job_id</span><span class="p">)</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAdminSite</span><span class="p">(</span><span class="n">AdminSite</span><span class="p">):</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">enqueue_export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job</span><span class="p">):</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>        <span class="n">run_admin_export</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">job</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The admin does not delete old exports. <code>ExportJob.delete()</code> deletes the row and its
+file.</p>
+<h3 id="import">Import<a class="headerlink" href="#import" title="Permanent link">&para;</a></h3>
+<p>Import is off by default. <code>import_formats</code> turns it on and adds an Import button next
+to the Export menu:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Contact</span><span class="p">)</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ContactAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">import_formats</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"csv"</span><span class="p">,</span> <span class="s2">"xlsx"</span><span class="p">)</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">import_id_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"email"</span><span class="p">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>import_formats</code></td>
+<td><code>()</code></td>
+<td>The formats the Import page reads. An empty tuple hides the button.</td>
+</tr>
+<tr>
+<td><code>import_fields</code></td>
+<td>the add form's fields</td>
+<td>The fields a row sets. Unset, the fields of the add form without the read-only and file fields.</td>
+</tr>
+<tr>
+<td><code>import_id_fields</code></td>
+<td>the primary key</td>
+<td>The fields that find the record a row changes.</td>
+</tr>
+</tbody>
+</table>
+<p>The import page checks a file before it saves anything. Pick a file and click Check
+file. The preview counts the new, changed, unchanged and invalid rows, and a click on a
+count shows only those rows. A changed cell shows the old and the new value, and an
+invalid cell shows its error as in <code>list_editable</code>. Import saves the rows in one
+transaction and goes back to the list with a summary. While a row has an error, the
+Import button stays off: fix the file and check it again.</p>
+<p><img alt="The import preview of a contact list" src="../../img/admin/import.webp" /></p>
+<p>How the file maps to records:</p>
+<ul>
+<li>A header matches a field by its name or its label, in any case. Other columns are
+  listed as ignored, so a file exported from the list imports as it is.</li>
+<li>A row whose <code>import_id_fields</code> match a record changes that record. A row without a
+  match, or with an empty key, adds a new one. Two rows for the same record are an
+  error.</li>
+<li>A foreign key column holds the primary key, as the export writes it. A header such as
+  <code>category__name</code> finds the record by that field instead. A many-to-many column holds
+  the keys separated by commas, and <code>tags__slug</code> works the same way. A value that
+  matches no record or several records is an error.</li>
+<li>A choice column takes the stored value or the label. A boolean column takes <code>true</code>
+  and <code>false</code> or <code>yes</code> and <code>no</code>.</li>
+<li>A column the file leaves out keeps the record's value on a changed row and gets the
+  field's default on a new row. Records the file does not mention stay as they are. An
+  import never deletes.</li>
+<li>A row that matches its record is skipped: it is not saved and not logged.</li>
+</ul>
+<p>Each row runs through the admin's form in a formwork model formset, so the form's
+validation applies. Unique fields are checked across the whole file: two rows with the
+same email get the error Django would give, with one query per check instead of one per
+row. Saving goes through <code>save_form()</code>, <code>save_model()</code> and <code>save_related()</code>, so an
+override that sets an owner still runs. Each saved row gets a history entry with
+Django's change message.</p>
+<p>The formats:</p>
+<ul>
+<li>CSV in UTF-8, with or without a byte order mark, or in Windows-1252. The delimiter is
+  a comma, a semicolon or a tab, whichever the header row has most of. In a file with
+  semicolons, a number can use a decimal comma, as a German Excel saves it.</li>
+<li>Excel reads the first sheet. It needs openpyxl.</li>
+<li>JSON reads a list of objects.</li>
+</ul>
+<p>Whoever can add or change records can import. Each row is checked again: a new row
+needs <code>has_add_permission()</code>, a changed row <code>has_change_permission()</code> on its record. A
+row that fails gets an error. <code>has_import_permission()</code>, <code>get_import_formats()</code>,
+<code>get_import_fields()</code>, <code>get_import_id_fields()</code> and <code>get_import_form()</code> take the request
+like the other hooks.</p>
+<p>The import keeps no copy of the file between the check and the import. Import sends the
+file again, and the server checks it again. If the file or the records changed since the
+check, the page shows the new preview instead of importing. The import runs in the
+request, so a very large file is better split. The preview shows up to 1,000 rows:
+the ones with errors first, then the changed and the new ones. The counts cover every
+row.</p>
+<h2 id="templates">Templates<a class="headerlink" href="#templates" title="Permanent link">&para;</a></h2>
+<p>Every page is a Jinja2 template under <code>formwork_admin/</code>, loaded from the <code>jinja2/</code>
+directory of each installed app. To override one, put a template with the same path in
+an app listed before <code>django_formwork.admin</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>myapp/jinja2/formwork_admin/change_list.html
+</span></code></pre></div>
+<p><code>change_list_template</code>, <code>change_form_template</code> and the other <code>*_template</code> options name
+Jinja2 templates of the same engine.</p>
+<h2 id="performance">Performance<a class="headerlink" href="#performance" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A foreign key column joins only its own relation. Django's admin calls
+  <code>select_related()</code> without arguments for one, which follows every non-null relation
+  five levels deep.</li>
+<li>A relation to a model whose admin has <code>search_fields</code> pages its rows from the server.
+  The change form no longer loads the whole related table into a <code>&lt;select&gt;</code>.</li>
+<li>Without filters, the list counts a PostgreSQL table of more than 10,000 rows from the
+  planner's estimate instead of <code>COUNT(*)</code>. Any filter or search counts exactly.
+  <code>EstimatedCountPaginator.estimate_threshold</code> sets the limit.</li>
+<li>A search or filter that can return a row twice keeps the rows unique with a primary
+  key subquery instead of <code>DISTINCT</code> over every column.</li>
+<li>The filter bar, the search and the paging swap only the list, without a full page
+  load.</li>
+</ul>
+<h2 id="keyboard">Keyboard<a class="headerlink" href="#keyboard" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Keys</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><kbd>Ctrl</kbd>+<kbd>K</kbd></td>
+<td>Filter the navigation</td>
+</tr>
+<tr>
+<td><kbd>/</kbd></td>
+<td>Focus the list search</td>
+</tr>
+<tr>
+<td><kbd>Ctrl</kbd>+<kbd>S</kbd></td>
+<td>Save and continue editing</td>
+</tr>
+</tbody>
+</table>
+<h2 id="not-supported-yet">Not supported yet<a class="headerlink" href="#not-supported-yet" title="Permanent link">&para;</a></h2>
+<ul>
+<li>The raw ID lookup popup and the add and change popups next to a relation. A relation
+  in <code>raw_id_fields</code> gets the searchable dropdown.</li>
+<li>Prepopulated fields in inline rows.</li>
+<li>Facet counts (<code>show_facets</code>).</li>
+<li>Admins for <code>User</code> and <code>Group</code>. Django registers them on its own site only.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.sections", "navigation.expand", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>
