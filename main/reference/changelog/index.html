@@ -1286,6 +1286,9 @@
   button that clears the stored file, with a second button to keep it before the save.
   It posts the same fields as Django's widget, so <code>widget=widgets.ClearableFileInput</code>
   is the only change a form needs.</li>
+<li><code>Select</code> and <code>SelectMultiple</code> take <code>counts</code>, a mapping of option values to numbers.
+  Each option shows its number at the end of the row, as a faceted filter does, and an
+  option with 0 is dimmed.</li>
 <li><code>django_formwork.admin</code> (experimental): a Django admin on formwork forms, django-filter,
   htmx and Jinja2, styled with DaisyUI. It keeps the options, hooks, URL names and
   permissions of <code>django.contrib.admin</code>, so an <code>admin.py</code> ports by importing
@@ -1294,7 +1297,14 @@
   exports in a background task, so run <code>migrate</code> after you add the app. With
   <code>import_formats</code> set, a list also imports CSV, Excel or JSON files: a preview shows
   the new, changed and invalid rows before anything is saved. Columns that do
-  not fit the width of a list hide behind a button that shows them all.</li>
+  not fit the width of a list hide behind a button that shows them all. With
+  <code>django.contrib.auth</code> installed, the admin has pages for users and groups, with the
+  password page of Django's user admin. A Show counts switch in the filter row shows
+  the number of rows for each filter option, as <code>show_facets</code> does in Django. Dates are
+  typed in the language's first <code>DATE_INPUT_FORMATS</code>, in a calendar dropdown, and a
+  datetime field has a time input next to its date. The buttons next to a relation add
+  a row or change the chosen one in a dialog, where Django's admin opens a popup
+  window.</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1331,6 +1341,33 @@
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>An input inside a DaisyUI <code>&lt;label class="input"&gt;</code> wrapper, such as a search field with
+  an icon, drew a second border and padding inside the wrapper. Formwork's input styles
+  now skip inputs inside the wrapper, and the wrapper takes the error border when its
+  input is invalid.</li>
+<li>After a click on an option of a <code>SelectMultiple</code>, the focus left the widget for the
+  page. Escape no longer closed the list, and the arrow keys no longer moved through
+  it. The focus now stays in the widget. If you override
+  <code>formwork/widgets/select_multiple.html</code>, copy it again.</li>
+<li>A click on the calendar button of a <code>DatePicker</code> left other dropdowns open, such as a
+  <code>Select</code> or the calendar of a second <code>DatePicker</code>, so two panels could overlap. If you
+  override <code>formwork/widgets/date_picker.html</code>, copy it again.</li>
+<li>A <code>size-*</code> class on an icon, such as <code>&lt;i class="icon icon-x size-4"&gt;</code>, had no effect.
+  Formwork's fallback size for icons was outside the cascade layers, so it beat every
+  Tailwind utility. It is in <code>@layer base</code> now.</li>
+<li>The days of a <code>DatePicker</code> calendar sat at the left edge of the panel when the panel
+  was wider than one month. They are centered now. If you override
+  <code>formwork/widgets/partials/calendar.html</code>, copy it again.</li>
+<li>The × button of a <code>SearchInput</code> took clicks while the field was empty. It is dimmed
+  and disabled until the field has text, also after an htmx swap changes the value.</li>
+<li>The × button in the search field of a <code>Select</code> or <code>SelectMultiple</code> dropdown cleared
+  the search only on a mouse click. Enter and Space on it did nothing. If you override
+  <code>formwork/widgets/partials/dropdown_search.html</code>, copy it again.</li>
+<li>The buttons inside a field showed no focus ring when reached with Tab: the × button
+  of <code>SearchInput</code>, the reveal button of <code>PasswordInput</code>, the arrows of
+  <code>StepperNumberInput</code> and the calendar button of <code>DatePicker</code>. Each draws a ring around
+  its icon now. If you override <code>formwork/widgets/search_input.html</code> or
+  <code>formwork/widgets/password_input.html</code>, copy it again.</li>
 <li><code>DatePicker(format="%d.%m.%Y")</code> keeps its format after a pick in the calendar. The
   input showed <code>13.07.2026</code>, and a click on a day changed it to <code>2026-07-13</code>. A date in
   the widget's format also validates where the language has no such input format: on

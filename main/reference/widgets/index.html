@@ -2084,6 +2084,12 @@ instead; see <a href="../views/#server-side-search">Server-side search</a>.</p>
 <td><code>None</code></td>
 <td>Reuse a registered search with its own params</td>
 </tr>
+<tr>
+<td><code>counts</code></td>
+<td><code>Mapping \| None</code></td>
+<td><code>None</code></td>
+<td>A number at the end of each option, keyed by the option value, as faceted filters show; a value missing from the mapping shows 0, dimmed. A list that the server pages shows no counts</td>
+</tr>
 </tbody>
 </table>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">CITIES</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">)</span>
