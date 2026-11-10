@@ -5,6 +5,19 @@ import { clearInput } from "./_helpers.js";
 
 document.addEventListener("alpine:init", () => {
   Alpine.data("formworkSearchInput", () => ({
+    // Disables the clear button while there is nothing to clear.
+    empty: true,
+
+    init() {
+      this.empty = !this.$refs.input.value;
+    },
+
+    // Runs on each input, and after an htmx swap, which can change the value.
+    sync() {
+      this.empty = !this.$refs.input.value;
+      if (this.$root.dataset.filterItems) this.filter();
+    },
+
     clear() {
       clearInput(this.$refs.input);
     },

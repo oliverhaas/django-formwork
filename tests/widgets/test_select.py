@@ -1231,6 +1231,21 @@ def test_select_many_filters_options(select_page):
 
 
 @pytest.mark.e2e
+def test_select_search_clears_from_the_keyboard(select_page):
+    """Enter on the clear button empties the search and brings the options back."""
+    from playwright.sync_api import expect
+
+    sel = select_page.locator("details.dropdown.formwork-select").nth(1)
+    _open_dropdown(select_page, 1)
+    search = sel.locator('.dropdown-content input[type="search"]')
+    search.fill("Jap")
+    expect(sel.locator("button", has_text="Brazil")).to_be_hidden()
+    sel.get_by_role("button", name="Clear search").press("Enter")
+    expect(search).to_have_value("")
+    expect(sel.locator("button", has_text="Brazil")).to_be_visible()
+
+
+@pytest.mark.e2e
 def test_select_many_pick_option_sets_value(select_page):
     """Picking an option from the many-options list sets the correct value."""
     sel = select_page.locator("details.dropdown.formwork-select").nth(1)

@@ -72,10 +72,18 @@ def test_search_input_filter_items_wires_the_filter():
     soup = render_widget(SearchInput(filter_items="#rows > li"), name="q")
     root = soup.select_one('[x-data="formworkSearchInput"]')
     assert root["data-filter-items"] == "#rows > li"
-    assert root["@htmx:after:settle.window"] == "filter()"
-    inp = root.select_one("input")
-    assert inp["@input"] == "filter()"
-    assert inp.has_attr("@keydown.enter.prevent")
+    assert root["@input"] == "sync()"
+    assert root["@htmx:after:settle.window"] == "sync()"
+    assert root.select_one("input").has_attr("@keydown.enter.prevent")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("value", "disabled"), [(None, True), ("", True), ("desk", False)])
+def test_search_input_clear_button_is_disabled_while_empty(value, disabled):
+    """An empty search has nothing to clear, so the button starts disabled."""
+    button = render_widget(SearchInput(), name="q", value=value).select_one("button")
+    assert button.has_attr("disabled") is disabled
+    assert button[":disabled"] == "empty"
 
 
 @pytest.mark.integration

@@ -1,5 +1,5 @@
 {% load i18n %}<div class="calendar grid" @keydown="onGridKey($event)">
-  <div class="calendar-days col-start-1 row-start-1 flex gap-6" :class="viewClass('days')" @mouseleave="hover(null)">{% for offset in calendar.offsets %}
+  <div class="calendar-days col-start-1 row-start-1 flex justify-center gap-6" :class="viewClass('days')" @mouseleave="hover(null)">{% for offset in calendar.offsets %}
     <div class="calendar-month{% if not forloop.first %} hidden sm:block{% endif %}">
       <div class="calendar-caption">
         {% if forloop.first %}<button type="button" class="btn btn-ghost btn-sm btn-square" @click="page(-1)" aria-label="{% translate 'Previous month' %}"><i class="icon icon-chevron-left rtl:rotate-180" aria-hidden="true"></i></button>{% else %}<span class="size-8 max-sm:hidden" aria-hidden="true"></span>{% endif %}

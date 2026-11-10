@@ -88,6 +88,33 @@
 
 ### Fixed
 
+- An input inside a DaisyUI `<label class="input">` wrapper, such as a search field with
+  an icon, drew a second border and padding inside the wrapper. Formwork's input styles
+  now skip inputs inside the wrapper, and the wrapper takes the error border when its
+  input is invalid.
+- After a click on an option of a `SelectMultiple`, the focus left the widget for the
+  page. Escape no longer closed the list, and the arrow keys no longer moved through
+  it. The focus now stays in the widget. If you override
+  `formwork/widgets/select_multiple.html`, copy it again.
+- A click on the calendar button of a `DatePicker` left other dropdowns open, such as a
+  `Select` or the calendar of a second `DatePicker`, so two panels could overlap. If you
+  override `formwork/widgets/date_picker.html`, copy it again.
+- A `size-*` class on an icon, such as `<i class="icon icon-x size-4">`, had no effect.
+  Formwork's fallback size for icons was outside the cascade layers, so it beat every
+  Tailwind utility. It is in `@layer base` now.
+- The days of a `DatePicker` calendar sat at the left edge of the panel when the panel
+  was wider than one month. They are centered now. If you override
+  `formwork/widgets/partials/calendar.html`, copy it again.
+- The × button of a `SearchInput` took clicks while the field was empty. It is dimmed
+  and disabled until the field has text, also after an htmx swap changes the value.
+- The × button in the search field of a `Select` or `SelectMultiple` dropdown cleared
+  the search only on a mouse click. Enter and Space on it did nothing. If you override
+  `formwork/widgets/partials/dropdown_search.html`, copy it again.
+- The buttons inside a field showed no focus ring when reached with Tab: the × button
+  of `SearchInput`, the reveal button of `PasswordInput`, the arrows of
+  `StepperNumberInput` and the calendar button of `DatePicker`. Each draws a ring around
+  its icon now. If you override `formwork/widgets/search_input.html` or
+  `formwork/widgets/password_input.html`, copy it again.
 - `DatePicker(format="%d.%m.%Y")` keeps its format after a pick in the calendar. The
   input showed `13.07.2026`, and a click on a day changed it to `2026-07-13`. A date in
   the widget's format also validates where the language has no such input format: on

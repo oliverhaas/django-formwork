@@ -120,7 +120,9 @@ document.addEventListener("alpine:init", () => {
         },
         // The box around the input is not a <label>, which would add the toggle's
         // name to the input's, so a click on its padding focuses the input here.
-        focusInput() {
+        // The toggle's click goes on to the page, so an open dropdown elsewhere closes.
+        focusInput(event) {
+          if (event.target.closest(".date-picker-toggle")) return;
           this.$refs.input.focus();
         },
         // Back in the input after a pick, without opening the calendar again.

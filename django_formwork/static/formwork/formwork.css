@@ -502,10 +502,11 @@ details.formwork-select[open] > summary.formwork-placeholder {
 
 /* Text-like inputs: text, email, url, number, password, date, time,
    datetime-local, search, color, tel.
-   Excludes ComboBox, the dropdown search inputs and inputs that a compound
-   widget styles itself (OTPInput draws its boxes on the <label class="otp">,
-   DateInput and InputMask style their own wrappers). */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.otp > input):not(.date-picker-label *):not(.input-mask *):not(.date-range-field *) {
+   Excludes ComboBox, the dropdown search inputs, inputs inside a DaisyUI
+   <label class="input"> wrapper and inputs that a compound widget styles
+   itself (OTPInput draws its boxes on the <label class="otp">, DateInput and
+   InputMask style their own wrappers). */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.input *):not(.otp > input):not(.date-picker-label *):not(.input-mask *):not(.date-range-field *) {
     @apply input w-full focus-primary;
 }
 
@@ -524,13 +525,14 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
     appearance: textfield;
 }
 
-/* Icon fallback: ensure iconx icons have a minimum size even if the
-   full iconx CSS hasn't been generated yet.  When iconx CSS IS loaded,
-   its .icon rule takes precedence (more specific). */
-i.icon {
-    display: inline-block;
-    width: 1em;
-    height: 1em;
+/* Icon fallback: iconx icons have a size before iconx's CSS is generated.
+   In @layer base, so a size-* or text-* utility on the icon wins. */
+@layer base {
+    i.icon {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+    }
 }
 
 /* ================================================================
@@ -599,9 +601,10 @@ i.icon {
     border-color: transparent;
 }
 
-/* DatePicker toggle button: faint by default, dark when open. */
+/* DatePicker toggle button: faint by default, dark when open. The padding
+   makes a 24px target, and the negative margin keeps the field's layout. */
 .date-picker-toggle {
-    @apply cursor-pointer opacity-40 hover:opacity-70 transition-opacity shrink-0;
+    @apply -m-1 inline-flex shrink-0 cursor-pointer items-center justify-center rounded-field p-1 opacity-40 transition-opacity hover:opacity-70 focus-visible:opacity-100;
 }
 
 .date-picker[data-open="true"] .date-picker-toggle {
@@ -717,6 +720,21 @@ i.icon {
 
 .input-stepper-button {
     @apply absolute top-1/2 z-20 flex -translate-y-1/2 items-center justify-center rounded-field p-1 text-base-content/60 cursor-pointer transition-colors hover:text-base-content disabled:pointer-events-none disabled:opacity-50;
+}
+
+/* An icon button at the end of a field, like the clear button of SearchInput
+   and the reveal button of PasswordInput: a 24px target, centered. */
+.input-icon-button {
+    @apply absolute top-1/2 z-20 flex -translate-y-1/2 items-center justify-center rounded-field p-1 cursor-pointer transition-colors enabled:hover:text-base-content disabled:cursor-default disabled:opacity-40;
+}
+
+/* The field draws no ring when a button inside it has the focus, so the
+   button draws DaisyUI's ring, tight around its target. */
+.input-icon-button:focus-visible,
+.input-stepper-button:focus-visible,
+.date-picker-toggle:focus-visible {
+    outline: 2px solid var(--color-base-content);
+    outline-offset: 0;
 }
 
 /* OTPInput: DaisyUI's .otp sizes the label at n strides, one gap wider than
@@ -1238,7 +1256,7 @@ details.formwork-disclosure[open] > summary > .formwork-disclosure-row > .icon {
    DaisyUI's -accent variants highlight the modified input.
    ================================================================ */
 
-fieldset.formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.otp > input):not(.date-picker-label *):not(.date-range-field *) {
+fieldset.formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.input *):not(.otp > input):not(.date-picker-label *):not(.date-range-field *) {
     @apply input-accent;
 }
 
@@ -1425,7 +1443,7 @@ details.formwork-select-multiple [data-value]:active,
    of specificity. The error recolor has to beat those classes too.
    ================================================================ */
 
-input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.otp > input):not(.date-picker-label *):not(.date-range-field *) {
+input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.input *):not(.otp > input):not(.date-picker-label *):not(.date-range-field *) {
     @apply input-error;
 }
 
@@ -1434,9 +1452,10 @@ input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type=
     @apply otp-error;
 }
 
-/* DatePicker: style the wrapper label based on the inner input's state. */
+/* DatePicker and a <label class="input"> wrapper: style the wrapper label based on the inner input's state. */
+.input:has(> input[aria-invalid="true"]),
 .date-picker-label:has(> input[aria-invalid="true"]),
-.date-range-field:has(> input[aria-invalid="true"]),
+.date-range-field:has(input[aria-invalid="true"]),
 .clearable-file-input-row:has(> input[aria-invalid="true"]) {
     @apply input-error;
 }
