@@ -1519,7 +1519,10 @@ are no more than seven of them. Set <code>icon</code> on the models you want to 
 glance and leave the rest to the shapes.</p>
 <h3 id="related-objects">Related objects<a class="headerlink" href="#related-objects" title="Permanent link">&para;</a></h3>
 <p>Next to a relation, the change form has buttons that open the related model's admin in
-a dialog. Django's admin opens a popup window for the same buttons.</p>
+a dialog. Django's admin opens a popup window for the same buttons. They show next to
+any widget of the relation: the dropdown, the radio buttons of <code>radio_fields</code>, or a
+widget from <code>formfield_overrides</code>, such as checkboxes or a native select. A hidden
+widget gets no buttons, as in Django's admin.</p>
 <ul>
 <li><strong>Add another</strong> (plus) adds a row. After the save, the dialog closes and the field
   chooses the new row. Every other field that can choose the row lists it too, also in
@@ -1872,7 +1875,6 @@ Jinja2 templates of the same engine.</p>
 <ul>
 <li>The raw ID lookup popup. A relation in <code>raw_id_fields</code> gets the searchable dropdown,
   with the add and change buttons.</li>
-<li>The add and change buttons for a relation in <code>radio_fields</code>.</li>
 <li>Prepopulated fields in inline rows.</li>
 </ul>
 

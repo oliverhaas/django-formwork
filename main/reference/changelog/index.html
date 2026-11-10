@@ -1379,6 +1379,17 @@
   <code>circle-exclamation-point</code>. The hint uses the new name. Run <code>formwork install</code> again
   if your icon set is older than 1.68. If you override
   <code>formwork/widgets/partials/pattern_hint.html</code>, copy it again.</li>
+<li>The label of a <code>RadioSelect</code>, a <code>CheckboxSelectMultiple</code> or a <code>MultiWidget</code> sat 4px
+  higher than the label of a field next to it in the same row. The two line up now.</li>
+<li>After an htmx morph, a checkbox, a radio button or a native <code>&lt;select&gt;</code> kept the state
+  that a click or a script had given it, even when the server rendered another one. A
+  list that gained a choice could show the wrong choice as checked and post it. The
+  morph now applies the server's state, except on the focused control, as it already
+  did for the value of a text input.</li>
+<li>A <code>RadioSelect</code> or <code>CheckboxSelectMultiple</code> inside a wrapper widget, one that holds it
+  in its <code>widget</code> attribute like Django admin's <code>RelatedFieldWidgetWrapper</code>, rendered
+  without the stacked choice list. <code>BoundField.widget_type</code> names the wrapped widget
+  now.</li>
 </ul>
 <h2 id="010a3-2026-11-06">0.1.0a3 (2026-11-06)<a class="headerlink" href="#010a3-2026-11-06" title="Permanent link">&para;</a></h2>
 <h3 id="breaking-changes_1">Breaking changes<a class="headerlink" href="#breaking-changes_1" title="Permanent link">&para;</a></h3>
