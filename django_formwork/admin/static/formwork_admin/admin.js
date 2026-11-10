@@ -454,11 +454,24 @@ document.addEventListener("alpine:init", () => {
       host.dispatchEvent(new host.CustomEvent("formwork-admin:popup", { detail }));
     },
 
+    // The inputs and native selects that post the field.
+    controls() {
+      return [...this.$root.querySelectorAll("input, select")].filter((el) => el.name === this.$root.dataset.name);
+    },
+
+    // The chosen row: the dropdown's value, or the value that the field posts last, as the
+    // server reads it.
+    value() {
+      const field = this.field();
+      if (field) return field.dataset.value ?? "";
+      return this.controls().filter((el) => el.type !== "radio" || el.checked).at(-1)?.value ?? "";
+    },
+
     // The change button follows the chosen row. Without one it stays in place, dimmed.
     syncLink() {
       const link = this.$root.querySelector('[data-related-popup="change"]');
       if (!link) return;
-      const value = this.field()?.dataset.value ?? "";
+      const value = this.value();
       if (value) {
         link.href = this.$root.dataset.changeUrl.replace("__fk__", encodeURIComponent(adminQuote(value)));
         link.removeAttribute("aria-disabled");
@@ -482,9 +495,9 @@ document.addEventListener("alpine:init", () => {
     // form, so every relation lists the rows as they are now.
     apply({ action, value, obj, new_value: newValue, chosen }) {
       const field = this.field();
-      if (!field) return;
-      const multiple = field.classList.contains("formwork-select-multiple");
-      if (action === "delete") {
+      const multiple = field?.classList.contains("formwork-select-multiple");
+      if (!field) this.applyToControls({ action, value, newValue, chosen });
+      else if (action === "delete") {
         if (multiple) this.select(field, this.selected(field).filter(([key]) => key !== value));
         else if (field.dataset.value === value) {
           Object.assign(field.dataset, { value: "", label: "", icon: "", labelHtml: "", selectedToggleClass: "" });
@@ -502,15 +515,27 @@ document.addEventListener("alpine:init", () => {
       this.syncLink();
       if (!chosen) return;
       this.$nextTick(() => {
-        // A list of boxes has none for the new row until the refresh lists it, so a hidden input
+        // A list has no option for the new row until the refresh lists it, so a hidden input
         // posts the row, also when the form is saved first.
-        const name = field.dataset.name;
-        const posted = [...this.$root.querySelectorAll("input")].some(
-          (input) => input.name === name && input.value === value && (input.type === "hidden" || input.checked),
-        );
-        if (!action && !posted) this.$root.append(Object.assign(document.createElement("input"), { type: "hidden", name, value }));
+        const posted = this.controls().some((el) => el.value === value && (el.type === "hidden" || el.checked));
+        if (!action && !posted) {
+          const input = Object.assign(document.createElement("input"), { type: "hidden", name: this.$root.dataset.name, value });
+          this.$root.append(input);
+          this.syncLink();
+        }
         this.$dispatch("formwork-admin:refresh");
       });
+    },
+
+    // Radio buttons, checkboxes or a native select. The refresh lists the rows with their new
+    // names, so only the choice changes here.
+    applyToControls({ action, value, newValue, chosen }) {
+      for (const el of this.$root.querySelectorAll("input, option")) {
+        if ((el.closest("select") ?? el).name !== this.$root.dataset.name) continue;
+        if (el.value === value && action === "delete") el[el.tagName === "OPTION" ? "selected" : "checked"] = false;
+        else if (el.value === value && action === "change") el.value = newValue;
+        else if (chosen && !action && el.type === "radio") el.checked = false;
+      }
     },
   }));
 

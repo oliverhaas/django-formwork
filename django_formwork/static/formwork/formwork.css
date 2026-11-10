@@ -360,6 +360,14 @@ fieldset.fieldset:has(> .tooltip > select + select + select) > .label {
     grid-column: 1 / -1;
 }
 
+/* A fieldset draws its legend above its top padding and a label below it, so
+   a field with a legend (a choice group, a MultiWidget) adds that padding to
+   line up with a field with a label next to it. Unlayered, so it beats
+   DaisyUI's .fieldset-legend in @layer utilities. */
+fieldset.fieldset > legend.fieldset-legend {
+    padding-top: 0.75rem;
+}
+
 /* Error tooltip inside a multi-widget fieldset: span all columns
    and use subgrid so child inputs keep the parent's column layout. */
 fieldset.fieldset > .tooltip:has(> input[type="date"] + input:is([type="date"], [type="time"])),
@@ -868,9 +876,8 @@ input[type="range"] {
 /* CheckboxSelectMultiple and RadioSelect (the field template marks the
    fieldset .choice-group): a plain stacked list, each label as wide as
    its text.  Django renders <div id> > <div> > <label> > <input>; the
-   error tooltip wraps the outer <div>. */
-.choice-group > div:not(.tooltip):has(> div > label > input:is([type="checkbox"], [type="radio"])),
-.choice-group > .tooltip > div:has(> div > label > input:is([type="checkbox"], [type="radio"])) {
+   error tooltip or the admin's relation buttons wrap the outer <div>. */
+.choice-group div:not(.tooltip):has(> div > label > input:is([type="checkbox"], [type="radio"])) {
     @apply flex flex-col items-start gap-y-1;
 }
 

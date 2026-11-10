@@ -9,10 +9,12 @@ import pytest
 from admin_app.admin import ItemAdmin, LowStockFilter
 from admin_app.models import Category, Item, Part, Tag
 from bs4 import BeautifulSoup
+from django import forms
 from django.contrib.admin import EmptyFieldListFilter, RelatedOnlyFieldListFilter, ShowFacets
 from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.auth.models import Group, Permission
 from django.core import checks
+from django.db import models
 from django.urls import reverse
 from django.utils import timezone, translation
 
@@ -355,6 +357,7 @@ def test_radio_fields_orientation_marks_the_choice_list(admin_client, catalog, m
     for name in ["status", "category"]:
         wrapper = soup.find("input", attrs={"name": name, "type": "radio"}).find_parent("div").find_parent("div")
         assert ("flex-row" in wrapper.get("class", [])) is inline
+        assert "choice-group" in soup.find("fieldset", id=f"id_{name}_field")["class"]
 
 
 @pytest.mark.parametrize(("order", "first"), [("quantity", b"Alpha kettle"), ("-quantity", b"Beta lamp")])
@@ -898,11 +901,34 @@ def test_relation_buttons_follow_the_related_admins_permissions(staff_client, ca
     assert [link["aria-label"] for link in field.select("[data-related-popup]")] == buttons
 
 
-def test_change_button_links_to_the_chosen_row(admin_client, catalog):
+@pytest.mark.parametrize(
+    "options",
+    [
+        {},
+        {"radio_fields": {"category": admin.VERTICAL}},
+        {"formfield_overrides": {models.ForeignKey: {"widget": forms.Select}}},
+    ],
+    ids=["dropdown", "radio_fields", "native_select"],
+)
+def test_change_button_links_to_the_chosen_row(admin_client, catalog, monkeypatch, options):
+    for name, value in options.items():
+        monkeypatch.setattr(site.get_model_admin(Item), name, value)
+
     soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
 
-    link = soup.select_one('[data-related="admin_app.category"] [data-related-popup="change"]')
-    assert link["href"] == url(Category, "change", catalog.kitchen.pk)
+    links = soup.select('[data-related="admin_app.category"] [data-related-popup="change"]')
+    assert [link.get("href") for link in links] == [url(Category, "change", catalog.kitchen.pk)]
+
+
+@pytest.mark.parametrize(("widget", "buttons"), [(forms.CheckboxSelectMultiple, 1), (forms.MultipleHiddenInput, 0)])
+def test_relation_buttons_show_next_to_any_visible_widget(admin_client, catalog, monkeypatch, widget, buttons):
+    overrides = {models.ManyToManyField: {"widget": widget}}
+    monkeypatch.setattr(site.get_model_admin(Item), "formfield_overrides", overrides)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
+
+    assert soup.select_one("[name=tags]") is not None
+    assert len(soup.select('[data-related="admin_app.tag"] [data-related-popup="add"]')) == buttons
 
 
 def test_change_button_is_dimmed_without_a_chosen_row(admin_client, catalog):

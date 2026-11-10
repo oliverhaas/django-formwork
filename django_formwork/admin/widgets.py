@@ -128,7 +128,7 @@ TO_FIELD_VAR = "_to_field"
 
 
 class RelatedWidgetWrapper(forms.Widget):
-    """A relation's dropdown, with buttons that add a row or change the chosen one in a dialog.
+    """A relation's widget, with buttons that add a row or change the chosen one in a dialog.
 
     The same role as Django's ``RelatedFieldWidgetWrapper``. The related admin opens with ``_popup=1``."""
 
@@ -206,6 +206,8 @@ class RelatedWidgetWrapper(forms.Widget):
             "model_label": opts.label_lower,
             "can_change_related": self.can_change_related,
             "can_view_related": self.can_view_related,
+            # The buttons follow radio buttons or checkboxes, as wide as their labels.
+            "choice_list": isinstance(self.widget, forms.RadioSelect),
             # The links open the full page; a plain click adds these and opens it in the dialog.
             "popup_query": f"{TO_FIELD_VAR}={self.rel.get_related_field().name}&{IS_POPUP_VAR}=1",
         }
@@ -213,6 +215,9 @@ class RelatedWidgetWrapper(forms.Widget):
             context["add_related_url"] = self._related_url("add")
         if self.can_change_related or self.can_view_related:
             context["change_related_template_url"] = self._related_url("change", "__fk__")
+            # Radio buttons and a native select hold the value in a list.
+            if isinstance(value, list | tuple):
+                value = value[0] if value else None
             if value not in (None, ""):
                 context["change_related_url"] = self._related_url("change", quote(value))
         return context

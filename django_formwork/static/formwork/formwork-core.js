@@ -370,6 +370,22 @@ if (typeof htmx !== "undefined") {
           newNode.removeAttribute("checked");
         }
         newNode.checked = oldNode.checked;
+      } else if (oldNode instanceof HTMLInputElement && (oldNode.type === "checkbox" || oldNode.type === "radio")) {
+        // The same sync for the checked state. Once a click or a script has
+        // changed it, the `checked` attribute that htmx copies no longer
+        // moves it, and a list that gains a choice pairs each old input with
+        // a different choice.
+        if (oldNode === document.activeElement) {
+          newNode.toggleAttribute("checked", oldNode.checked);
+        } else {
+          oldNode.checked = newNode.hasAttribute("checked");
+        }
+      } else if (oldNode instanceof HTMLOptionElement) {
+        if (oldNode.closest("select") === document.activeElement) {
+          newNode.toggleAttribute("selected", oldNode.selected);
+        } else {
+          oldNode.selected = newNode.hasAttribute("selected");
+        }
       }
 
       return true;

@@ -5,10 +5,12 @@ import re
 import django_filters
 import pytest
 from admin_app.models import Category, Item, Part, Tag
+from django import forms
+from django.db.models import ForeignKey
 from django.utils import timezone
 from playwright.sync_api import expect
 
-from django_formwork.admin import TabularInline, site
+from django_formwork.admin import VERTICAL, TabularInline, site
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -191,6 +193,55 @@ def test_a_category_added_in_the_dialog_is_chosen_and_saved(admin_page, live_ser
     admin_page.get_by_role("button", name="Save", exact=True).click()
     expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
     assert Item.objects.get(name="Spade").category == garden
+    assert admin_page.errors == []
+
+
+def test_a_category_added_in_the_dialog_is_chosen_in_a_radio_list(admin_page, live_server, kitchen, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "radio_fields", {"category": VERTICAL})
+    Category.objects.create(name="Workshop", slug="workshop")
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/add/")
+    field = admin_page.locator('[data-related="admin_app.category"]')
+    field.get_by_label("Workshop").check()
+
+    field.get_by_role("link", name="Add another category").click()
+    dialog = related_dialog(admin_page)
+    dialog.locator("[name=name]").fill("Garden")
+    dialog.get_by_role("button", name="Save", exact=True).click()
+
+    expect(admin_page.locator("dialog")).to_have_count(0)
+    expect(field.get_by_label("Garden")).to_be_checked()
+    expect(field.get_by_label("Workshop")).not_to_be_checked()
+    garden = Category.objects.get(name="Garden")
+    expect(field.get_by_role("link", name="Change selected category")).to_have_attribute(
+        "href", f"/admin/admin_app/category/{garden.pk}/change/"
+    )
+    admin_page.locator("[name=name]").fill("Spade")
+    admin_page.get_by_role("button", name="Save", exact=True).click()
+    expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
+    assert Item.objects.get(name="Spade").category == garden
+    assert admin_page.errors == []
+
+
+def test_a_category_added_in_the_dialog_is_chosen_in_a_native_select(admin_page, live_server, kitchen, monkeypatch):
+    overrides = {ForeignKey: {"widget": forms.Select}}
+    monkeypatch.setattr(site.get_model_admin(Item), "formfield_overrides", overrides)
+    item = Item.objects.create(name="Spade", category=Category.objects.create(name="Workshop", slug="workshop"))
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
+    select = admin_page.locator('[data-related="admin_app.category"] select')
+    select.select_option(label="Kitchen")
+
+    admin_page.get_by_role("link", name="Add another category").click()
+    dialog = related_dialog(admin_page)
+    dialog.locator("[name=name]").fill("Patio")
+    dialog.get_by_role("button", name="Save", exact=True).click()
+
+    expect(admin_page.locator("dialog")).to_have_count(0)
+    patio = Category.objects.get(name="Patio")
+    expect(select).to_have_value(str(patio.pk))
+    admin_page.get_by_role("button", name="Save", exact=True).click()
+    expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
+    item.refresh_from_db()
+    assert item.category == patio
     assert admin_page.errors == []
 
 

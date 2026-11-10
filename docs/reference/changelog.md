@@ -133,6 +133,17 @@
   `circle-exclamation-point`. The hint uses the new name. Run `formwork install` again
   if your icon set is older than 1.68. If you override
   `formwork/widgets/partials/pattern_hint.html`, copy it again.
+- The label of a `RadioSelect`, a `CheckboxSelectMultiple` or a `MultiWidget` sat 4px
+  higher than the label of a field next to it in the same row. The two line up now.
+- After an htmx morph, a checkbox, a radio button or a native `<select>` kept the state
+  that a click or a script had given it, even when the server rendered another one. A
+  list that gained a choice could show the wrong choice as checked and post it. The
+  morph now applies the server's state, except on the focused control, as it already
+  did for the value of a text input.
+- A `RadioSelect` or `CheckboxSelectMultiple` inside a wrapper widget, one that holds it
+  in its `widget` attribute like Django admin's `RelatedFieldWidgetWrapper`, rendered
+  without the stacked choice list. `BoundField.widget_type` names the wrapped widget
+  now.
 
 ## 0.1.0a3 (2026-11-06)
 

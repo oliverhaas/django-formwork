@@ -193,7 +193,10 @@ glance and leave the rest to the shapes.
 ### Related objects
 
 Next to a relation, the change form has buttons that open the related model's admin in
-a dialog. Django's admin opens a popup window for the same buttons.
+a dialog. Django's admin opens a popup window for the same buttons. They show next to
+any widget of the relation: the dropdown, the radio buttons of `radio_fields`, or a
+widget from `formfield_overrides`, such as checkboxes or a native select. A hidden
+widget gets no buttons, as in Django's admin.
 
 - **Add another** (plus) adds a row. After the save, the dialog closes and the field
   chooses the new row. Every other field that can choose the row lists it too, also in
@@ -552,5 +555,4 @@ Jinja2 templates of the same engine.
 
 - The raw ID lookup popup. A relation in `raw_id_fields` gets the searchable dropdown,
   with the add and change buttons.
-- The add and change buttons for a relation in `radio_fields`.
 - Prepopulated fields in inline rows.

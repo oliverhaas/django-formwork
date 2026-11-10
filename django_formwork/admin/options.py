@@ -70,7 +70,7 @@ from django_formwork.formsets import (
     formwork_inlineformset_factory,
     formwork_modelformset_factory,
 )
-from django_formwork.widgets import Select, SelectMultiple
+from django_formwork.widgets import Select
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -173,8 +173,7 @@ class BaseModelAdmin:
         db_field: models.ForeignKey[Any, Any] | models.ManyToManyField[Any, Any],
         request: HttpRequest,
     ) -> forms.Field | None:
-        # The add and change buttons update a formwork dropdown; another widget stays as it is.
-        if formfield is None or type(formfield.widget) not in {Select, SelectMultiple}:
+        if formfield is None or formfield.widget.is_hidden:
             return formfield
         related_admin = self.admin_site.get_model_admin_or_none(db_field.remote_field.model)
         if related_admin is None:

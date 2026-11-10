@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 from django import forms
@@ -14,6 +15,15 @@ __all__ = ["FormworkBoundField"]
 
 class FormworkBoundField(forms.BoundField):
     """Adds the ARIA attributes only the bound field can decide on."""
+
+    @property
+    def widget_type(self) -> str:
+        """The type of the widget, also when a wrapper such as an admin's relation buttons holds it in ``widget``."""
+        widget = self.field.widget
+        inner = getattr(widget, "widget", None)
+        if isinstance(inner, forms.Widget):
+            widget = inner
+        return re.sub(r"widget$|input$", "", type(widget).__name__.lower())
 
     @property
     def is_mandatory(self) -> bool:
