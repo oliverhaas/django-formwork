@@ -187,6 +187,7 @@ instead; see [Server-side search](views.md#server-side-search).
 | `search_decorator` | `callable \| None` | required with `search_queryset` | Access rule for the search; `None` for a public endpoint |
 | `search_ranked` | `bool` | `False` | Rank the results on PostgreSQL |
 | `search_key`, `search_params` | | `None` | Reuse a registered search with its own params |
+| `counts` | `Mapping \| None` | `None` | A number at the end of each option, keyed by the option value, as faceted filters show; a value missing from the mapping shows 0, dimmed. A list that the server pages shows no counts |
 
 ```python
 city = forms.ChoiceField(choices=CITIES, widget=widgets.Select)

@@ -40,6 +40,9 @@
   button that clears the stored file, with a second button to keep it before the save.
   It posts the same fields as Django's widget, so `widget=widgets.ClearableFileInput`
   is the only change a form needs.
+- `Select` and `SelectMultiple` take `counts`, a mapping of option values to numbers.
+  Each option shows its number at the end of the row, as a faceted filter does, and an
+  option with 0 is dimmed.
 - `django_formwork.admin` (experimental): a Django admin on formwork forms, django-filter,
   htmx and Jinja2, styled with DaisyUI. It keeps the options, hooks, URL names and
   permissions of `django.contrib.admin`, so an `admin.py` ports by importing

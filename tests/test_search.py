@@ -594,3 +594,15 @@ def test_ranked_search_puts_the_best_match_first(names: list[str], query: str, b
     row = BeautifulSoup(response.content.decode(), "html.parser").select_one("[data-value]")
     assert row is not None
     assert row["data-label"] == best
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(("users", "shown"), [(3, True), (21, False)], ids=["one_page", "paged"])
+def test_option_counts_show_only_while_the_list_fits_one_page(users: int, shown: bool) -> None:  # noqa: FBT001
+    first = _make_users(users)[0]
+    form = _UserSearchForm()
+    form.fields["user"].widget.counts = {first.pk: 7}
+
+    soup = BeautifulSoup(str(form["user"]), "html.parser")
+
+    assert ("7" in soup.select_one(f'[role=option] > [data-value="{first.pk}"]').get_text(" ").split()) is shown

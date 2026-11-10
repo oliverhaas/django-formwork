@@ -9,6 +9,7 @@ from django import forms
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.forms.models import ModelChoiceIterator
 from django.utils.choices import flatten_choices
+from django.utils.formats import number_format
 
 from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search_url
 
@@ -144,6 +145,7 @@ class SearchableSelectMixin(_SelectBase):
         search_ranked: bool = False,
         allow_clear: bool = False,
         floating: bool = False,
+        counts: Mapping[Any, int] | None = None,
     ) -> None:
         if search_key is not None and search_fields:
             msg = "Pass either search_key or search_fields, not both."
@@ -162,6 +164,7 @@ class SearchableSelectMixin(_SelectBase):
         self.search_ranked = search_ranked
         self.allow_clear = allow_clear
         self.floating = floating
+        self.counts = counts
         # Set per render by optgroups().
         self.truncated = False
         self.selected_past_page: list[str] = []
@@ -175,9 +178,17 @@ class SearchableSelectMixin(_SelectBase):
         options: list[dict[str, Any]] = []
         selected: list[dict[str, Any]] = []
         total = 0
+        # The server's pages of a long list carry no counts, so the first page shows none either.
+        counts = None
+        if self.counts is not None and not self.truncated:
+            counts = {str(key): count for key, count in self.counts.items()}
         for group, group_options, _index in widget["optgroups"]:
             for option in group_options:
                 option.update(label_extras(option["label"]))
+                if counts is not None and str(option["value"]) != "":
+                    count = counts.get(str(option["value"]), 0)
+                    option["count"] = number_format(count, force_grouping=True)
+                    option["count_zero"] = not count
                 # A heading row precedes the first option of each named group.
                 option["group"] = group or ""
                 # The empty choice (e.g. ModelChoiceField's "---------") is a row
