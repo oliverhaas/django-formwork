@@ -1,4 +1,4 @@
-<nav class="flex h-full w-72 flex-col border-r border-base-300 bg-base-100" x-data="formworkNav" aria-label="{{ _("Models") }}">
+<nav class="flex h-full w-64 flex-col border-r border-base-300 bg-base-100" x-data="formworkNav" aria-label="{{ _("Models") }}">
   {# The brand row matches the height and border of the top bar; only the model list scrolls. #}
   <div class="shrink-0 border-b border-base-300">
     <a href="{{ url(site.name ~ ":index") }}" class="flex h-14 items-center gap-3 px-5">
@@ -10,8 +10,8 @@
     </a>
   </div>
   <div class="shrink-0 px-3 pt-3 pb-1">
-    <label class="input input-sm w-full">
-      {{ icon("search", "size-4 opacity-50") }}
+    <label class="input h-8 w-full">
+      {{ icon("search", "shrink-0 opacity-50") }}
       <input type="search" id="formwork-admin-nav-filter" x-model="query" @keydown.escape="query = ''" @keydown.enter.prevent="open()"
              placeholder="{{ _("Filter models") }}" aria-label="{{ _("Filter models") }}" autocomplete="off">
       <kbd class="kbd kbd-xs hidden lg:inline-flex">Ctrl K</kbd>
@@ -19,7 +19,7 @@
   </div>
   <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-6 [scrollbar-color:var(--color-base-300)_transparent] [scrollbar-width:thin]">
     {% for app in available_apps %}
-    <ul data-nav-app class="menu menu-sm w-full [--menu-active-bg:color-mix(in_oklab,var(--color-primary)_10%,transparent)] [--menu-active-fg:var(--color-primary)]" x-show="appMatches($el)">
+    <ul data-nav-app class="menu w-full [--menu-active-bg:color-mix(in_oklab,var(--color-primary)_10%,transparent)] [--menu-active-fg:var(--color-primary)]" x-show="appMatches($el)">
       <li class="menu-title">
         <a href="{{ app.app_url }}" class="text-xs font-semibold tracking-wide text-base-content/60 uppercase transition-colors hover:text-base-content">{{ app.name }}</a>
       </li>

@@ -86,8 +86,15 @@
   <div id="changelist-filter-row" x-show="open" class="mt-3 rounded-box border border-base-300 bg-base-100 px-4 py-3"{% if not filters_open %} style="display: none"{% endif %}>
     {% if cl.has_filters %}
     {# The link stays in place, dimmed while no filter is set. Like Django's, it keeps the search and the sort. #}
-    <div class="mb-2 flex items-center justify-between gap-3 border-b border-base-200 pb-2">
-      <span class="text-sm text-base-content/60">{% if cl.has_active_filters %}{% trans trimmed count=cl.active_filter_count, total=number(cl.active_filter_count) %}{{ total }} filter active{% pluralize %}{{ total }} filters active{% endtrans %}{% else %}{{ _("No filters active") }}{% endif %}</span>
+    <div class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-base-200 pb-2">
+      <span class="me-auto text-sm text-base-content/60">{% if cl.has_active_filters %}{% trans trimmed count=cl.active_filter_count, total=number(cl.active_filter_count) %}{{ total }} filter active{% pluralize %}{{ total }} filters active{% endtrans %}{% else %}{{ _("No filters active") }}{% endif %}</span>
+      {% if cl.is_facets_optional %}
+      {#- A field of the form, so a change refreshes the list as a filter does. #}
+      <label class="flex cursor-pointer items-center gap-2 text-sm text-base-content/70">
+        <input type="checkbox" name="_facets" value="True" class="toggle toggle-sm toggle-primary"{% if cl.add_facets %} checked{% endif %}>
+        {{ _("Show counts") }}
+      </label>
+      {% endif %}
       {% if cl.has_active_filters %}
       <a {{ m.list_link(cl.clear_all_filters_qs) }} data-clear-filters class="btn btn-ghost btn-sm -me-3 gap-1.5 text-base-content/70">{{ icon("x") }}{{ _("Clear all filters") }}</a>
       {% else %}

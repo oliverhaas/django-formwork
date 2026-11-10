@@ -51,7 +51,14 @@
   exports in a background task, so run `migrate` after you add the app. With
   `import_formats` set, a list also imports CSV, Excel or JSON files: a preview shows
   the new, changed and invalid rows before anything is saved. Columns that do
-  not fit the width of a list hide behind a button that shows them all.
+  not fit the width of a list hide behind a button that shows them all. With
+  `django.contrib.auth` installed, the admin has pages for users and groups, with the
+  password page of Django's user admin. A Show counts switch in the filter row shows
+  the number of rows for each filter option, as `show_facets` does in Django. Dates are
+  typed in the language's first `DATE_INPUT_FORMATS`, in a calendar dropdown, and a
+  datetime field has a time input next to its date. The buttons next to a relation add
+  a row or change the chosen one in a dialog, where Django's admin opens a popup
+  window.
 
 ### Changed
 

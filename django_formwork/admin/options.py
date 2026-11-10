@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 import io
+import json
 from functools import cached_property, partial, update_wrapper
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 from urllib.parse import quote_plus
@@ -15,11 +16,13 @@ from django import forms
 from django.apps import apps
 from django.contrib import messages
 from django.contrib.admin import options as django_options
+from django.contrib.admin.exceptions import DisallowedModelAdminToField
+from django.contrib.admin.options import EMPTY_VALUE_STRING, ShowFacets
 from django.contrib.admin.utils import (
     NestedObjects,
     construct_change_message,
+    display_for_value,
     flatten_fieldsets,
-    get_deleted_objects,
     model_format_dict,
     model_ngettext,
     quote,
@@ -28,6 +31,7 @@ from django.contrib.admin.utils import (
 from django.contrib.auth import get_permission_codename
 from django.core.exceptions import FieldDoesNotExist, FieldError, PermissionDenied, ValidationError
 from django.db import IntegrityError, models, router, transaction
+from django.db.models import prefetch_related_objects
 from django.forms.formsets import DELETION_FIELD_NAME, all_valid
 from django.forms.models import modelform_defines_fields
 from django.http import (
@@ -38,7 +42,7 @@ from django.http import (
     HttpResponseRedirect,
     QueryDict,
 )
-from django.urls import path, reverse
+from django.urls import NoReverseMatch, path, reverse
 from django.utils.html import format_html
 from django.utils.text import capfirst, get_text_list
 from django.utils.translation import gettext as _
@@ -51,7 +55,13 @@ from django_formwork.admin.helpers import AdminForm, InlineAdminFormSet
 from django_formwork.admin.info import describe_fields, describe_search, describe_table
 from django_formwork.admin.jinja import AdminTemplateResponse
 from django_formwork.admin.paginator import EstimatedCountPaginator
-from django_formwork.admin.widgets import FORMFIELD_FOR_DBFIELD_DEFAULTS, relation_widget
+from django_formwork.admin.widgets import (
+    FORMFIELD_FOR_DBFIELD_DEFAULTS,
+    IS_POPUP_VAR,
+    TO_FIELD_VAR,
+    RelatedWidgetWrapper,
+    relation_widget,
+)
 from django_formwork.forms import FormworkModelForm
 from django_formwork.formsets import (
     FormworkBaseInlineFormSet,
@@ -59,7 +69,7 @@ from django_formwork.formsets import (
     formwork_inlineformset_factory,
     formwork_modelformset_factory,
 )
-from django_formwork.widgets import Select
+from django_formwork.widgets import Select, SelectMultiple
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -105,7 +115,7 @@ class BaseModelAdmin:
     raw_id_fields: Sequence[str] = ()
     fields: Sequence[Any] | None = None
     exclude: Sequence[str] | None = None
-    fieldsets: Sequence[tuple[str | None, dict[str, Any]]] | None = None
+    fieldsets: Sequence[tuple[str | StrPromise | None, dict[str, Any]]] | None = None
     form: type[forms.ModelForm[Any]] = FormworkModelForm
     filter_vertical: Sequence[str] = ()
     filter_horizontal: Sequence[str] = ()
@@ -139,8 +149,10 @@ class BaseModelAdmin:
             if db_field.__class__ in self.formfield_overrides:
                 kwargs = {**self.formfield_overrides[db_field.__class__], **kwargs}
             if isinstance(db_field, models.ForeignKey):
-                return self.formfield_for_foreignkey(db_field, request, **kwargs)
-            return self.formfield_for_manytomany(db_field, request, **kwargs)
+                formfield = self.formfield_for_foreignkey(db_field, request, **kwargs)
+            else:
+                formfield = self.formfield_for_manytomany(db_field, request, **kwargs)
+            return self._wrap_related(formfield, db_field, request)
         if isinstance(db_field, models.BooleanField) and db_field.null and "widget" not in kwargs:
             choices = [("unknown", _("Unknown")), ("true", _("Yes")), ("false", _("No"))]
             kwargs["widget"] = Select(choices=choices, show_search=False)
@@ -153,6 +165,53 @@ class BaseModelAdmin:
                 }
                 return db_field.formfield(**kwargs)
         return db_field.formfield(**kwargs)
+
+    def _wrap_related(
+        self,
+        formfield: forms.Field | None,
+        db_field: models.ForeignKey[Any, Any] | models.ManyToManyField[Any, Any],
+        request: HttpRequest,
+    ) -> forms.Field | None:
+        # The add and change buttons update a formwork dropdown; another widget stays as it is.
+        if formfield is None or type(formfield.widget) not in {Select, SelectMultiple}:
+            return formfield
+        related_admin = self.admin_site.get_model_admin_or_none(db_field.remote_field.model)
+        if related_admin is None:
+            return formfield
+        formfield.widget = RelatedWidgetWrapper(
+            formfield.widget,
+            db_field.remote_field,
+            self.admin_site,
+            can_add_related=related_admin.has_add_permission(request),
+            can_change_related=related_admin.has_change_permission(request),
+            can_view_related=related_admin.has_view_permission(request),
+        )
+        return formfield
+
+    def to_field_allowed(self, request: HttpRequest, to_field: str) -> bool:
+        """Whether a page may name this model's rows by ``to_field``: the primary key, or a field a relation targets."""
+        try:
+            field = self.opts.get_field(to_field)
+        except FieldDoesNotExist:
+            return False
+        if getattr(field, "primary_key", False):
+            return True
+        if any(m2m.m2m_target_field_name() == to_field for m2m in self.opts.many_to_many):
+            return True
+        registered = set(self.admin_site._registry)
+        for model_admin in self.admin_site._registry.values():
+            registered.update(inline.model for inline in model_admin.inlines)
+        for related in self.opts.get_fields(include_hidden=True):
+            if not (related.auto_created and not related.concrete):
+                continue
+            remote_field = related.field.remote_field
+            if (
+                any(issubclass(model, related.related_model) for model in registered)
+                and hasattr(remote_field, "get_related_field")
+                and remote_field.get_related_field() == field
+            ):
+                return True
+        return False
 
     def formfield_for_choice_field(
         self, db_field: models.Field[Any, Any], request: HttpRequest, **kwargs: Any
@@ -256,7 +315,7 @@ class BaseModelAdmin:
 
     def get_fieldsets(
         self, request: HttpRequest, obj: models.Model | None = None
-    ) -> Sequence[tuple[str | None, dict[str, Any]]]:
+    ) -> Sequence[tuple[str | StrPromise | None, dict[str, Any]]]:
         if self.fieldsets:
             return self.fieldsets
         return [(None, {"fields": self.get_fields(request, obj)})]
@@ -343,7 +402,7 @@ class ModelAdmin(BaseModelAdmin):
     save_on_top = False
     paginator = EstimatedCountPaginator
     preserve_filters = True
-    show_facets = None
+    show_facets = ShowFacets.ALLOW
     inlines: Sequence[type[InlineModelAdmin]] = ()
     delete_confirmation_max_display = 100
 
@@ -355,6 +414,7 @@ class ModelAdmin(BaseModelAdmin):
     delete_selected_confirmation_template: str | Sequence[str] | None = None
     object_history_template: str | Sequence[str] | None = None
     import_template: str | Sequence[str] | None = None
+    popup_response_template: str | Sequence[str] | None = None
 
     #: The export's columns: field names, admin methods, callables or ``__`` lookups; unset, every field.
     export_fields: Sequence[Any] | None = None
@@ -482,9 +542,18 @@ class ModelAdmin(BaseModelAdmin):
         except model.DoesNotExist, ValidationError, ValueError:
             return None
 
+    def _changelist_formfield(
+        self, db_field: models.Field[Any, Any], request: HttpRequest, **kwargs: Any
+    ) -> forms.Field | None:
+        formfield = self.formfield_for_dbfield(db_field, request, **kwargs)
+        # A table cell has no room for the add and change buttons.
+        if formfield is not None and isinstance(formfield.widget, RelatedWidgetWrapper):
+            formfield.widget = formfield.widget.widget
+        return formfield
+
     def get_changelist_form(self, request: HttpRequest, **kwargs: Any) -> type[forms.ModelForm[Any]]:
         defaults: dict[str, Any] = {
-            "formfield_callback": partial(self.formfield_for_dbfield, request=request),
+            "formfield_callback": partial(self._changelist_formfield, request=request),
             **kwargs,
         }
         if defaults.get("fields") is None and not modelform_defines_fields(defaults.get("form")):  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
@@ -497,7 +566,7 @@ class ModelAdmin(BaseModelAdmin):
             form=self.get_changelist_form(request),
             extra=0,
             fields=self.list_editable,
-            formfield_callback=partial(self.formfield_for_dbfield, request=request),
+            formfield_callback=partial(self._changelist_formfield, request=request),
             **kwargs,
         )
 
@@ -906,7 +975,49 @@ class ModelAdmin(BaseModelAdmin):
     def get_deleted_objects(
         self, objs: Any, request: HttpRequest
     ) -> tuple[list[Any], dict[str, int], set[str], list[Any]]:
-        return get_deleted_objects(objs, request, self.admin_site)
+        """Django's ``get_deleted_objects``, but a row of a ``ManyToManyField`` names the two objects it links.
+
+        Django shows such a row as "Item_tags object (1)".
+        """
+        try:
+            first = objs[0]
+        except IndexError:
+            return [], {}, set(), []
+        collector = NestedObjects(using=router.db_for_write(first._meta.model), origin=objs)
+        collector.collect(objs)
+        # The stubs key model_objs by name; Django keys it by model.
+        model_objs = cast("dict[type[models.Model], set[models.Model]]", collector.model_objs)
+        links = {}
+        for model, instances in model_objs.items():
+            if model._meta.auto_created:
+                ends = [field.name for field in model._meta.fields if field.is_relation]
+                prefetch_related_objects(list(instances), *ends)
+                links[model] = ends
+        perms_needed: set[str] = set()
+
+        def format_callback(obj: models.Model) -> str:
+            opts = obj._meta
+            name = capfirst(opts.verbose_name)
+            if type(obj) in links:
+                return f"{name}: " + " \u2192 ".join(str(getattr(obj, end)) for end in links[type(obj)])
+            if not self.admin_site.is_registered(type(obj)):
+                return f"{name}: {obj}"
+            if not self.admin_site.get_model_admin(type(obj)).has_delete_permission(request, obj):
+                perms_needed.add(str(opts.verbose_name))
+            try:
+                change_url = reverse(
+                    f"{self.admin_site.name}:{opts.app_label}_{opts.model_name}_change", args=(quote(obj.pk),)
+                )
+            except NoReverseMatch:
+                return f"{name}: {obj}"
+            return format_html(
+                '{}: <a href="{}">{}</a>', name, change_url, display_for_value(str(obj), EMPTY_VALUE_STRING)
+            )
+
+        to_delete = collector.nested(format_callback)
+        protected = [format_callback(obj) for obj in collector.protected]
+        model_count = {str(model._meta.verbose_name_plural): len(found) for model, found in model_objs.items()}
+        return to_delete, model_count, perms_needed, protected
 
     # History
 
@@ -997,9 +1108,23 @@ class ModelAdmin(BaseModelAdmin):
         url = reverse(self.url_name("change"), args=(quote(obj.pk),))
         return format_html('<a href="{}">{}</a>', url, obj)
 
+    def response_popup(self, request: HttpRequest, data: dict[str, str]) -> HttpResponse:
+        """The page that hands a dialog's saved or deleted row back to the form that opened it."""
+        opts = self.opts
+        templates = self.popup_response_template or [
+            f"formwork_admin/{opts.app_label}/{opts.model_name}/popup_response.html",
+            f"formwork_admin/{opts.app_label}/popup_response.html",
+            "formwork_admin/popup_response.html",
+        ]
+        return self.render(request, templates, {"popup_response_data": json.dumps(data)})
+
     def response_add(
         self, request: HttpRequest, obj: models.Model, post_url_continue: str | None = None
     ) -> HttpResponse:
+        if IS_POPUP_VAR in request.POST:
+            to_field = request.POST.get(TO_FIELD_VAR)
+            value = obj.serializable_value(str(to_field) if to_field else obj._meta.pk.attname)
+            return self.response_popup(request, {"value": str(value), "obj": str(obj)})
         msg_dict = {"name": self.opts.verbose_name, "obj": self._object_link(obj)}
         if "_continue" in request.POST or (
             "_saveasnew" in request.POST and self.save_as_continue and self.has_change_permission(request, obj)
@@ -1021,6 +1146,17 @@ class ModelAdmin(BaseModelAdmin):
         return self.response_post_save_add(request, obj)
 
     def response_change(self, request: HttpRequest, obj: models.Model) -> HttpResponse:
+        if IS_POPUP_VAR in request.POST:
+            to_field = request.POST.get(TO_FIELD_VAR)
+            match = request.resolver_match
+            new_value = obj.serializable_value(str(to_field) if to_field else obj._meta.pk.attname)
+            data = {
+                "action": "change",
+                "value": str(unquote(match.kwargs["object_id"]) if match else new_value),
+                "obj": str(obj),
+                "new_value": str(new_value),
+            }
+            return self.response_popup(request, data)
         msg_dict = {"name": self.opts.verbose_name, "obj": self._object_link(obj)}
         if "_continue" in request.POST:
             msg = format_html(
@@ -1055,6 +1191,8 @@ class ModelAdmin(BaseModelAdmin):
         return self._response_post_save(request, obj)
 
     def response_delete(self, request: HttpRequest, obj_display: str, obj_id: Any) -> HttpResponse:
+        if IS_POPUP_VAR in request.POST:
+            return self.response_popup(request, {"action": "delete", "value": str(obj_id)})
         msg = _("The %(name)s “%(obj)s” was deleted successfully.") % {
             "name": self.opts.verbose_name,
             "obj": obj_display,
@@ -1266,9 +1404,18 @@ class ModelAdmin(BaseModelAdmin):
             )
         return wrapped
 
+    def _popup_to_field(self, request: HttpRequest) -> str | None:
+        # The field the page that opened this dialog names the row by.
+        to_field = request.POST.get(TO_FIELD_VAR, request.GET.get(TO_FIELD_VAR))
+        if to_field and not self.to_field_allowed(request, to_field):
+            msg = f"The field {to_field} cannot be referenced."
+            raise DisallowedModelAdminToField(msg)
+        return to_field
+
     def _changeform_view(
         self, request: HttpRequest, object_id: str | None, form_url: str, extra_context: dict[str, Any] | None
     ) -> HttpResponse:
+        to_field = self._popup_to_field(request)
         if request.method == "POST" and "_saveasnew" in request.POST:
             object_id = None
         add = object_id is None
@@ -1277,7 +1424,7 @@ class ModelAdmin(BaseModelAdmin):
                 raise PermissionDenied
             obj = None
         else:
-            obj = self.get_object(request, unquote(object_id))  # type: ignore[arg-type]
+            obj = self.get_object(request, unquote(object_id), to_field)  # type: ignore[arg-type]
             if obj is None:
                 if not self.has_view_or_change_permission(request):
                     raise PermissionDenied
@@ -1349,6 +1496,10 @@ class ModelAdmin(BaseModelAdmin):
             inline_admin_formsets=inline_formsets,
             error_count=error_count,
             errors=error_count,
+            is_popup=IS_POPUP_VAR in request.POST or IS_POPUP_VAR in request.GET,
+            to_field=to_field,
+            is_popup_var=IS_POPUP_VAR,
+            to_field_var=TO_FIELD_VAR,
             **(extra_context or {}),
         )
         if request.method == "POST" and not form_validated and "_saveasnew" in request.POST:
@@ -1373,10 +1524,13 @@ class ModelAdmin(BaseModelAdmin):
             inline.has_add_permission or inline.has_change_permission or inline.has_delete_permission
             for inline in context.get("inline_admin_formsets", ())
         )
-        # The same buttons as Django's submit_row tag.
+        # The same buttons as Django's submit_row tag. A dialog saves and closes, so it shows Save only.
+        is_popup = context.get("is_popup", False)
         can_save = (has_change and change) or (can_add and add) or editable_inlines
         show_save = context.get("show_save", True) and can_save
-        history = bool(obj) and _log_entries_installed() and self.has_view_or_change_permission(request, obj)
+        history = (
+            bool(obj) and not is_popup and _log_entries_installed() and self.has_view_or_change_permission(request, obj)
+        )
         context.update(
             {
                 "add": add,
@@ -1394,7 +1548,7 @@ class ModelAdmin(BaseModelAdmin):
                 else None,
                 "save_as": self.save_as,
                 "save_on_top": self.save_on_top,
-                "view_on_site_url": self.get_view_on_site_url(obj),
+                "view_on_site_url": None if is_popup else self.get_view_on_site_url(obj),
                 "history_url": self.with_preserved_filters(
                     request, reverse(self.url_name("history"), args=(quote(obj.pk),))
                 )
@@ -1403,15 +1557,23 @@ class ModelAdmin(BaseModelAdmin):
                 "delete_url": self.with_preserved_filters(
                     request, reverse(self.url_name("delete"), args=(quote(obj.pk),))
                 )
-                if obj and change and context.get("show_delete", True) and self.has_delete_permission(request, obj)
+                if obj
+                and change
+                and not is_popup
+                and context.get("show_delete", True)
+                and self.has_delete_permission(request, obj)
                 else "",
                 "show_save": show_save,
-                "show_save_and_continue": can_save and has_view and context.get("show_save_and_continue", True),
+                "show_save_and_continue": not is_popup
+                and can_save
+                and has_view
+                and context.get("show_save_and_continue", True),
                 "show_save_and_add_another": can_add
+                and not is_popup
                 and (not self.save_as or add)
                 and can_save
                 and context.get("show_save_and_add_another", True),
-                "show_save_as_new": change and self.save_as and can_add,
+                "show_save_as_new": change and not is_popup and self.save_as and can_add,
                 "show_close": not show_save,
                 "can_change": has_change or editable_inlines,
             }
@@ -1428,7 +1590,8 @@ class ModelAdmin(BaseModelAdmin):
             return self._delete_view(request, object_id, extra_context)
 
     def _delete_view(self, request: HttpRequest, object_id: str, extra_context: dict[str, Any] | None) -> HttpResponse:
-        obj = self.get_object(request, unquote(object_id))
+        to_field = self._popup_to_field(request)
+        obj = self.get_object(request, unquote(object_id), to_field)
         if not self.has_delete_permission(request, obj):
             raise PermissionDenied
         if obj is None:
@@ -1438,7 +1601,7 @@ class ModelAdmin(BaseModelAdmin):
             if perms_needed:
                 raise PermissionDenied
             obj_display = str(obj)
-            obj_id = obj.serializable_value(self.opts.pk.attname)
+            obj_id = obj.serializable_value(to_field or self.opts.pk.attname)
             self.log_deletions(request, [obj])
             self.delete_model(request, obj)
             return self.response_delete(request, obj_display, obj_id)
@@ -1458,6 +1621,10 @@ class ModelAdmin(BaseModelAdmin):
             protected=protected,
             change_url=self.with_preserved_filters(request, reverse(self.url_name("change"), args=(quote(obj.pk),))),
             media=self.media,
+            is_popup=IS_POPUP_VAR in request.POST or IS_POPUP_VAR in request.GET,
+            to_field=to_field,
+            is_popup_var=IS_POPUP_VAR,
+            to_field_var=TO_FIELD_VAR,
             **(extra_context or {}),
         )
         return self.render(

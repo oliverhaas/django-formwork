@@ -20,11 +20,11 @@
       @submit="if (busy) { $event.preventDefault() } else { busy = 'import' }">
   {{ csrf_input }}
 
-  <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+  <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
     <div class="card border border-base-300 bg-base-100">
       <div class="card-body gap-4 p-6">
         {% if form.non_field_errors() %}
-        <div role="alert" class="alert alert-error alert-soft items-start">{{ icon("circle-exclamation-point", "size-5 mt-0.5") }}<span>{{ form.non_field_errors()|join(" ") }}</span></div>
+        <div role="alert" class="alert alert-error alert-soft items-start">{{ icon("circle-exclamation-point", "size-5") }}<span>{{ form.non_field_errors()|join(" ") }}</span></div>
         {% endif %}
         {{ form.file.as_field_group() }}
         <div>
@@ -42,18 +42,18 @@
     <details id="import-columns-{{ "checked" if result is not none else "open" }}" class="card border border-base-300 bg-base-100 [&[open]_[data-chevron]]:rotate-180"{% if result is none %} open{% endif %}>
       <summary class="flex cursor-pointer list-none items-center gap-3 px-6 py-4 [&::-webkit-details-marker]:hidden">
         <span class="min-w-0 flex-1">
-          <span class="block font-medium">{{ _("Columns") }}</span>
+          <span class="block font-semibold">{{ _("Columns") }}</span>
           <span class="block text-sm text-base-content/60">{{ _("A header names a field or its label, in any case. A file exported from this list imports as it is.") }}</span>
         </span>
         <span data-chevron class="inline-flex shrink-0 text-base-content/50 transition-transform motion-reduce:transition-none">{{ icon("chevron-down") }}</span>
       </summary>
       <div class="overflow-x-auto border-t border-base-300">
         <table class="table table-sm">
-          <thead>
+          <thead class="text-xs">
             <tr class="{{ head_bg }}">
-              <th class="font-medium">{{ _("Column") }}</th>
-              <th class="font-medium">{{ _("Field") }}</th>
-              <th class="font-medium">{{ _("Values") }}</th>
+              <th>{{ _("Column") }}</th>
+              <th>{{ _("Field") }}</th>
+              <th>{{ _("Values") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -85,7 +85,7 @@
     ("unchanged", _("Unchanged"), "equal", "text-base-content/50"),
     ("error", _("Errors"), "circle-exclamation-point", "text-error"),
   ] %}
-  {% set badges = {"new": "badge-success badge-soft", "changed": "badge-info badge-soft", "unchanged": "badge-ghost", "error": "badge-error badge-soft"} %}
+  {% set dots = {"new": "status-success", "changed": "status-info", "unchanged": "", "error": "status-error"} %}
   {% set labels = {"new": _("New"), "changed": _("Changed"), "unchanged": _("Unchanged"), "error": _("Error")} %}
   {#- A new check gives a new id, so the filter starts over. #}
   <section id="import-preview-{{ result.digest[:16] }}" class="mt-8" x-data="{ show: '' }" x-show="!picked" aria-labelledby="import-preview-title">
@@ -94,7 +94,7 @@
 
     {% if stale %}
     <div role="alert" class="alert alert-warning alert-soft mb-4 items-start">
-      {{ icon("triangle-exclamation-point", "size-5 mt-0.5") }}
+      {{ icon("triangle-exclamation-point", "size-5") }}
       <span>{{ _("The file or the records changed since the last check, so nothing was imported. Look over the new preview and import again.") }}</span>
     </div>
     {% endif %}
@@ -126,12 +126,12 @@
     <div class="card mt-4 overflow-hidden border border-base-300 bg-base-100">
       <div class="max-h-[70vh] overflow-auto">
         <table class="table table-sm table-pin-rows">
-          <thead>
+          <thead class="text-xs">
             <tr class="{{ head_bg }}">
-              <th class="w-px font-medium">{{ _("Row") }}</th>
-              {% if mapping.key_shown %}<th class="font-medium whitespace-nowrap">{{ mapping.key_label }}</th>{% endif %}
+              <th class="w-px">{{ _("Row") }}</th>
+              {% if mapping.key_shown %}<th class="whitespace-nowrap">{{ mapping.key_label }}</th>{% endif %}
               {% for column in mapping.columns %}
-              <th class="font-medium whitespace-nowrap" title="{{ column.header }}">{{ column.label }}</th>
+              <th class="whitespace-nowrap" title="{{ column.header }}">{{ column.label }}</th>
               {% endfor %}
             </tr>
           </thead>
@@ -142,7 +142,7 @@
               <td>
                 <span class="flex items-center gap-2 whitespace-nowrap">
                   <span class="min-w-6 text-right tabular-nums text-base-content/60">{{ row.number }}</span>
-                  <span data-status class="badge badge-sm {{ badges[row.status] }}">{{ labels[row.status] }}</span>
+                  <span data-status class="badge badge-ghost badge-sm gap-1.5"><span class="status {{ dots[row.status] }}" aria-hidden="true"></span>{{ labels[row.status] }}</span>
                 </span>
               </td>
               {% if mapping.key_shown %}

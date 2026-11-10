@@ -161,7 +161,14 @@ admin: `list_display`, `list_display_links`, `list_filter`, `list_select_related
 `delete_model()` and `response_*()` hooks.
 
 The forms are formwork forms, so every field renders with formwork's widgets and
-templates. A date field gets a `DatePicker`, a relation a `Select` or `SelectMultiple`.
+templates. A relation gets a `Select` or `SelectMultiple`, a date field a `DatePicker`,
+and a datetime field a `DatePicker` with a time input next to it. As in Django's admin,
+a date is typed in the first format of the language's `DATE_INPUT_FORMATS`, for example
+`10.01.2026` in German, and the date filter writes its dates the same way. Lists and
+read-only fields show `DATE_FORMAT` and `DATETIME_FORMAT`.
+
+After a failed save, each field error shows under its field, as in Django's admin. A
+`form` whose `Meta.error_display` is set keeps that display.
 
 ![The change form of an employee](../img/admin/change-form.webp)
 
@@ -182,6 +189,34 @@ pentagon, hexagon or star. The shape comes from a hash of the model's label, so 
 the same across restarts, and the models of one app get different shapes while there
 are no more than seven of them. Set `icon` on the models you want to tell apart at a
 glance and leave the rest to the shapes.
+
+### Related objects
+
+Next to a relation, the change form has buttons that open the related model's admin in
+a dialog. Django's admin opens a popup window for the same buttons.
+
+- **Add another** (plus) adds a row. After the save, the dialog closes and the field
+  chooses the new row. The other fields on the page that point to the same model list
+  the row too, unless they limit their choices.
+- **Change selected** (pencil) edits the chosen row, and the field shows its new name.
+  With only the view permission, the button is an eye and shows the row. Without a
+  chosen row, the button stays in place, dimmed. A many-to-many field has no such
+  button.
+
+Each button shows only with the matching permission on the related model's admin. There
+is no delete button: delete a row in its own admin.
+
+A relation in the dialog opens the next dialog on top. <kbd>Esc</kbd> or the close
+button closes a dialog, and the browser asks first when its form has unsaved changes.
+A click with <kbd>Ctrl</kbd> or <kbd>Cmd</kbd>, or with the middle button, opens the
+page in a new tab instead.
+
+The dialog loads Django's popup URLs, with `_popup=1` and `_to_field`, so a
+`response_add()`, `response_change()` or `response_delete()` that checks for `_popup`
+keeps working. A save in the dialog ends on `popup_response_template`, by default
+`formwork_admin/popup_response.html`. An override keeps the element with the id
+`formwork-admin-popup-response`: the dialog reads the saved row from its
+`data-popup-response` attribute.
 
 ### Filters
 
@@ -208,6 +243,23 @@ one row, as Django's related filter does.
 
 The list updates as the user types or picks, and the URL keeps every filter, the
 search, the sort and the page.
+
+With `show_facets` at its default, `admin.ShowFacets.ALLOW`, the filter row has a Show
+counts switch. The switch adds `_facets` to the URL, as Django's link does, and each
+option then shows how many rows it matches. The count applies the search and the other
+filters, but not the filter of the option itself. `ShowFacets.ALWAYS` shows the counts
+without the switch, and `ShowFacets.NEVER` removes both.
+
+```python
+@admin.register(Project)
+class ProjectAdmin(admin.ModelAdmin):
+    list_filter = ("status", "owner")
+    show_facets = admin.ShowFacets.ALWAYS
+```
+
+Each filter with counts runs one more query. Date and number ranges have no counts. A
+relation filter that searches its rows on the server shows counts only while all rows
+fit on its first page of 20.
 
 ### Columns
 
@@ -403,6 +455,57 @@ request, so a very large file is better split. The preview shows up to 1,000 row
 the ones with errors first, then the changed and the new ones. The counts cover every
 row.
 
+## Users and groups
+
+With `django.contrib.auth` installed, the site registers admins for `User` and `Group`,
+as `django.contrib.auth.admin` does on Django's own site. They work as Django's do:
+
+- Add user asks for a username and a password, or turns password-based authentication
+  off. The save opens the change form of the new user for the other fields.
+- The change form shows the algorithm and the parameters of the password hash. Its
+  button opens a page that sets a new password or turns password-based authentication
+  off.
+- To add a user, the "Change user" permission is necessary too, because a user who can
+  add users can add a superuser.
+- The permissions of a group or a user are grouped by model.
+
+When `AUTH_USER_MODEL` names another model, only `Group` is registered. For a model that
+extends `AbstractUser`, subclass `UserAdmin`:
+
+```python
+from django_formwork import admin
+from django_formwork.admin.auth import UserAdmin
+
+from .models import Account
+
+
+@admin.register(Account)
+class AccountAdmin(UserAdmin):
+    list_display = ("username", "email", "is_staff")
+```
+
+`User` and `Group` are registered before the `admin` modules of the apps are imported,
+so an app can replace them:
+
+```python
+from django.contrib.auth.models import Group, User
+
+from django_formwork import admin
+from django_formwork.admin.auth import UserAdmin
+
+admin.site.unregister(Group)
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class StaffUserAdmin(UserAdmin):
+    list_filter = ("is_active",)
+```
+
+`django_formwork.admin.auth` also has `UserChangeForm`, `AdminUserCreationForm` and
+`AdminPasswordChangeForm` for `form`, `add_form` and `change_password_form`, and
+`GroupAdmin`. `change_user_password_template` names the template of the password page.
+
 ## Templates
 
 Every page is a Jinja2 template under `formwork_admin/`, loaded from the `jinja2/`
@@ -441,8 +544,7 @@ Jinja2 templates of the same engine.
 
 ## Not supported yet
 
-- The raw ID lookup popup and the add and change popups next to a relation. A relation
-  in `raw_id_fields` gets the searchable dropdown.
+- The raw ID lookup popup. A relation in `raw_id_fields` gets the searchable dropdown,
+  with the add and change buttons.
+- The add and change buttons for a relation in `radio_fields`.
 - Prepopulated fields in inline rows.
-- Facet counts (`show_facets`).
-- Admins for `User` and `Group`. Django registers them on its own site only.

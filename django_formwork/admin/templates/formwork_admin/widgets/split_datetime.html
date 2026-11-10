@@ -1,0 +1,1 @@
+<div class="flex flex-wrap gap-2">{% with date=widget.subwidgets.0 time=widget.subwidgets.1 %}<div class="min-w-0 grow basis-48">{% with widget=date %}{% include widget.template_name %}{% endwith %}</div><div class="min-w-0 grow basis-40 sm:grow-0">{% with widget=time %}{% include widget.template_name %}{% endwith %}</div>{% endwith %}</div>

@@ -21,9 +21,9 @@
       {% if job.status == "done" %}
       <a href="{{ url(site.name ~ ":export_download", pk=job.pk) }}" class="btn btn-sm">{{ icon("download") }} {{ _("Download") }}</a>
       {% elif job.status == "failed" %}
-      <span class="badge badge-soft badge-error">{{ icon("circle-x", "size-3.5") }} {{ job.get_status_display() }}</span>
+      <span class="badge badge-ghost gap-1.5"><span class="status status-error" aria-hidden="true"></span>{{ job.get_status_display() }}</span>
       {% else %}
-      <span class="badge badge-soft badge-info"><span class="loading loading-spinner loading-xs" aria-hidden="true"></span> {{ job.get_status_display() }}</span>
+      <span class="badge badge-ghost gap-1.5"><span class="loading loading-spinner loading-xs" aria-hidden="true"></span>{{ job.get_status_display() }}</span>
       {% endif %}
     </li>
     {% endfor %}

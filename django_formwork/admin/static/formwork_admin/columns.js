@@ -28,6 +28,7 @@
     // An error in a column the cut hides shows every column, until the user folds them again.
     forced: null,
     hidden: [],
+    folded: false,
     pins: [],
     start: false,
     end: false,
@@ -100,6 +101,11 @@
       state.forced = hidden.some((i) => table.querySelector(`:scope > tbody > tr > :nth-child(${i + 1})[data-invalid]`));
     }
     state.hidden = hidden;
+    const editable = cells.flatMap((_, i) =>
+      table.querySelector(`:scope > tbody > tr > :nth-child(${i + 1})[data-editable]`) ? [i] : [],
+    );
+    // With every editable column hidden there is nothing to save.
+    state.folded = editable.length > 0 && editable.every((i) => hidden.includes(i));
     // The cells up to the first column stay in view while the table scrolls.
     state.pins = [];
     let inset = 0;
@@ -143,6 +149,7 @@
       );
       if (state.end) rules.push(`${ROWS} > [data-col-toggle] { box-shadow: ${-8 * dir}px 0 8px -8px ${SHADOW} }`);
       if (!open()) rules.push(`${ROWS} > :is(${state.hidden.map((i) => `:nth-child(${i + 1})`).join(", ")}) { display: none }`);
+      if (!open() && state.folded) rules.push("#changelist-form [data-save-bar] { display: none }");
     }
     const text = rules.join("\n");
     if (text !== state.rules) {

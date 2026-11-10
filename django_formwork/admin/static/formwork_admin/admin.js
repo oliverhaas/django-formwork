@@ -32,6 +32,39 @@ const control = (form, name) => {
   return item;
 };
 
+const escapeHtml = (text) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+// Django's admin quote(): a character that would break a key in a URL path becomes _XX.
+const adminQuote = (value) =>
+  value.replace(/[":/_#?;@&=+$,[\]<>%\n\\]/g, (char) => `_${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
+
+// The frame of the related-object dialog that shows this page, if one does.
+const popupFrame = () => {
+  const frame = window.frameElement;
+  return frame?.closest("[data-popup-level]") ? frame : null;
+};
+
+// The window that shows the related-object dialogs: a page in a dialog opens the next one on top of its own.
+const popupHost = () => {
+  let host = window;
+  while (host.frameElement?.closest("[data-popup-level]")) host = host.parent;
+  return host;
+};
+
+// Writes a value and label into a copy of a relation's blank row, or into a row that the dialog changed.
+const fillRow = (row, value, label) => {
+  row.dataset.label = label;
+  for (const el of row.querySelectorAll("[data-value]")) {
+    el.dataset.value = value;
+    if ("label" in el.dataset) el.dataset.label = label;
+    delete el.dataset.labelHtml;
+    if (el.tagName === "INPUT") el.value = value;
+  }
+  const text = row.querySelector(".select-none");
+  if (text) text.textContent = label;
+};
+
 document.addEventListener("alpine:init", () => {
   const Alpine = window.Alpine;
 
@@ -66,13 +99,23 @@ document.addEventListener("alpine:init", () => {
         if (!filter) return;
         event.preventDefault();
         const drawer = document.getElementById("formwork-admin-nav");
-        if (drawer && !filter.offsetParent) drawer.checked = true;
-        requestAnimationFrame(() => filter.focus());
+        // Below lg the filter sits in the closed drawer, which hides it.
+        if (drawer && !filter.checkVisibility({ visibilityProperty: true })) drawer.checked = true;
+        // The drawer shows after a transition delay, and a hidden input takes no focus.
+        const focus = (frames) => {
+          filter.focus();
+          if (document.activeElement !== filter && frames) requestAnimationFrame(() => focus(frames - 1));
+        };
+        requestAnimationFrame(() => focus(30));
       } else if (mod && key === "s") {
         const button = document.querySelector("[data-continue]") ?? document.querySelector("[data-save]");
         if (!button) return;
         event.preventDefault();
         button.form.requestSubmit(button);
+      } else if (key === "escape" && !event.defaultPrevented) {
+        // In a page in a dialog, Escape closes the dialog, as it does with the focus outside the page.
+        const frame = popupFrame();
+        if (frame) frame.dispatchEvent(new frame.ownerDocument.defaultView.Event("formwork-admin:dismiss", { bubbles: true }));
       } else if (key === "/" && !mod && !isTyping(event.target)) {
         const search = document.querySelector("[data-search] input:not([type=hidden])");
         if (!search) return;
@@ -242,11 +285,21 @@ document.addEventListener("alpine:init", () => {
       for (const { field, dependencies } of JSON.parse(form.dataset.prepopulated || "[]")) {
         this.prepopulate(form, field, dependencies, adding);
       }
+      // After a failed save, the first field with an error takes the focus, so its message shows.
+      form.querySelector('[aria-invalid="true"]:not([type=hidden])')?.focus();
 
+      // A widget sends its own change events, also while it starts. They count only
+      // after the user has pressed a key or a pointer in the form.
+      let used = false;
       let dirty = false;
-      const mark = (event) => {
-        if (event.isTrusted) dirty = true;
+      const use = (event) => {
+        if (event.isTrusted) used = true;
       };
+      const mark = (event) => {
+        if (used || event.isTrusted) dirty = true;
+      };
+      form.addEventListener("pointerdown", use);
+      form.addEventListener("keydown", use);
       form.addEventListener("input", mark);
       form.addEventListener("change", mark);
       form.addEventListener("submit", () => {
@@ -279,6 +332,211 @@ document.addEventListener("alpine:init", () => {
         source.addEventListener("input", fill);
         source.addEventListener("change", fill);
       }
+    },
+  }));
+
+  // Password-based authentication "Disabled" turns the password fields off; each button with
+  // data-usable-password is on only for its own choice. Both stay in place.
+  Alpine.data("formworkUsablePassword", () => ({
+    init() {
+      this.apply();
+      this.$root.addEventListener("change", (event) => {
+        if (event.target.name === "usable_password") this.apply();
+      });
+    },
+
+    apply() {
+      const root = this.$root;
+      const off = root.querySelector('[name="usable_password"][value="false"]')?.checked ?? false;
+      for (const el of root.querySelectorAll('[data-field="password1"] input, [data-field="password2"] input')) {
+        el.disabled = off;
+      }
+      for (const el of root.querySelectorAll("[data-usable-password]")) {
+        el.disabled = (el.dataset.usablePassword === "false") !== off;
+      }
+    },
+  }));
+
+  // Shows the add or change page of a related object in a dialog, and hands the saved object to the
+  // relation's field. Each dialog is a level; a relation in a dialog opens the next level on top.
+  Alpine.data("formworkPopup", () => {
+    const levels = [];
+    return {
+      open({ url, source, opener }) {
+        const dialog = this.$refs.level.content.firstElementChild.cloneNode(true);
+        const frame = dialog.querySelector("iframe");
+        const level = { dialog, frame, source, opener, observer: null };
+        levels.push(level);
+        const label = opener?.getAttribute("aria-label");
+        if (label) {
+          dialog.setAttribute("aria-label", label);
+          frame.title = label;
+        }
+        dialog.addEventListener("cancel", (event) => {
+          event.preventDefault();
+          this.dismiss(level);
+        });
+        // The browser closes a dialog itself after a second Escape without a click between.
+        dialog.addEventListener("close", () => this.close(level));
+        dialog.addEventListener("formwork-admin:dismiss", () => this.dismiss(level));
+        dialog.querySelector("[data-dismiss]").addEventListener("click", () => this.dismiss(level));
+        frame.addEventListener("load", () => this.loaded(level));
+        // A frame with its address set before it is attached loads no blank page first.
+        frame.src = url;
+        this.$root.append(dialog);
+        dialog.showModal();
+      },
+
+      // A page with unsaved changes asks first; the blank page then closes the dialog.
+      dismiss(level) {
+        level.frame.src = "about:blank";
+      },
+
+      loaded(level) {
+        const { dialog, frame } = level;
+        const doc = frame.contentDocument;
+        if (!doc || doc.URL === "about:blank") return this.close(level);
+        const response = doc.getElementById("formwork-admin-popup-response");
+        if (response) {
+          this.close(level);
+          this.answer(level, JSON.parse(response.dataset.popupResponse));
+          return;
+        }
+        const title = doc.querySelector("#content h1")?.textContent.trim() || doc.title;
+        dialog.setAttribute("aria-label", title);
+        frame.title = title;
+        // The frame takes the height of its page, up to the height of the dialog.
+        level.observer?.disconnect();
+        level.observer = new frame.contentWindow.ResizeObserver(() => {
+          frame.style.height = `${Math.ceil(doc.body.getBoundingClientRect().height)}px`;
+        });
+        level.observer.observe(doc.body);
+        // While the next page loads, the spinner shows instead of a blank frame.
+        frame.contentWindow.addEventListener("pagehide", () => this.busy(level, true));
+        this.busy(level, false);
+        // A page that focused a field with an error keeps that focus.
+        if (doc.activeElement === doc.body) {
+          const fields = doc.querySelectorAll("#content form :is(input:not([type=hidden]), textarea, select, summary)");
+          [...fields].find((el) => !el.disabled && el.checkVisibility())?.focus();
+        }
+      },
+
+      busy(level, on) {
+        level.frame.classList.toggle("invisible", on);
+        level.dialog.querySelector("[data-spinner]").hidden = !on;
+      },
+
+      close(level) {
+        const index = levels.indexOf(level);
+        if (index === -1) return;
+        for (const closed of levels.splice(index).reverse()) {
+          closed.observer?.disconnect();
+          closed.dialog.close();
+          closed.dialog.remove();
+        }
+        // Safari does not focus a clicked link, so the dialog has no focus to give back.
+        level.opener?.focus();
+      },
+
+      // Every field of the same model on the page gets the saved object; the field that opened the dialog chooses it.
+      answer({ source }, data) {
+        const doc = source.ownerDocument;
+        for (const field of doc.querySelectorAll(`[data-related="${CSS.escape(source.dataset.related)}"]`)) {
+          const detail = { ...data, chosen: field === source };
+          field.dispatchEvent(new doc.defaultView.CustomEvent("formwork-admin:related", { detail }));
+        }
+      },
+    };
+  });
+
+  // A relation's dropdown with buttons that add a row or change the chosen one in a dialog.
+  Alpine.data("formworkRelated", () => ({
+    field() {
+      return this.$root.querySelector(".formwork-select, .formwork-select-multiple");
+    },
+
+    // A click with a modifier key opens the full page, in a new tab or window.
+    open(event) {
+      const link = event.currentTarget;
+      if (!link.href || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      const url = new URL(link.href);
+      for (const [key, value] of new URLSearchParams(this.$root.dataset.popupQuery)) url.searchParams.set(key, value);
+      const host = popupHost();
+      const detail = { url: url.href, source: this.$root, opener: link };
+      host.dispatchEvent(new host.CustomEvent("formwork-admin:popup", { detail }));
+    },
+
+    // The change button follows the chosen row. Without one it stays in place, dimmed.
+    syncLink() {
+      const link = this.$root.querySelector('[data-related-popup="change"]');
+      if (!link) return;
+      const value = this.field()?.dataset.value ?? "";
+      if (value) {
+        link.href = this.$root.dataset.changeUrl.replace("__fk__", encodeURIComponent(adminQuote(value)));
+        link.removeAttribute("aria-disabled");
+      } else {
+        link.removeAttribute("href");
+        link.setAttribute("aria-disabled", "true");
+      }
+    },
+
+    selected(field) {
+      return JSON.parse(field.dataset.selected || "[]");
+    },
+
+    // The widget reads its selection back from this attribute.
+    select(field, entries) {
+      field.dataset.selected = JSON.stringify(entries);
+    },
+
+    // The answer of the dialog: a row of the related model added, changed or deleted.
+    apply({ action, value, obj, new_value: newValue, chosen }) {
+      const field = this.field();
+      if (!field) return;
+      const multiple = field.classList.contains("formwork-select-multiple");
+      const rows = [...field.querySelectorAll("li[role=option]")].filter(
+        (row) => row.querySelector("[data-value]")?.dataset.value === value,
+      );
+      if (action === "delete") {
+        for (const row of rows) row.remove();
+        if (multiple) this.select(field, this.selected(field).filter(([key]) => key !== value));
+        else if (field.dataset.value === value) {
+          Object.assign(field.dataset, { value: "", label: "", icon: "", labelHtml: "", selectedToggleClass: "" });
+        }
+      } else if (action === "change") {
+        for (const row of rows) fillRow(row, newValue, obj);
+        if (multiple) {
+          const entries = this.selected(field).map(([key, html]) => (key === value ? [newValue, escapeHtml(obj)] : [key, html]));
+          this.select(field, entries);
+        } else if (field.dataset.value === value) Object.assign(field.dataset, { value: newValue, label: obj, labelHtml: "" });
+      } else {
+        // A field limited to some rows of the model may not offer the new row, unless it asked for it.
+        if (chosen || !("limitChoicesTo" in this.$root.dataset)) this.addRow(field, value, obj);
+        if (chosen && multiple) {
+          this.select(field, [...this.selected(field).filter(([key]) => key !== value), [value, escapeHtml(obj)]]);
+        } else if (chosen) {
+          Alpine.$data(field).choose({ value, label: obj, icon: "", labelHtml: "", selectedToggleClass: "" });
+        }
+      }
+      this.syncLink();
+    },
+
+    // An added row joins the list, so the field can show it and post it.
+    addRow(field, value, label) {
+      const list = field.querySelector("[x-ref=options]");
+      const blank = this.$root.querySelector("template[data-related-option]")?.content.querySelector("li[role=option]");
+      if (!list || !blank || list.querySelector(`[data-value="${CSS.escape(value)}"]`)) return;
+      const row = document.importNode(blank, true);
+      fillRow(row, value, label);
+      // The "No results found" row goes with the first row.
+      list.querySelector(":scope > li:has([role=status])")?.remove();
+      const last = [...list.querySelectorAll(":scope > li[role=option]")].at(-1);
+      if (last) last.after(row);
+      else list.prepend(row);
+      // A list without a search sizes the field to its longest label.
+      const widths = field.querySelector(".formwork-autowidth");
+      if (widths?.childElementCount) widths.append(Object.assign(document.createElement("span"), { textContent: label }));
     },
   }));
 

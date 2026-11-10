@@ -29,8 +29,15 @@ if TYPE_CHECKING:
 
     from django.contrib.admin.options import _FieldsetSpec
     from django.forms import BaseForm, BoundField, Media, ModelForm
+    from django_stubs_ext import StrPromise
 
 __all__ = ["AdminField", "AdminForm", "Fieldset", "InlineAdminForm", "InlineAdminFormSet", "ReadonlyField"]
+
+
+def _show_errors_inline(form: BaseForm) -> None:
+    """Show each field error under its field, unless the form's ``Meta.error_display`` sets a display."""
+    if getattr(getattr(type(form), "Meta", None), "error_display", None) is None:
+        form.error_display = "inline"  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 
 
 @dataclass
@@ -78,7 +85,7 @@ class AdminField:
 class Fieldset:
     """A titled group of rows; ``collapse`` in ``classes`` folds it behind its title."""
 
-    name: str | None
+    name: str | StrPromise | None
     rows: list[list[AdminField]]
     description: str = ""
     classes: tuple[str, ...] = ()
@@ -177,11 +184,12 @@ class AdminForm:
     def __init__(
         self,
         form: ModelForm[Any],
-        fieldsets: Sequence[tuple[str | None, dict[str, Any]]],
+        fieldsets: Sequence[tuple[str | StrPromise | None, dict[str, Any]]],
         prepopulated_fields: dict[str, Sequence[str]],
         readonly_fields: Sequence[Any] = (),
         model_admin: Any = None,
     ) -> None:
+        _show_errors_inline(form)
         self.form = form
         self.fieldsets_spec = fieldsets
         self.prepopulated_fields = [
@@ -257,7 +265,7 @@ class InlineAdminFormSet:
         self,
         inline: Any,
         formset: Any,
-        fieldsets: Sequence[tuple[str | None, dict[str, Any]]],
+        fieldsets: Sequence[tuple[str | StrPromise | None, dict[str, Any]]],
         readonly_fields: Sequence[Any] = (),
         *,
         has_add_permission: bool = True,
@@ -275,6 +283,7 @@ class InlineAdminFormSet:
         self.has_view_permission = has_view_permission
 
     def _admin_form(self, form: ModelForm[Any], original: models.Model | None) -> InlineAdminForm:
+        _show_errors_inline(form)
         readonly = self.readonly_fields
         if original is not None and not self.has_change_permission:
             readonly = [

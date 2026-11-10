@@ -1,0 +1,9 @@
+{% extends "formwork_admin/change_form.html" %}
+
+{% block form_top %}
+<p class="mb-6 text-sm text-base-content/70">{{ _("After you’ve created a user, you’ll be able to edit more user options.") }}</p>
+{% endblock %}
+
+{% block field_sets %}
+<div class="contents" x-data="formworkUsablePassword">{{ super() }}</div>
+{% endblock %}

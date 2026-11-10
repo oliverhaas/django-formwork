@@ -13,10 +13,39 @@
 
 @source "../../";
 
+/* A badge cell colors its dot with status-{{ c.color }}, from list_badges. */
+@source inline("status-{primary,secondary,accent,info,success,warning,error}");
+
 /* Links in HTML the admin does not render itself (format_html() cells,
    read-only values, fieldset descriptions) are underlined like its own. */
 #content a:not([class]) {
   @apply link;
+}
+
+/* Links, summaries and buttons without a DaisyUI class (sort links, the details of a
+   delete page) draw DaisyUI's focus ring, not the browser's. In the base layer, so every
+   component and utility focus style still wins. */
+@layer base {
+  :where(.formwork-admin) :is(a, summary, button):focus-visible {
+    outline: 2px solid var(--color-base-content);
+    outline-offset: 2px;
+    border-radius: var(--radius-field);
+  }
+}
+
+/* Checked boxes, radios and switches are primary, as the selected rows are. Each selector has the
+   specificity of formwork's base rule, so the error and changed-field colors still win. */
+:where(.formwork-admin) input[type="checkbox"]:not(.toggle):not(.hidden):where(:checked, :indeterminate) {
+  --input-color: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+:where(.formwork-admin) input[type="radio"]:not(.mask):not(.rating-hidden):where(:checked) {
+  --input-color: var(--color-primary);
+}
+
+:where(.formwork-admin) input.toggle:checked {
+  --input-color: var(--color-primary);
 }
 
 /* list_editable cells: the widget renders the control, the cell fits it to the row. */

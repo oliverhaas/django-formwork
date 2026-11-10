@@ -5,7 +5,8 @@
 {{ m.toasts(messages, oob=True) }}
 {% else %}
 <!DOCTYPE html>
-<html lang="{{ request.LANGUAGE_CODE|default("en") }}" class="formwork-admin [scrollbar-gutter:stable]">
+{#- The root color fills the scrollbar gutter, so it takes the page color. #}
+<html lang="{{ request.LANGUAGE_CODE|default("en") }}" class="formwork-admin [scrollbar-gutter:stable] [--root-bg:var(--color-base-200)]">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -34,26 +35,39 @@
   {% block extrahead %}{% endblock %}
   <script defer src="{{ alpine_script }}"></script>
 </head>
-<body class="min-h-screen bg-base-200 text-base-content antialiased {% block bodyclass %}{% endblock %}"
+{#- A page in the related-object dialog takes the height of its content, which sizes the dialog. #}
+{% set popup = is_popup|default(false) %}
+<body class="{{ "" if popup else "min-h-screen " }}bg-base-200 text-base-content antialiased {% block bodyclass %}{% endblock %}"
       x-data="formworkAdmin"
       @keydown.window="shortcut($event)">
 {% block shell %}
+{% if popup %}
+<main id="content" class="px-4 pt-5 pb-4 sm:px-6">{{ self.content() }}</main>
+{% else %}
 {% set sidebar = has_permission and is_nav_sidebar_enabled %}
-{#- The sidebar's column is sized up front: the sidebar comes after the content and a long page paints before it is parsed. #}
-<div class="drawer lg:drawer-open{% if sidebar %} lg:grid-cols-[18rem_minmax(0,1fr)]{% endif %}">
+<a href="#content" class="btn btn-primary btn-sm fixed start-3 top-3 z-50 -translate-y-16 focus:translate-y-0">{{ _("Skip to main content") }}</a>
+{#- The sidebar comes first, so the focus order follows the page from left to right. Its column is sized up front. #}
+<div class="drawer lg:drawer-open{% if sidebar %} lg:grid-cols-[16rem_minmax(0,1fr)]{% endif %}">
   <input id="formwork-admin-nav" type="checkbox" class="drawer-toggle">
+  {% if sidebar %}
+  <aside class="drawer-side z-30">
+    <label for="formwork-admin-nav" aria-label="{{ _("Close navigation") }}" class="drawer-overlay"></label>
+    {% include "formwork_admin/nav_sidebar.html" %}
+  </aside>
+  {% endif %}
   <div class="drawer-content flex min-h-screen min-w-0 flex-col">
     <header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/85 backdrop-blur supports-[backdrop-filter]:bg-base-100/70">
       <div class="flex h-14 items-center gap-2 px-4 lg:px-8">
-        <label for="formwork-admin-nav" class="btn btn-ghost btn-sm btn-square lg:hidden" aria-label="{{ _("Open navigation") }}">
+        <label for="formwork-admin-nav" class="drawer-button btn btn-ghost btn-sm btn-square lg:hidden" aria-label="{{ _("Open navigation") }}">
           {{ icon("menu") }}
         </label>
         <nav class="breadcrumbs min-w-0 flex-1 py-0 text-sm" aria-label="{{ _("Breadcrumbs") }}">
-          {# A phone keeps the last two crumbs: the parent to go back to and the page. #}
-          <ul class="max-sm:[&>li:nth-last-child(2)]:before:hidden max-sm:[&>li:nth-last-child(n+3)]:hidden">
+          {#- A crumb that does not fit ends in an ellipsis, the page's own crumb last. Its padding keeps the focus
+              ring inside the crumb's clip. A phone keeps the last two crumbs: the parent to go back to and the page. #}
+          <ul class="[&>li]:-mx-1 [&>li]:block [&>li]:min-w-0 [&>li]:truncate [&>li]:p-1 [&>li>*]:inline [&>li+li]:before:inline-block [&>li+li]:before:align-middle [&>li:last-child]:max-w-[70%] [&>li:last-child]:shrink-0 max-sm:[&>li:nth-last-child(2)]:before:hidden max-sm:[&>li:nth-last-child(n+3)]:hidden">
             {% block breadcrumbs %}
             <li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>
-            {% if title is defined and title %}<li class="min-w-0 font-medium"><span class="block truncate">{{ title }}</span></li>{% endif %}
+            {% if title is defined and title %}<li class="font-medium">{{ title }}</li>{% endif %}
             {% endblock %}
           </ul>
         </nav>
@@ -68,14 +82,10 @@
       {% block content %}{% endblock %}
     </main>
   </div>
-  {% if sidebar %}
-  <aside class="drawer-side z-30">
-    <label for="formwork-admin-nav" aria-label="{{ _("Close navigation") }}" class="drawer-overlay"></label>
-    {% include "formwork_admin/nav_sidebar.html" %}
-  </aside>
-  {% endif %}
 </div>
+{% endif %}
 {% endblock %}
+{{ m.related_dialog() }}
 {{ m.toasts(messages) }}
 {% block footer %}{% endblock %}
 </body>

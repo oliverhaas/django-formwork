@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+{#- The page a save or delete in the related-object dialog ends on. The dialog reads the object from it and closes. #}
+<html lang="{{ request.LANGUAGE_CODE|default("en") }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <title>{{ _("Popup closing…") }}</title>
+</head>
+<body>
+  <div id="formwork-admin-popup-response" data-popup-response="{{ popup_response_data }}" hidden></div>
+</body>
+</html>

@@ -17,7 +17,7 @@
 </div>
 {% elif request.user.is_authenticated %}
 <div role="alert" class="alert alert-warning alert-soft items-start">
-  {{ icon("lock", "size-5 mt-0.5") }}
+  {{ icon("lock", "size-5") }}
   <span class="text-sm">{{ _("You are signed in as %(username)s, but this account has no access to this page. Log in with another account?", username=username) }}</span>
 </div>
 {% endif %}

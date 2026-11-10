@@ -6,8 +6,11 @@
 {% block content %}
 {{ m.page_header(title, site_header) }}
 <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-  <div class="columns-1 gap-6 md:columns-2 *:mb-6 *:break-inside-avoid">
-    {% include "formwork_admin/app_list.html" %}
+  {#- Two columns only where each card fits an app name, and only for two apps or more. #}
+  <div class="@container min-w-0">
+    <div class="columns-1 gap-6{{ " @3xl:columns-2" if app_list|length > 1 }} *:mb-6 *:break-inside-avoid *:last:mb-0">
+      {% include "formwork_admin/app_list.html" %}
+    </div>
   </div>
   {% block sidebar %}
   <section class="card h-fit border border-base-300 bg-base-100" aria-labelledby="recent-actions">

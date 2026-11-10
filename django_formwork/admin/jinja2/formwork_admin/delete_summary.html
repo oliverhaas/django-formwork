@@ -2,7 +2,7 @@
 {% import "formwork_admin/macros.html" as m %}
 {% if perms_lacking %}
 <div role="alert" class="alert alert-warning alert-soft items-start">
-  {{ icon("lock", "size-5 mt-0.5") }}
+  {{ icon("lock", "size-5") }}
   <div>
     <p class="font-medium">{{ _("Your account lacks permission to delete these related objects:") }}</p>
     <ul class="mt-1 list-inside list-disc text-sm">{% for name in perms_lacking %}<li>{{ name|capfirst }}</li>{% endfor %}</ul>
@@ -13,7 +13,7 @@
   {{ icon("shield-exclamation-point", "size-5") }}
   <span class="text-sm font-medium">{{ _("These related objects are protected:") }}</span>
 </div>
-<div class="max-h-96 overflow-y-auto rounded-box border border-base-300 px-4 py-3">{{ m.nested(protected, delete_confirmation_max_display) }}</div>
+<div class="rounded-box border border-base-300 px-4 py-3">{{ m.nested(protected, delete_confirmation_max_display) }}</div>
 {% else %}
 {% if model_count %}
 <div class="flex flex-wrap gap-2">

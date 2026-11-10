@@ -126,19 +126,24 @@ def html(cell: Cell) -> str:
     match cell["kind"]:
         case "boolean" if cell["text"]:
             return format_html(
-                '<span class="inline-flex text-success" title="{}"><i class="icon icon-circle-check size-[1.125rem]"'
+                '<span class="inline-flex text-[color:color-mix(in_oklab,var(--color-success)_75%,var(--color-base-content))]" title="{}"><i class="icon icon-circle-check size-[1.125rem]"'
                 ' aria-hidden="true"></i><span class="sr-only">{}</span></span>',
                 gettext("Yes"),
                 gettext("Yes"),
             )
         case "boolean":
             return format_html(
-                '<span class="inline-flex text-base-content/30" title="{}"><i class="icon icon-circle-x size-[1.125rem]"'
+                '<span class="inline-flex text-base-content/50" title="{}"><i class="icon icon-circle-x size-[1.125rem]"'
                 ' aria-hidden="true"></i><span class="sr-only">{}</span></span>',
                 gettext("No"),
                 gettext("No"),
             )
         case "badge":
-            return format_html('<span class="badge badge-soft badge-{}">{}</span>', cell["color"], text)
+            dot = "status" if cell["color"] == "neutral" else f"status status-{cell['color']}"
+            return format_html(
+                '<span class="badge badge-ghost gap-1.5"><span class="{}" aria-hidden="true"></span>{}</span>',
+                dot,
+                text,
+            )
         case _:
             return str(text)

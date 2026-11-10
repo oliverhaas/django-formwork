@@ -10,6 +10,7 @@ import hashlib
 from functools import cached_property
 from typing import TYPE_CHECKING, Any
 
+from django.contrib.admin.options import IS_FACETS_VAR, ShowFacets
 from django.contrib.admin.utils import label_for_field, lookup_field, quote
 from django.core.exceptions import FieldDoesNotExist
 from django.core.paginator import InvalidPage
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 
     from django_formwork.admin.filters import AdminFilterSet
 
-__all__ = ["ALL_VAR", "ORDER_VAR", "PAGE_VAR", "PRESERVED_FILTERS_VAR", "SEARCH_VAR", "ChangeList"]
+__all__ = ["ALL_VAR", "IS_FACETS_VAR", "ORDER_VAR", "PAGE_VAR", "PRESERVED_FILTERS_VAR", "SEARCH_VAR", "ChangeList"]
 
 ALL_VAR = "all"
 ORDER_VAR = "o"
@@ -79,7 +80,7 @@ class ChangeList:
     def known_params(self) -> frozenset[str]:
         """Parameters this list reads; links and redirects drop every other one."""
         declared = {param for params in self.filter_params.values() for param in params}
-        return frozenset({ORDER_VAR, PAGE_VAR, ALL_VAR, *declared})
+        return frozenset({ORDER_VAR, PAGE_VAR, ALL_VAR, IS_FACETS_VAR, *declared})
 
     @cached_property
     def params(self) -> QueryDict:
@@ -93,7 +94,9 @@ class ChangeList:
     @cached_property
     def state_key(self) -> str:
         """Changes with the parameters, so a filtered or sorted list starts with nothing selected."""
-        return hashlib.blake2s(self.params.urlencode().encode(), digest_size=4).hexdigest()
+        params = self.params.copy()
+        params.pop(IS_FACETS_VAR, None)
+        return hashlib.blake2s(params.urlencode().encode(), digest_size=4).hexdigest()
 
     def get_query_string(self, new_params: dict[str, Any] | None = None, remove: list[str] | None = None) -> str:
         """The list's query string with ``new_params`` set; a None value or a ``remove`` entry drops a key."""
@@ -133,11 +136,29 @@ class ChangeList:
         return form[SEARCH_VAR] if form is not None and SEARCH_VAR in form.fields else None
 
     @cached_property
+    def add_facets(self) -> bool:
+        """Whether each filter option shows its row count, after ``show_facets`` and ``_facets``."""
+        show_facets = self.model_admin.show_facets
+        return show_facets is ShowFacets.ALWAYS or (
+            show_facets is ShowFacets.ALLOW and IS_FACETS_VAR in self.request.GET
+        )
+
+    @property
+    def is_facets_optional(self) -> bool:
+        return self.model_admin.show_facets is ShowFacets.ALLOW
+
+    @cached_property
     def filter_fields(self) -> list[BoundField]:
         form = self.filter_form
         if form is None:
             return []
-        return [form[name] for name in self.filter_params if name != SEARCH_VAR]
+        names = [name for name in self.filter_params if name != SEARCH_VAR]
+        if self.add_facets and self.filterset is not None:
+            for name in names:
+                counts = self.filterset.facet_counts(name)
+                if counts is not None:
+                    form.fields[name].widget.counts = counts
+        return [form[name] for name in names]
 
     @cached_property
     def query(self) -> str:
@@ -166,7 +187,7 @@ class ChangeList:
     def export_query(self) -> str:
         """The filters, search and ordering an export of this list keeps; the page goes."""
         params = self.params.copy()
-        for key in (PAGE_VAR, ALL_VAR):
+        for key in (PAGE_VAR, ALL_VAR, IS_FACETS_VAR):
             params.pop(key, None)
         return params.urlencode()
 

@@ -11,33 +11,37 @@
 {% else %}
 <li class="text-base-content/60">{{ opts.verbose_name_plural|capfirst }}</li>
 {% endif %}
-<li class="min-w-0 font-medium"><span class="block truncate">{{ original if original is not none and not add else _("Add %(name)s", name=opts.verbose_name) }}</span></li>
+<li class="font-medium">{{ original if original is not none and not add else _("Add %(name)s", name=opts.verbose_name) }}</li>
 {% endblock %}
 
 {% block content %}
 <form id="{{ opts.model_name }}_form" method="post" action="{{ form_url }}"{% if has_file_field %} enctype="multipart/form-data"{% endif %} novalidate
       class="mx-auto max-w-5xl" x-data="formworkChangeForm" data-prepopulated="{{ adminform.prepopulated_fields|tojson_attr }}" data-add="{{ "1" if add else "" }}">
   {{ csrf_input }}
+  {{ m.popup_inputs(is_popup, to_field) }}
 
-  <div class="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+  {#- In the related-object dialog, the title stops short of the dialog's close button. #}
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3{% if is_popup %} pe-10{% endif %}">
     <div class="flex min-w-0 items-center gap-3">
       <span class="hidden size-11 shrink-0 place-items-center rounded-box bg-primary/10 text-primary sm:grid">{{ icon(model_admin.get_icon(), "size-5") }}</span>
       <div class="min-w-0">
         <h1 class="truncate text-2xl font-semibold tracking-tight">{{ subtitle if subtitle else title }}</h1>
-        <p class="mt-0.5 truncate text-sm text-base-content/60">{{ title if subtitle else opts.verbose_name_plural|capfirst }}</p>
+        {% if subtitle %}<p class="mt-0.5 truncate text-sm text-base-content/60">{{ title }}</p>{% endif %}
       </div>
     </div>
-    <div class="flex flex-wrap items-center gap-1">
+    <div class="flex flex-wrap items-center gap-2">
       {% block object_tools %}
       {% if history_url %}
-      <a href="{{ history_url }}" class="btn btn-ghost btn-sm">{{ icon("rotate-ccw-clock") }} {{ _("History") }}</a>
+      <a href="{{ history_url }}" class="btn gap-2">{{ icon("rotate-ccw-clock") }} {{ _("History") }}</a>
       {% endif %}
       {% if view_on_site_url %}
-      <a href="{{ view_on_site_url }}" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">{{ icon("external-link") }} {{ _("View on site") }}</a>
+      <a href="{{ view_on_site_url }}" class="btn gap-2" target="_blank" rel="noopener">{{ icon("external-link") }} {{ _("View on site") }}</a>
       {% endif %}
       {% endblock %}
     </div>
   </div>
+
+  {% block form_top %}{% endblock %}
 
   {{ m.errors_alert(error_count, adminform.non_field_errors) }}
 

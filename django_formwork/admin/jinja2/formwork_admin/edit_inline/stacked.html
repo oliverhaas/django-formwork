@@ -10,7 +10,7 @@
     {% else %}
     <h3 class="min-w-0 flex-1 truncate text-sm font-medium text-base-content/60">{{ _("New %(name)s", name=inline.verbose_name) }}</h3>
     {% endif %}
-    {% if admin_form.has_errors %}<span class="badge badge-error badge-soft badge-sm">{{ _("Errors") }}</span>{% endif %}
+    {% if admin_form.has_errors %}<span class="badge badge-ghost badge-sm gap-1.5"><span class="status status-error" aria-hidden="true"></span>{{ _("Errors") }}</span>{% endif %}
     {% if admin_form.change_url %}
     <a href="{{ admin_form.change_url }}" class="btn btn-ghost btn-xs text-base-content/60">{{ icon("square-arrow-out-up-right", "size-3.5") }} {{ _("Open") }}</a>
     {% endif %}
@@ -45,7 +45,7 @@
   <header class="flex items-center gap-2 border-b border-base-300 px-6 py-4">
     <h2 class="font-semibold">{{ inline.verbose_name_plural|capfirst }}</h2>
     {% if formset.initial_form_count() %}<span class="badge badge-ghost badge-sm tabular-nums">{{ number(formset.initial_form_count()) }}</span>{% endif %}
-    {% if inline.error_count() %}<span class="badge badge-error badge-soft badge-sm ml-auto">{{ _("Errors") }}</span>{% endif %}
+    {% if inline.error_count() %}<span class="badge badge-ghost badge-sm gap-1.5 ml-auto"><span class="status status-error" aria-hidden="true"></span>{{ _("Errors") }}</span>{% endif %}
   </header>
   {{ formset.management_form }}
   {% if inline.non_form_errors %}

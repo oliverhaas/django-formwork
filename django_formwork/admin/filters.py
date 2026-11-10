@@ -25,7 +25,7 @@ from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy as _
 from django_filters.widgets import RangeWidget, SuffixedMultiWidget
 
-from django_formwork.admin.widgets import relation_widget
+from django_formwork.admin.widgets import date_input_format, relation_widget
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import DateRangePicker, SearchInput, Select
 
@@ -48,12 +48,12 @@ def _floating(label: object) -> dict[str, Any]:
 class _FloatingDateRangePicker(DateRangePicker):
     """The range picker with the filter's name on its border, as the select filters show theirs.
 
-    The dates show in the short format, so both fit the narrow filter column. The calendar
-    offers the ranges of Django's date filter: today, the past 7 days, this month and this year.
+    The dates show as the date fields of the change form write them. The calendar offers the
+    ranges of Django's date filter: today, the past 7 days, this month and this year.
     """
 
     def __init__(self, label: object) -> None:
-        super().__init__(format="SHORT_DATE_FORMAT", presets=True)
+        super().__init__(format=date_input_format()[1], presets=True)
         self.label = capfirst(str(label))
 
     def render(self, name: str, value: Any, attrs: dict[str, Any] | None = None, renderer: Any = None) -> SafeString:
@@ -105,6 +105,11 @@ class _FloatingRangeWidget(RangeWidget):
         )
 
 
+def _count() -> models.Count:
+    # Distinct, so a row that a join repeats counts once.
+    return models.Count("pk", distinct=True)
+
+
 class _FieldFilterMixin:
     """Picks the control from the model field it filters, after the label is known."""
 
@@ -136,16 +141,29 @@ class BooleanFilter(_FieldFilterMixin, django_filters.BooleanFilter):
         choices = [("", _("All")), ("true", _("Yes")), ("false", _("No"))]
         return {"widget": Select(choices=choices, show_search=False, **_floating(self.label))}
 
+    def facet_counts(self, qs: QuerySet[Any]) -> dict[str, int]:
+        rows = qs.order_by().values_list(self.field_name).annotate(count=_count())
+        return {"true" if value else "false": count for value, count in rows if value is not None}
+
 
 class ChoiceFilter(_FieldFilterMixin, django_filters.ChoiceFilter):
     def field_defaults(self, model_field: Any) -> dict[str, Any]:
         return {"choices": model_field.flatchoices, "empty_label": _("All"), "widget": Select(**_floating(self.label))}
+
+    def facet_counts(self, qs: QuerySet[Any]) -> dict[str, int]:
+        rows = qs.order_by().values_list(self.field_name).annotate(count=_count())
+        return {str(value): count for value, count in rows if value is not None}
 
 
 class RelatedFilter(_FieldFilterMixin, django_filters.ModelChoiceFilter):
     """One related row, paged from the server when the related admin can search."""
 
     related_only = False
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Before django-filter sets its "---------".
+        kwargs.setdefault("empty_label", _("All"))
+        super().__init__(*args, **kwargs)
 
     def field_defaults(self, model_field: Any) -> dict[str, Any]:
         related = model_field.related_model
@@ -161,7 +179,11 @@ class RelatedFilter(_FieldFilterMixin, django_filters.ModelChoiceFilter):
         widget = relation_widget(
             model_field, model_admin.admin_site, searchable=searchable, multiple=False, **_floating(self.label)
         )
-        return {"queryset": queryset, "empty_label": _("All"), "widget": widget}
+        return {"queryset": queryset, "widget": widget}
+
+    def facet_counts(self, qs: QuerySet[Any]) -> dict[str, int]:
+        rows = qs.order_by().values_list(f"{self.field_name}{LOOKUP_SEP}pk").annotate(count=_count())
+        return {str(value): count for value, count in rows if value is not None}
 
 
 class EmptyFilter(_FieldFilterMixin, django_filters.BooleanFilter):
@@ -171,14 +193,25 @@ class EmptyFilter(_FieldFilterMixin, django_filters.BooleanFilter):
         choices = [("", _("All")), ("true", _("Empty")), ("false", _("Not empty"))]
         return {"widget": Select(choices=choices, show_search=False, **_floating(self.label))}
 
-    def filter(self, qs: QuerySet[Any], value: bool | None) -> QuerySet[Any]:
-        if value is None:
-            return qs
+    def _empty(self) -> models.Q:
         model_field = get_fields_from_path(self.model, self.field_name)[-1]
         empty = models.Q(**{f"{self.field_name}__isnull": True})
         if getattr(model_field, "empty_strings_allowed", False) and not model_field.is_relation:
             empty |= models.Q(**{self.field_name: ""})
+        return empty
+
+    def filter(self, qs: QuerySet[Any], value: bool | None) -> QuerySet[Any]:
+        if value is None:
+            return qs
+        empty = self._empty()
         return qs.filter(empty) if value else qs.exclude(empty)
+
+    def facet_counts(self, qs: QuerySet[Any]) -> dict[str, int]:
+        empty = self._empty()
+        return qs.aggregate(
+            true=models.Count("pk", filter=empty, distinct=True),
+            false=models.Count("pk", filter=~empty, distinct=True),
+        )
 
 
 class DateRangeFilter(_FieldFilterMixin, django_filters.DateFromToRangeFilter):
@@ -215,6 +248,16 @@ class SimpleFilter(django_filters.ChoiceFilter):
     def filter(self, qs: QuerySet[Any], value: str) -> QuerySet[Any]:
         # Django calls queryset() whether or not the filter has a value, so a filter can apply a default.
         return self.instance.queryset(self.parent.request, qs) or qs
+
+    def facet_counts(self, qs: QuerySet[Any]) -> dict[str, int]:
+        # Django's own count of each lookup: rows of qs that queryset() keeps with that value set.
+        expressions = self.instance.get_facet_counts("pk", qs)
+        counts = qs.aggregate(**expressions) if expressions else {}
+        return {
+            str(value): counts[f"{index}__c"]
+            for index, (value, _title) in enumerate(self.instance.lookup_choices)
+            if f"{index}__c" in counts
+        }
 
 
 class AdminFilterSet(django_filters.FilterSet):
@@ -263,8 +306,11 @@ class AdminFilterSet(django_filters.FilterSet):
                     field.label = ""
         return self._form
 
-    def filter_queryset(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
+    def filter_queryset(self, queryset: QuerySet[Any], *, exclude: str | None = None) -> QuerySet[Any]:
+        """The rows the search and the filters keep; ``exclude`` names one filter to skip."""
         for name, value in self.form.cleaned_data.items():
+            if name == exclude:
+                continue
             filter_ = self.filters[name]
             if isinstance(filter_, SimpleFilter):
                 queryset = filter_.filter(queryset, value)
@@ -273,6 +319,21 @@ class AdminFilterSet(django_filters.FilterSet):
                 self.may_have_duplicates = True
             queryset = filter_.filter(queryset, value)
         return queryset
+
+    def facet_counts(self, name: str) -> dict[str, int] | None:
+        """Rows per option of one filter, with the search and the other filters applied, as Django's facets count.
+
+        None for a filter without counts, such as a date range, and for a form with errors.
+        """
+        counter = getattr(self.filters[name], "facet_counts", None)
+        if counter is None or not self.is_valid():
+            return None
+        duplicates, self.may_have_duplicates = self.may_have_duplicates, False
+        queryset = self.filter_queryset(self.queryset.all(), exclude=name)
+        if self.may_have_duplicates:
+            queryset = self.queryset.filter(pk__in=queryset.values("pk"))
+        self.may_have_duplicates = duplicates
+        return counter(queryset)
 
 
 def _declared(item: Any, model_admin: Any) -> tuple[str, django_filters.Filter | None]:

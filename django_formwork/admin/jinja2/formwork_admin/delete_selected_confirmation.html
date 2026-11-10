@@ -34,7 +34,11 @@
 
       {% include "formwork_admin/delete_summary.html" %}
 
-      {% if not blocked %}
+      {% if blocked %}
+      <div class="border-t border-base-300 pt-5">
+        <a href="{{ request.get_full_path() }}" class="btn">{{ icon("arrow-left") }} {{ _("Back") }}</a>
+      </div>
+      {% else %}
       <form method="post" class="flex flex-wrap items-center gap-2 border-t border-base-300 pt-5">
         {{ csrf_input }}
         {% for pk in selected %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk }}">{% endfor %}

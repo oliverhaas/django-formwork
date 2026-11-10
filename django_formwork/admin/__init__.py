@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         RelatedOnlyFieldListFilter,
         SimpleListFilter,
     )
+    from django.contrib.admin.options import ShowFacets
 
     from django_formwork.admin.decorators import action, display, register
     from django_formwork.admin.options import (
@@ -43,6 +44,7 @@ _EXPORTS = {
     "ModelAdmin": "django_formwork.admin.options",
     "RelatedFieldListFilter": "django.contrib.admin.filters",
     "RelatedOnlyFieldListFilter": "django.contrib.admin.filters",
+    "ShowFacets": "django.contrib.admin.options",
     "SimpleListFilter": "django.contrib.admin.filters",
     "StackedInline": "django_formwork.admin.options",
     "TabularInline": "django_formwork.admin.options",
@@ -66,6 +68,7 @@ __all__ = [
     "ModelAdmin",
     "RelatedFieldListFilter",
     "RelatedOnlyFieldListFilter",
+    "ShowFacets",
     "SimpleListFilter",
     "StackedInline",
     "TabularInline",
@@ -79,11 +82,15 @@ __all__ = [
 
 def autodiscover() -> None:
     """Import every installed app's admin module (``FORMWORK_ADMIN_AUTODISCOVER``, ``admin`` by default)."""
+    from django.apps import apps
     from django.conf import settings
     from django.utils.module_loading import autodiscover_modules
 
     from django_formwork.admin.sites import site
 
+    # User and Group register first, so an app's admin module can unregister them.
+    if apps.is_installed("django.contrib.auth"):
+        import_module("django_formwork.admin.auth")
     autodiscover_modules(getattr(settings, "FORMWORK_ADMIN_AUTODISCOVER", "admin"), register_to=site)
 
 

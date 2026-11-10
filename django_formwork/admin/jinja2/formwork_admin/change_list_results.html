@@ -4,8 +4,8 @@
 {% set collapsible = cl.columns|length > 1 %}
 {% set columns = cl.columns|length + (1 if actions else 0) + (1 if collapsible else 0) %}
 {% set filtered = cl.has_active_filters or cl.query %}
-{# A neutral box that turns primary when checked, like the rest of the selection. #}
-{% set checkbox = "checkbox checkbox-sm text-primary-content checked:[--input-color:var(--color-primary)] indeterminate:[--input-color:var(--color-primary)]" %}
+{# A neutral box; admin.css turns it primary when checked, like the rest of the selection. #}
+{% set checkbox = "checkbox checkbox-sm" %}
 {# Opaque row colors, so a pinned column takes its row's color over the columns that scroll under it. #}
 {% set head_bg = "bg-[color-mix(in_srgb,var(--color-base-200)_50%,var(--color-base-100))]" %}
 {% set row_bg = "bg-base-100 hover:bg-[color-mix(in_srgb,var(--color-base-200)_60%,var(--color-base-100))]" %}
@@ -26,7 +26,7 @@
     {# columns.js fits the columns to this box. #}
     <div id="changelist-scroll" class="overflow-x-auto"{% if collapsible %} data-columns="{{ opts.label_lower }}"{% endif %}>
       <table id="changelist-table" class="table table-sm">
-        <thead>
+        <thead class="text-xs">
           <tr class="{{ head_bg }}">
             {% if actions %}
             <th class="w-10" data-pin>
@@ -36,7 +36,7 @@
             </th>
             {% endif %}
             {% for column in cl.columns %}
-            <th class="font-medium{{ " text-right" if column.numeric }}" data-col{% if loop.first or column.linked %} data-pin{% endif %}{% if column.direction %} aria-sort="{{ "ascending" if column.direction == "asc" else "descending" }}"{% endif %}>
+            <th{% if column.numeric %} class="text-right"{% endif %} data-col{% if loop.first or column.linked %} data-pin{% endif %}{% if column.direction %} aria-sort="{{ "ascending" if column.direction == "asc" else "descending" }}"{% endif %}>
               {% if column.sort_url %}
               <a {{ m.list_link(column.sort_url) }} class="group inline-flex items-center gap-1 whitespace-nowrap transition-colors hover:text-base-content{% if column.numeric %} flex-row-reverse{% endif %}{% if column.direction %} text-base-content{% endif %}">
                 {{ column.label }}
@@ -94,7 +94,7 @@
               <div class="flex flex-col items-center gap-3 py-16 text-center">
                 <span class="grid size-12 place-items-center rounded-full bg-base-200 text-base-content/40">{{ icon("search-x" if filtered else "inbox", "size-6") }}</span>
                 <div>
-                  <p class="font-medium">{{ _("No %(name)s found", name=opts.verbose_name_plural) if filtered else _("No %(name)s yet", name=opts.verbose_name_plural) }}</p>
+                  <p class="text-base font-medium">{{ _("No %(name)s found", name=opts.verbose_name_plural) if filtered else _("No %(name)s yet", name=opts.verbose_name_plural) }}</p>
                   <p class="mt-1 text-sm text-base-content/60">
                     {{ _("Nothing matches the search and filters.") if filtered else _("Once added, they appear here.") }}
                   </p>
@@ -113,13 +113,15 @@
       </table>
     </div>
     {% if editable and cl.result_list %}
-    <div class="flex items-center justify-end gap-2 border-t border-base-300 bg-base-200/40 px-4 py-2.5">
+    {# columns.js hides it while every editable column is folded away. #}
+    <div class="flex items-center justify-end gap-2 border-t border-base-300 bg-base-200/40 px-4 py-2.5" data-save-bar>
       <button type="submit" name="_save" value="1" class="btn btn-primary btn-sm">{{ icon("check") }} {{ _("Save changes") }}</button>
     </div>
     {% endif %}
     {% if editable %}</form>{% endif %}
 
-    <div id="changelist-footer" class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-4 py-3">
+    {# Kept without rows, as change_list.html waits for it before the first render. #}
+    <div id="changelist-footer" class="{{ "flex" if cl.result_count else "hidden" }} flex-wrap items-center justify-between gap-3 border-t border-base-300 px-4 py-3">
       <p class="text-sm text-base-content/60">
         {% if cl.result_count %}
         {% if cl.show_all or not cl.multi_page %}
@@ -136,7 +138,7 @@
       </p>
       <div class="flex items-center gap-2">
         {% if cl.multi_page and cl.can_show_all and not cl.show_all %}
-        <a {{ m.list_link(cl.get_query_string({"all": "", "p": none})) }} class="btn btn-ghost btn-sm">{{ _("Show all") }}</a>
+        <a {{ m.list_link(cl.get_query_string({"all": "", "p": none}), top=true) }} class="btn btn-ghost btn-sm">{{ _("Show all") }}</a>
         {% endif %}
         {{ m.pagination(cl) }}
       </div>
@@ -148,15 +150,24 @@
         class="sticky bottom-4 z-10 mx-auto mt-4 flex w-fit max-w-full flex-wrap items-center gap-1 rounded-box border border-base-300 bg-base-100 p-1.5 pl-4 shadow-xl">
     {{ csrf_input }}
     <input type="hidden" name="select_across" :value="across ? '1' : '0'" value="0">
-    <span class="mr-1 text-sm font-medium tabular-nums">
-      <span x-show="!across"><span x-text="count"></span> {{ _("selected") }}</span>
-      <span x-show="across" x-cloak>{{ _("All %(count)s selected", count=number(cl.result_count)) }}</span>
-    </span>
-    {% if cl.result_count > cl.result_list|length %}
-    <button type="button" class="btn btn-link btn-sm px-1" x-show="allChecked && !across" @click="across = true">
-      {{ _("Select all %(count)s", count=number(cl.result_count)) }}
-    </button>
-    {% endif %}
+    {% set more = cl.result_count > cl.result_list|length %}
+    {# Every state shares one grid cell, and the widest ones hold its width, so the buttons after it keep their place. #}
+    <div class="mr-1 grid items-center text-sm font-medium tabular-nums">
+      <span class="invisible col-start-1 row-start-1 flex items-center">
+        {{ number(cl.result_list|length) }} {{ _("selected") }}
+        {% if more %}<span class="btn btn-link btn-sm px-1">{{ _("Select all %(count)s", count=number(cl.result_count)) }}</span>{% endif %}
+      </span>
+      <span class="invisible col-start-1 row-start-1">{{ _("All %(count)s selected", count=number(cl.result_count)) }}</span>
+      <span class="col-start-1 row-start-1 flex items-center" x-show="!across">
+        <span><span x-text="count"></span> {{ _("selected") }}</span>
+        {% if more %}
+        <button type="button" class="btn btn-link btn-sm px-1" x-show="allChecked" @click="across = true">
+          {{ _("Select all %(count)s", count=number(cl.result_count)) }}
+        </button>
+        {% endif %}
+      </span>
+      <span class="col-start-1 row-start-1" x-show="across" x-cloak>{{ _("All %(count)s selected", count=number(cl.result_count)) }}</span>
+    </div>
     <button type="button" class="btn btn-ghost btn-sm btn-square" @click="clear()" aria-label="{{ _("Clear selection") }}" title="{{ _("Clear selection") }}">{{ icon("x") }}</button>
     <span class="mx-1 h-6 w-px bg-base-300" aria-hidden="true"></span>
     {% for action in actions %}

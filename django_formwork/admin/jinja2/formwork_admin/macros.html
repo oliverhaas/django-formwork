@@ -17,8 +17,8 @@
 
 {% macro cell(c) %}
 {% if c.kind == "empty" %}<span class="text-base-content/35">{{ c.text }}</span>
-{% elif c.kind == "boolean" %}{% if c.text %}<span class="inline-flex text-success" title="{{ _("Yes") }}">{{ icon("circle-check", "size-[1.125rem]") }}<span class="sr-only">{{ _("Yes") }}</span></span>{% else %}<span class="inline-flex text-base-content/30" title="{{ _("No") }}">{{ icon("circle-x", "size-[1.125rem]") }}<span class="sr-only">{{ _("No") }}</span></span>{% endif %}
-{% elif c.kind == "badge" %}<span class="badge badge-sm whitespace-nowrap {{ "badge-ghost" if c.color == "neutral" else "badge-soft badge-" ~ c.color }}">{{ c.text }}</span>
+{% elif c.kind == "boolean" %}{% if c.text %}<span class="inline-flex text-[color:color-mix(in_oklab,var(--color-success)_75%,var(--color-base-content))]" title="{{ _("Yes") }}">{{ icon("circle-check", "size-[1.125rem]") }}<span class="sr-only">{{ _("Yes") }}</span></span>{% else %}<span class="inline-flex text-base-content/50" title="{{ _("No") }}">{{ icon("circle-x", "size-[1.125rem]") }}<span class="sr-only">{{ _("No") }}</span></span>{% endif %}
+{% elif c.kind == "badge" %}<span class="badge badge-ghost badge-sm gap-1.5 whitespace-nowrap"><span class="status{{ "" if c.color == "neutral" else " status-" ~ c.color }}" aria-hidden="true"></span>{{ c.text }}</span>
 {% elif c.kind == "number" %}<span class="tabular-nums">{{ c.text }}</span>
 {% elif c.kind == "date" %}<span class="whitespace-nowrap tabular-nums">{{ c.text }}</span>
 {% elif c.kind == "html" %}{{ c.text|safe }}
@@ -47,7 +47,7 @@
 {% macro errors_alert(count, non_field_errors=()) %}
 {% if count or non_field_errors %}
 <div role="alert" class="alert alert-error alert-soft mb-6 items-start">
-  {{ icon("circle-exclamation-point", "size-5 mt-0.5") }}
+  {{ icon("circle-exclamation-point", "size-5") }}
   <div>
     <p class="font-medium">{% trans trimmed count=count %}Please correct the error below.{% pluralize %}Please correct the {{ count }} errors below.{% endtrans %}</p>
     {% for error in non_field_errors %}<p class="text-sm">{{ error }}</p>{% endfor %}
@@ -56,11 +56,34 @@
 {% endif %}
 {% endmacro %}
 
+{#- The dialogs that show the add or change page of a related object, for the buttons beside a relation.
+    A relation in a dialog opens the next dialog on top. A click outside does not close one, so a
+    half-filled form stays. #}
+{% macro related_dialog() %}
+<div x-data="formworkPopup" @formwork-admin:popup.window="open($event.detail)">
+  <template x-ref="level">
+    <dialog class="modal" data-popup-level>
+      <div class="modal-box relative w-11/12 max-w-4xl overflow-hidden bg-base-200 p-0">
+        <button type="button" class="btn btn-ghost btn-sm btn-square absolute end-3 top-3 z-10" data-dismiss aria-label="{{ _("Close") }}">{{ icon("x") }}</button>
+        <div class="absolute inset-0 grid place-items-center" data-spinner aria-hidden="true"><span class="loading loading-spinner text-base-content/50"></span></div>
+        <iframe class="invisible block h-64 max-h-[calc(100dvh-5em)] w-full" title="{{ _("Related object") }}"></iframe>
+      </div>
+    </dialog>
+  </template>
+</div>
+{% endmacro %}
+
+{#- A page in the related-object dialog posts back that it is one, so the response closes the dialog. #}
+{% macro popup_inputs(is_popup, to_field) %}
+{% if is_popup %}<input type="hidden" name="_popup" value="1">{% endif %}
+{% if to_field %}<input type="hidden" name="_to_field" value="{{ to_field }}">{% endif %}
+{% endmacro %}
+
 {% macro pagination(cl) %}
 {% if cl.page_links %}
 <nav class="join" aria-label="{{ _("Pages") }}">
   {% if cl.page.has_previous() %}
-  <a class="join-item btn btn-sm btn-square" {{ list_link(cl.page_url(cl.page.previous_page_number())) }} rel="prev" aria-label="{{ _("Previous page") }}">{{ icon("chevron-left") }}</a>
+  <a class="join-item btn btn-sm btn-square" {{ list_link(cl.page_url(cl.page.previous_page_number()), top=true) }} rel="prev" aria-label="{{ _("Previous page") }}">{{ icon("chevron-left") }}</a>
   {% else %}
   <span class="join-item btn btn-sm btn-square btn-disabled" aria-hidden="true">{{ icon("chevron-left") }}</span>
   {% endif %}
@@ -70,11 +93,11 @@
   {% elif n == cl.page_num %}
   <span class="join-item btn btn-sm btn-primary tabular-nums" aria-current="page">{{ number(n) }}</span>
   {% else %}
-  <a class="join-item btn btn-sm tabular-nums" {{ list_link(cl.page_url(n)) }}>{{ number(n) }}</a>
+  <a class="join-item btn btn-sm tabular-nums" {{ list_link(cl.page_url(n), top=true) }}>{{ number(n) }}</a>
   {% endif %}
   {% endfor %}
   {% if cl.page.has_next() %}
-  <a class="join-item btn btn-sm btn-square" {{ list_link(cl.page_url(cl.page.next_page_number())) }} rel="next" aria-label="{{ _("Next page") }}">{{ icon("chevron-right") }}</a>
+  <a class="join-item btn btn-sm btn-square" {{ list_link(cl.page_url(cl.page.next_page_number()), top=true) }} rel="next" aria-label="{{ _("Next page") }}">{{ icon("chevron-right") }}</a>
   {% else %}
   <span class="join-item btn btn-sm btn-square btn-disabled" aria-hidden="true">{{ icon("chevron-right") }}</span>
   {% endif %}
@@ -82,8 +105,9 @@
 {% endif %}
 {% endmacro %}
 
-{# A changelist link that morphs the page content in place and pushes the URL. #}
-{% macro list_link(href) %}href="{{ href }}" hx-get="{{ href }}" hx-target="#content" hx-swap="innerMorph" hx-push-url="true"{% endmacro %}
+{# A changelist link that morphs the page content in place and pushes the URL.
+   With top, the page goes back to its top, as after a page load: for a link to other rows. #}
+{% macro list_link(href, top=false) %}href="{{ href }}" hx-get="{{ href }}" hx-target="#content" hx-swap="innerMorph{{ " scroll:top scrollTarget:window" if top }}" hx-push-url="true"{% endmacro %}
 
 {# The export formats for the rows on screen. #}
 {% macro export_menu(cl, formats, export_url, csrf_input) %}
@@ -242,7 +266,7 @@
       <span class="block font-semibold">{{ fieldset.name or _("More") }}</span>
       {% if fieldset.description %}<span class="block text-sm text-base-content/60">{{ fieldset.description }}</span>{% endif %}
     </span>
-    {% if fieldset.has_errors %}<span class="badge badge-error badge-soft badge-sm">{{ _("Errors") }}</span>{% endif %}
+    {% if fieldset.has_errors %}<span class="badge badge-ghost badge-sm gap-1.5"><span class="status status-error" aria-hidden="true"></span>{{ _("Errors") }}</span>{% endif %}
     {{ icon("chevron-down", "size-4 text-base-content/50 transition-transform group-open/fs:rotate-180") }}
   </summary>
   <div class="border-t border-base-300 px-6 pt-2 pb-5">{{ fieldset_rows(fieldset) }}</div>
