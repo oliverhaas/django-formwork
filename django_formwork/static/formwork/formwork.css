@@ -612,9 +612,11 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
 }
 
 /* DateRangePicker and DateTimeRangePicker: the box draws the input around
-   the start and end inputs.  Each input is as wide as the longest date the
-   format writes (--date-range-width, set by the widget), so the end keeps
-   its place whatever the start holds; both shrink in a narrow box. */
+   the start and end inputs, with the calendar icon at its end. Each input
+   lies over a hidden copy of the widest texts it shows, set in tabular
+   figures like the input, so a date fills its input. The dash then has the
+   same space on both sides, and the end keeps its place whatever the start
+   holds. Both inputs shrink in a narrow box. */
 .date-range-picker {
     @apply relative w-full;
 }
@@ -623,9 +625,17 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
     @apply input w-full cursor-text focus-primary;
 }
 
+.date-range-part {
+    @apply relative min-w-0 self-stretch overflow-hidden;
+}
+
+/* One pixel more than the text, for the caret after the last character. */
+.date-range-sizer {
+    @apply invisible grid h-0 whitespace-pre pe-px tabular-nums;
+}
+
 .date-range-input {
-    @apply min-w-0;
-    flex: 0 1 var(--date-range-width, 12ch);
+    @apply absolute inset-0 size-full min-w-0 tabular-nums;
 }
 
 /* A bar under the end the next pick sets, while the calendar is open.

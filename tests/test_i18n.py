@@ -57,6 +57,7 @@ _TRANSLATED_BLOCK = re.compile(r"\{%\s*(blocktranslate|blocktrans|comment)\b.*?%
 _TEMPLATE_TAG = re.compile(r"\{%.*?%\}|\{\{.*?\}\}|\{#.*?#\}", re.DOTALL)
 _PSEUDO = re.compile(r"⟦[^⟧]*⟧")
 _WORD = re.compile(r"[A-Za-z]{2,}")
+_NAME = re.compile(r"[^\W\d_]+\.?")
 _JS_STRING = re.compile(r"'([^']*)'|\"([^\"]*)\"|`([^`]*)`")
 _TEXT_ATTRS = {
     "alt",
@@ -123,12 +124,12 @@ class _VisibleText(HTMLParser):
 
 
 def _english(html: str, allowed: frozenset[str] = frozenset()) -> list[str]:
-    """The words ``html`` shows that are not ``allowed`` and neither a template tag nor a pseudo-translation."""
+    """The texts ``html`` shows with a word that is not ``allowed`` and neither a template tag nor a pseudo-translation."""
     parser = _VisibleText()
     parser.feed(_PSEUDO.sub("", _TEMPLATE_TAG.sub("", _TRANSLATED_BLOCK.sub("", html))))
     parser.close()
     texts = (text.strip() for text in parser.texts)
-    return [text for text in texts if _WORD.search(text) and text not in allowed]
+    return [text for text in texts if _WORD.search(_NAME.sub(lambda m: "" if m[0] in allowed else m[0], text))]
 
 
 def _template_id(path: Path) -> str:

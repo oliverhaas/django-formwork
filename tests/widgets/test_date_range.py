@@ -238,12 +238,14 @@ def test_presets_come_from_a_function_of_today(monkeypatch, presets, expected):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(("language", "longest"), [("en", "Sept. 28, 2026"), ("de", "28. September 2026")])
+@pytest.mark.parametrize(("language", "longest"), [("en", "Sept. 00, 0000"), ("de", "00. September 0000")])
 def test_each_input_is_as_wide_as_the_longest_date_the_format_writes(language, longest):
     """The end input keeps its place whatever the start holds."""
     with translation.override(language):
-        field = render_widget(DateRangePicker(), name="period").select_one(".date-range-field")
-    assert field["style"] == f"--date-range-width: {len(longest) + 1}ch"
+        parts = render_widget(DateRangePicker(), name="period").select(".date-range-part")
+    assert len(parts) == 2
+    for part in parts:
+        assert longest in [text.get_text() for text in part.select(".date-range-sizer > span")]
 
 
 @pytest.mark.unit

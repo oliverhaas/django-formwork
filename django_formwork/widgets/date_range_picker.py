@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import calendar
 import datetime as dt
+import re
 from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
@@ -38,10 +39,14 @@ def _today() -> dt.date:
     return (timezone.localtime(now) if timezone.is_aware(now) else now).date()
 
 
-def _text_width(date_format: str, *placeholders: str) -> int:
-    """The characters of the longest date ``date_format`` writes or placeholder, and one for the caret."""
+def _sizing_texts(date_format: str, *placeholders: str) -> list[str]:
+    """The widest texts an input shows: a date in each month, and the placeholders.
+
+    The inputs set digits in tabular figures, so dates that differ only in digits count once.
+    """
     dates = (dt.datetime(2026, month, 28, 23, 59) for month in range(1, 13))  # noqa: DTZ001 (only formatted)
-    return max(len(text) for text in (*(format_date(date, date_format) for date in dates), *placeholders)) + 1
+    texts = (*(format_date(date, date_format) for date in dates), *placeholders)
+    return list(dict.fromkeys(re.sub(r"\d", "0", text) for text in texts))
 
 
 class DateRangePicker(forms.MultiWidget):
@@ -117,7 +122,7 @@ class DateRangePicker(forms.MultiWidget):
             widget[f"{part}_text"] = format_date(parsed, value_format) if parsed else text
         widget["start_placeholder"] = start_placeholder = gettext("Start date")
         widget["end_placeholder"] = end_placeholder = gettext("End date")
-        widget["text_width"] = _text_width(value_format, start_placeholder, end_placeholder)
+        widget["sizing_texts"] = _sizing_texts(value_format, start_placeholder, end_placeholder)
         widget["count_text"] = _plural_forms(_days_text)
         presets = self.default_presets if self.presets is True else self.presets
         widget["presets"] = (
