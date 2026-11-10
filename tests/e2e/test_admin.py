@@ -8,7 +8,7 @@ from admin_app.models import Category, Item, Part, Tag
 from django.utils import timezone
 from playwright.sync_api import expect
 
-from django_formwork.admin import site
+from django_formwork.admin import TabularInline, site
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -218,6 +218,11 @@ def test_a_tag_added_in_the_dialog_joins_the_picked_tags(admin_page, live_server
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
     field = admin_page.locator('[data-related="admin_app.tag"]')
 
+    def hold_the_refresh(route):
+        if route.request.headers.get("hx-request") != "true":
+            route.continue_()
+
+    admin_page.route(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/", hold_the_refresh)
     field.get_by_role("link", name="Add another tag").click()
     dialog = related_dialog(admin_page)
     dialog.locator("[name=name]").fill("eco")
@@ -227,6 +232,38 @@ def test_a_tag_added_in_the_dialog_joins_the_picked_tags(admin_page, live_server
 
     expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
     assert sorted(item.tags.values_list("name", flat=True)) == ["eco", "sale"]
+    assert admin_page.errors == []
+
+
+class ItemInline(TabularInline):
+    model = Item
+    fields = ["name", "status", "tags"]
+    extra = 0
+
+
+def test_a_tag_added_in_the_dialog_shows_in_inline_rows_added_after(admin_page, live_server, kitchen, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Category), "inlines", [ItemInline])
+    admin_page.goto(f"{live_server.url}/admin/admin_app/category/{kitchen.pk}/change/")
+    group = admin_page.locator("#items-group")
+    add = group.get_by_role("button", name=re.compile("Add another item"))
+    add.click()
+    group.locator("[name=items-0-name]").fill("Kettle")
+
+    group.locator("#items-0").get_by_role("link", name="Add another tag").click()
+    dialog = related_dialog(admin_page)
+    dialog.locator("[name=name]").fill("eco")
+    dialog.get_by_role("button", name="Save", exact=True).click()
+    expect(admin_page.locator("dialog")).to_have_count(0)
+    expect(group.locator("#items-0 [data-related] summary")).to_match_aria_snapshot("- text: eco")
+    add.click()
+    group.locator("[name=items-1-name]").fill("Toaster")
+    tags = group.locator("#items-1 [data-related]")
+    tags.locator("summary").click()
+    tags.get_by_role("option", name="eco").click()
+    admin_page.get_by_role("button", name="Save", exact=True).click()
+
+    expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/category/")
+    assert sorted(Item.objects.filter(tags__name="eco").values_list("name", flat=True)) == ["Kettle", "Toaster"]
     assert admin_page.errors == []
 
 

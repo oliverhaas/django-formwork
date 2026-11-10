@@ -52,19 +52,6 @@ const popupHost = () => {
   return host;
 };
 
-// Writes a value and label into a copy of a relation's blank row, or into a row that the dialog changed.
-const fillRow = (row, value, label) => {
-  row.dataset.label = label;
-  for (const el of row.querySelectorAll("[data-value]")) {
-    el.dataset.value = value;
-    if ("label" in el.dataset) el.dataset.label = label;
-    delete el.dataset.labelHtml;
-    if (el.tagName === "INPUT") el.value = value;
-  }
-  const text = row.querySelector(".select-none");
-  if (text) text.textContent = label;
-};
-
 document.addEventListener("alpine:init", () => {
   const Alpine = window.Alpine;
 
@@ -490,53 +477,40 @@ document.addEventListener("alpine:init", () => {
       field.dataset.selected = JSON.stringify(entries);
     },
 
-    // The answer of the dialog: a row of the related model added, changed or deleted.
+    // The answer of the dialog: a row of the related model added, changed or deleted. Each field
+    // updates its selection; the field that opened the dialog then has the server re-render the
+    // form, so every relation lists the rows as they are now.
     apply({ action, value, obj, new_value: newValue, chosen }) {
       const field = this.field();
       if (!field) return;
       const multiple = field.classList.contains("formwork-select-multiple");
-      const rows = [...field.querySelectorAll("li[role=option]")].filter(
-        (row) => row.querySelector("[data-value]")?.dataset.value === value,
-      );
       if (action === "delete") {
-        for (const row of rows) row.remove();
         if (multiple) this.select(field, this.selected(field).filter(([key]) => key !== value));
         else if (field.dataset.value === value) {
           Object.assign(field.dataset, { value: "", label: "", icon: "", labelHtml: "", selectedToggleClass: "" });
         }
       } else if (action === "change") {
-        for (const row of rows) fillRow(row, newValue, obj);
         if (multiple) {
           const entries = this.selected(field).map(([key, html]) => (key === value ? [newValue, escapeHtml(obj)] : [key, html]));
           this.select(field, entries);
         } else if (field.dataset.value === value) Object.assign(field.dataset, { value: newValue, label: obj, labelHtml: "" });
-      } else {
-        // A field limited to some rows of the model may not offer the new row, unless it asked for it.
-        if (chosen || !("limitChoicesTo" in this.$root.dataset)) this.addRow(field, value, obj);
-        if (chosen && multiple) {
-          this.select(field, [...this.selected(field).filter(([key]) => key !== value), [value, escapeHtml(obj)]]);
-        } else if (chosen) {
-          Alpine.$data(field).choose({ value, label: obj, icon: "", labelHtml: "", selectedToggleClass: "" });
-        }
+      } else if (chosen && multiple) {
+        this.select(field, [...this.selected(field).filter(([key]) => key !== value), [value, escapeHtml(obj)]]);
+      } else if (chosen) {
+        Alpine.$data(field).choose({ value, label: obj, icon: "", labelHtml: "", selectedToggleClass: "" });
       }
       this.syncLink();
-    },
-
-    // An added row joins the list, so the field can show it and post it.
-    addRow(field, value, label) {
-      const list = field.querySelector("[x-ref=options]");
-      const blank = this.$root.querySelector("template[data-related-option]")?.content.querySelector("li[role=option]");
-      if (!list || !blank || list.querySelector(`[data-value="${CSS.escape(value)}"]`)) return;
-      const row = document.importNode(blank, true);
-      fillRow(row, value, label);
-      // The "No results found" row goes with the first row.
-      list.querySelector(":scope > li:has([role=status])")?.remove();
-      const last = [...list.querySelectorAll(":scope > li[role=option]")].at(-1);
-      if (last) last.after(row);
-      else list.prepend(row);
-      // A list without a search sizes the field to its longest label.
-      const widths = field.querySelector(".formwork-autowidth");
-      if (widths?.childElementCount) widths.append(Object.assign(document.createElement("span"), { textContent: label }));
+      if (!chosen) return;
+      this.$nextTick(() => {
+        // A list of boxes has none for the new row until the refresh lists it, so a hidden input
+        // posts the row, also when the form is saved first.
+        const name = field.dataset.name;
+        const posted = [...this.$root.querySelectorAll("input")].some(
+          (input) => input.name === name && input.value === value && (input.type === "hidden" || input.checked),
+        );
+        if (!action && !posted) this.$root.append(Object.assign(document.createElement("input"), { type: "hidden", name, value }));
+        this.$dispatch("formwork-admin:refresh");
+      });
     },
   }));
 
@@ -607,6 +581,16 @@ document.addEventListener("alpine:init", () => {
       this.setTotal(rows.length);
     },
   }));
+});
+
+// A refresh of the change form leaves files out.
+document.addEventListener("htmx:config:request", (event) => {
+  const { ctx } = event.detail;
+  if (ctx.sourceEvent?.type !== "formwork-admin:refresh" || !(ctx.request.body instanceof FormData)) return;
+  const body = ctx.request.body;
+  for (const [key, value] of [...body]) {
+    if (value instanceof File) body.delete(key);
+  }
 });
 
 // Leaves empty filters out of the changelist URL.

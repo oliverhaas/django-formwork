@@ -16,7 +16,8 @@
 
 {% block content %}
 <form id="{{ opts.model_name }}_form" method="post" action="{{ form_url }}"{% if has_file_field %} enctype="multipart/form-data"{% endif %} novalidate
-      class="mx-auto max-w-5xl" x-data="formworkChangeForm" data-prepopulated="{{ adminform.prepopulated_fields|tojson_attr }}" data-add="{{ "1" if add else "" }}">
+      class="mx-auto max-w-5xl" x-data="formworkChangeForm" data-prepopulated="{{ adminform.prepopulated_fields|tojson_attr }}" data-add="{{ "1" if add else "" }}"
+      hx-post="{{ form_url or request.get_full_path() }}" hx-trigger="formwork-admin:refresh" hx-vals='{"_refresh": "{{ "errors" if error_count else "1" }}"}' hx-target="#content" hx-swap="innerMorph" hx-sync="this:replace">
   {{ csrf_input }}
   {{ m.popup_inputs(is_popup, to_field) }}
 

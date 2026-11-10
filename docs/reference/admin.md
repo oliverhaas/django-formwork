@@ -196,8 +196,8 @@ Next to a relation, the change form has buttons that open the related model's ad
 a dialog. Django's admin opens a popup window for the same buttons.
 
 - **Add another** (plus) adds a row. After the save, the dialog closes and the field
-  chooses the new row. The other fields on the page that point to the same model list
-  the row too, unless they limit their choices.
+  chooses the new row. Every other field that can choose the row lists it too, also in
+  inline rows added later.
 - **Change selected** (pencil) edits the chosen row, and the field shows its new name.
   With only the view permission, the button is an eye and shows the row. Without a
   chosen row, the button stays in place, dimmed. A many-to-many field has no such
@@ -217,6 +217,12 @@ keeps working. A save in the dialog ends on `popup_response_template`, by defaul
 `formwork_admin/popup_response.html`. An override keeps the element with the id
 `formwork-admin-popup-response`: the dialog reads the saved row from its
 `data-popup-response` attribute.
+
+After a save in the dialog, the change form posts its values to its own URL with
+`_refresh` added, and htmx morphs the page with the response. For such a POST,
+`changeform_view()` renders the form as posted and saves nothing. Field errors show
+only when the page showed them before. An override of `changeform_view()` that acts on
+a POST checks for `_refresh` first.
 
 ### Filters
 

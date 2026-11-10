@@ -194,23 +194,16 @@ class RelatedWidgetWrapper(forms.Widget):
         # The stubs lack Widget._render.
         render = self.widget._render  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         rendered = render(self.widget.template_name, context, renderer)
-        # An empty row of the dropdown's list, for a row the dialog adds.
-        blank = {"value": "", "label": "", "selected": False, "attrs": {}}
-        option = render(
-            f"{self.widget.template_name}#option_list", {**context, "options": [blank], "truncated": False}, renderer
-        )
-        wrapper_context = self.get_wrapper_context(name, rendered, option, context["widget"].get("value"))
+        wrapper_context = self.get_wrapper_context(name, rendered, context["widget"].get("value"))
         return self._render(self.template_name, wrapper_context, renderer)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 
-    def get_wrapper_context(self, name: str, rendered_widget: str, option: str, value: Any = None) -> dict[str, Any]:
+    def get_wrapper_context(self, name: str, rendered_widget: str, value: Any = None) -> dict[str, Any]:
         opts = self.rel.model._meta
         context: dict[str, Any] = {
             "rendered_widget": rendered_widget,
-            "option": option,
             "name": name,
             "model": opts.verbose_name,
             "model_label": opts.label_lower,
-            "has_limit_choices_to": bool(self.rel.limit_choices_to),
             "can_change_related": self.can_change_related,
             "can_view_related": self.can_view_related,
             # The links open the full page; a plain click adds these and opens it in the dialog.

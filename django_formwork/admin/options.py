@@ -34,6 +34,7 @@ from django.db import IntegrityError, models, router, transaction
 from django.db.models import prefetch_related_objects
 from django.forms.formsets import DELETION_FIELD_NAME, all_valid
 from django.forms.models import modelform_defines_fields
+from django.forms.utils import ErrorDict
 from django.http import (
     Http404,
     HttpResponse,
@@ -1441,18 +1442,31 @@ class ModelAdmin(BaseModelAdmin):
                 raise PermissionDenied
             form = ModelForm(request.POST, request.FILES, instance=obj)
             formsets, inline_instances = self._create_formsets(request, form.instance, change=not add)
-            form_validated = form.is_valid()
-            new_object = self.save_form(request, form, change=not add) if form_validated else form.instance
-            if all_valid(formsets) and form_validated:
-                self.save_model(request, new_object, form, not add)
-                self.save_related(request, form, formsets, not add)
-                change_message = self.construct_change_message(request, form, formsets, add)
-                if add:
-                    self.log_addition(request, new_object, change_message)
-                    return self.response_add(request, new_object)
-                self.log_change(request, new_object, change_message)
-                return self.response_change(request, new_object)
-            form_validated = False
+            # A row added in a dialog re-renders the form as posted, so every relation lists it. Errors
+            # show again only when the page showed them before.
+            refresh = request.POST.get("_refresh")
+            if refresh:
+                if refresh != "errors":
+                    # Empty error lists render the form as posted without validating it.
+                    form._errors = ErrorDict(renderer=form.renderer)
+                    for formset in formsets:
+                        for inline_form in formset.forms:
+                            inline_form._errors = ErrorDict(renderer=inline_form.renderer)
+                        formset._errors = [inline_form._errors for inline_form in formset.forms]
+                        formset._non_form_errors = formset.error_class(error_class="nonform", renderer=formset.renderer)
+            else:
+                form_validated = form.is_valid()
+                new_object = self.save_form(request, form, change=not add) if form_validated else form.instance
+                if all_valid(formsets) and form_validated:
+                    self.save_model(request, new_object, form, not add)
+                    self.save_related(request, form, formsets, not add)
+                    change_message = self.construct_change_message(request, form, formsets, add)
+                    if add:
+                        self.log_addition(request, new_object, change_message)
+                        return self.response_add(request, new_object)
+                    self.log_change(request, new_object, change_message)
+                    return self.response_change(request, new_object)
+                form_validated = False
         elif add:
             form = ModelForm(initial=self.get_changeform_initial_data(request))
             formsets, inline_instances = self._create_formsets(request, form.instance, change=False)
