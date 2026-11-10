@@ -138,8 +138,8 @@ def test_preview_badges_take_the_list_badges_colors(admin_client, items):
     response = check(admin_client, f"id,status\n{lamp.pk},archived\n")
 
     changed = BeautifulSoup(response.content, "html.parser").select_one("section[id^=import-preview] td:has(del)")
-    assert changed.select_one("del .status")["class"] == ["status"]
-    assert "status-warning" in changed.select_one("ins .status")["class"]
+    assert "badge-ghost" in changed.select_one("del .badge")["class"]
+    assert "badge-warning" in changed.select_one("ins .badge")["class"]
 
 
 def test_import_saves_new_and_changed_rows_and_logs_them(admin_client, admin_user, items):

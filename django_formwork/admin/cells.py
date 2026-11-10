@@ -139,11 +139,7 @@ def html(cell: Cell) -> str:
                 gettext("No"),
             )
         case "badge":
-            dot = "status" if cell["color"] == "neutral" else f"status status-{cell['color']}"
-            return format_html(
-                '<span class="badge badge-ghost gap-1.5"><span class="{}" aria-hidden="true"></span>{}</span>',
-                dot,
-                text,
-            )
+            color = "badge-ghost" if cell["color"] == "neutral" else f"badge-soft badge-{cell['color']}"
+            return format_html('<span class="badge {}">{}</span>', color, text)
         case _:
             return str(text)

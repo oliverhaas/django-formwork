@@ -85,7 +85,7 @@
     ("unchanged", _("Unchanged"), "equal", "text-base-content/50"),
     ("error", _("Errors"), "circle-exclamation-point", "text-error"),
   ] %}
-  {% set dots = {"new": "status-success", "changed": "status-info", "unchanged": "", "error": "status-error"} %}
+  {% set badges = {"new": "badge-success badge-soft", "changed": "badge-info badge-soft", "unchanged": "badge-ghost", "error": "badge-error badge-soft"} %}
   {% set labels = {"new": _("New"), "changed": _("Changed"), "unchanged": _("Unchanged"), "error": _("Error")} %}
   {#- A new check gives a new id, so the filter starts over. #}
   <section id="import-preview-{{ result.digest[:16] }}" class="mt-8" x-data="{ show: '' }" x-show="!picked" aria-labelledby="import-preview-title">
@@ -142,7 +142,7 @@
               <td>
                 <span class="flex items-center gap-2 whitespace-nowrap">
                   <span class="min-w-6 text-right tabular-nums text-base-content/60">{{ row.number }}</span>
-                  <span data-status class="badge badge-ghost badge-sm gap-1.5"><span class="status {{ dots[row.status] }}" aria-hidden="true"></span>{{ labels[row.status] }}</span>
+                  <span data-status class="badge badge-sm {{ badges[row.status] }}">{{ labels[row.status] }}</span>
                 </span>
               </td>
               {% if mapping.key_shown %}

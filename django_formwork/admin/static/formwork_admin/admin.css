@@ -13,9 +13,6 @@
 
 @source "../../";
 
-/* A badge cell colors its dot with status-{{ c.color }}, from list_badges. */
-@source inline("status-{primary,secondary,accent,info,success,warning,error}");
-
 /* Links in HTML the admin does not render itself (format_html() cells,
    read-only values, fieldset descriptions) are underlined like its own. */
 #content a:not([class]) {

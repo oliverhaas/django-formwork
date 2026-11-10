@@ -18,7 +18,7 @@
 {% macro cell(c) %}
 {% if c.kind == "empty" %}<span class="text-base-content/35">{{ c.text }}</span>
 {% elif c.kind == "boolean" %}{% if c.text %}<span class="inline-flex text-[color:color-mix(in_oklab,var(--color-success)_75%,var(--color-base-content))]" title="{{ _("Yes") }}">{{ icon("circle-check", "size-[1.125rem]") }}<span class="sr-only">{{ _("Yes") }}</span></span>{% else %}<span class="inline-flex text-base-content/50" title="{{ _("No") }}">{{ icon("circle-x", "size-[1.125rem]") }}<span class="sr-only">{{ _("No") }}</span></span>{% endif %}
-{% elif c.kind == "badge" %}<span class="badge badge-ghost badge-sm gap-1.5 whitespace-nowrap"><span class="status{{ "" if c.color == "neutral" else " status-" ~ c.color }}" aria-hidden="true"></span>{{ c.text }}</span>
+{% elif c.kind == "badge" %}<span class="badge badge-sm whitespace-nowrap {{ "badge-ghost" if c.color == "neutral" else "badge-soft badge-" ~ c.color }}">{{ c.text }}</span>
 {% elif c.kind == "number" %}<span class="tabular-nums">{{ c.text }}</span>
 {% elif c.kind == "date" %}<span class="whitespace-nowrap tabular-nums">{{ c.text }}</span>
 {% elif c.kind == "html" %}{{ c.text|safe }}
@@ -266,7 +266,7 @@
       <span class="block font-semibold">{{ fieldset.name or _("More") }}</span>
       {% if fieldset.description %}<span class="block text-sm text-base-content/60">{{ fieldset.description }}</span>{% endif %}
     </span>
-    {% if fieldset.has_errors %}<span class="badge badge-ghost badge-sm gap-1.5"><span class="status status-error" aria-hidden="true"></span>{{ _("Errors") }}</span>{% endif %}
+    {% if fieldset.has_errors %}<span class="badge badge-error badge-soft badge-sm">{{ _("Errors") }}</span>{% endif %}
     {{ icon("chevron-down", "size-4 text-base-content/50 transition-transform group-open/fs:rotate-180") }}
   </summary>
   <div class="border-t border-base-300 px-6 pt-2 pb-5">{{ fieldset_rows(fieldset) }}</div>
