@@ -28,6 +28,7 @@ document.addEventListener("alpine:init", () => {
         const el = this.$el;
         this.watchOpen();
         this.anchorPanel();
+        this.keepSearchedList();
         this.showSearch = el.dataset.showSearch === "true";
         this.placeholder = el.dataset.placeholder || "";
         this.summaryThreshold = Number(el.dataset.summaryThreshold);
@@ -81,6 +82,10 @@ document.addEventListener("alpine:init", () => {
       writeValues() {
         const values = this.$refs.values;
         if (!values) return;
+        // A morph that echoes the selection rewrites data-selected; the inputs stay.
+        const wanted = Object.keys(this.selected);
+        const posted = [...values.children].map((input) => input.value);
+        if (wanted.length === posted.length && wanted.every((value, i) => value === posted[i])) return;
         values.replaceChildren(
           ...Object.keys(this.selected).map((value) =>
             Object.assign(document.createElement("input"), { type: "hidden", name: values.dataset.name, value }),

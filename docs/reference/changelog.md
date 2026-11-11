@@ -135,11 +135,20 @@
   `formwork/widgets/partials/pattern_hint.html`, copy it again.
 - The label of a `RadioSelect`, a `CheckboxSelectMultiple` or a `MultiWidget` sat 4px
   higher than the label of a field next to it in the same row. The two line up now.
-- After an htmx morph, a checkbox, a radio button or a native `<select>` kept the state
-  that a click or a script had given it, even when the server rendered another one. A
-  list that gained a choice could show the wrong choice as checked and post it. The
-  morph now applies the server's state, except on the focused control, as it already
-  did for the value of a text input.
+- After an htmx morph, a checkbox, a radio button, a native `<select>` or a text field
+  kept the state that a click, typing or a script had given it, even when the server
+  rendered another one. A list that gained a choice could show the wrong choice as
+  checked and post it, and a field the server answered empty kept the typed text. The
+  morph now applies the server's state to every control except the focused one, also
+  where the server's HTML for the field is the same as before.
+- An htmx morph of the form, such as an autosave, disturbed the dropdown of a `Select`,
+  `SelectMultiple` or `ComboBox`. It replaced the results of a search through
+  `search_url` with the options of the form's own render, dropped the option that the
+  arrow keys had highlighted, and rebuilt the option rows and the hidden inputs of a
+  `SelectMultiple`. When the server sends back the same choice, the dropdown now stays
+  as the user left it. If you override `formwork/widgets/select.html`,
+  `formwork/widgets/select_multiple.html` or `formwork/widgets/combo_box.html`, copy it
+  again.
 - A `RadioSelect` or `CheckboxSelectMultiple` inside a wrapper widget, one that holds it
   in its `widget` attribute like Django admin's `RelatedFieldWidgetWrapper`, rendered
   without the stacked choice list. `BoundField.widget_type` names the wrapped widget

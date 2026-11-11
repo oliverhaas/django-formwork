@@ -603,7 +603,7 @@ def test_combo_box_keydown_invokes_nav_methods():
 @pytest.mark.unit
 def test_combo_box_xdata_binds_alpine_component():
     """Wrapper binds to the formworkComboBox component (state including
-    highlightedEl is defined in the JS module)."""
+    the highlight is defined in the JS module)."""
     widget = ComboBox(suggestions=["A"])
     html = widget.render("test", "")
     assert 'x-data="formworkComboBox"' in html

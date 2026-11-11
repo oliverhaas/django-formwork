@@ -303,12 +303,55 @@ if (typeof htmx !== "undefined") {
     ? `${htmx.config.morphSkipChildren}, ${morphSkipChildrenSelector}`
     : morphSkipChildrenSelector;
 
+  // The hook below sees a node only when htmx morphs it.  htmx leaves out
+  // the children of a node equal to its new version, and a control's
+  // checked, selected or value property is not part of that comparison, so
+  // the controls in an unchanged subtree keep what the user did there.
+  // These are the nodes of the running morph that the hook saw; after the
+  // morph, each control it did not see is set to its attributes, which are
+  // the server's.
+  let morphed = [];
+
+  const morphedControls = (target) => {
+    const seen = new Set(morphed.map((detail) => detail.oldNode));
+    // Every extension hook gets the same detail; htmx marks it cancelled
+    // when one of them kept the node.
+    const kept = morphed.filter((detail) => detail.cancelled).map((detail) => detail.oldNode);
+    const skipped = [htmx.config.morphSkip, htmx.config.morphSkipChildren].filter(Boolean).join(", ");
+    return [...target.querySelectorAll("input, textarea, option")].filter(
+      (control) =>
+        !seen.has(control) &&
+        !kept.some((node) => node.contains(control)) &&
+        !(skipped && control.parentElement?.closest(skipped)),
+    );
+  };
+
+  const syncToAttributes = (control) => {
+    if (control === document.activeElement || control._x_model) return;
+    if (control instanceof HTMLOptionElement) {
+      if (control.closest("select") !== document.activeElement) {
+        control.selected = control.hasAttribute("selected");
+      }
+    } else if (control instanceof HTMLTextAreaElement) {
+      control.value = control.defaultValue;
+    } else if (control.type === "checkbox" || control.type === "radio") {
+      control.checked = control.hasAttribute("checked");
+    } else if (control.type !== "file") {
+      control.value = control.getAttribute("value") ?? "";
+    }
+  };
+
   // Per-pair morph hook.  htmx 4 dispatches `htmx:before:morph:node` via
   // the extension API for every (oldNode, newNode) pair.  Returning false
   // skips morphing that node entirely; mutating `newNode` here lets us
   // pre-seed values that the subsequent attribute/child copy will then
   // pick up.
   htmx.registerExtension("formwork-morph", {
+    htmx_before_settle: (target) => {
+      if (!morphed.length) return;
+      if (target.isConnected) morphedControls(target).forEach(syncToAttributes);
+      morphed = [];
+    },
     htmx_before_morph_node: (_elt, detail) => {
       const oldNode = detail.oldNode;
       const newNode = detail.newNode;
@@ -316,6 +359,7 @@ if (typeof htmx !== "undefined") {
       if (!(oldNode instanceof Element) || !(newNode instanceof Element)) {
         return true;
       }
+      morphed.push(detail);
 
       // A dropdown holding a pick the server has not confirmed yet skips a
       // stale echo whole: its hidden inputs would otherwise post the older

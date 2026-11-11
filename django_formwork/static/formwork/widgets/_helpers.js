@@ -184,7 +184,9 @@ const baseData = () => ({
   search: "",
   showSearch: false,
   placeholder: "",
-  highlightedEl: null,
+  // The option value of the row the arrow keys highlight, and that row's id.
+  highlighted: null,
+  highlightId: "",
   dropUp: false,
   hasError: false,
   _unfollow: null,
@@ -407,37 +409,53 @@ const baseData = () => ({
   },
 
   clearHighlight() {
-    if (this.highlightedEl) {
-      this.highlightedEl.classList.remove("highlighted");
-      this.highlightedEl.removeAttribute("id");
-      this.highlightedEl = null;
-    }
+    this.highlighted = null;
+  },
+
+  // A row's class and id bindings read the highlight. A morph then pairs the
+  // highlighted row with the server's copy of it, and htmx's alpine-compat
+  // extension gives the copy the same class and id.
+  isHighlighted(row) {
+    return this.highlighted !== null && row.querySelector("[data-value]")?.dataset.value === this.highlighted;
+  },
+
+  optionClass(row) {
+    return this.isHighlighted(row) ? "highlighted" : "";
+  },
+
+  optionId(row) {
+    return this.isHighlighted(row) && this.highlightId;
   },
 
   // The text box keeps focus while the arrows move the highlight, so it
   // points screen readers at the highlighted row by id.
   get activeOption() {
-    return this.highlightedEl?.id;
+    return this.highlighted === null ? undefined : this.highlightId;
   },
 
   nav(dir) {
     const visible = visibleOptions(this);
     if (!visible.length) return;
-    let idx = visible.findIndex((el) => el.closest("li") === this.highlightedEl);
+    let idx = visible.findIndex((el) => el.dataset.value === this.highlighted);
     if (idx === -1) idx = dir > 0 ? 0 : visible.length - 1;
     else idx = (idx + dir + visible.length) % visible.length;
-    this.clearHighlight();
-    const li = visible[idx].closest("li");
-    li.id = `formwork-option-${++highlightIds}`;
-    li.classList.add("highlighted");
-    li.scrollIntoView({ block: "nearest" });
-    this.highlightedEl = li;
+    // A new id for each step, so a screen reader announces the move.
+    this.highlightId = `formwork-option-${++highlightIds}`;
+    this.highlighted = visible[idx].dataset.value;
+    visible[idx].closest("li").scrollIntoView({ block: "nearest" });
   },
 
   // The highlighted row's option, else the first visible one.
   confirmTarget() {
-    const target = this.highlightedEl?.querySelector("[data-value]");
-    return target && target.offsetParent !== null ? target : visibleOptions(this)[0];
+    const visible = visibleOptions(this);
+    return visible.find((el) => el.dataset.value === this.highlighted) ?? visible[0];
+  },
+
+  // The rows a typed search brought in are the answer to that search; the
+  // form's own render lists other rows, so a morph leaves them.
+  keepSearchedList() {
+    const list = this.$refs.options;
+    if (list) list._formworkAcceptMorph = () => !(this.hasSearchUrl && this.query);
   },
 
   // htmx 4 builds the GET query from the request body. The search box has no

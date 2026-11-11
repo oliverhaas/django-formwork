@@ -4,9 +4,17 @@ The live_server fixture from pytest-django starts a real Django server.
 We override Django settings for e2e-specific URL routing and templates.
 """
 
+import io
 import os
+from pathlib import Path
 
+import numpy as np
 import pytest
+from django.template import engines
+from django.test import RequestFactory
+from e2e.views import _page_html
+from PIL import Image
+from playwright.sync_api import expect
 
 # Playwright runs an async event loop; Django blocks sync DB calls in async
 # contexts by default.  This is safe for tests, the live_server runs in a
@@ -200,3 +208,136 @@ def translated_page(page, live_server, pseudo_catalog):
 def sections_page(page, live_server):
     """Navigate to the section-forms page."""
     return _navigate(page, live_server, "/sections/")
+
+
+_MORPH_PAGE = engines["django"].from_string(
+    _page_html(
+        "Morph",
+        '<div class="card-body"><form id="morph_form" class="flex flex-col gap-5" data-revision="{{ revision }}" '
+        'novalidate hx-post="" hx-trigger="save" hx-select="#morph_form" hx-swap="outerMorph">{{ form }}</form></div>',
+    )
+)
+_CHANNEL_TOLERANCE = 8
+_STRAY_PIXELS = 6
+_CSS_IMAGES_LOADED = r"""() => [...document.querySelectorAll("*")]
+    .filter((el) => el.checkVisibility())
+    .flatMap((el) => {
+        const style = getComputedStyle(el);
+        return [...`${style.maskImage} ${style.backgroundImage}`.matchAll(/url\("(.+?)"\)/g)];
+    })
+    .every(([, url]) => url.startsWith("data:") || performance.getEntriesByName(url).length)"""
+_NEXT_FRAME = "new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))"
+
+
+class MorphPage:
+    """A page with one form whose save the test answers.
+
+    The answer renders the form bound to the posted data, like a view that validates on save."""
+
+    def __init__(self, page, live_server, output):
+        self.page = page
+        self.live_server = live_server
+        self.output = output
+        self.form = page.locator("#morph_form")
+        self.revision = 0
+        self.reply = None
+        self.errors = []
+        page.on("pageerror", lambda error: self.errors.append(str(error)))
+        page.on("console", self._on_console)
+        page.on("response", self._on_response)
+
+    def open(self, form_class, data=None):
+        """Load the page with the form, bound to ``data`` if given."""
+        self.form_class = form_class
+        self.data = data
+        self.page.route(f"{self.live_server.url}/morph/", self._respond)
+        self._load()
+
+    def morph(self, data=None):
+        """Save the form and wait until the answer is morphed in; it renders ``data``, else the posted data."""
+        self.reply = data
+        revision = self.revision + 1
+        self.form.dispatch_event("save")
+        expect(self.form).to_have_attribute("data-revision", str(revision))
+        expect(self.page.locator(".htmx-request")).to_have_count(0)
+
+    def assert_morph_keeps_state(self):
+        """A save answered with what the user entered changes no pixel and replaces no node."""
+        self.form.evaluate("form => form.querySelectorAll('*').forEach(el => el.morphProbe = true)")
+        before = self._screenshot()
+        self.morph()
+        after = self._screenshot()
+        replaced = self.form.evaluate(
+            "form => [...form.querySelectorAll('*')].filter(el => !el.morphProbe).map(el => el.outerHTML.slice(0, 200))"
+        )
+        assert not self.errors
+        assert not replaced, "The morph replaced nodes"
+        self._assert_same(before, after, "before", "after")
+
+    def assert_morph_shows(self, data):
+        """A save answered with other data looks like a fresh load of that data, after the user left the field."""
+        self.page.evaluate("document.activeElement?.blur()")
+        self.morph(data)
+        morphed = self._screenshot()
+        self.data = data
+        self._load()
+        loaded = self._screenshot()
+        assert not self.errors
+        self._assert_same(morphed, loaded, "morphed", "loaded")
+
+    def _on_console(self, message):
+        if message.type == "error" and not message.text.startswith("Failed to load resource"):
+            self.errors.append(message.text)
+
+    def _on_response(self, response):
+        if response.status >= 400:
+            self.errors.append(f"{response.status} {response.url}")
+
+    def _load(self):
+        _navigate(self.page, self.live_server, "/morph/")
+        self.page.evaluate("document.fonts.ready.then(() => true)")
+
+    def _screenshot(self):
+        """With the mouse off every control, after each visible icon, a CSS mask image, has loaded."""
+        self.page.mouse.move(0, 0)
+        self.page.wait_for_function(_CSS_IMAGES_LOADED)
+        self.page.evaluate(_NEXT_FRAME)
+        return self.page.screenshot(
+            animations="disabled",
+            caret="hide",
+            style="*, *::before, *::after { transition: none !important; }",
+        )
+
+    def _assert_same(self, first, second, *names):
+        """Allows a few stray pixels: under parallel load, two loads of one page can differ on a glyph edge."""
+        a, b = (np.asarray(Image.open(io.BytesIO(png)).convert("RGB"), dtype=np.int16) for png in (first, second))
+        if a.shape == b.shape and (np.abs(a - b) > _CHANNEL_TOLERANCE).any(axis=2).sum() <= _STRAY_PIXELS:
+            return
+        self.output.mkdir(parents=True, exist_ok=True)
+        for name, png in zip(names, (first, second), strict=True):
+            (self.output / f"{name}.png").write_bytes(png)
+        pytest.fail(f"The screens differ, see {self.output}")
+
+    def _respond(self, route):
+        data, files = self.data, None
+        if route.request.method == "POST":
+            self.revision += 1
+            if self.reply is None:
+                posted = RequestFactory().generic(
+                    "POST",
+                    "/morph/",
+                    route.request.post_data_buffer or b"",
+                    content_type=route.request.headers.get("content-type", ""),
+                )
+                data, files = posted.POST, posted.FILES
+            else:
+                data = self.reply
+        form = self.form_class() if data is None else self.form_class(data, files)
+        html = _MORPH_PAGE.render({"form": form, "revision": self.revision})
+        route.fulfill(content_type="text/html", body=html)
+
+
+@pytest.fixture
+def morph_page(page, live_server, output_path):
+    """A page whose one form the test defines, saved with a morph."""
+    return MorphPage(page, live_server, Path(output_path))

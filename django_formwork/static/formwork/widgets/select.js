@@ -18,6 +18,7 @@ document.addEventListener("alpine:init", () => {
         const el = this.$el;
         this.watchOpen();
         this.anchorPanel();
+        this.keepSearchedList();
         this.showSearch = el.dataset.showSearch === "true";
         this.placeholder = el.dataset.placeholder || "";
         // The template server-renders the initial display classes on the

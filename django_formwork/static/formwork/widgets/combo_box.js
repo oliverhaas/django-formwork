@@ -39,6 +39,7 @@ document.addEventListener("alpine:init", () => {
         const el = this.$el;
         this.multiple = el.dataset.multiple === "true";
         this.anchorPanel();
+        this.keepSearchedList();
         // Open after x-show has run: a hidden panel has no height to measure
         // the drop against.
         this.$watch("open", (open) => (open ? this.$nextTick(() => this.showPanel()) : this.hidePanel()));
