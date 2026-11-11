@@ -1381,11 +1381,20 @@
   <code>formwork/widgets/partials/pattern_hint.html</code>, copy it again.</li>
 <li>The label of a <code>RadioSelect</code>, a <code>CheckboxSelectMultiple</code> or a <code>MultiWidget</code> sat 4px
   higher than the label of a field next to it in the same row. The two line up now.</li>
-<li>After an htmx morph, a checkbox, a radio button or a native <code>&lt;select&gt;</code> kept the state
-  that a click or a script had given it, even when the server rendered another one. A
-  list that gained a choice could show the wrong choice as checked and post it. The
-  morph now applies the server's state, except on the focused control, as it already
-  did for the value of a text input.</li>
+<li>After an htmx morph, a checkbox, a radio button, a native <code>&lt;select&gt;</code> or a text field
+  kept the state that a click, typing or a script had given it, even when the server
+  rendered another one. A list that gained a choice could show the wrong choice as
+  checked and post it, and a field the server answered empty kept the typed text. The
+  morph now applies the server's state to every control except the focused one, also
+  where the server's HTML for the field is the same as before.</li>
+<li>An htmx morph of the form, such as an autosave, disturbed the dropdown of a <code>Select</code>,
+  <code>SelectMultiple</code> or <code>ComboBox</code>. It replaced the results of a search through
+  <code>search_url</code> with the options of the form's own render, dropped the option that the
+  arrow keys had highlighted, and rebuilt the option rows and the hidden inputs of a
+  <code>SelectMultiple</code>. When the server sends back the same choice, the dropdown now stays
+  as the user left it. If you override <code>formwork/widgets/select.html</code>,
+  <code>formwork/widgets/select_multiple.html</code> or <code>formwork/widgets/combo_box.html</code>, copy it
+  again.</li>
 <li>A <code>RadioSelect</code> or <code>CheckboxSelectMultiple</code> inside a wrapper widget, one that holds it
   in its <code>widget</code> attribute like Django admin's <code>RelatedFieldWidgetWrapper</code>, rendered
   without the stacked choice list. <code>BoundField.widget_type</code> names the wrapped widget
