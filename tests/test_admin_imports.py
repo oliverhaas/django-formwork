@@ -8,7 +8,6 @@ from decimal import Decimal
 import pytest
 from admin_app.models import Category, Item, Tag
 from bs4 import BeautifulSoup
-from django.contrib.admin.models import ADDITION, CHANGE, LogEntry
 from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
@@ -17,6 +16,7 @@ from django.urls import reverse
 from openpyxl import Workbook
 
 from django_formwork.admin import site
+from django_formwork.admin.models import HistoryEntry
 
 pytestmark = pytest.mark.django_db
 
@@ -163,12 +163,9 @@ def test_import_saves_new_and_changed_rows_and_logs_them(admin_client, admin_use
     mug = Item.objects.get(name="Gamma mug")
     assert mug.category.name == "Kitchen"
     assert mug.quantity == 0
-    entries = LogEntry.objects.filter(user=admin_user).order_by("action_flag")
-    assert [(entry.object_id, entry.action_flag) for entry in entries] == [
-        (str(mug.pk), ADDITION),
-        (str(lamp.pk), CHANGE),
-    ]
-    assert "Status" in entries[1].get_change_message()
+    entries = HistoryEntry.objects.filter(user=admin_user).order_by("action")
+    assert [(entry.object_id, entry.action) for entry in entries] == [(str(mug.pk), "add"), (str(lamp.pk), "change")]
+    assert "Status" in entries[1].changes[0]["changed"]["fields"]
     messages = [str(message) for message in response.wsgi_request._messages]
     assert messages == ["Imported 2 items: 1 added, 1 changed."]
 

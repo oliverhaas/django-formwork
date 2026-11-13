@@ -15,43 +15,11 @@
   <a href="{{ change_url }}" class="btn gap-2">{{ icon("arrow-left") }} {{ _("Back to %(name)s", name=opts.verbose_name) }}</a>
   {% endcall %}
 
-  <div class="card border border-base-300 bg-base-100">
-    {% if action_list %}
-    <ol class="divide-y divide-base-200">
-      {% for entry in action_list %}
-      {% set kind = "add" if entry.is_addition() else ("delete" if entry.is_deletion() else "change") %}
-      <li class="flex items-start gap-3 px-5 py-3.5">
-        <span class="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full {{ {"add": "bg-success/15 text-success", "change": "bg-info/15 text-info", "delete": "bg-error/15 text-error"}[kind] }}">
-          {{ icon({"add": "plus", "change": "pencil", "delete": "trash"}[kind], "size-3.5") }}
-        </span>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm">{{ entry.get_change_message() or _("No fields changed.") }}</p>
-          <p class="mt-0.5 text-xs text-base-content/55">
-            <span class="font-medium text-base-content/75">{{ (entry.user.get_full_name() if entry.user.get_full_name is defined else "") or entry.user.get_username() }}</span>
-            · <time datetime="{{ entry.action_time.isoformat() }}" title="{{ entry.action_time|ago }}">{{ entry.action_time|datetime }}</time>
-          </p>
-        </div>
-      </li>
-      {% endfor %}
-    </ol>
-    {% if page_obj.paginator.num_pages > 1 %}
-    <div class="flex items-center justify-between gap-3 border-t border-base-300 px-5 py-3">
-      <p class="text-sm text-base-content/60">{% trans trimmed count=page_obj.paginator.count, total=number(page_obj.paginator.count) %}{{ total }} entry{% pluralize %}{{ total }} entries{% endtrans %}</p>
-      <nav class="join" aria-label="{{ _("Pages") }}">
-        {% for n in page_range %}
-        {% if n == page_obj.paginator.ELLIPSIS %}
-        <span class="join-item btn btn-sm btn-disabled pointer-events-none">&hellip;</span>
-        {% elif n == page_obj.number %}
-        <span class="join-item btn btn-sm btn-primary tabular-nums" aria-current="page">{{ number(n) }}</span>
-        {% else %}
-        <a class="join-item btn btn-sm tabular-nums" href="?p={{ n }}">{{ number(n) }}</a>
-        {% endif %}
-        {% endfor %}
-      </nav>
-    </div>
-    {% endif %}
+  <div id="history" class="card border border-base-300 bg-base-100 px-5 py-4">
+    {% if history_entries %}
+    <ol class="divide-y divide-base-200">{% include "formwork_admin/history_entries.html" %}</ol>
     {% else %}
-    <div class="flex flex-col items-center gap-3 px-6 py-16 text-center">
+    <div class="flex flex-col items-center gap-3 px-6 py-12 text-center">
       <span class="grid size-12 place-items-center rounded-full bg-base-200 text-base-content/40">{{ icon("rotate-ccw-clock", "size-6") }}</span>
       <div>
         <p class="font-medium">{{ _("No history yet") }}</p>

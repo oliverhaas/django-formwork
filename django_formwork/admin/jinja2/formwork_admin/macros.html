@@ -17,7 +17,7 @@
 
 {% macro cell(c) %}
 {% if c.kind == "empty" %}<span class="text-base-content/35">{{ c.text }}</span>
-{% elif c.kind == "boolean" %}{% if c.text %}<span class="inline-flex text-[color:color-mix(in_oklab,var(--color-success)_75%,var(--color-base-content))]" title="{{ _("Yes") }}">{{ icon("circle-check", "size-[1.125rem]") }}<span class="sr-only">{{ _("Yes") }}</span></span>{% else %}<span class="inline-flex text-base-content/50" title="{{ _("No") }}">{{ icon("circle-x", "size-[1.125rem]") }}<span class="sr-only">{{ _("No") }}</span></span>{% endif %}
+{% elif c.kind == "boolean" %}{% if c.text %}<span class="inline-flex align-middle text-[color:color-mix(in_oklab,var(--color-success)_75%,var(--color-base-content))]" title="{{ _("Yes") }}">{{ icon("circle-check", "size-[1.125rem]") }}<span class="sr-only">{{ _("Yes") }}</span></span>{% else %}<span class="inline-flex align-middle text-base-content/50" title="{{ _("No") }}">{{ icon("circle-x", "size-[1.125rem]") }}<span class="sr-only">{{ _("No") }}</span></span>{% endif %}
 {% elif c.kind == "badge" %}<span class="badge badge-sm whitespace-nowrap {{ "badge-ghost" if c.color == "neutral" else "badge-soft badge-" ~ c.color }}">{{ c.text }}</span>
 {% elif c.kind == "number" %}<span class="tabular-nums">{{ c.text }}</span>
 {% elif c.kind == "date" %}<span class="whitespace-nowrap tabular-nums">{{ c.text }}</span>
@@ -118,7 +118,7 @@
   <input type="hidden" name="query" value="{{ cl.export_query }}">
   <div tabindex="0" role="button" class="btn gap-2">{{ icon("download") }} {{ _("Export") }} {{ icon("chevron-down", "size-3.5 opacity-50") }}</div>
   <ul tabindex="-1" class="dropdown-content menu z-30 mt-2 w-60 rounded-box border border-base-300 bg-base-100 p-1 shadow-lg">
-    <li class="menu-title text-xs font-normal">{% if cl.has_active_filters or cl.query %}{% trans trimmed count=cl.result_count, total=number(cl.result_count) %}The {{ total }} filtered row{% pluralize %}The {{ total }} filtered rows{% endtrans %}{% else %}{% trans trimmed count=cl.result_count, total=number(cl.result_count) %}All {{ total }} row{% pluralize %}All {{ total }} rows{% endtrans %}{% endif %}</li>
+    <li class="menu-title text-xs font-normal">{% if cl.is_filtered %}{% trans trimmed count=cl.result_count, total=number(cl.result_count) %}The {{ total }} filtered row{% pluralize %}The {{ total }} filtered rows{% endtrans %}{% else %}{% trans trimmed count=cl.result_count, total=number(cl.result_count) %}All {{ total }} row{% pluralize %}All {{ total }} rows{% endtrans %}{% endif %}</li>
     {% for format in formats %}
     <li><button type="submit" name="format" value="{{ format.name }}">{{ icon(format_icons.get(format.name, "file")) }} {{ format.label }}<span class="ml-auto text-xs text-base-content/50">.{{ format.extension }}</span></button></li>
     {% endfor %}
@@ -127,23 +127,25 @@
 {% endif %}
 {% endmacro %}
 
-{# Django's nested deletion list, cut after ``limit`` objects per level. #}
-{% macro nested(items, limit=100, depth=0) %}
-{% set ns = namespace(shown=0, hidden=0) %}
-<ul class="{{ "space-y-1" if depth == 0 else "mt-1 ml-1.5 space-y-1 border-l border-base-300 pl-4" }}">
+{#- Django's nested deletion list. Like Django's ``truncated_unordered_list`` it counts the objects of
+    every level together and stops after ``limit`` of them; ``limit=None`` lists them all. #}
+{% macro nested(items, limit=100, seen=none) %}
+{% set top = seen is none %}
+{% set seen = namespace(count=0) if top else seen %}
+<ul class="{{ "space-y-1" if top else "mt-1 ml-1.5 space-y-1 border-l border-base-300 pl-4" }}">
   {% for item in items %}
   {% if item is string or item.__html__ is defined %}
-  {% if ns.shown < limit %}
-  <li class="text-sm [&_a]:link">{{ item }}</li>
-  {% set ns.shown = ns.shown + 1 %}
+  {% set seen.count = seen.count + 1 %}
+  {% if limit is none or seen.count <= limit %}<li class="text-sm [&_a]:link">{{ item }}</li>{% endif %}
+  {% elif limit is none or seen.count < limit %}
+  <li>{{ nested(item, limit, seen) }}</li>
   {% else %}
-  {% set ns.hidden = ns.hidden + 1 %}
-  {% endif %}
-  {% elif not ns.hidden %}
-  <li>{{ nested(item, limit, depth + 1) }}</li>
+  {% set uncounted = nested(item, limit, seen) %}
   {% endif %}
   {% endfor %}
-  {% if ns.hidden %}<li class="text-sm text-base-content/50">{{ _("and %(count)s more", count=number(ns.hidden)) }}</li>{% endif %}
+  {% if top and limit is not none and seen.count > limit %}
+  <li class="text-sm text-base-content/50">{{ _("and %(count)s more", count=number(seen.count - limit)) }}</li>
+  {% endif %}
 </ul>
 {% endmacro %}
 
@@ -255,6 +257,34 @@
 </div>
 {% endif %}
 {% endfor %}
+{% endmacro %}
+
+{#- An inline's card, around the rows its template passes in a call block. A collapsible inline folds
+    behind its title like a collapsed fieldset, and starts open while a row has an error. #}
+{% macro inline_group(inline) %}
+{% set formset = inline.formset %}
+{% set errors = inline.error_count() %}
+{% set title %}
+<h2 class="font-semibold">{{ inline.group_name|capfirst }}</h2>
+{% if formset.initial_form_count() %}<span class="badge badge-ghost badge-sm tabular-nums">{{ number(formset.initial_form_count()) }}</span>{% endif %}
+{% if errors %}<span class="badge badge-error badge-soft badge-sm ml-auto">{{ _("Errors") }}</span>{% endif %}
+{% endset %}
+{% if inline.collapsible %}
+<details id="{{ inline.prefix }}-group" class="card group/inline border border-base-300 bg-base-100"{% if errors %} open{% endif %}
+         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}">
+  <summary class="flex cursor-pointer list-none items-center gap-2 px-6 py-4 select-none [&::-webkit-details-marker]:hidden">
+    {{ title }}
+    {{ icon("chevron-down", "size-4 text-base-content/50 transition-transform group-open/inline:rotate-180" ~ ("" if errors else " ml-auto")) }}
+  </summary>
+  <div class="border-t border-base-300">{{ caller() }}</div>
+</details>
+{% else %}
+<section id="{{ inline.prefix }}-group" class="card border border-base-300 bg-base-100"
+         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}">
+  <header class="flex items-center gap-2 border-b border-base-300 px-6 py-4">{{ title }}</header>
+  {{ caller() }}
+</section>
+{% endif %}
 {% endmacro %}
 
 {% macro fieldset_card(fieldset) %}

@@ -37,7 +37,6 @@ class InvoiceAdmin(admin.ModelAdmin):
         ("Attachments", {"fields": ["pdf", "notes"], "classes": ["collapse"]}),
     ]
     inlines = [InvoiceLineInline, PaymentInline]
-    save_on_top = True
     actions = ["mark_sent", "mark_paid", "void"]
 
     def get_readonly_fields(self, request, obj=None):

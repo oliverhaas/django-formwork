@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+from django import forms
 from django.apps import apps
 from django.conf import settings
-from django.contrib.admin.utils import label_for_field
+from django.contrib.admin.utils import NotRelationField, label_for_field
 from django.core import checks
 from django.core.exceptions import FieldDoesNotExist
 
 from django_formwork.admin.filters import build_filterset
+from django_formwork.forms import FormworkModelForm
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -72,11 +74,80 @@ def check_model_admins(app_configs: Sequence[AppConfig] | None, **kwargs: Any) -
     return errors
 
 
+# Django's inline classes, by dotted path: the module to import them from and formwork's module for the same name.
+_DJANGO_INLINES = {
+    "django.contrib.admin.options.InlineModelAdmin": ("django.contrib.admin.options", "django_formwork.admin.options"),
+    "django.contrib.admin.options.StackedInline": ("django.contrib.admin", "django_formwork.admin"),
+    "django.contrib.admin.options.TabularInline": ("django.contrib.admin", "django_formwork.admin"),
+    **{
+        f"django.contrib.contenttypes.admin.{name}": (
+            "django.contrib.contenttypes.admin",
+            "django_formwork.admin.contenttypes",
+        )
+        for name in ("GenericInlineModelAdmin", "GenericStackedInline", "GenericTabularInline")
+    },
+}
+
+
+def _check_form(owner: type, option: str) -> list[checks.CheckMessage]:
+    form = getattr(owner, option)
+    if isinstance(form, type) and issubclass(form, FormworkModelForm):
+        return []
+    if isinstance(form, type):
+        bases = [base.__name__ for base in form.__bases__ if base is not forms.ModelForm]
+        declaration = f"class {form.__name__}({', '.join([*bases, 'FormworkModelForm'])})"
+        hint = f"Declare it as '{declaration}', with FormworkModelForm from django_formwork.forms."
+    else:
+        hint = "Use a subclass of django_formwork.forms.FormworkModelForm."
+    return [
+        checks.Error(
+            f"The value of '{option}' must inherit from 'FormworkModelForm'.",
+            hint=hint,
+            obj=owner,
+            id="formwork_admin.E016",
+        )
+    ]
+
+
+def _check_inline(model_admin: ModelAdmin, inline: Any) -> list[checks.CheckMessage]:
+    from django_formwork.admin.options import InlineModelAdmin
+
+    if isinstance(inline, type) and issubclass(inline, InlineModelAdmin):
+        return _check_form(inline, "form")
+    django_path = next(
+        (
+            path
+            for klass in getattr(inline, "__mro__", ())
+            if (path := f"{klass.__module__}.{klass.__qualname__}") in _DJANGO_INLINES
+        ),
+        None,
+    )
+    if django_path is None:
+        hint = "Base it on TabularInline or StackedInline from django_formwork.admin."
+    else:
+        old_module, new_module = _DJANGO_INLINES[django_path]
+        hint = f"Import {django_path.rpartition('.')[2]} from {new_module} instead of {old_module}."
+    name = getattr(inline, "__qualname__", repr(inline))
+    return [
+        checks.Error(
+            f"'{name}' must inherit from 'django_formwork.admin.options.InlineModelAdmin'.",
+            hint=hint,
+            obj=type(model_admin),
+            id="formwork_admin.E104",
+        )
+    ]
+
+
 def check_model_admin(model_admin: ModelAdmin) -> list[checks.CheckMessage]:
     """The options a typo breaks only when someone opens the page."""
     errors: list[checks.CheckMessage] = []
     opts = model_admin.model._meta
     name = type(model_admin).__qualname__
+    errors.extend(_check_form(type(model_admin), "form"))
+    if hasattr(model_admin, "add_form"):
+        errors.extend(_check_form(type(model_admin), "add_form"))
+    for inline in model_admin.inlines:
+        errors.extend(_check_inline(model_admin, inline))
     for item in model_admin.list_display:
         try:
             label_for_field(item, model_admin.model, model_admin)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
@@ -139,8 +210,20 @@ def check_model_admin(model_admin: ModelAdmin) -> list[checks.CheckMessage]:
                     id="formwork_admin.E040",
                 ),
             )
+    limit = model_admin.delete_confirmation_max_display
+    if limit is not None and (not isinstance(limit, int) or limit < 0):
+        errors.append(
+            checks.Error(
+                "The value of 'delete_confirmation_max_display' must be a non-negative integer or None.",
+                obj=type(model_admin),
+                id="formwork_admin.E041",
+            ),
+        )
     try:
         build_filterset(model_admin, model_admin.list_filter, model_admin.search_fields)
+    except NotRelationField:
+        msg = "list_filter names a field path that crosses a field without a relation."
+        errors.append(checks.Error(msg, obj=type(model_admin), id="formwork_admin.E116"))
     except (TypeError, FieldDoesNotExist) as error:
         errors.append(checks.Error(str(error), obj=type(model_admin), id="formwork_admin.E116"))
     return errors

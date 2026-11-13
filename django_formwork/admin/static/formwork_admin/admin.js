@@ -213,6 +213,40 @@ document.addEventListener("alpine:init", () => {
     last: null,
     pks: [],
     total: 0,
+    // The editable cells whose value differs from the saved one; formwork counts them.
+    changes: 0,
+
+    init() {
+      // formwork may have counted before Alpine started.
+      this.changes = this.$root.querySelectorAll("#changelist-form .formwork-dirty").length;
+      this.$root.addEventListener("formwork:dirty", (event) => {
+        this.changes = event.detail.count;
+      });
+
+      // Other results replace the changed cells, and so does another page: both ask first.
+      // The save and the Discard button replace them on purpose.
+      let saving = false;
+      this.$root.addEventListener("submit", (event) => {
+        if (event.target.id === "changelist-form") saving = true;
+      });
+      this.leave = (event) => {
+        if (this.changes && !saving) event.preventDefault();
+      };
+      this.guard = (event) => {
+        const { ctx } = event.detail;
+        const form = this.$root.querySelector("#changelist-form");
+        if (!this.changes || !form || !(ctx.target instanceof Element) || !ctx.target.contains(form)) return;
+        if (ctx.sourceElement?.closest?.("[data-discard]")) return;
+        if (!window.confirm(this.$root.dataset.discardQuestion)) event.preventDefault();
+      };
+      window.addEventListener("beforeunload", this.leave);
+      document.addEventListener("htmx:before:request", this.guard);
+    },
+
+    destroy() {
+      window.removeEventListener("beforeunload", this.leave);
+      document.removeEventListener("htmx:before:request", this.guard);
+    },
 
     // Each render of the results starts a new selection, including one that a swap brings in.
     reset(list) {
@@ -266,6 +300,9 @@ document.addEventListener("alpine:init", () => {
   }));
 
   Alpine.data("formworkChangeForm", () => ({
+    // True after the user changed a field. The page then asks before it leaves, and the actions menu waits.
+    dirty: false,
+
     init() {
       const form = this.$root;
       const adding = Boolean(form.dataset.add);
@@ -278,22 +315,21 @@ document.addEventListener("alpine:init", () => {
       // A widget sends its own change events, also while it starts. They count only
       // after the user has pressed a key or a pointer in the form.
       let used = false;
-      let dirty = false;
       const use = (event) => {
         if (event.isTrusted) used = true;
       };
       const mark = (event) => {
-        if (used || event.isTrusted) dirty = true;
+        if (used || event.isTrusted) this.dirty = true;
       };
       form.addEventListener("pointerdown", use);
       form.addEventListener("keydown", use);
       form.addEventListener("input", mark);
       form.addEventListener("change", mark);
       form.addEventListener("submit", () => {
-        dirty = false;
+        this.dirty = false;
       });
       window.addEventListener("beforeunload", (event) => {
-        if (dirty) event.preventDefault();
+        if (this.dirty) event.preventDefault();
       });
     },
 

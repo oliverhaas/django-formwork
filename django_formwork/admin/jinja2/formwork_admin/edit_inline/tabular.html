@@ -46,13 +46,7 @@
 {% endmacro %}
 
 {% set columns = inline.headers|length + 1 %}
-<section id="{{ inline.prefix }}-group" class="card border border-base-300 bg-base-100"
-         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}">
-  <header class="flex items-center gap-2 border-b border-base-300 px-6 py-4">
-    <h2 class="font-semibold">{{ inline.verbose_name_plural|capfirst }}</h2>
-    {% if formset.initial_form_count() %}<span class="badge badge-ghost badge-sm tabular-nums">{{ number(formset.initial_form_count()) }}</span>{% endif %}
-    {% if inline.error_count() %}<span class="badge badge-error badge-soft badge-sm ml-auto">{{ _("Errors") }}</span>{% endif %}
-  </header>
+{% call m.inline_group(inline) %}
   {{ formset.management_form }}
   {% if inline.non_form_errors %}
   <div role="alert" class="alert alert-error alert-soft mx-4 mt-4">{{ icon("circle-exclamation-point", "size-5") }}<span>{{ inline.non_form_errors|join(" ") }}</span></div>
@@ -78,7 +72,7 @@
   <template x-ref="empty">{{ row(inline.empty_form, can_delete, columns) }}</template>
 
   <p class="px-6 py-8 text-center text-sm text-base-content/50" x-show="!total"{% if inline.forms %} x-cloak{% endif %}>
-    {{ _("No %(name)s yet.", name=inline.verbose_name_plural) }}
+    {{ _("No %(name)s yet.", name=inline.group_name) }}
   </p>
 
   {% if inline.has_add_permission %}
@@ -86,4 +80,4 @@
     <button type="button" class="btn btn-ghost btn-sm text-primary" @click="add()">{{ icon("plus") }} {{ _("Add another %(name)s", name=inline.verbose_name) }}</button>
   </div>
   {% endif %}
-</section>
+{% endcall %}

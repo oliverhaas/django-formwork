@@ -93,6 +93,7 @@ provides-extras = ["admin"]
 dev = [
     { name = "beautifulsoup4", specifier = "==4.15.0" },
     { name = "django-filter", specifier = ">=25.1" },
+    { name = "django-pghistory", specifier = ">=3" },
     { name = "django-stubs", specifier = "==6.1.2" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "mypy", specifier = "==2.4.1" },

@@ -394,6 +394,7 @@ admin = [
 dev = [
     { name = "beautifulsoup4" },
     { name = "django-filter" },
+    { name = "django-pghistory" },
     { name = "django-stubs" },
     { name = "jinja2" },
     { name = "mypy" },
@@ -431,6 +432,7 @@ provides-extras = ["admin"]
 dev = [
     { name = "beautifulsoup4", specifier = "==4.15.0" },
     { name = "django-filter", specifier = ">=25.1" },
+    { name = "django-pghistory", specifier = ">=3" },
     { name = "django-stubs", specifier = "==6.1.2" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "mypy", specifier = "==2.4.1" },
@@ -464,6 +466,31 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d2/e1/8c0e96247274c59e9dc2575c0d6c9cb472ec5f30faa7c192b4aebba68c9d/django_iconx-0.2.0.tar.gz", hash = "sha256:91c0c44c0d501a4cf00ae093085b4611e8b92d98f002ce39986cf74a4d0b68af", size = 11204, upload-time = "2026-04-12T07:22:39.857Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f0/62/ef7b6cfdaabfdebf509e95998dcef5e33d98c0a58cd967846bc4cf1ff617/django_iconx-0.2.0-py3-none-any.whl", hash = "sha256:72c39bf66925d30ce4710c84e7134fa2e63aa2bf76d3b130915de1b9e7a2e72e", size = 13985, upload-time = "2026-04-12T07:22:38.294Z" },
+]
+
+[[package]]
+name = "django-pghistory"
+version = "3.9.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "django-pgtrigger" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9e/7e/594930ce9cc8ddd9a586ef126f745d9516e307ef48a35a8566da54ca53e8/django_pghistory-3.9.2.tar.gz", hash = "sha256:1d07b75b61501a209330e7fb43fad2b2482f7f0399a36fa91aa7600a03025921", size = 31401, upload-time = "2026-02-17T16:08:21.304Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e9/5f/58a0551e951e4b67063e35d3393aeaab2f77bca24b0706ffcd977474e34c/django_pghistory-3.9.2-py3-none-any.whl", hash = "sha256:1623633af429837567dd11469823b9bb3c3f908cc117d60f097d23f3f0622fa2", size = 39929, upload-time = "2026-02-17T16:08:19.894Z" },
+]
+
+[[package]]
+name = "django-pgtrigger"
+version = "4.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/45/3d/ea55015e2e2a8e2230c6a056768512a9660573f8926f87671f166d455936/django_pgtrigger-4.17.0.tar.gz", hash = "sha256:55d297a756b5b6a8e0c533d3323fda1589c699e7d14aa3fff7fa7d774c46363c", size = 32200, upload-time = "2025-12-04T15:46:06.587Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/91/47/13c0c23c134cd0f0b0addfbc3ef1477f90d891184d21689f9074b794b00c/django_pgtrigger-4.17.0-py3-none-any.whl", hash = "sha256:06048cdeb57e20987fd0bf7dd673512a1413a08868eea248d70dbb970e967175", size = 36326, upload-time = "2025-12-04T15:46:05.427Z" },
 ]
 
 [[package]]

@@ -1,4 +1,4 @@
-"""The admin's own tables: exports that run in the background."""
+"""The admin's own tables: the history of changes, and exports that run in the background."""
 
 from __future__ import annotations
 
@@ -7,9 +7,10 @@ from typing import Any
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-__all__ = ["ExportJob"]
+__all__ = ["ExportJob", "HistoryEntry"]
 
 
 def export_path(job: ExportJob, filename: str) -> str:
@@ -56,3 +57,40 @@ class ExportJob(models.Model):
         if self.file:
             self.file.delete(save=False)
         return super().delete(*args, **kwargs)
+
+
+class HistoryEntry(models.Model):
+    """One addition, change or deletion made through the admin.
+
+    ``changes`` holds the list that ``construct_change_message`` returns, with the values before and
+    after each field. ``message`` holds a text that an admin passes to ``log_change`` instead.
+    """
+
+    class Action(models.TextChoices):
+        ADD = "add", _("Added")
+        CHANGE = "change", _("Changed")
+        DELETE = "delete", _("Deleted")
+
+    time = models.DateTimeField(default=timezone.now, editable=False)
+    # A deleted user keeps the entries, which then name no one.
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    object_id = models.CharField(max_length=255)
+    object_repr = models.CharField(max_length=200)
+    action = models.CharField(max_length=10, choices=Action.choices)
+    changes = models.JSONField(default=list, blank=True)
+    message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ("-time", "-pk")
+        indexes = (
+            models.Index(fields=["content_type", "object_id", "-time"], name="formwork_admin_history_obj"),
+            models.Index(fields=["user", "-time"], name="formwork_admin_history_user"),
+        )
+        verbose_name = _("history entry")
+        verbose_name_plural = _("history entries")
+
+    def __str__(self) -> str:
+        return f"{self.get_action_display()} {self.object_repr}"

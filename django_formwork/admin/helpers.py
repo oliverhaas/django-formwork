@@ -358,6 +358,11 @@ class InlineAdminFormSet:
         return str(self.opts.verbose_name_plural)
 
     @property
+    def group_name(self) -> str:
+        """The name of the whole inline: singular when it holds one row at most, as in Django."""
+        return self.verbose_name if self.formset.max_num == 1 else self.verbose_name_plural
+
+    @property
     def can_add(self) -> bool:
         return self.has_add_permission and self.formset.max_num > len(self.formset.forms)
 
@@ -367,11 +372,16 @@ class InlineAdminFormSet:
 
     @property
     def media(self) -> Media:
-        return self.formset.media
+        return self.opts.media + self.formset.media
 
     @property
     def is_tabular(self) -> bool:
         return getattr(self.opts, "layout", "stacked") == "tabular"
+
+    @property
+    def collapsible(self) -> bool:
+        """``collapse`` in the inline's ``classes`` folds it behind its title, as it folds a fieldset."""
+        return "collapse" in (getattr(self.opts, "classes", None) or ())
 
     def error_count(self) -> int:
         return sum(1 for form in self.formset.forms if form.errors) + bool(self.formset.non_form_errors())

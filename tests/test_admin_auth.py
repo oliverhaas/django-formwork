@@ -5,9 +5,10 @@ from urllib.parse import urljoin
 
 import pytest
 from bs4 import BeautifulSoup
-from django.contrib.admin.models import CHANGE, LogEntry
 from django.contrib.auth.models import Group, Permission, User
 from django.urls import reverse
+
+from django_formwork.admin.models import HistoryEntry
 
 pytestmark = pytest.mark.django_db
 
@@ -35,6 +36,11 @@ def test_user_change_form_links_to_the_password_page(admin_client, ada):
 
     link = soup.select_one('[data-field="password"] a[href]')
     assert urljoin(url(User, "change", ada.pk), link["href"]) == password_url(ada)
+
+
+@pytest.mark.parametrize("lookup", ["password__startswith", "password"])
+def test_user_list_refuses_a_lookup_on_the_password_hash(admin_client, ada, lookup):
+    assert admin_client.get(url(User, "changelist"), {lookup: "pbkdf2"}).status_code == 400
 
 
 def test_add_user_opens_the_new_users_change_page(admin_client):
@@ -89,7 +95,8 @@ def test_password_page_sets_the_password_and_logs_the_change(admin_client, ada):
     ada.refresh_from_db()
     assert response["Location"] == url(User, "change", ada.pk)
     assert ada.check_password("new-Pw-7781")
-    assert LogEntry.objects.filter(object_id=str(ada.pk), action_flag=CHANGE).exists()
+    entry = HistoryEntry.objects.get(object_id=str(ada.pk), action="change")
+    assert "new-Pw-7781" not in str(entry.changes)
 
 
 @pytest.mark.parametrize(("button", "usable"), [("set-password", True), ("unset-password", False)])

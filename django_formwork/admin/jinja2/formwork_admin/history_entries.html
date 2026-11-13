@@ -1,0 +1,50 @@
+{#- The entries of one page of history, as <li> items, and a button that loads the next page in its place. #}
+{% for entry in history_entries %}
+<li class="flex gap-3 py-3 first:pt-0 last:pb-0">
+  <span class="grid size-6 shrink-0 place-items-center rounded-full {{ {"add": "bg-success/15 text-success", "change": "bg-info/15 text-info", "delete": "bg-error/15 text-error"}[entry.action] }}">
+    {{ icon({"add": "plus", "change": "pencil", "delete": "trash"}[entry.action], "size-3.5") }}
+  </span>
+  <div class="min-w-0 flex-1">
+    <p class="flex min-h-6 flex-wrap items-center gap-x-1.5 text-xs text-base-content/60">
+      <span class="font-medium text-base-content/80">{{ entry.user or _("Unknown user") }}</span>
+      <time datetime="{{ entry.time.isoformat() }}" title="{{ entry.time|datetime }}">{{ entry.time|ago }}</time>
+    </p>
+    {% for change in entry.changes %}
+    {% if change.has_values %}
+    {% if change.target %}<p class="mt-1.5 text-sm font-medium break-words">{{ change.target }}</p>{% endif %}
+    <dl class="mt-1 space-y-1.5">
+      {% for field in change.fields %}
+      <div>
+        <dt class="text-xs text-base-content/60">{{ field.label|capfirst }}</dt>
+        <dd class="text-sm break-words">
+          {% if field.has_values %}
+          {% if field.old %}
+          <span class="text-base-content/50 line-through decoration-base-content/30">{{ field.old }}</span>
+          {% else %}
+          <span class="italic text-base-content/50">{{ _("empty") }}</span>
+          {% endif %}
+          <span class="text-base-content/40" aria-hidden="true">&rarr;</span><span class="sr-only">{{ _("changed to") }}</span>
+          <span class="{{ "font-medium" if field.new else "italic text-base-content/50" }}">{{ field.new if field.new else _("empty") }}</span>
+          {% else %}
+          <span class="italic text-base-content/50">{{ _("changed") }}</span>
+          {% endif %}
+        </dd>
+      </div>
+      {% endfor %}
+    </dl>
+    {% else %}
+    <p class="mt-1 text-sm break-words">{{ change.text }}</p>
+    {% endif %}
+    {% else %}
+    <p class="mt-1 text-sm text-base-content/60">{{ _("No fields changed.") }}</p>
+    {% endfor %}
+  </div>
+</li>
+{% endfor %}
+{% if history_next_url %}
+<li class="pt-3">
+  <button type="button" class="btn btn-ghost btn-sm w-full" hx-get="{{ history_next_url }}" hx-target="closest li" hx-swap="outerHTML">
+    {{ icon("chevron-down") }} {{ _("Show older") }}
+  </button>
+</li>
+{% endif %}

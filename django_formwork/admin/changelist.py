@@ -1,8 +1,8 @@
 """The state of one changelist request, read from ``request.GET``.
 
-The parameters keep Django's names: ``q`` searches, ``p`` pages from 1, ``all`` shows
-every row, ``o`` orders. ``o`` names a column (``-name`` descends), not a column index.
-"""
+The parameters keep Django's names and lookups. ``o`` numbers the columns as Django's does,
+so ``o=2.-1`` sorts by column 2, then by column 1 descending. A lookup that no filter reads
+narrows the rows, as in Django's changelist."""
 
 from __future__ import annotations
 
@@ -10,23 +10,34 @@ import hashlib
 from functools import cached_property
 from typing import TYPE_CHECKING, Any
 
-from django.contrib.admin.options import IS_FACETS_VAR, ShowFacets
-from django.contrib.admin.utils import label_for_field, lookup_field, quote
-from django.core.exceptions import FieldDoesNotExist
+from django.contrib.admin.exceptions import DisallowedModelAdminLookup
+from django.contrib.admin.options import IS_FACETS_VAR, IncorrectLookupParameters, ShowFacets
+from django.contrib.admin.utils import (
+    build_q_object_from_lookup_parameters,
+    label_for_field,
+    lookup_field,
+    lookup_spawns_duplicates,
+    prepare_lookup_value,
+    quote,
+)
+from django.contrib.admin.views.main import ERROR_FLAG, IGNORED_PARAMS
+from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured, SuspiciousOperation
 from django.core.paginator import InvalidPage
 from django.db import models
+from django.db.models.constants import LOOKUP_SEP
+from django.db.models.expressions import Combinable, F, OrderBy
 from django.http import QueryDict
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django.utils.http import urlencode
 from django.utils.text import capfirst
 
-from django_formwork.admin.cells import list_cell
-from django_formwork.admin.filters import SEARCH_VAR, list_filter_params
+from django_formwork.admin.cells import list_cell, list_field
+from django_formwork.admin.filters import SEARCH_VAR
 from django_formwork.admin.paginator import EstimatedCountPaginator
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
     from django.core.paginator import Page
     from django.forms import BoundField
@@ -34,7 +45,16 @@ if TYPE_CHECKING:
 
     from django_formwork.admin.filters import AdminFilterSet
 
-__all__ = ["ALL_VAR", "IS_FACETS_VAR", "ORDER_VAR", "PAGE_VAR", "PRESERVED_FILTERS_VAR", "SEARCH_VAR", "ChangeList"]
+__all__ = [
+    "ALL_VAR",
+    "ERROR_FLAG",
+    "IS_FACETS_VAR",
+    "ORDER_VAR",
+    "PAGE_VAR",
+    "PRESERVED_FILTERS_VAR",
+    "SEARCH_VAR",
+    "ChangeList",
+]
 
 ALL_VAR = "all"
 ORDER_VAR = "o"
@@ -73,30 +93,78 @@ class ChangeList:
         return self.model_admin.get_filterset_class(request=self.request)
 
     @cached_property
-    def filter_params(self) -> dict[str, tuple[str, ...]]:
-        return list_filter_params(self.filterset_class)
+    def lookup_params(self) -> dict[str, list[str]]:
+        """Every parameter but the list's own, each checked with ``lookup_allowed`` as Django's changelist does."""
+        params = {
+            key: values
+            for key, values in self.request.GET.lists()
+            if key not in IGNORED_PARAMS and key not in {PAGE_VAR, ERROR_FLAG}
+        }
+        for key, values in params.items():
+            for value in values:
+                if not self.model_admin.lookup_allowed(key, value, self.request):
+                    msg = f"Filtering by {key} not allowed"
+                    raise DisallowedModelAdminLookup(msg)
+        return params
 
     @cached_property
-    def known_params(self) -> frozenset[str]:
-        """Parameters this list reads; links and redirects drop every other one."""
-        declared = {param for params in self.filter_params.values() for param in params}
-        return frozenset({ORDER_VAR, PAGE_VAR, ALL_VAR, IS_FACETS_VAR, *declared})
+    def remaining_lookups(self) -> dict[str, list[str]]:
+        """The lookups no filter reads, such as ``?author__id__exact=3`` from a link elsewhere."""
+        claimed = self.filterset_class.claimed_params(self.request.GET) if self.filterset_class else set()
+        return {key: values for key, values in self.lookup_params.items() if key not in claimed}
+
+    @cached_property
+    def lookups_may_have_duplicates(self) -> bool:
+        return any(lookup_spawns_duplicates(self.opts, key) for key in self.remaining_lookups)
+
+    @cached_property
+    def lookup_queryset(self) -> models.QuerySet[Any]:
+        """The admin's rows narrowed by the remaining lookups; the filters start from these.
+
+        A lookup that names no field or takes no such value raises ``IncorrectLookupParameters``."""
+        if not self.remaining_lookups:
+            return self.root_queryset
+        lookups: dict[str, Iterable[object]] = {
+            key: prepare_lookup_value(key, values) for key, values in self.remaining_lookups.items()
+        }
+        try:
+            return self.root_queryset.filter(build_q_object_from_lookup_parameters(lookups))
+        except SuspiciousOperation, ImproperlyConfigured:
+            raise
+        except Exception as error:
+            # Django's changelist validates the lookups the same way: any other error means a bad URL.
+            raise IncorrectLookupParameters(error) from error
 
     @cached_property
     def params(self) -> QueryDict:
-        """``request.GET`` narrowed to the known parameters."""
+        """The list's state as Django's changelist writes it: filters, other lookups, sort, page and search."""
         params = QueryDict(mutable=True)
-        for key, values in self.request.GET.lists():
-            if key in self.known_params:
-                params.setlist(key, values)
+        if self.filterset is not None:
+            for key, value in self.filterset.written_params():
+                params.appendlist(key, value)
+        for key, values in self.remaining_lookups.items():
+            params.setlist(key, values)
+        own = [ORDER_VAR, PAGE_VAR, ALL_VAR, IS_FACETS_VAR, *([SEARCH_VAR] if self.search_fields else [])]
+        for key in own:
+            if key in self.request.GET:
+                params.setlist(key, self.request.GET.getlist(key))
         return params
+
+    @staticmethod
+    def encode(params: QueryDict) -> str:
+        """The query string of ``params``, sorted by key as Django's ``get_query_string`` writes it."""
+        return urlencode(sorted(params.lists()), doseq=True)
+
+    @cached_property
+    def encoded_params(self) -> str:
+        return self.encode(self.params)
 
     @cached_property
     def state_key(self) -> str:
         """Changes with the parameters, so a filtered or sorted list starts with nothing selected."""
         params = self.params.copy()
         params.pop(IS_FACETS_VAR, None)
-        return hashlib.blake2s(params.urlencode().encode(), digest_size=4).hexdigest()
+        return hashlib.blake2s(self.encode(params).encode(), digest_size=4).hexdigest()
 
     def get_query_string(self, new_params: dict[str, Any] | None = None, remove: list[str] | None = None) -> str:
         """The list's query string with ``new_params`` set; a None value or a ``remove`` entry drops a key."""
@@ -110,7 +178,7 @@ class ChangeList:
                 params.setlist(key, [str(item) for item in value])
             else:
                 params[key] = str(value)
-        query = params.urlencode()
+        query = self.encode(params)
         return f"?{query}" if query else self.request.path
 
     # Filtering
@@ -121,7 +189,7 @@ class ChangeList:
             return None
         return self.filterset_class(
             self.request.GET,
-            self.root_queryset,
+            self.lookup_queryset,
             request=self.request,
             model_admin=self.model_admin,
         )
@@ -148,11 +216,18 @@ class ChangeList:
         return self.model_admin.show_facets is ShowFacets.ALLOW
 
     @cached_property
+    def filter_names(self) -> list[str]:
+        """The form fields of the filter bar, in ``list_filter`` order."""
+        if self.filterset_class is None:
+            return []
+        return [name for name in self.filterset_class.base_filters if name != SEARCH_VAR]
+
+    @cached_property
     def filter_fields(self) -> list[BoundField]:
         form = self.filter_form
         if form is None:
             return []
-        names = [name for name in self.filter_params if name != SEARCH_VAR]
+        names = self.filter_names
         if self.add_facets and self.filterset is not None:
             for name in names:
                 counts = self.filterset.facet_counts(name)
@@ -171,9 +246,7 @@ class ChangeList:
             return 0
         form = self.filter_form
         form.is_valid()
-        return sum(
-            form.cleaned_data.get(name) not in (None, "", [], ()) for name in self.filter_params if name != SEARCH_VAR
-        )
+        return sum(form.cleaned_data.get(name) not in (None, "", [], ()) for name in self.filter_names)
 
     @property
     def has_filters(self) -> bool:
@@ -183,28 +256,33 @@ class ChangeList:
     def has_active_filters(self) -> bool:
         return bool(self.active_filter_count)
 
+    @property
+    def is_filtered(self) -> bool:
+        """Whether the list shows fewer rows than the admin has: a filter, the search or another lookup narrows it."""
+        return self.has_active_filters or bool(self.query) or bool(self.remaining_lookups)
+
     @cached_property
     def export_query(self) -> str:
         """The filters, search and ordering an export of this list keeps; the page goes."""
         params = self.params.copy()
         for key in (PAGE_VAR, ALL_VAR, IS_FACETS_VAR):
             params.pop(key, None)
-        return params.urlencode()
+        return self.encode(params)
 
     @cached_property
     def clear_all_filters_qs(self) -> str:
-        """The list without its filters; the search and the sort stay, as in Django."""
-        filter_keys = [param for name, params in self.filter_params.items() if name != SEARCH_VAR for param in params]
-        return self.get_query_string(remove=[*filter_keys, PAGE_VAR])
+        """The list without the bar's filters; the other lookups, the search and the sort stay, as in Django."""
+        written = [key for key, _value in self.filterset.written_params()] if self.filterset is not None else []
+        return self.get_query_string(remove=[*written, PAGE_VAR])
 
     @cached_property
     def queryset(self) -> models.QuerySet[Any]:
         """The filtered, searched and ordered rows, before paging."""
-        queryset = self.root_queryset
-        duplicates = False
+        queryset = self.lookup_queryset
+        duplicates = self.lookups_may_have_duplicates
         if self.filterset is not None:
             queryset = self.filterset.qs
-            duplicates = self.filterset.may_have_duplicates
+            duplicates |= self.filterset.may_have_duplicates
         if duplicates:
             # A pk subquery keeps the rows unique without DISTINCT over every selected column.
             queryset = self.root_queryset.filter(pk__in=queryset.values("pk"))
@@ -236,8 +314,10 @@ class ChangeList:
 
     # Ordering
 
-    def order_field(self, name: str | Callable[..., Any]) -> str | models.expressions.BaseExpression | None:
+    def order_field(self, name: str | Callable[..., Any] | None) -> str | models.expressions.BaseExpression | None:
         """What a column sorts by, None when it cannot sort."""
+        if name is None:
+            return None
         if self.sortable_by is not None and name not in self.sortable_by:
             return None
         if callable(name):
@@ -248,6 +328,9 @@ class ChangeList:
             if name == "__str__":
                 return None
             attr = getattr(self.model_admin, name, None) or getattr(self.model, name, None)
+            if attr is None and LOOKUP_SEP in name:
+                # A column that follows a relation, such as "author__name", sorts by that path.
+                return name
             if isinstance(attr, property) and hasattr(attr, "fget"):
                 attr = attr.fget
             return getattr(attr, "admin_order_field", None)
@@ -266,30 +349,88 @@ class ChangeList:
         return names
 
     @cached_property
-    def current_order(self) -> str:
-        """The requested ``o`` when a column sorts by it, else blank."""
-        requested = self.request.GET.get(ORDER_VAR, "")
-        column = self.column_names.get(requested.removeprefix("-"))
-        if column is None or self.order_field(column) is None:
-            return ""
-        return requested
+    def column_offset(self) -> int:
+        """Django counts the action checkbox as column 0, so ``o`` numbers the other columns from 1 while it shows."""
+        return 1 if self.model_admin.get_actions(self.request) else 0
+
+    def column_at(self, index: int) -> str | Callable[..., Any] | None:
+        position = index - self.column_offset
+        return self.list_display[position] if 0 <= position < len(self.list_display) else None
+
+    @cached_property
+    def sorted_columns(self) -> dict[int, str]:
+        """The sorted columns as ``o`` numbers them, each ``asc`` or ``desc``, the first sort first.
+
+        Without ``o``, the columns of the admin's ordering, which Django's changelist marks the same way.
+        A blank ``o`` marks none, as in Django, while the rows keep the admin's ordering."""
+        columns: dict[int, str] = {}
+        if ORDER_VAR in self.request.GET:
+            for part in self.request.GET[ORDER_VAR].split("."):
+                _, sign, number = part.rpartition("-")
+                try:
+                    index = int(number)
+                except ValueError:
+                    continue
+                column = self.column_at(index)
+                if column is not None and self.order_field(column) is not None:
+                    columns.setdefault(index, "desc" if sign else "asc")
+            return columns
+        for item in self.model_admin.get_ordering(self.request) or self.opts.ordering or ():
+            if isinstance(item, Combinable | OrderBy):
+                term: Any = item if isinstance(item, OrderBy) else item.asc()  # type: ignore[attr-defined]
+                if not isinstance(term.expression, F):
+                    continue
+                name, direction = term.expression.name, "desc" if term.descending else "asc"  # type: ignore[attr-defined]
+            else:
+                name, direction = item.removeprefix("-"), "desc" if item.startswith("-") else "asc"
+            for position, entry in enumerate(self.list_display):
+                if self.order_field(entry) == name:
+                    columns.setdefault(position + self.column_offset, direction)
+                    break
+        return columns
+
+    @cached_property
+    def current_order(self) -> str | None:
+        """The requested ``o`` with the columns it can sort, None without one."""
+        if ORDER_VAR not in self.request.GET:
+            return None
+        return ".".join(
+            f"{'-' if direction == 'desc' else ''}{index}" for index, direction in self.sorted_columns.items()
+        )
+
+    def sort_term(self, index: int, direction: str) -> Any:
+        """The ``order_by()`` term of a column, as Django's changelist builds it."""
+        field: Any = self.order_field(self.column_at(index))
+        descending = direction == "desc"
+        if isinstance(field, OrderBy):
+            if not descending:
+                return field
+            field = field.copy()
+            field.reverse_ordering()
+            return field
+        if isinstance(field, str):
+            # An admin_order_field of "-name" sorts descending first, so a click flips it.
+            if descending and field.startswith("-"):
+                return field.removeprefix("-")
+            return f"-{field}" if descending else field
+        return field.desc() if descending else field.asc()
 
     @cached_property
     def ordering(self) -> list[Any]:
-        """The requested column, then the admin's ordering, then the primary key so pages never overlap."""
-        ordering: list[Any] = []
-        if self.current_order:
-            field = self.order_field(self.column_names[self.current_order.removeprefix("-")])
-            descending = self.current_order.startswith("-")
-            if isinstance(field, str):
-                # An admin_order_field of "-name" sorts descending first, so a click flips it.
-                flipped = descending != field.startswith("-")
-                ordering.append(f"-{field.removeprefix('-')}" if flipped else field.removeprefix("-"))
-            elif field is not None:
-                ordering.append(field.desc() if descending else field.asc())
-        ordering.extend(self.model_admin.get_ordering(self.request) or self.opts.ordering or ())
-        pk_names = {"pk", "-pk", self.opts.pk.name, f"-{self.opts.pk.name}"}
-        if not any(isinstance(item, str) and item in pk_names for item in ordering):
+        """The sorted columns, else the admin's ordering, then the queryset's own; the primary key ends a partial order."""
+        if self.request.GET.get(ORDER_VAR):
+            ordering = [self.sort_term(index, direction) for index, direction in self.sorted_columns.items()]
+        else:
+            ordering = [*(self.model_admin.get_ordering(self.request) or self.opts.ordering or ())]
+        ordering.extend(self.root_queryset.query.order_by)
+        rows = self.root_queryset.order_by(*ordering)
+        if hasattr(rows, "totally_ordered"):
+            total = rows.totally_ordered
+        else:
+            # Django 6.0 has no QuerySet.totally_ordered; there only a primary key term ends the order.
+            pk_names = {"pk", self.opts.pk.name}
+            total = any(isinstance(term, str) and term.removeprefix("-") in pk_names for term in ordering)
+        if not total:
             ordering.append("-pk")
         return ordering
 
@@ -310,7 +451,7 @@ class ChangeList:
     @cached_property
     def full_result_count(self) -> int | None:
         """Every row before the filters, when the admin shows it and something filters."""
-        if not self.model_admin.show_full_result_count or not (self.has_active_filters or self.query):
+        if not self.model_admin.show_full_result_count or not self.is_filtered:
             return None
         # An order keeps the paginator from warning; COUNT(*) drops it again.
         return EstimatedCountPaginator(self.root_queryset.order_by("pk"), self.list_per_page).count
@@ -370,33 +511,41 @@ class ChangeList:
 
     @cached_property
     def columns(self) -> list[dict[str, Any]]:
-        """One header per ``list_display`` entry, with its sort link and direction."""
-        current = self.current_order.removeprefix("-")
+        """One header per ``list_display`` entry, with its sort link and direction.
+
+        Like Django's header, a click sorts by the column first and keeps the other sorted columns after it.
+        A sorted column also links to the order without it, Django's "Remove from sorting"."""
+        sorted_columns = self.sorted_columns
         columns = []
-        for key, entry in self.column_names.items():
+        for position, (key, entry) in enumerate(self.column_names.items()):
             column: dict[str, Any] = {
                 "name": key,
                 "label": self.header_label(entry),
                 "sort_url": "",
+                "remove_url": "",
                 "direction": "",
+                "priority": None,
                 "numeric": self.is_numeric(entry),
                 "linked": entry in self.links,
             }
+            index = position + self.column_offset
             if self.order_field(entry) is not None:
-                ascending = current == key and not self.current_order.startswith("-")
-                column["sort_url"] = self.get_query_string({ORDER_VAR: f"-{key}" if ascending else key, PAGE_VAR: None})
-                if current == key:
-                    column["direction"] = "asc" if ascending else "desc"
+                direction = sorted_columns.get(index, "")
+                first = f"-{index}" if direction == "asc" else str(index)
+                rest = [
+                    f"{'-' if d == 'desc' else ''}{number}" for number, d in sorted_columns.items() if number != index
+                ]
+                column["sort_url"] = self.get_query_string({ORDER_VAR: ".".join([first, *rest]), PAGE_VAR: None})
+                column["direction"] = direction
+                if direction:
+                    column["remove_url"] = self.get_query_string({ORDER_VAR: ".".join(rest), PAGE_VAR: None})
+                if direction and len(sorted_columns) > 1:
+                    column["priority"] = list(sorted_columns).index(index) + 1
             columns.append(column)
         return columns
 
     def is_numeric(self, entry: str | Callable[..., Any]) -> bool:
-        if not isinstance(entry, str):
-            return False
-        try:
-            field = self.opts.get_field(entry)
-        except FieldDoesNotExist:
-            return False
+        field = list_field(self.model, entry)
         numeric = (models.IntegerField, models.FloatField, models.DecimalField)
         return isinstance(field, numeric) and not getattr(field, "flatchoices", None) and not field.primary_key
 
@@ -411,7 +560,7 @@ class ChangeList:
         """The list state a change page carries, so saving returns here."""
         if not self.model_admin.preserve_filters:
             return ""
-        query = self.params.urlencode()
+        query = self.encoded_params
         return urlencode({PRESERVED_FILTERS_VAR: query}) if query else ""
 
     def change_url(self, result: models.Model) -> str:
@@ -438,6 +587,8 @@ class ChangeList:
                 cell: dict[str, Any] = {"name": key, "link": url if linked else "", "field": None}
                 if form is not None and key in self.list_editable and not linked:
                     cell["field"] = form[key]
+                    # After a failed save, a valid value the user changed still shows as changed.
+                    cell["changed"] = form.is_bound and key in form.changed_data and not form[key].errors
                 else:
                     cell.update(list_cell(entry, obj, self.model_admin))
                 cell["numeric"] = self.is_numeric(entry)

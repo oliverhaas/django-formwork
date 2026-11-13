@@ -132,22 +132,22 @@ def test_export_needs_view_permission(client, django_user_model, items):
 
 def test_export_menu_offers_the_formats_and_keeps_the_filters(admin_client, items):
     soup = BeautifulSoup(
-        admin_client.get(reverse("admin:admin_app_item_changelist") + "?status=draft&p=1").content, "html.parser"
+        admin_client.get(reverse("admin:admin_app_item_changelist") + "?status__exact=draft&p=1").content, "html.parser"
     )
 
     menu = soup.select_one("form:has(> input[name=query])")
     assert [button["value"] for button in menu.select("button[name=format]")] == ["csv", "xlsx", "json"]
-    assert menu.select_one("input[name=query]")["value"] == "status=draft"
+    assert menu.select_one("input[name=query]")["value"] == "status__exact=draft"
 
 
 def test_export_menu_follows_the_filters_in_a_content_morph(admin_client, items):
     response = admin_client.get(
-        reverse("admin:admin_app_item_changelist") + "?status=archived",
+        reverse("admin:admin_app_item_changelist") + "?status__exact=archived",
         headers={"HX-Request": "true", "HX-Target": "main#content"},
     )
 
     soup = BeautifulSoup(response.content, "html.parser")
-    assert soup.select_one("form:has(> input[name=query]) input[name=query]")["value"] == "status=archived"
+    assert soup.select_one("form:has(> input[name=query]) input[name=query]")["value"] == "status__exact=archived"
 
 
 def test_export_menu_hides_without_formats(admin_client, items, monkeypatch):

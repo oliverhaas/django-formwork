@@ -10,7 +10,7 @@ from django.db.models import ForeignKey
 from django.utils import timezone
 from playwright.sync_api import expect
 
-from django_formwork.admin import VERTICAL, TabularInline, site
+from django_formwork.admin import VERTICAL, ActionLocation, TabularInline, action, site
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -60,8 +60,8 @@ def test_a_date_filter_preset_filters_the_list(admin_page, live_server, kitchen)
     admin_page.locator("#id_released").click()
     admin_page.get_by_role("button", name="This year").click()
 
-    first, last = today.replace(month=1, day=1), today.replace(month=12, day=31)
-    expect(admin_page).to_have_url(re.compile(rf"released_0={first}&released_1={last}"))
+    first, after = today.replace(month=1, day=1), today.replace(year=today.year + 1, month=1, day=1)
+    expect(admin_page).to_have_url(re.compile(rf"\?released__gte={first}&released__lt={after}$"))
     expect(admin_page.locator("#changelist tbody tr")).to_have_count(1)
     expect(admin_page.locator("#changelist tbody")).to_contain_text("Kettle")
     assert admin_page.errors == []
@@ -78,10 +78,10 @@ def test_filter_toggle_shows_the_row_and_counts_active_filters(admin_page, live_
 
     toggle.click()
     expect(toggle).to_have_attribute("aria-expanded", "true")
-    admin_page.locator("[name=quantity_min]").fill("10")
-    admin_page.locator("[name=quantity_min]").blur()
+    admin_page.locator("[name=quantity__gte]").fill("10")
+    admin_page.locator("[name=quantity__gte]").blur()
 
-    expect(admin_page).to_have_url(re.compile(r"\?quantity_min=10$"))
+    expect(admin_page).to_have_url(re.compile(r"\?quantity__gte=10$"))
     expect(admin_page.locator("#changelist tbody tr")).to_have_count(1)
     expect(toggle.locator(".badge")).to_have_text("1")
     clear = admin_page.get_by_role("link", name="Clear all filters")
@@ -92,7 +92,7 @@ def test_filter_toggle_shows_the_row_and_counts_active_filters(admin_page, live_
     expect(admin_page.locator("#changelist tbody tr")).to_have_count(2)
     expect(toggle.locator(".badge")).to_have_text("0")
     expect(row).to_be_visible()
-    expect(admin_page.locator("[name=quantity_min]")).to_have_value("")
+    expect(admin_page.locator("[name=quantity__gte]")).to_have_value("")
     assert admin_page.errors == []
 
 
@@ -136,16 +136,82 @@ def test_columns_that_do_not_fit_hide_behind_a_toggle(admin_page, live_server, k
     assert admin_page.errors == []
 
 
-def test_save_changes_hides_while_the_editable_columns_do(admin_page, live_server, kitchen):
-    Item.objects.create(name="Kettle", category=kitchen)
-    admin_page.set_viewport_size({"width": 390, "height": 800})
+def test_changed_cells_show_in_the_save_bar_until_discarded(admin_page, live_server, kitchen):
+    for name in ("Kettle", "Toaster"):
+        Item.objects.create(name=name, category=kitchen, quantity=3)
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
-    save = admin_page.get_by_role("button", name="Save changes")
-    expect(admin_page.locator("#changelist-table thead th", has_text="Quantity")).to_be_hidden()
-    expect(save).to_be_hidden()
+    bar = admin_page.locator("[data-save-bar]")
+    quantities = admin_page.locator("#changelist-table [data-editable] input")
+    expect(bar).to_be_hidden()
 
-    admin_page.locator("#changelist-table [data-col-toggle] button").click()
-    expect(save).to_be_visible()
+    count = bar.locator("[data-change-count]")
+    quantities.nth(0).fill("5")
+    quantities.nth(1).fill("7")
+    expect(count).to_have_text("2")
+    expect(admin_page.locator("#changelist-table td.formwork-dirty")).to_have_count(2)
+
+    quantities.nth(1).fill("3")
+    expect(count).to_have_text("1")
+
+    bar.get_by_role("button", name="Discard").click()
+    expect(bar).to_be_hidden()
+    expect(quantities.nth(0)).to_have_value("3")
+    expect(admin_page.locator("#changelist-table td.formwork-dirty")).to_have_count(0)
+    assert admin_page.errors == []
+
+
+def test_list_actions_wait_until_the_changes_are_saved(admin_page, live_server, kitchen):
+    item = Item.objects.create(name="Kettle", category=kitchen, quantity=3)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    activate = admin_page.locator("#changelist-actions").get_by_role("button", name="Mark selected items as active")
+    admin_page.locator("#changelist tbody input[type=checkbox]").click()
+    expect(activate).to_be_enabled()
+
+    admin_page.locator("#changelist-table [data-editable] input").fill("5")
+    expect(activate).to_be_disabled()
+
+    admin_page.get_by_role("button", name="Save changes").click()
+    expect(admin_page.get_by_role("status").filter(has_text="was changed successfully")).to_be_visible()
+    item.refresh_from_db()
+    assert item.quantity == 5
+    assert admin_page.errors == []
+
+
+def test_other_results_ask_before_they_replace_the_changes(admin_page, live_server, kitchen):
+    Item.objects.create(name="Kettle", category=kitchen, quantity=3)
+    url = f"{live_server.url}/admin/admin_app/item/"
+    admin_page.goto(url)
+    quantity = admin_page.locator("#changelist-table [data-editable] input")
+    sort = admin_page.locator("#changelist-table thead a", has_text="Price")
+    quantity.fill("5")
+
+    admin_page.once("dialog", lambda prompt: prompt.dismiss())
+    with admin_page.expect_event("dialog") as prompt:
+        sort.click()
+    assert prompt.value.type == "confirm"
+    admin_page.wait_for_load_state("networkidle")
+    expect(admin_page).to_have_url(url)
+    expect(quantity).to_have_value("5")
+
+    admin_page.once("dialog", lambda prompt: prompt.accept())
+    sort.click()
+    expect(admin_page).to_have_url(re.compile(r"\?o=4$"))
+    expect(quantity).to_have_value("3")
+    assert admin_page.errors == []
+
+
+def test_a_long_list_scrolls_its_rows_under_the_header(admin_page, live_server, kitchen):
+    Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen) for i in range(40))
+    admin_page.set_viewport_size({"width": 1280, "height": 720})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    header = admin_page.locator("#changelist-table thead th", has_text="Name")
+    top = header.bounding_box()["y"]
+
+    admin_page.locator("#changelist-scroll").evaluate("(el) => el.scrollBy(0, 400)")
+
+    expect(admin_page.locator("#changelist-footer")).to_be_in_viewport()
+    assert admin_page.evaluate("document.documentElement.scrollHeight") <= 720
+    assert header.bounding_box()["y"] == top
     assert admin_page.errors == []
 
 
@@ -365,6 +431,36 @@ def test_leaving_the_form_without_a_change_asks_nothing(admin_page, live_server,
     admin_page.get_by_label("Breadcrumbs").get_by_role("link", name="Items").click()
     expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
     assert prompts == []
+    assert admin_page.errors == []
+
+
+@action(description="Archive this %(verbose_name)s", location=ActionLocation.CHANGE_FORM)
+def archive(modeladmin, request, queryset):
+    queryset.update(status=Item.Status.ARCHIVED)
+    modeladmin.message_user(request, "Archived.")
+
+
+def test_change_form_actions_wait_until_the_changes_are_saved(admin_page, live_server, kitchen, monkeypatch):
+    monkeypatch.setattr(type(site.get_model_admin(Item)), "actions", [archive])
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    url = f"{live_server.url}/admin/admin_app/item/{item.pk}/change/"
+    admin_page.goto(url)
+    menu = admin_page.get_by_role("button", name="Actions")
+
+    admin_page.locator("[name=name]").fill("Kettle 2")
+    expect(menu).to_have_attribute("aria-disabled", "true")
+    expect(menu.locator("xpath=..")).to_have_attribute("data-tip", "Save your changes first")
+    expect(menu.locator("xpath=..")).to_have_class(re.compile(r"\btooltip\b"))
+
+    admin_page.get_by_role("button", name="Save and continue editing").click()
+    expect(admin_page.get_by_role("status").filter(has_text="was changed successfully")).to_be_visible()
+    menu.click()
+    admin_page.get_by_role("button", name="Archive this item").click()
+
+    expect(admin_page.get_by_role("status").filter(has_text="Archived.")).to_be_visible()
+    expect(admin_page).to_have_url(url)
+    item.refresh_from_db()
+    assert (item.name, item.status) == ("Kettle 2", Item.Status.ARCHIVED)
     assert admin_page.errors == []
 
 

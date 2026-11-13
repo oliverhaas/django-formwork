@@ -1,0 +1,14 @@
+{#- The object's history next to its change form. On a wide page it stays in view while the fields scroll. #}
+<aside id="history" class="card border border-base-300 bg-base-100 @min-[66rem]:sticky @min-[66rem]:top-20 @min-[66rem]:max-h-[calc(100dvh-6rem)]" aria-labelledby="history-title">
+  <div class="flex items-center gap-2 border-b border-base-300 px-4 py-3">
+    {{ icon("rotate-ccw-clock", "size-4 text-base-content/50") }}
+    <h2 id="history-title" class="font-semibold">{{ _("History") }}</h2>
+  </div>
+  <div class="min-h-0 overflow-y-auto px-4 py-3">
+    {% if history_entries %}
+    <ol class="divide-y divide-base-200">{% include "formwork_admin/history_entries.html" %}</ol>
+    {% else %}
+    <p class="py-4 text-center text-sm text-base-content/50">{{ _("No changes recorded yet.") }}</p>
+    {% endif %}
+  </div>
+</aside>

@@ -41,7 +41,6 @@ The `admin` extra installs django-filter and Jinja2.
 ```python
 INSTALLED_APPS = [
     ...,
-    "django.contrib.admin",  # the history log (LogEntry)
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.messages",
@@ -60,10 +59,9 @@ MIDDLEWARE = [
 ]
 ```
 
-The admin writes its history to Django's `LogEntry`, so `django.contrib.admin` must be
-installed. Its system checks also ask for a `DjangoTemplates` backend with the `request`,
-`auth` and `messages` context processors. The admin pages themselves render through a
-private Jinja2 engine, so `TEMPLATES` needs no Jinja2 backend.
+`django.contrib.admin` is not needed: the admin keeps its history in its own table. The
+admin pages render through a private Jinja2 engine, so `TEMPLATES` needs no Jinja2
+backend.
 
 Run `manage.py migrate` after you add the app.
 
@@ -140,11 +138,14 @@ changes the module name). Attributes of `AdminSite` that Django's site does not 
 | `scripts` | htmx 4 and `hx-alpine-compat` | Scripts loaded before the admin's own. |
 | `alpine_script` | Alpine.js 3.15 | Loaded last, with `defer`. |
 | `themes` | `("light", "dark")` | The DaisyUI themes the theme menu offers. The first is the default. |
+| `history` | `ModelHistory()` | Where the history goes; see [History](#history). |
 
 `site_title`, `site_header`, `index_title`, `site_url`, `empty_value_display`,
-`enable_nav_sidebar`, `login_form`, `password_change_form`, the `*_template` attributes,
-`each_context()`, `get_app_list()`, `admin_view()`, `has_permission()`, `add_action()`
-and `disable_action()` work as in Django.
+`enable_nav_sidebar`, `final_catch_all_view`, `login_form`, `password_change_form`, the
+`*_template` attributes, `each_context()`, `get_app_list()`, `admin_view()`,
+`has_permission()`, `catch_all_view()`, `add_action()` and `disable_action()` work as in
+Django. As in Django, any unknown URL under the admin sends a signed-out visitor to the
+login page, so the URLs do not show which models are registered.
 
 ![The deal list in the dark theme](../img/admin/changelist-dark.webp)
 
@@ -156,9 +157,16 @@ admin: `list_display`, `list_display_links`, `list_filter`, `list_select_related
 `search_help_text`, `date_hierarchy`, `ordering`, `sortable_by`, `fields`, `exclude`,
 `fieldsets`, `readonly_fields`, `prepopulated_fields`, `radio_fields`,
 `autocomplete_fields`, `raw_id_fields`, `formfield_overrides`, `form`, `inlines`,
-`actions`, `save_as`, `save_on_top`, `preserve_filters`, `view_on_site`, the
+`actions`, `save_as`, `preserve_filters`, `view_on_site`, the
 `has_*_permission()` methods, and the `get_*()`, `save_model()`, `save_formset()`,
 `delete_model()` and `response_*()` hooks.
+
+`save_on_top` is accepted and does nothing: the save buttons stay in the bar at the bottom
+of the page, which stays in view while the form scrolls.
+
+The delete pages list at most `delete_confirmation_max_display` objects, counted over
+all levels as Django counts them. The default is 100, where Django's is `None`. `None`
+lists every object, and `0` lists none and keeps only the count per model.
 
 The forms are formwork forms, so every field renders with formwork's widgets and
 templates. A relation gets a `Select` or `SelectMultiple`, a date field a `DatePicker`,
@@ -169,6 +177,25 @@ read-only fields show `DATE_FORMAT` and `DATETIME_FORMAT`.
 
 After a failed save, each field error shows under its field, as in Django's admin. A
 `form` whose `Meta.error_display` is set keeps that display.
+
+A `form` must subclass `FormworkModelForm`, where Django's admin takes any `ModelForm`.
+A system check reports a `form` or an `add_form` that does not. To build on another of
+Django's forms, list `FormworkModelForm` after it, so the clean steps of that form run:
+`class StaffForm(UserChangeForm, FormworkModelForm)`.
+
+A form or `formfield_overrides` that names one of Django's admin widgets, such as `AdminDateWidget`, `AutocompleteSelect` or
+`FilteredSelectMultiple`, gets the formwork widget for the same field. The widget keeps
+its attrs, without the classes that only Django's admin CSS reads. `AdminSplitDateTime`
+still posts the day and the time apart, so a `SplitDateTimeField` cleans as before. A
+subclass of a Django admin widget is kept, with its own markup and scripts. Those scripts
+need Django's admin CSS and its `jsi18n/` translations, which this site does not load,
+and a subclass of `AutocompleteSelect` raises `NoReverseMatch`, as this site has no
+`autocomplete/` URL. Give such a field a formwork widget instead, for example through
+`autocomplete_fields`.
+
+A `class Media` on a `ModelAdmin` or an inline adds its CSS and JavaScript to the pages
+of that admin, as in Django. Django's admin also loads jQuery on these pages, and this
+admin does not, so a script that uses `django.jQuery` does not run here.
 
 ![The change form of an employee](../img/admin/change-form.webp)
 
@@ -234,12 +261,18 @@ An entry can be:
 
 - a field name. Choices, booleans and relations get a dropdown, dates a range picker.
   Its calendar has the ranges of Django's date filter: Today, Past 7 days, This month
-  and This year.
+  and This year. A nullable date adds No date and Has date.
 - a `SimpleListFilter` subclass, as in Django.
 - a tuple such as `("field", admin.EmptyFieldListFilter)` or
   `("category", admin.RelatedOnlyFieldListFilter)`.
 - a `django_filters.Filter` with its `field_name` set, for any lookup django-filter
-  supports. A `django_filters.RangeFilter` shows a min and a max input in one field.
+  supports. A `django_filters.RangeFilter` shows a min and a max input in one field,
+  which post `field__gte` and `field__lte`.
+
+A nullable relation and a many-to-many relation also offer the rows without a related
+row, under the admin's `empty_value_display`. A nullable boolean offers Unknown. A
+relation lists its rows in the order of the related model's admin and leaves out the rows
+that the field's `limit_choices_to` excludes, as Django's filter does.
 
 The filters sit in a row under the search box, in the order of `list_filter`. The
 Filters button opens the row and shows how many filters are active. The row is open
@@ -253,9 +286,28 @@ one row, as Django's related filter does.
 The list updates as the user types or picks, and the URL keeps every filter, the
 search, the sort and the page.
 
+The URL uses the parameters of Django's list filters, so a link filters the same rows in
+both admins:
+
+| Filter | Parameters |
+|---|---|
+| Choices and booleans | `status__exact=draft`, `is_active__exact=1`, `field__isnull=True` |
+| Relations | `owner__id__exact=3`, `owner__isnull=True` |
+| Dates | `created__gte=2026-01-01&created__lt=2026-02-01`, `created__isnull=True` |
+| `EmptyFieldListFilter` | `website__isempty=1` |
+| `SimpleListFilter` | its `parameter_name` |
+
+A date filter also reads `__lte` and the `__year`, `__month` and `__day` of
+`date_hierarchy`. A parameter that no filter reads narrows the list as in Django, such as
+`?name__startswith=A`, and stays while the filters change. `lookup_allowed()` refuses a
+lookup through a relation that `list_filter` does not name with a 400 response. A lookup
+that the list cannot apply returns to the list with `?e=1` and a warning that the list
+shows all rows.
+
 With `show_facets` at its default, `admin.ShowFacets.ALLOW`, the filter row has a Show
 counts switch. The switch adds `_facets` to the URL, as Django's link does, and each
-option then shows how many rows it matches. The count applies the search and the other
+option then shows how many rows it matches, in a badge at the end of the option. An
+option that matches no rows shows 0, dimmed. The count applies the search and the other
 filters, but not the filter of the option itself. `ShowFacets.ALWAYS` shows the counts
 without the switch, and `ShowFacets.NEVER` removes both.
 
@@ -272,6 +324,15 @@ fit on its first page of 20.
 
 ### Columns
 
+A click on a column header sorts by that column, and a second click reverses it. The
+columns sorted before stay as later sort keys, and with more than one sorted column each
+header shows its place in the order. The × next to a sorted header removes its column from
+the sort. When the last sorted column goes, the rows follow the admin's `ordering` again
+and no header shows a sort, as in Django. The `o` parameter numbers the columns as Django's
+does, so a sorted link opens the same order in both admins. `o=2.-1` sorts by column 2,
+then by column 1 descending. While the list has actions, the checkbox is column 0. A
+column outside `sortable_by` is left out of the sort.
+
 When the columns of `list_display` do not fit the width of the list, the list hides
 columns from the right and shows a "+N" button at the end of the header. The checkbox,
 the first column and the columns of `list_display_links` always show. The tooltip of
@@ -283,6 +344,27 @@ the same way next time.
 
 A `list_editable` error in a hidden column shows all columns and scrolls the first error
 into view. Without JavaScript, the table scrolls sideways as in Django's admin.
+
+In a window at least 40rem wide, a long list fits the window: the rows scroll under the
+header, and the footer with the page links stays in view. A short list keeps its height.
+In a narrow window, in a dialog, or when less than 288 pixels are left for the rows, the
+page scrolls as usual.
+
+### Editable columns
+
+The columns in `list_editable` show their fields in each row, as in Django's admin. A cell
+whose value differs from the saved one gets the accent color, and a bar at the bottom of
+the window counts the changed cells. Save changes saves the rows, and Discard loads the
+saved values again. After a failed save, each error shows under its cell, and the cells
+with valid changes stay marked.
+
+While cells have unsaved changes:
+
+- the actions wait, and their buttons are disabled until the changes are saved.
+- a sort, a filter, a search or another page asks before it replaces the changed cells.
+- the browser asks before it leaves the page.
+
+The marks come from formwork's [changed-field highlight](forms.md#changed-field-highlight).
 
 ### Info dialog
 
@@ -316,11 +398,48 @@ error color. Actions run as in Django: a function gets `(modeladmin, request, qu
 and a name resolves to a method of the admin. The bar appears when a row is selected,
 and shift-click selects a range.
 
+The other arguments are Django 6.1's, and they also work on Django 6.0. `location`
+puts an action in the list, on the change form or both, and the list labels it with
+`description_plural` when given:
+
+```python
+from django_formwork.admin import ActionLocation
+
+
+@admin.action(
+    description="Close this ticket",
+    description_plural="Close selected tickets",
+    location=[ActionLocation.CHANGE_LIST, ActionLocation.CHANGE_FORM],
+)
+def close(self, request, queryset): ...
+```
+
+The change form lists its actions in an Actions menu next to its title. An action there
+runs on the saved row: the page reloads with the action's message, or shows the response
+the action returns, such as a confirmation page or a file. While the form has unsaved
+changes, the menu waits until they are saved. The menu does not show on the add page or
+in a related-object dialog.
+
+`get_actions()` and `get_action_choices()` take Django's `action_location`. An override
+of `get_actions()` without it keeps working for the list and gives the change form no
+actions, as in Django. An action with `permissions` shows when the user has any one of
+them.
+
 ### Inlines
 
 `TabularInline` and `StackedInline` take Django's options (`extra`, `min_num`,
-`max_num`, `fk_name`, `can_delete`, `show_change_link`, `classes`, `formset`). Rows are
-added and removed in the browser, and the formset indexes stay contiguous.
+`max_num`, `fk_name`, `can_delete`, `show_change_link`, `classes`, `form`, `formset`).
+Rows are added and removed in the browser, and the formset indexes stay contiguous. An
+inline's `form` subclasses `FormworkModelForm`, as the `ModelAdmin`'s does.
+
+With `"collapse"` in `classes`, the inline folds behind its title and row count, as a
+fieldset with `"collapse"` does. It starts open when one of its rows has an error.
+
+For a model that points at its parent through a `GenericForeignKey`, import
+`GenericTabularInline` or `GenericStackedInline` from `django_formwork.admin.contenttypes`.
+They take `ct_field` and `ct_fk_field` as Django's do. An inline class from
+`django.contrib.admin` or `django.contrib.contenttypes.admin` fails the system check, and
+the error names the class to import instead.
 
 ### Export
 
@@ -440,8 +559,8 @@ Each row runs through the admin's form in a formwork model formset, so the form'
 validation applies. Unique fields are checked across the whole file: two rows with the
 same email get the error Django would give, with one query per check instead of one per
 row. Saving goes through `save_form()`, `save_model()` and `save_related()`, so an
-override that sets an owner still runs. Each saved row gets a history entry with
-Django's change message.
+override that sets an owner still runs. Each saved row gets a history entry with the
+values before and after.
 
 The formats:
 
@@ -477,6 +596,8 @@ as `django.contrib.auth.admin` does on Django's own site. They work as Django's 
 - To add a user, the "Change user" permission is necessary too, because a user who can
   add users can add a superuser.
 - The permissions of a group or a user are grouped by model.
+- The list refuses a lookup on the password, such as `?password__startswith=pbkdf2`,
+  with a 400 response, as a lookup on the hash could read it out.
 
 When `AUTH_USER_MODEL` names another model, only `Group` is registered. For a model that
 extends `AbstractUser`, subclass `UserAdmin`:
@@ -513,7 +634,56 @@ class StaffUserAdmin(UserAdmin):
 
 `django_formwork.admin.auth` also has `UserChangeForm`, `AdminUserCreationForm` and
 `AdminPasswordChangeForm` for `form`, `add_form` and `change_password_form`, and
-`GroupAdmin`. `change_user_password_template` names the template of the password page.
+`GroupAdmin`. The forms are Django's, built on formwork's form classes. A form for a
+custom user model subclasses them, as it would subclass Django's.
+`change_user_password_template` names the template of the password page.
+
+## History
+
+The change form shows the history of the object to the right of its fields, or below
+them on a narrow page. Each entry names the user and the time, and lists the changed
+fields with their values before and after the save. A change to an inline row shows under
+the row's name. The panel loads `history_per_page` entries at a time, 20 by default, and
+its Show older button loads the next ones. The page at `<object_id>/history/` lists the
+same entries without the form.
+
+![The history next to the change form](../img/admin/history.webp)
+
+The admin writes the entries to its own table, `formwork_admin.HistoryEntry`, through
+`log_addition()`, `log_change()` and `log_deletions()`, as Django's admin writes
+`LogEntry`. The dashboard lists the last ten entries of the user as recent actions.
+`construct_change_message()` returns Django's list with a `values` key added to each
+`changed` item, and `log_change()` still takes a plain text instead of the list.
+
+A value is stored as the form showed it: the name of a related object, the label of a
+choice, a localized date. A text longer than 300 characters is cut. A field with a
+`PasswordInput` widget, or with `password` in its name, shows without its values.
+
+### pghistory
+
+[django-pghistory](https://django-pghistory.readthedocs.io/) records the changes of a
+model with database triggers, so it also sees the changes made outside the admin. To
+show its events in the panel, give the site the `PghistoryHistory` backend:
+
+```python
+from django_formwork.admin import AdminSite
+from django_formwork.admin.history import PghistoryHistory
+
+
+class MyAdminSite(AdminSite):
+    history = PghistoryHistory()
+```
+
+For a model that pghistory tracks, the panel then lists the model's events with the
+fields each event changed, as pghistory's `pgh_diff` has them. A foreign key shows the
+name of the related object, and a choice its label. Each admin view runs inside
+`pghistory.context()` with the user and the URL, so an event made through the admin names
+its user without pghistory's middleware. A model that pghistory does not track keeps the
+admin's own entries, and the recent actions on the dashboard still come from the admin's
+table.
+
+Another store needs a subclass of `django_formwork.admin.history.History` with `log()`,
+`entries()` and `recent()`, and `context()` to wrap each admin view.
 
 ## Templates
 
@@ -527,6 +697,54 @@ myapp/jinja2/formwork_admin/change_list.html
 
 `change_list_template`, `change_form_template` and the other `*_template` options name
 Jinja2 templates of the same engine.
+
+## Custom pages
+
+A page of your own gets the admin's layout, navigation and login check. Add its URL in
+`get_urls()`, wrap the view in `admin_site.admin_view()`, and render a Jinja2 template
+that extends `formwork_admin/base.html`:
+
+```python
+from django.urls import path
+
+from django_formwork import admin
+
+from .models import Author
+
+
+@admin.register(Author)
+class AuthorAdmin(admin.ModelAdmin):
+    def get_urls(self):
+        stats = self.admin_site.admin_view(self.stats_view)
+        return [path("stats/", stats, name="myapp_author_stats"), *super().get_urls()]
+
+    def stats_view(self, request):
+        context = self.page_context(request, title="Author stats", count=Author.objects.count())
+        return self.render(request, "myapp/author_stats.html", context)
+```
+
+```jinja
+{# myapp/jinja2/myapp/author_stats.html #}
+{% extends "formwork_admin/base.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block breadcrumbs %}
+{{ m.model_crumbs(site, opts, changelist_url) }}
+<li class="font-medium">{{ title }}</li>
+{% endblock %}
+
+{% block content %}
+{{ m.page_header(title, icon_name=model_admin.get_icon()) }}
+<div class="card border border-base-300 bg-base-100 p-6">{{ count }} authors</div>
+{% endblock %}
+```
+
+`page_context()` returns the site's `each_context()`, the model's `opts`,
+`changelist_url` and permissions, and the keyword arguments. `render()` renders with
+the admin's Jinja2 engine. Put the page's markup in the `content` block: a link inside
+the admin swaps only that block. The URL reverses under the site's name, for example
+`reverse("admin:myapp_author_stats")`. A page that belongs to no model goes in
+`AdminSite.get_urls()`, rendered with `site.render()` and `site.each_context(request)`.
 
 ## Performance
 

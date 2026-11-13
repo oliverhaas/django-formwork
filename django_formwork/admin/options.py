@@ -6,21 +6,24 @@ The views render Jinja templates under ``formwork_admin/`` and formwork forms.
 from __future__ import annotations
 
 import copy
+import enum
 import io
 import json
+from dataclasses import dataclass
 from functools import cached_property, partial, update_wrapper
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 from urllib.parse import quote_plus
 
+import django
 from django import forms
 from django.apps import apps
 from django.contrib import messages
 from django.contrib.admin import options as django_options
 from django.contrib.admin.exceptions import DisallowedModelAdminToField
-from django.contrib.admin.options import EMPTY_VALUE_STRING, ShowFacets
+from django.contrib.admin.options import IncorrectLookupParameters, ShowFacets
 from django.contrib.admin.utils import (
     NestedObjects,
-    construct_change_message,
     display_for_value,
     flatten_fieldsets,
     model_format_dict,
@@ -29,11 +32,11 @@ from django.contrib.admin.utils import (
     unquote,
 )
 from django.contrib.auth import get_permission_codename
-from django.core.exceptions import FieldDoesNotExist, FieldError, PermissionDenied, ValidationError
+from django.core.exceptions import BadRequest, FieldDoesNotExist, FieldError, PermissionDenied, ValidationError
 from django.db import IntegrityError, models, router, transaction
 from django.db.models import prefetch_related_objects
 from django.forms.formsets import DELETION_FIELD_NAME, all_valid
-from django.forms.models import modelform_defines_fields
+from django.forms.models import BaseModelFormSet, modelform_defines_fields
 from django.forms.utils import ErrorDict
 from django.http import (
     Http404,
@@ -45,13 +48,14 @@ from django.http import (
 )
 from django.urls import NoReverseMatch, path, reverse
 from django.utils.html import format_html
+from django.utils.inspect import get_func_args
 from django.utils.text import capfirst, get_text_list
 from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
 
-from django_formwork.admin import exports, formats, imports
-from django_formwork.admin.changelist import PRESERVED_FILTERS_VAR, ChangeList
-from django_formwork.admin.filters import build_filterset
+from django_formwork.admin import exports, formats, history, imports
+from django_formwork.admin.changelist import ERROR_FLAG, PRESERVED_FILTERS_VAR, ChangeList
+from django_formwork.admin.filters import build_filterset, list_filter_path
 from django_formwork.admin.helpers import AdminForm, InlineAdminFormSet
 from django_formwork.admin.info import describe_fields, describe_search, describe_table
 from django_formwork.admin.jinja import AdminTemplateResponse
@@ -59,9 +63,12 @@ from django_formwork.admin.paginator import EstimatedCountPaginator
 from django_formwork.admin.widgets import (
     FORMFIELD_FOR_DBFIELD_DEFAULTS,
     IS_POPUP_VAR,
+    RADIO_ROW_CLASS,
     TO_FIELD_VAR,
+    NullBooleanSelect,
     RelatedWidgetWrapper,
     relation_widget,
+    use_formwork_widgets,
 )
 from django_formwork.forms import FormworkModelForm
 from django_formwork.formsets import (
@@ -73,8 +80,7 @@ from django_formwork.formsets import (
 from django_formwork.widgets import Select
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
-    from uuid import UUID
+    from collections.abc import Callable, Iterator, Mapping, Sequence
 
     from django.contrib.admin.options import _FieldsetSpec
     from django.db.models.fields.related import RelatedField
@@ -88,6 +94,8 @@ __all__ = [
     "ACTION_CHECKBOX_NAME",
     "HORIZONTAL",
     "VERTICAL",
+    "Action",
+    "ActionLocation",
     "BaseModelAdmin",
     "InlineModelAdmin",
     "ModelAdmin",
@@ -97,10 +105,35 @@ __all__ = [
 
 ACTION_CHECKBOX_NAME = "_selected_action"
 HORIZONTAL, VERTICAL = 1, 2
+# What Django 6.1's deletion pages show for an object whose name is blank; Django 6.0 has no such constant.
+EMPTY_VALUE_STRING = getattr(django_options, "EMPTY_VALUE_STRING", "-")
 
+if TYPE_CHECKING or django.VERSION >= (6, 1):
+    from django.contrib.admin.options import Action, ActionLocation
+else:
 
-def _log_entries_installed() -> bool:
-    return apps.is_installed("django.contrib.admin")
+    class ActionLocation(enum.Enum):
+        """Where an action shows: Django 6.1's ``ActionLocation``, for Django 6.0."""
+
+        CHANGE_FORM = "CHANGE_FORM"
+        CHANGE_LIST = "CHANGE_LIST"
+
+    @dataclass
+    class Action:
+        """An action as ``get_actions()`` returns it: Django 6.1's ``Action``, for Django 6.0."""
+
+        func: Callable[..., Any]
+        name: str
+        description: str
+        plural_description: str
+        locations: list[ActionLocation]
+
+        # Code written for Django 6.0 unpacks an action as (func, name, description).
+        def __iter__(self) -> Iterator[Any]:
+            return iter((self.func, self.name, self.description))
+
+        def __getitem__(self, index: int) -> Any:
+            return (self.func, self.name, self.description)[index]
 
 
 def get_content_type_for_model(obj: Any) -> Any:
@@ -109,8 +142,8 @@ def get_content_type_for_model(obj: Any) -> Any:
     return ContentType.objects.get_for_model(obj, for_concrete_model=False)
 
 
-class BaseModelAdmin:
-    """What a model admin and an inline share: the form and its fields."""
+class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
+    """What a model admin and an inline share: the form, its fields and the ``Media`` of the class."""
 
     autocomplete_fields: Sequence[str] = ()
     raw_id_fields: Sequence[str] = ()
@@ -131,6 +164,11 @@ class BaseModelAdmin:
 
     model: type[models.Model]
     admin_site: Any
+
+    @property
+    def media(self) -> forms.Media:
+        """The files of a ``Media`` class on the admin. Unlike Django's, it holds no jQuery."""
+        return forms.Media()
 
     def __init__(self) -> None:
         overrides = copy.deepcopy(FORMFIELD_FOR_DBFIELD_DEFAULTS)
@@ -155,8 +193,7 @@ class BaseModelAdmin:
                 formfield = self.formfield_for_manytomany(db_field, request, **kwargs)
             return self._wrap_related(formfield, db_field, request)
         if isinstance(db_field, models.BooleanField) and db_field.null and "widget" not in kwargs:
-            choices = [("unknown", _("Unknown")), ("true", _("Yes")), ("false", _("No"))]
-            kwargs["widget"] = Select(choices=choices, show_search=False)
+            kwargs["widget"] = NullBooleanSelect
             return db_field.formfield(**kwargs)
         for klass in db_field.__class__.mro():
             if klass in self.formfield_overrides:
@@ -226,7 +263,7 @@ class BaseModelAdmin:
     def _radio_select(self, db_field: models.Field[Any, Any]) -> forms.RadioSelect:
         # The choice group stacks its options; HORIZONTAL lays them out in a row.
         horizontal = self.radio_fields[db_field.name] == HORIZONTAL
-        return forms.RadioSelect(attrs={"class": "flex-row flex-wrap gap-x-5"} if horizontal else None)
+        return forms.RadioSelect(attrs={"class": RADIO_ROW_CLASS} if horizontal else None)
 
     def get_field_queryset(
         self, db: str | None, db_field: RelatedField[Any, Any], request: HttpRequest
@@ -404,7 +441,9 @@ class ModelAdmin(BaseModelAdmin):
     preserve_filters = True
     show_facets = ShowFacets.ALLOW
     inlines: Sequence[type[InlineModelAdmin]] = ()
-    delete_confirmation_max_display = 100
+    delete_confirmation_max_display: int | None = 100
+    #: How many entries the history panel loads at a time.
+    history_per_page = 20
 
     # Custom templates (a name or a list of names, looked up in the admin's Jinja engine).
     add_form_template: str | Sequence[str] | None = None
@@ -479,10 +518,6 @@ class ModelAdmin(BaseModelAdmin):
     def redirect_to_change(self, request: HttpRequest, object_id: str) -> HttpResponse:
         return HttpResponseRedirect(reverse(self.url_name("change"), args=(object_id,)))
 
-    @property
-    def media(self) -> forms.Media:
-        return forms.Media()
-
     def get_model_perms(self, request: HttpRequest) -> dict[str, bool]:
         return {
             "add": self.has_add_permission(request),
@@ -521,10 +556,12 @@ class ModelAdmin(BaseModelAdmin):
         if defaults["fields"] is None and not modelform_defines_fields(defaults["form"]):
             defaults["fields"] = forms.ALL_FIELDS
         try:
-            return forms.modelform_factory(self.model, **defaults)
+            form_class = forms.modelform_factory(self.model, **defaults)
         except FieldError as error:
             msg = f"{error}. Check fields/fieldsets/exclude attributes of class {self.__class__.__name__}."
             raise FieldError(msg) from error
+        use_formwork_widgets(form_class, self.admin_site)
+        return form_class
 
     def get_changelist(self, request: HttpRequest, **kwargs: Any) -> type[ChangeList]:
         return ChangeList
@@ -558,7 +595,9 @@ class ModelAdmin(BaseModelAdmin):
         }
         if defaults.get("fields") is None and not modelform_defines_fields(defaults.get("form")):  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
             defaults["fields"] = forms.ALL_FIELDS
-        return forms.modelform_factory(self.model, form=self.form, **defaults)
+        form_class = forms.modelform_factory(self.model, form=self.form, **defaults)
+        use_formwork_widgets(form_class, self.admin_site)
+        return form_class
 
     def get_changelist_formset(self, request: HttpRequest, **kwargs: Any) -> type[FormworkBaseModelFormSet]:
         return formwork_modelformset_factory(
@@ -629,10 +668,20 @@ class ModelAdmin(BaseModelAdmin):
     def _filterset_classes(self) -> dict[tuple[Any, ...], type[AdminFilterSet] | None]:
         return {}
 
+    def lookup_allowed(self, lookup: str, value: str, request: HttpRequest) -> bool:
+        """Django's check of a lookup in the changelist URL; a ``Filter`` in ``list_filter`` allows its field path."""
+        admin = SimpleNamespace(
+            model=self.model,
+            date_hierarchy=self.date_hierarchy,
+            get_list_filter=lambda request: [list_filter_path(item) for item in self.get_list_filter(request)],
+        )
+        return django_options.BaseModelAdmin.lookup_allowed(admin, lookup, value, request)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
     def get_filterset_class(self, request: HttpRequest) -> type[AdminFilterSet] | None:
         """The filter bar's ``FilterSet``, built once per ``list_filter``, ``search_fields`` and ``date_hierarchy``."""
         list_filter = list(self.get_list_filter(request))
-        if self.date_hierarchy and self.date_hierarchy not in list_filter:
+        paths = {item[0] if isinstance(item, tuple | list) else list_filter_path(item) for item in list_filter}
+        if self.date_hierarchy and self.date_hierarchy not in paths:
             list_filter.append(self.date_hierarchy)
         search_fields = tuple(self.get_search_fields(request))
         key = (tuple(map(repr, list_filter)), search_fields)
@@ -686,7 +735,10 @@ class ModelAdmin(BaseModelAdmin):
         list_request = copy.copy(request)
         list_request.method = "GET"
         list_request.GET = QueryDict(query)
-        queryset = self.get_export_queryset(list_request)
+        try:
+            queryset = self.get_export_queryset(list_request)
+        except IncorrectLookupParameters:
+            return HttpResponseBadRequest(_("The list's filters name a field the list does not have."))
         threshold = self.export_background_threshold
         if threshold is not None and (count := queryset.count()) > threshold:
             self.start_export(request, export_format, query, count)
@@ -860,77 +912,133 @@ class ModelAdmin(BaseModelAdmin):
 
     # Actions
 
-    def _get_base_actions(self) -> list[tuple[Callable[..., Any], str, str]]:
-        actions: list[tuple[Callable[..., Any], str, str]] = []
-        if self.actions is not None:
-            actions.extend(
-                (func, name, getattr(func, "short_description", None) or capfirst(name.replace("_", " ")))
-                for name, func in self.admin_site.actions
-            )
-            # Django resolves a name to the class attribute, so a method action gets the admin as its first argument.
-            actions.extend(action for action in map(self.get_action, self.actions or ()) if action is not None)
-        return actions
+    def _get_base_actions(self, action_location: ActionLocation = ActionLocation.CHANGE_LIST) -> list[Action]:
+        own = [action for action in (self.get_action(item, action_location) for item in self.actions or ()) if action]
+        names = {action.name for action in own}
+        # The site's actions come first, unless the admin has its own under that name.
+        actions = [
+            self._action(func, name)
+            for name, func in self.admin_site.actions
+            if name not in names and action_location in getattr(func, "locations", [ActionLocation.CHANGE_LIST])
+        ]
+        return actions + own
 
-    def _filter_actions_by_permissions(self, request: HttpRequest, actions: list[Any]) -> list[Any]:
+    @staticmethod
+    def _action(func: Callable[..., Any], name: str) -> Action:
+        description = getattr(func, "short_description", None) or capfirst(name.replace("_", " "))
+        return Action(
+            func=func,
+            name=name,
+            description=description,
+            plural_description=getattr(func, "plural_description", description),
+            locations=getattr(func, "locations", [ActionLocation.CHANGE_LIST]),
+        )
+
+    def _filter_actions_by_permissions(self, request: HttpRequest, actions: list[Action]) -> list[Action]:
+        """Keep the actions the user may run: no ``allowed_permissions``, or any one of them."""
         allowed = []
         for action in actions:
-            callable_ = action[0]
-            permissions = getattr(callable_, "allowed_permissions", ())
-            if all(getattr(self, f"has_{permission}_permission")(request) for permission in permissions):
+            permissions = getattr(action.func, "allowed_permissions", None)
+            if permissions is None or any(
+                getattr(self, f"has_{permission}_permission")(request) for permission in permissions
+            ):
                 allowed.append(action)
         return allowed
 
-    def get_actions(self, request: HttpRequest) -> dict[str, tuple[Callable[..., Any], str, str]]:
-        if self.actions is None:
+    def get_actions(
+        self, request: HttpRequest, action_location: ActionLocation = ActionLocation.CHANGE_LIST
+    ) -> dict[str, Action]:
+        if self.actions is None or IS_POPUP_VAR in request.GET:
             return {}
-        actions = self._filter_actions_by_permissions(request, self._get_base_actions())
-        return {name: (func, name, desc) for func, name, desc in actions}
+        actions = self._filter_actions_by_permissions(request, self._get_base_actions(action_location))
+        return {action.name: action for action in actions}
 
-    def get_action(self, action: str | Callable[..., Any]) -> tuple[Callable[..., Any], str, str] | None:
+    def _actions_at(self, request: HttpRequest, action_location: ActionLocation) -> dict[str, Action]:
+        """``get_actions()`` for one location, also from an override written before Django 6.1.
+
+        Such an override gives the list's actions and none for the change form, as in Django.
+        """
+        if "action_location" in get_func_args(self.get_actions):
+            actions = self.get_actions(request, action_location=action_location)
+        elif action_location == ActionLocation.CHANGE_LIST:
+            actions = self.get_actions(request)
+        else:
+            return {}
+        # An override can still build Django 6.0's (func, name, description) tuples.
+        return {
+            name: action
+            if isinstance(action, Action)
+            else Action(action[0], action[1], action[2], action[2], [ActionLocation.CHANGE_LIST])
+            for name, action in actions.items()
+        }
+
+    def get_action(
+        self, action: str | Callable[..., Any], action_location: ActionLocation = ActionLocation.CHANGE_LIST
+    ) -> Action | None:
         if callable(action):
             func, name = action, action.__name__  # ty: ignore[unresolved-attribute]
         elif hasattr(self.__class__, action):
+            # A method comes off the class, so it gets the admin as its first argument like a function.
             func, name = getattr(self.__class__, action), action
         else:
             try:
                 func, name = self.admin_site.get_action(action), action
             except KeyError:
                 return None
-        description = getattr(func, "short_description", None) or capfirst(name.replace("_", " "))
-        return func, name, description
+        if action_location not in getattr(func, "locations", [ActionLocation.CHANGE_LIST]):
+            return None
+        return self._action(func, name)
 
-    def get_action_choices(self, request: HttpRequest) -> list[dict[str, Any]]:
-        """The actions as the action bar draws them: name, label, icon and whether it destroys."""
+    def get_action_choices(
+        self, request: HttpRequest, action_location: ActionLocation = ActionLocation.CHANGE_LIST
+    ) -> list[dict[str, Any]]:
+        """The actions as the page draws them: name, label, icon and whether it destroys.
+
+        The list labels an action with its plural description, the change form with its description.
+        """
         choices = []
-        for func, name, description in self.get_actions(request).values():
+        for action in self._actions_at(request, action_location).values():
+            if action_location == ActionLocation.CHANGE_LIST:
+                label = action.plural_description
+            else:
+                label = action.description
             choices.append(
                 {
-                    "name": name,
-                    "label": str(description) % model_format_dict(self.opts),
-                    "icon": getattr(func, "icon", ""),
-                    "danger": getattr(func, "danger", False),
+                    "name": action.name,
+                    "label": str(label) % model_format_dict(self.opts),
+                    "icon": getattr(action.func, "icon", ""),
+                    "danger": getattr(action.func, "danger", False),
                 }
             )
         return choices
 
-    def response_action(self, request: HttpRequest, queryset: models.QuerySet[Any]) -> HttpResponse | None:
-        """Run the posted action over the selected rows, or over every filtered row with ``select_across``."""
-        name = request.POST.get("action", "")
-        actions = self.get_actions(request)
+    def response_action(
+        self,
+        request: HttpRequest,
+        queryset: models.QuerySet[Any],
+        action_location: ActionLocation = ActionLocation.CHANGE_LIST,
+    ) -> HttpResponse | None:
+        """Run the posted action over the selected rows, or over every filtered row with ``select_across``.
+
+        The change form posts ``CHANGE_FORM-action`` and runs it over its own row only.
+        """
+        in_list = action_location == ActionLocation.CHANGE_LIST
+        name = request.POST.get("action" if in_list else f"{action_location.value}-action", "")
+        actions = self._actions_at(request, action_location)
         if name not in actions:
             self.message_user(request, _("No action selected."), messages.WARNING)
             return None
-        func = actions[name][0]
         selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
-        select_across = request.POST.get("select_across") == "1"
+        select_across = in_list and request.POST.get("select_across") == "1"
         if not selected and not select_across:
             msg = _("Items must be selected in order to perform actions on them. No items have been changed.")
             self.message_user(request, msg, messages.WARNING)
             return None
         if not select_across:
             queryset = queryset.filter(pk__in=selected)
+        func: Callable[..., Any] = actions[name].func
         response = func(self, request, queryset)
-        if response is not None and hasattr(response, "status_code"):
+        if hasattr(response, "status_code"):
             return response
         return HttpResponseRedirect(request.get_full_path())
 
@@ -970,7 +1078,8 @@ class ModelAdmin(BaseModelAdmin):
     def construct_change_message(
         self, request: HttpRequest, form: forms.ModelForm[Any], formsets: list[Any], add: bool = False
     ) -> list[dict[str, Any]]:
-        return construct_change_message(form, formsets, add)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+        """Django's change message, with the values before and after each changed field."""
+        return history.change_message(form, formsets, add)
 
     def get_deleted_objects(
         self, objs: Any, request: HttpRequest
@@ -1021,40 +1130,14 @@ class ModelAdmin(BaseModelAdmin):
 
     # History
 
-    def log_addition(self, request: HttpRequest, obj: models.Model, message: Any) -> Any:
-        if not _log_entries_installed():
-            return None
-        from django.contrib.admin.models import ADDITION, LogEntry
+    def log_addition(self, request: HttpRequest, obj: models.Model, message: Any) -> None:
+        self.admin_site.history.log(request, [obj], history.ADD, message)
 
-        return LogEntry.objects.log_actions(
-            user_id=cast("int | str | UUID", request.user.pk),
-            queryset=[obj],
-            action_flag=ADDITION,
-            change_message=message,
-            single_object=True,
-        )
+    def log_change(self, request: HttpRequest, obj: models.Model, message: Any) -> None:
+        self.admin_site.history.log(request, [obj], history.CHANGE, message)
 
-    def log_change(self, request: HttpRequest, obj: models.Model, message: Any) -> Any:
-        if not _log_entries_installed():
-            return None
-        from django.contrib.admin.models import CHANGE, LogEntry
-
-        return LogEntry.objects.log_actions(
-            user_id=cast("int | str | UUID", request.user.pk),
-            queryset=[obj],
-            action_flag=CHANGE,
-            change_message=message,
-            single_object=True,
-        )
-
-    def log_deletions(self, request: HttpRequest, queryset: Any) -> Any:
-        if not _log_entries_installed():
-            return None
-        from django.contrib.admin.models import DELETION, LogEntry
-
-        return LogEntry.objects.log_actions(
-            user_id=cast("int | str | UUID", request.user.pk), queryset=queryset, action_flag=DELETION
-        )
+    def log_deletions(self, request: HttpRequest, queryset: Any) -> None:
+        self.admin_site.history.log(request, queryset, history.DELETE)
 
     def message_user(
         self,
@@ -1081,7 +1164,7 @@ class ModelAdmin(BaseModelAdmin):
         if not self.preserve_filters or match is None:
             return ""
         if match.url_name == f"{self.opts.app_label}_{self.opts.model_name}_changelist":
-            preserved = self.get_changelist_instance(request).params.urlencode()
+            preserved = self.get_changelist_instance(request).encoded_params
         else:
             preserved = request.GET.get(PRESERVED_FILTERS_VAR, "")
         return f"{PRESERVED_FILTERS_VAR}={quote_plus(preserved)}" if preserved else ""
@@ -1247,7 +1330,16 @@ class ModelAdmin(BaseModelAdmin):
     def changelist_view(self, request: HttpRequest, extra_context: dict[str, Any] | None = None) -> HttpResponse:
         if not self.has_view_or_change_permission(request):
             raise PermissionDenied
-        cl = self.get_changelist_instance(request)
+        try:
+            cl = self.get_changelist_instance(request)
+            cl.queryset  # noqa: B018
+        except IncorrectLookupParameters:
+            # A lookup that names no field: Django's changelist starts over without the query.
+            if ERROR_FLAG in request.GET:
+                raise
+            msg = _("The address had a filter this list cannot apply. The list shows all rows instead.")
+            self.message_user(request, msg, messages.WARNING)
+            return HttpResponseRedirect(f"{request.path}?{ERROR_FLAG}=1")
         actions = self.get_action_choices(request)
 
         if request.method == "POST" and "action" in request.POST and "_save" not in request.POST:
@@ -1306,7 +1398,15 @@ class ModelAdmin(BaseModelAdmin):
             ),
             **(extra_context or {}),
         )
-        return self.render(request, self._templates(self.change_list_template, "change_list.html"), context)
+        response = self.render(request, self._templates(self.change_list_template, "change_list.html"), context)
+        if (
+            request.method == "GET"
+            and request.headers.get("HX-Request")
+            and cl.encode(request.GET) != cl.encoded_params
+        ):
+            # The address bar shows the filters as Django's links write them, as a reload reads them.
+            response["HX-Push-Url"] = f"{request.path}?{cl.encoded_params}" if cl.encoded_params else request.path
+        return response
 
     def _get_edited_object_pks(self, request: HttpRequest, prefix: str) -> list[str]:
         pk_name = self.opts.pk.name
@@ -1432,11 +1532,25 @@ class ModelAdmin(BaseModelAdmin):
             if not self.has_view_or_change_permission(request, obj):
                 raise PermissionDenied
 
+        actions = [] if add else self.get_action_choices(request, ActionLocation.CHANGE_FORM)
         fieldsets = self.get_fieldsets(request, obj)
         fields = flatten_fieldsets(cast("_FieldsetSpec", fieldsets))
         ModelForm = self.get_form(request, obj, change=not add, fields=fields)  # noqa: N806
         form_validated = False
         if request.method == "POST":
+            # As in Django, an action runs before the change permission is checked, so a view-only
+            # user can run one that allows it.
+            if (
+                actions
+                and f"{ActionLocation.CHANGE_FORM.value}-action" in request.POST
+                and not any(name in request.POST for name in ("_save", "_continue", "_addanother"))
+            ):
+                if request.POST.getlist(ACTION_CHECKBOX_NAME) != [str(cast("models.Model", obj).pk)]:
+                    raise BadRequest
+                response = self.response_action(
+                    request, self.get_queryset(request), action_location=ActionLocation.CHANGE_FORM
+                )
+                return response or HttpResponseRedirect(request.get_full_path())
             if not add and not self.has_change_permission(request, obj):
                 raise PermissionDenied
             form = ModelForm(request.POST, request.FILES, instance=obj)
@@ -1447,7 +1561,7 @@ class ModelAdmin(BaseModelAdmin):
             if refresh:
                 if refresh != "errors":
                     # Empty error lists render the form as posted without validating it.
-                    form._errors = ErrorDict(renderer=form.renderer)
+                    form._errors = ErrorDict(renderer=form.renderer)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
                     for formset in formsets:
                         for inline_form in formset.forms:
                             inline_form._errors = ErrorDict(renderer=inline_form.renderer)
@@ -1507,6 +1621,8 @@ class ModelAdmin(BaseModelAdmin):
             original=obj,
             media=media,
             inline_admin_formsets=inline_formsets,
+            actions=actions,
+            action_checkbox_name=ACTION_CHECKBOX_NAME,
             error_count=error_count,
             errors=error_count,
             is_popup=IS_POPUP_VAR in request.POST or IS_POPUP_VAR in request.GET,
@@ -1541,9 +1657,9 @@ class ModelAdmin(BaseModelAdmin):
         is_popup = context.get("is_popup", False)
         can_save = (has_change and change) or (can_add and add) or editable_inlines
         show_save = context.get("show_save", True) and can_save
-        history = (
-            bool(obj) and not is_popup and _log_entries_installed() and self.has_view_or_change_permission(request, obj)
-        )
+        show_history = bool(obj) and not is_popup and self.has_view_or_change_permission(request, obj)
+        if show_history and obj is not None:
+            context.update(self._history_context(request, obj, 0))
         context.update(
             {
                 "add": add,
@@ -1562,11 +1678,7 @@ class ModelAdmin(BaseModelAdmin):
                 "save_as": self.save_as,
                 "save_on_top": self.save_on_top,
                 "view_on_site_url": None if is_popup else self.get_view_on_site_url(obj),
-                "history_url": self.with_preserved_filters(
-                    request, reverse(self.url_name("history"), args=(quote(obj.pk),))
-                )
-                if history and obj
-                else "",
+                "show_history": show_history,
                 "delete_url": self.with_preserved_filters(
                     request, reverse(self.url_name("delete"), args=(quote(obj.pk),))
                 )
@@ -1644,38 +1756,46 @@ class ModelAdmin(BaseModelAdmin):
             request, self._templates(self.delete_confirmation_template, "delete_confirmation.html"), context
         )
 
+    def _history_context(self, request: HttpRequest, obj: models.Model, start: int) -> dict[str, Any]:
+        """One page of the object's history, and the URL of the next page while older entries exist."""
+        entries = self.admin_site.history.entries(request, obj, start, start + self.history_per_page + 1)
+        more = len(entries) > self.history_per_page
+        url = reverse(self.url_name("history"), args=(quote(obj.pk),))
+        return {
+            "history_entries": entries[: self.history_per_page],
+            "history_next_url": f"{url}?start={start + self.history_per_page}" if more else "",
+        }
+
     def history_view(
         self, request: HttpRequest, object_id: str, extra_context: dict[str, Any] | None = None
     ) -> HttpResponse:
-        if not _log_entries_installed():
-            raise Http404
-        from django.contrib.admin.models import LogEntry
+        """The whole history of one object. The change form shows its first page next to the fields.
 
+        An htmx request for ``?start=`` answers with the next entries only, which the "Show older"
+        button of the panel and of this page swap in.
+        """
         obj = self.get_object(request, unquote(object_id))
         if obj is None:
             return self._get_obj_does_not_exist_redirect(request, object_id)
         if not self.has_view_or_change_permission(request, obj):
             raise PermissionDenied
-        entries = (
-            LogEntry.objects.filter(object_id=unquote(object_id), content_type=get_content_type_for_model(self.model))
-            .select_related("user")
-            .order_by("-action_time")
-        )
-        paginator = self.get_paginator(request, entries, 100)
-        page = paginator.get_page(request.GET.get("p", 1))
+        try:
+            start = max(int(request.GET.get("start", 0)), 0)
+        except ValueError:
+            start = 0
         context = self.page_context(
             request,
             title=_("Change history: %s") % obj,
             subtitle=None,
-            action_list=list(page.object_list),
-            page_obj=page,
-            page_range=list(paginator.get_elided_page_range(page.number, on_each_side=2, on_ends=1)),
             object=obj,
             original=obj,
             change_url=self.with_preserved_filters(request, reverse(self.url_name("change"), args=(quote(obj.pk),))),
             media=self.media,
+            **self._history_context(request, obj, start),
             **(extra_context or {}),
         )
+        if request.headers.get("HX-Request") == "true" and "start" in request.GET:
+            return self.render(request, "formwork_admin/history_entries.html", context)
         return self.render(request, self._templates(self.object_history_template, "object_history.html"), context)
 
 
@@ -1684,7 +1804,7 @@ class InlineModelAdmin(BaseModelAdmin):
 
     model: type[models.Model]
     fk_name: str | None = None
-    formset: type[FormworkBaseInlineFormSet] = FormworkBaseInlineFormSet
+    formset: type[BaseModelFormSet[Any, Any]] = FormworkBaseInlineFormSet
     extra = 3
     min_num: int | None = None
     max_num: int | None = None
@@ -1709,10 +1829,6 @@ class InlineModelAdmin(BaseModelAdmin):
             )
         if self.verbose_name is None:
             self.verbose_name = meta.verbose_name
-
-    @property
-    def media(self) -> forms.Media:
-        return forms.Media()
 
     def get_extra(self, request: HttpRequest, obj: models.Model | None = None, **kwargs: Any) -> int:
         return self.extra
@@ -1757,7 +1873,7 @@ class InlineModelAdmin(BaseModelAdmin):
 
     def get_formset(
         self, request: HttpRequest, obj: models.Model | None = None, **kwargs: Any
-    ) -> type[FormworkBaseInlineFormSet]:
+    ) -> type[BaseModelFormSet[Any, Any]]:
         fields = (
             kwargs.pop("fields")
             if "fields" in kwargs
@@ -1789,6 +1905,11 @@ class InlineModelAdmin(BaseModelAdmin):
         )
         if defaults["fields"] is None and not modelform_defines_fields(defaults["form"]):
             defaults["fields"] = forms.ALL_FIELDS
+        formset = self._formset_factory(defaults)
+        use_formwork_widgets(formset.form, self.admin_site)
+        return formset
+
+    def _formset_factory(self, defaults: dict[str, Any]) -> type[BaseModelFormSet[Any, Any]]:
         return formwork_inlineformset_factory(self.parent_model, self.model, **defaults)
 
     def get_queryset(self, request: HttpRequest) -> models.QuerySet[Any]:

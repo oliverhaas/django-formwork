@@ -19,9 +19,7 @@
       <h2 id="recent-actions" class="font-semibold">{{ _("Recent actions") }}</h2>
     </div>
     <div class="p-3">
-      {% if not log_entries_enabled %}
-      <p class="px-2 py-1 text-sm text-base-content/60">{{ _("Add django.contrib.admin to INSTALLED_APPS to record changes.") }}</p>
-      {% elif not recent_actions %}
+      {% if not recent_actions %}
       <div class="py-6 text-center text-sm text-base-content/50">
         {{ icon("inbox", "mx-auto mb-2 block size-8 opacity-40") }}
         {{ _("Nothing changed yet.") }}
@@ -31,7 +29,7 @@
         {% for action in recent_actions %}
         {% set entry = action.entry %}
         <li>
-          <{{ "a" if action.url else "div" }}{% if action.url %} href="{{ action.url }}"{% endif %} class="flex items-start gap-3 rounded-field px-2 py-1.5{% if action.url %} transition-colors hover:bg-base-200{% endif %}">
+          <{{ "a" if action.url else "div" }}{% if action.url %} href="{{ action.url }}"{% endif %} class="flex items-start gap-3 rounded-field px-2 py-1.5{% if action.url %} transition-colors hover:bg-base-content/5{% endif %}">
             <span class="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full {{ {"add": "bg-success/15 text-success", "change": "bg-info/15 text-info", "delete": "bg-error/15 text-error"}[action.kind] }}">
               {{ icon({"add": "plus", "change": "pencil", "delete": "trash"}[action.kind], "size-3.5") }}
             </span>
@@ -39,7 +37,7 @@
               <span class="block truncate text-sm{% if action.kind == "delete" %} text-base-content/60 line-through{% endif %}">{{ entry.object_repr }}</span>
               <span class="block truncate text-xs text-base-content/50">
                 {{ entry.content_type.name|capfirst if entry.content_type else _("Unknown content") }}
-                · <time datetime="{{ entry.action_time.isoformat() }}" title="{{ entry.action_time|datetime }}">{{ entry.action_time|ago }}</time>
+                · <time datetime="{{ entry.time.isoformat() }}" title="{{ entry.time|datetime }}">{{ entry.time|ago }}</time>
               </span>
             </span>
           </{{ "a" if action.url else "div" }}>

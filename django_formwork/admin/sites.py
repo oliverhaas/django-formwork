@@ -19,18 +19,27 @@ from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db.models.base import ModelBase
-from django.http import FileResponse, Http404, HttpResponse, HttpResponseBase, HttpResponseRedirect
+from django.http import (
+    FileResponse,
+    Http404,
+    HttpResponse,
+    HttpResponseBase,
+    HttpResponsePermanentRedirect,
+    HttpResponseRedirect,
+)
 from django.shortcuts import get_object_or_404
-from django.urls import NoReverseMatch, include, path, re_path, reverse
+from django.urls import NoReverseMatch, Resolver404, include, path, re_path, resolve, reverse
 from django.utils.functional import LazyObject, empty
 from django.utils.module_loading import import_string
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 from django.views.decorators.cache import never_cache
+from django.views.decorators.common import no_append_slash
 from django.views.decorators.csrf import csrf_protect
 
 from django_formwork.admin.actions import delete_selected
+from django_formwork.admin.history import DELETE, History, ModelHistory
 from django_formwork.admin.jinja import AdminTemplateResponse
 from django_formwork.admin.options import ModelAdmin
 from django_formwork.renderers import FormworkRenderer
@@ -106,6 +115,7 @@ class AdminSite:
     site_url: str | None = "/"
     empty_value_display = "-"
     enable_nav_sidebar = True
+    final_catch_all_view = True
 
     login_form: type[AuthenticationForm] | None = None
     password_change_form: type[PasswordChangeForm] = AdminPasswordChangeForm
@@ -126,6 +136,8 @@ class AdminSite:
     alpine_script = "https://cdn.jsdelivr.net/npm/alpinejs@3.15.0/dist/cdn.min.js"
     #: DaisyUI themes the theme switch offers; the first is the default.
     themes: Sequence[str] = ("light", "dark")
+    #: Where the history of changes goes: the admin's own table, or ``PghistoryHistory()`` for pghistory.
+    history: History = ModelHistory()
 
     def __init__(self, name: str = "admin") -> None:
         self._registry: dict[type[models.Model], ModelAdmin] = {}
@@ -260,7 +272,8 @@ class AdminSite:
                     response["HX-Redirect"] = f"{login_url}?{REDIRECT_FIELD_NAME}={request.get_full_path()}"
                     return response
                 return redirect_to_login(request.get_full_path(), login_url)
-            return view(request, *args, **kwargs)
+            with self.history.context(request):
+                return view(request, *args, **kwargs)
 
         if not cacheable:
             inner = never_cache(inner)
@@ -295,6 +308,8 @@ class AdminSite:
         if app_labels:
             pattern = r"^(?P<app_label>" + "|".join(map(re.escape, sorted(app_labels))) + ")/$"
             urlpatterns.append(re_path(pattern, wrap(self.app_index), name="app_list"))
+        if self.final_catch_all_view:
+            urlpatterns.append(re_path(r"(?P<url>.*)$", wrap(self.catch_all_view)))
         return urlpatterns
 
     @property
@@ -324,7 +339,6 @@ class AdminSite:
             "alpine_script": self.alpine_script,
             "themes": self.themes,
             "messages": messages.get_messages(request),
-            "log_entries_enabled": apps.is_installed("django.contrib.admin"),
             # htmx morphs the page content as one piece; htmx 4 names the target as ``tag#id``.
             "content_only": request.headers.get("HX-Request") == "true"
             and request.headers.get("HX-Target", "").rpartition("#")[2] == "content",
@@ -399,26 +413,18 @@ class AdminSite:
 
     def _recent_actions(self, request: HttpRequest) -> list[dict[str, Any]]:
         """The user's last ten changes, each linked to its object on this site while it exists."""
-        if not apps.is_installed("django.contrib.admin"):
-            return []
-        from django.contrib.admin.models import LogEntry
-
-        entries = LogEntry.objects.filter(user_id=cast("int | str", request.user.pk)).select_related("content_type")[
-            :10
-        ]
         actions = []
-        for entry in entries:
-            kind = "add" if entry.is_addition() else "change" if entry.is_change() else "delete"
+        for entry in self.history.recent(request, 10):
             link = ""
             content_type = entry.content_type
-            if kind != "delete" and content_type is not None:
+            if entry.action != DELETE and content_type is not None:
                 with suppress(NoReverseMatch):
                     link = reverse(
                         f"{self.name}:{content_type.app_label}_{content_type.model}_change",
-                        args=(quote(cast("str", entry.object_id)),),
+                        args=(quote(entry.object_id),),
                         current_app=self.name,
                     )
-            actions.append({"entry": entry, "kind": kind, "url": link})
+            actions.append({"entry": entry, "kind": entry.action, "url": link})
         return actions
 
     def app_index(
@@ -441,6 +447,21 @@ class AdminSite:
             self.app_index_template or [f"formwork_admin/{app_label}/app_index.html", "formwork_admin/app_index.html"],
             context,
         )
+
+    @no_append_slash
+    def catch_all_view(self, request: HttpRequest, url: str) -> HttpResponse:
+        """Any other URL under the site: the same URL with a slash when that one exists, else 404.
+
+        It sits behind the login check, so a signed-out visitor cannot tell which models are registered.
+        """
+        if settings.APPEND_SLASH and not url.endswith("/"):
+            try:
+                match = resolve(f"{request.path_info}/", getattr(request, "urlconf", None))
+            except Resolver404:
+                match = None
+            if match is not None and getattr(match.func, "should_append_slash", True):
+                return HttpResponsePermanentRedirect(request.get_full_path(force_append_slash=True))
+        raise Http404
 
     def login(self, request: HttpRequest, extra_context: dict[str, Any] | None = None) -> HttpResponse:
         if request.method == "GET" and self.has_permission(request):

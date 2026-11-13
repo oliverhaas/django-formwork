@@ -1,10 +1,14 @@
 /**
- * columns.js: fits the changelist's columns to its width.
+ * columns.js: fits the changelist's columns to its width and its rows to the window.
  *
  * Columns that don't fit hide from the right behind a "+N" toggle that shows them all.
  * The checkbox, the first column and the link columns always show, and the first two
  * stay in view while the table scrolls sideways. The choice to show all columns is
  * kept per model.
+ *
+ * On a window of at least 40rem by FIT_MIN of rows, the table ends above the window's
+ * bottom edge: its rows scroll inside it under the header, and the page keeps its
+ * search, filters and pagination in view.
  *
  * Load it as a classic script in <head>. It fits the table while the page parses, and
  * the changelist holds its first frame until the table is parsed (<link rel="expect">),
@@ -15,10 +19,14 @@
   const SHADOW = "light-dark(rgb(0 0 0 / 0.14), rgb(0 0 0 / 0.55))";
   const TABLE = "#changelist-table";
   const ROWS = `${TABLE} > :is(thead, tbody) > tr:not([data-empty])`;
+  const HEAD = `${TABLE} > thead > tr:not([data-empty])`;
+  // The least height worth scrolling the rows in; below it the page scrolls as a whole.
+  const FIT_MIN = 288;
 
-  // Every rule lives in one adopted sheet, which a morph of the page content leaves alone.
+  // Every rule lives in an adopted sheet, which a morph of the page content leaves alone.
   const sheet = new CSSStyleSheet();
-  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  const heights = new CSSStyleSheet();
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet, heights];
 
   const state = {
     scroller: null,
@@ -28,11 +36,14 @@
     // An error in a column the cut hides shows every column, until the user folds them again.
     forced: null,
     hidden: [],
-    folded: false,
     pins: [],
     start: false,
     end: false,
+    // The rows are scrolled under the header.
+    below: false,
     rules: "",
+    height: "",
+    key: "",
   };
 
   const resized = new ResizeObserver(() => fit());
@@ -101,11 +112,6 @@
       state.forced = hidden.some((i) => table.querySelector(`:scope > tbody > tr > :nth-child(${i + 1})[data-invalid]`));
     }
     state.hidden = hidden;
-    const editable = cells.flatMap((_, i) =>
-      table.querySelector(`:scope > tbody > tr > :nth-child(${i + 1})[data-editable]`) ? [i] : [],
-    );
-    // With every editable column hidden there is nothing to save.
-    state.folded = editable.length > 0 && editable.every((i) => hidden.includes(i));
     // The cells up to the first column stay in view while the table scrolls.
     state.pins = [];
     let inset = 0;
@@ -140,6 +146,7 @@
         `${ROWS} > :nth-child(${position}) { position: sticky; inset-inline-start: ${inset}px; z-index: 1; background-color: inherit }`,
     );
     const edge = state.pins.at(-1).position;
+    const under = state.below ? `, 0 6px 8px -8px ${SHADOW}` : "";
     if (state.start) rules.push(`${ROWS} > :nth-child(${edge}) { box-shadow: ${8 * dir}px 0 8px -8px ${SHADOW} }`);
     if (state.hidden.length) {
       rules.push(
@@ -149,8 +156,16 @@
       );
       if (state.end) rules.push(`${ROWS} > [data-col-toggle] { box-shadow: ${-8 * dir}px 0 8px -8px ${SHADOW} }`);
       if (!open()) rules.push(`${ROWS} > :is(${state.hidden.map((i) => `:nth-child(${i + 1})`).join(", ")}) { display: none }`);
-      if (!open() && state.folded) rules.push("#changelist-form [data-save-bar] { display: none }");
     }
+    // A header cell with an edge shadow keeps the one toward the rows as well.
+    if (state.start) rules.push(`${HEAD} > :nth-child(${edge}) { box-shadow: ${8 * dir}px 0 8px -8px ${SHADOW}${under} }`);
+    if (state.hidden.length && state.end) {
+      rules.push(`${HEAD} > [data-col-toggle] { box-shadow: ${-8 * dir}px 0 8px -8px ${SHADOW}${under} }`);
+    }
+    // The header's pinned cells cover the header cells and the rows that scroll under them.
+    const corners = state.pins.map(({ position }) => `:nth-child(${position})`);
+    if (state.hidden.length) corners.push("[data-col-toggle]");
+    rules.push(`${HEAD} > :is(${corners.join(", ")}) { z-index: 3 }`);
     const text = rules.join("\n");
     if (text !== state.rules) {
       sheet.replaceSync(text);
@@ -168,6 +183,55 @@
     state.start = start;
     state.end = end;
     paint();
+  };
+
+  // The rows take the window's height that the page leaves them: the space under the
+  // scroller's top, less the card's footer and the page's bottom padding, which holds the
+  // floating bars. The header cells stick to the scroller's top in either case, and show
+  // a shadow while rows are scrolled under them.
+  const height = () => {
+    const el = document.getElementById("changelist-scroll");
+    const card = el?.closest(".card");
+    const main = document.getElementById("content");
+    if (!el || !card || !main) return;
+    const rules = [`${HEAD} > * { position: sticky; top: 0; z-index: 2; background-color: inherit }`];
+    if (!window.frameElement && window.matchMedia("(min-width: 40rem)").matches) {
+      const box = el.getBoundingClientRect();
+      const after = card.getBoundingClientRect().bottom - box.bottom + parseFloat(getComputedStyle(main).paddingBottom);
+      const room = Math.floor(window.innerHeight - (box.top + window.scrollY) - after);
+      if (room >= FIT_MIN) rules.push(`#changelist-scroll { max-height: ${room}px }`);
+    }
+    if (state.below) rules.push(`${HEAD} > * { box-shadow: 0 6px 8px -8px ${SHADOW} }`);
+    const text = rules.join("\n");
+    if (text !== state.height) {
+      heights.replaceSync(text);
+      state.height = text;
+    }
+  };
+  const layout = new ResizeObserver(() => height());
+  window.addEventListener("resize", height, { passive: true });
+
+  const scrolled = (el) => {
+    const below = el.scrollTop > 0;
+    if (below === state.below) return;
+    state.below = below;
+    height();
+    if (el === state.scroller) paint();
+  };
+
+  // The rows of a new list start at the top; a morph of the same list keeps their place.
+  // Whatever moves the table's top, a message or the filters, resizes the page content.
+  const watch = () => {
+    const el = document.getElementById("changelist-scroll");
+    const key = el?.closest("[data-total]")?.id ?? "";
+    if (el && key !== state.key) {
+      if (state.key) el.scrollTop = 0;
+      state.key = key;
+    }
+    layout.disconnect();
+    const main = document.getElementById("content");
+    if (main) layout.observe(main);
+    height();
   };
 
   // A morph resets the button's attributes to the server's, so each fit sets them again.
@@ -203,17 +267,26 @@
   document.addEventListener("DOMContentLoaded", () => {
     parsing.disconnect();
     measure();
+    watch();
   });
 
   // A swap that brings in new results fits them afresh; one that fills a dialog leaves the table as it is.
   document.addEventListener("htmx:after:swap", (event) => {
     const target = event.detail?.ctx?.target;
-    if (!target?.contains || target.contains(document.getElementById("changelist-scroll"))) measure();
+    if (!target?.contains || target.contains(document.getElementById("changelist-scroll"))) {
+      measure();
+      watch();
+    }
   });
-  document.fonts?.addEventListener("loadingdone", measure);
+  document.fonts?.addEventListener("loadingdone", () => {
+    measure();
+    height();
+  });
   document.addEventListener(
     "scroll",
     (event) => {
+      if (event.target.id !== "changelist-scroll") return;
+      scrolled(event.target);
       if (event.target === state.scroller) edges();
     },
     { capture: true, passive: true },

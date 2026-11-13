@@ -12,7 +12,6 @@ SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
-    "django.contrib.admin",
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.forms",

@@ -67,6 +67,10 @@
 <form id="changelist-filters" method="get" action="{{ request.path }}" role="search" class="mb-4"
       hx-get="{{ request.path }}" hx-target="#content" hx-swap="innerMorph" hx-push-url="true"
       x-data="formworkFilters" data-open="{{ "1" if filters_open else "" }}" @input="typed()" @change="changed()">
+  {#- Lookups no filter reads, such as a link from a related page; they stay while the filters change. #}
+  {% for key, values in cl.remaining_lookups.items() %}{% for value in values %}
+  <input type="hidden" name="{{ key }}" value="{{ value }}">
+  {% endfor %}{% endfor %}
   <div class="flex items-center gap-2">
     {% if cl.search_field is not none %}
     <div class="min-w-0 flex-1" data-search>{{ cl.search_field }}</div>
@@ -121,7 +125,7 @@
 
 {% block result_list %}
 {# The selection lives outside #changelist, so a morph that brings in new rows keeps it. #}
-<div x-data="formworkChangelist">
+<div x-data="formworkChangelist" data-discard-question="{{ _("Discard your unsaved changes?") }}">
   {% include "formwork_admin/change_list_results.html" %}
 </div>
 {% endblock %}

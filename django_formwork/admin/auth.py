@@ -29,8 +29,8 @@ from django.views.decorators.debug import sensitive_post_parameters
 
 from django_formwork.admin.decorators import register
 from django_formwork.admin.options import ModelAdmin
-from django_formwork.admin.widgets import IS_POPUP_VAR
-from django_formwork.renderers import FormworkRenderer
+from django_formwork.admin.widgets import IS_POPUP_VAR, RADIO_ROW_CLASS
+from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.widgets import PasswordInput
 
 if TYPE_CHECKING:
@@ -90,7 +90,7 @@ class PermissionMultipleChoiceField(forms.ModelMultipleChoiceField):
 
 
 class _PasswordFieldsMixin:
-    # Django's password forms draw on formwork's renderer, with the reveal button on each password.
+    # Puts the reveal button on each of Django's password inputs.
     usable_password_help: Any = auth_forms.SetUnusablePasswordMixin.usable_password_help_text
     fields: dict[str, forms.Field]
 
@@ -103,20 +103,16 @@ class _PasswordFieldsMixin:
         usable = self.fields.get("usable_password")
         if usable is not None:
             # Django's field is a RadioSelect with the classes of Django's admin CSS.
-            usable.widget.attrs["class"] = "flex-row flex-wrap gap-x-5"
+            usable.widget.attrs["class"] = RADIO_ROW_CLASS
             usable.help_text = self.usable_password_help
 
 
-class AdminUserCreationForm(_PasswordFieldsMixin, auth_forms.AdminUserCreationForm):
+class AdminUserCreationForm(_PasswordFieldsMixin, auth_forms.AdminUserCreationForm, FormworkModelForm):
     """Django's form to add a user, with the password-based authentication switch."""
 
-    default_renderer = FormworkRenderer
 
-
-class AdminPasswordChangeForm(_PasswordFieldsMixin, auth_forms.AdminPasswordChangeForm):
+class AdminPasswordChangeForm(_PasswordFieldsMixin, auth_forms.AdminPasswordChangeForm, FormworkForm):
     """Django's form to set another user's password, or to turn password-based authentication off."""
-
-    default_renderer = FormworkRenderer
 
     # Django's help text adds the warning as HTML; the warning is plain text here.
     usable_password_help = format_lazy(
@@ -126,10 +122,9 @@ class AdminPasswordChangeForm(_PasswordFieldsMixin, auth_forms.AdminPasswordChan
     )
 
 
-class UserChangeForm(auth_forms.UserChangeForm):
+class UserChangeForm(auth_forms.UserChangeForm, FormworkModelForm):
     """Django's user form; the password shows its hash summary and links to the password page."""
 
-    default_renderer = FormworkRenderer
     password = auth_forms.ReadOnlyPasswordHashField(
         label=_("Password"),
         help_text=_("Raw passwords are not stored, so there is no way to see the user’s password."),
@@ -179,6 +174,10 @@ class UserAdmin(ModelAdmin):
     search_fields = ("username", "first_name", "last_name", "email")
     ordering = ("username",)
     filter_horizontal = ("groups", "user_permissions")
+
+    def lookup_allowed(self, lookup: str, value: str, request: HttpRequest) -> bool:
+        # A query on the hash would read it out one character at a time.
+        return not lookup.startswith("password") and super().lookup_allowed(lookup, value, request)
 
     def get_fieldsets(self, request: HttpRequest, obj: models.Model | None = None) -> Any:
         if not obj:

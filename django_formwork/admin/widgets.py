@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
+from functools import partial
+from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
 from django.apps import apps
+from django.contrib.admin import widgets as django_widgets
 from django.contrib.admin.utils import quote
 from django.core.exceptions import FieldDoesNotExist, PermissionDenied
 from django.db import models
@@ -44,10 +47,13 @@ __all__ = [
     "RELATION_SEARCH_KEY",
     "AdminDateTimeWidget",
     "AdminDateWidget",
+    "AdminSplitDateTime",
     "RelatedWidgetWrapper",
     "date_input_format",
+    "formwork_widget",
     "relation_queryset",
     "relation_widget",
+    "use_formwork_widgets",
 ]
 
 
@@ -250,6 +256,17 @@ class AdminDateWidget(DatePicker):
         super().__init__(attrs, format=date_input_format()[0])
 
 
+class NullBooleanSelect(Select):
+    """The dropdown over Unknown, Yes and No; it reads and posts values as Django's ``NullBooleanSelect``."""
+
+    format_value = forms.NullBooleanSelect.format_value  # type: ignore[assignment]  # ty: ignore[invalid-method-override]
+    value_from_datadict = forms.NullBooleanSelect.value_from_datadict
+
+    def __init__(self, attrs: dict[str, Any] | None = None) -> None:
+        choices = (("unknown", _("Unknown")), ("true", _("Yes")), ("false", _("No")))
+        super().__init__(attrs, choices=choices, show_search=False)
+
+
 # The native control, to the second, so a value nobody touched saves unchanged.
 _TIME_ATTRS = {"type": "time", "step": 1}
 
@@ -298,3 +315,148 @@ FORMFIELD_FOR_DBFIELD_DEFAULTS: dict[type[models.Field[Any, Any]], dict[str, Any
     models.ImageField: {"widget": ClearableFileInput(attrs={"accept": "image/*"})},
     models.BooleanField: {"widget": ToggleInput},
 }
+
+
+class AdminSplitDateTime(AdminDateTimeWidget):
+    """The calendar dropdown and the time input, posting the day and the time apart for a ``SplitDateTimeField``."""
+
+    value_from_datadict = forms.MultiWidget.value_from_datadict
+
+
+# The classes Django's admin widgets add for its own CSS and JavaScript.
+_DJANGO_CLASSES = frozenset(
+    {
+        "vDateField",
+        "vTimeField",
+        "vLargeTextField",
+        "vTextField",
+        "vURLField",
+        "vIntegerField",
+        "vBigIntegerField",
+        "vUUIDField",
+        "radiolist",
+        "inline",
+        "selectfilter",
+        "selectfilterstacked",
+        "admin-autocomplete",
+    }
+)
+
+# A choice field with radio buttons in a row: Django's HORIZONTAL radio_fields, or its "radiolist inline" class.
+RADIO_ROW_CLASS = "flex-row flex-wrap gap-x-5"
+
+# Builds formwork's widget from the attrs, Django's widget, the form field and the admin site.
+_Builder = Callable[[dict[str, Any], Any, forms.Field, Any], forms.Widget]
+
+
+def _attrs_only(build: Callable[[dict[str, Any]], forms.Widget]) -> _Builder:
+    return lambda attrs, _widget, _field, _admin_site: build(attrs)
+
+
+def _with_class(attrs: dict[str, Any], css_class: str) -> dict[str, Any]:
+    return {**attrs, "class": f"{attrs['class']} {css_class}" if attrs.get("class") else css_class}
+
+
+def _time_input(attrs: dict[str, Any]) -> forms.Widget:
+    return forms.TimeInput({**_TIME_ATTRS, **attrs}, format="%H:%M:%S")
+
+
+def _textarea(attrs: dict[str, Any]) -> forms.Widget:
+    # Django's Textarea defaults of 40 columns and 10 rows are strings; numbers come from the project.
+    attrs = {key: value for key, value in attrs.items() if (key, value) not in {("cols", "40"), ("rows", "10")}}
+    return Textarea({"rows": 4, **attrs})
+
+
+def _radio_select(attrs: dict[str, Any], widget: Any, _field: forms.Field, _admin_site: Any) -> forms.Widget:
+    if "inline" in str(widget.attrs.get("class", "")).split():
+        attrs = _with_class(attrs, RADIO_ROW_CLASS)
+    return forms.RadioSelect(attrs)
+
+
+def _split_datetime(attrs: dict[str, Any], _widget: Any, field: forms.Field, _admin_site: Any) -> forms.Widget:
+    return AdminSplitDateTime(attrs) if isinstance(field, forms.MultiValueField) else AdminDateTimeWidget(attrs)
+
+
+def _relation(attrs: dict[str, Any], widget: Any, field: forms.Field, admin_site: Any) -> forms.Widget:
+    # The autocomplete widgets name the model field; the raw id widgets name its relation.
+    db_field = widget.field if hasattr(widget, "field") else widget.rel.field
+    single = isinstance(db_field, models.ForeignKey)
+    return relation_widget(
+        db_field,
+        admin_site,
+        searchable=admin_site.is_searchable(db_field.remote_field.model),
+        attrs=attrs,
+        **({"allow_clear": not field.required} if single else {}),
+    )
+
+
+_FORMWORK_WIDGETS: dict[type[forms.Widget], _Builder] = {
+    django_widgets.BaseAdminDateWidget: _attrs_only(AdminDateWidget),
+    django_widgets.AdminDateWidget: _attrs_only(AdminDateWidget),
+    django_widgets.BaseAdminTimeWidget: _attrs_only(_time_input),
+    django_widgets.AdminTimeWidget: _attrs_only(_time_input),
+    django_widgets.AdminSplitDateTime: _split_datetime,
+    django_widgets.AdminRadioSelect: _radio_select,
+    django_widgets.AdminTextareaWidget: _attrs_only(_textarea),
+    django_widgets.AdminTextInputWidget: _attrs_only(TextInput),
+    django_widgets.AdminEmailInputWidget: _attrs_only(partial(TextInput, input_type="email")),
+    django_widgets.AdminURLFieldWidget: _attrs_only(partial(TextInput, input_type="url")),
+    django_widgets.AdminIntegerFieldWidget: _attrs_only(forms.NumberInput),
+    django_widgets.AdminBigIntegerFieldWidget: _attrs_only(forms.NumberInput),
+    django_widgets.AdminUUIDInputWidget: _attrs_only(lambda attrs: TextInput(_with_class(attrs, "font-mono"))),
+    django_widgets.AdminFileWidget: _attrs_only(ClearableFileInput),
+    django_widgets.FilteredSelectMultiple: _attrs_only(SelectMultiple),
+    django_widgets.AutocompleteSelect: _relation,
+    django_widgets.AutocompleteSelectMultiple: _relation,
+    django_widgets.ForeignKeyRawIdWidget: _relation,
+    django_widgets.ManyToManyRawIdWidget: _relation,
+}
+
+
+def formwork_widget(widget: forms.Widget, field: forms.Field, admin_site: Any) -> forms.Widget | None:
+    """Formwork's widget in place of one of Django's admin widgets on ``field``, or ``None`` for any other widget.
+
+    Only Django's own classes are replaced; a subclass keeps its markup and scripts. The new widget
+    keeps the attrs, without the classes that only Django's admin CSS and JavaScript read."""
+    kind = type(widget)
+    if kind is django_widgets.RelatedFieldWidgetWrapper or kind is RelatedWidgetWrapper:
+        wrapper = cast("Any", widget)
+        inner = formwork_widget(wrapper.widget, field, admin_site)
+        if inner is None and kind is RelatedWidgetWrapper:
+            return None
+        return RelatedWidgetWrapper(
+            inner or wrapper.widget,
+            wrapper.rel,
+            admin_site,
+            can_add_related=bool(wrapper.can_add_related),
+            can_change_related=wrapper.can_change_related,
+            can_view_related=wrapper.can_view_related,
+        )
+    build = _FORMWORK_WIDGETS.get(kind)
+    if build is None:
+        return None
+    # Django's wrapper marks the widget it wraps for its own JavaScript.
+    attrs = {key: value for key, value in widget.attrs.items() if key != "data-context"}
+    classes = [name for name in str(attrs.pop("class", "")).split() if name not in _DJANGO_CLASSES]
+    if classes:
+        attrs["class"] = " ".join(classes)
+    new = build(attrs, widget, field, admin_site)
+    # What Field.__init__ sets on the widget it gets.
+    new.is_required = field.required
+    new.is_localized = bool(field.localize)
+    new.attrs.update(field.widget_attrs(new))
+    if isinstance(field, forms.ChoiceField):
+        new.choices = field.choices  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    return new
+
+
+def use_formwork_widgets(form_class: type[forms.ModelForm[Any]], admin_site: Any) -> None:
+    """Puts formwork's widgets in place of Django's admin widgets on a form class the admin built.
+
+    Each such field is copied, so the class the project declared keeps its own."""
+    for name, field in form_class.base_fields.items():
+        widget = formwork_widget(field.widget, field, admin_site)
+        if widget is not None:
+            swapped = copy.copy(field)
+            swapped.widget = widget
+            form_class.base_fields[name] = swapped

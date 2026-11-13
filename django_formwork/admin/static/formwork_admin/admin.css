@@ -54,6 +54,17 @@
   @apply ms-auto max-w-32 text-end;
 }
 
+/* The list's floating bar parts its groups with a line in the gap before each group. The bar clips
+   its sides, so a group that wraps to the start of a line leaves its line outside, and no line hangs
+   at an edge. The clip reaches far above and below, so a tooltip still shows. */
+[data-dock] {
+  clip-path: inset(-100vh 0);
+}
+
+[data-dock-part] {
+  @apply relative before:absolute before:-start-1.5 before:top-1/2 before:h-6 before:w-px before:-translate-y-1/2 before:bg-base-300;
+}
+
 /* An inline row marked for deletion fades and strikes its values. */
 [data-inline-row]:has([name$="-DELETE"]:checked) :is(td:not(:last-child), [data-inline-fields]) {
   @apply line-through opacity-45;

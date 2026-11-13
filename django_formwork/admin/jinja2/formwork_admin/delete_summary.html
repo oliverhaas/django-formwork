@@ -1,5 +1,7 @@
-{# The body of both delete confirmations. Reads ``to_delete``, ``model_count``, ``perms_lacking`` and ``protected``. #}
+{#- The body of both delete confirmations. Reads ``to_delete``, ``model_count``, ``perms_lacking``, ``protected``
+    and ``delete_confirmation_max_display``, which lists no objects at 0, as Django's pages do. #}
 {% import "formwork_admin/macros.html" as m %}
+{% set listed = delete_confirmation_max_display is none or delete_confirmation_max_display > 0 %}
 {% if perms_lacking %}
 <div role="alert" class="alert alert-warning alert-soft items-start">
   {{ icon("lock", "size-5") }}
@@ -13,7 +15,9 @@
   {{ icon("shield-exclamation-point", "size-5") }}
   <span class="text-sm font-medium">{{ _("These related objects are protected:") }}</span>
 </div>
+{% if listed %}
 <div class="rounded-box border border-base-300 px-4 py-3">{{ m.nested(protected, delete_confirmation_max_display) }}</div>
+{% endif %}
 {% else %}
 {% if model_count %}
 <div class="flex flex-wrap gap-2">
@@ -24,6 +28,7 @@
   {% endfor %}
 </div>
 {% endif %}
+{% if listed %}
 <details class="group/del rounded-box border border-base-300"{% if to_delete|length < 12 %} open{% endif %}>
   <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
     {{ icon("chevron-right", "size-4 text-base-content/50 transition-transform group-open/del:rotate-90") }}
@@ -31,4 +36,5 @@
   </summary>
   <div class="max-h-96 overflow-y-auto border-t border-base-300 px-4 py-3">{{ m.nested(to_delete, delete_confirmation_max_display) }}</div>
 </details>
+{% endif %}
 {% endif %}

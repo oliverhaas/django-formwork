@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from django_formwork.admin.options import (
         HORIZONTAL,
         VERTICAL,
+        Action,
+        ActionLocation,
         ModelAdmin,
         StackedInline,
         TabularInline,
@@ -33,6 +35,8 @@ if TYPE_CHECKING:
     from django_formwork.admin.sites import AdminSite, site
 
 _EXPORTS = {
+    "Action": "django_formwork.admin.options",
+    "ActionLocation": "django_formwork.admin.options",
     "AdminSite": "django_formwork.admin.sites",
     "BooleanFieldListFilter": "django.contrib.admin.filters",
     "ChoicesFieldListFilter": "django.contrib.admin.filters",
@@ -58,6 +62,8 @@ _EXPORTS = {
 __all__ = [
     "HORIZONTAL",
     "VERTICAL",
+    "Action",
+    "ActionLocation",
     "AdminSite",
     "BooleanFieldListFilter",
     "ChoicesFieldListFilter",
@@ -81,17 +87,32 @@ __all__ = [
 
 
 def autodiscover() -> None:
-    """Import every installed app's admin module (``FORMWORK_ADMIN_AUTODISCOVER``, ``admin`` by default)."""
+    """Import every installed app's admin module (``FORMWORK_ADMIN_AUTODISCOVER``, ``admin`` by default).
+
+    Django's own apps are skipped: their admin modules register on the site of ``django.contrib.admin``,
+    which a project with only this admin does not install.
+    """
     from django.apps import apps
     from django.conf import settings
-    from django.utils.module_loading import autodiscover_modules
+    from django.utils.module_loading import module_has_submodule
 
     from django_formwork.admin.sites import site
 
     # User and Group register first, so an app's admin module can unregister them.
     if apps.is_installed("django.contrib.auth"):
         import_module("django_formwork.admin.auth")
-    autodiscover_modules(getattr(settings, "FORMWORK_ADMIN_AUTODISCOVER", "admin"), register_to=site)
+    module = getattr(settings, "FORMWORK_ADMIN_AUTODISCOVER", "admin")
+    for app_config in apps.get_app_configs():
+        if app_config.name.startswith("django.contrib."):
+            continue
+        registry = dict(site._registry)
+        try:
+            import_module(f"{app_config.name}.{module}")
+        except Exception:
+            # A failed import runs again on the next request, so it must not leave half its registrations.
+            site._registry = registry
+            if module_has_submodule(app_config.module, module):
+                raise
 
 
 def __getattr__(name: str) -> Any:

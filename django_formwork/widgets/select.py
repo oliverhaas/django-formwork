@@ -254,6 +254,10 @@ class SearchableSelectMixin(_SelectBase):
         if isinstance(choices, ModelChoiceIterator):
             if choices.field.empty_label is not None:
                 blank.append(("", choices.field.empty_label))
+            # django-filter's option for rows without a related row.
+            field: Any = choices.field
+            if getattr(field, "null_label", None) is not None:
+                blank.append((field.null_value, field.null_label))
             key = choices.field.to_field_name or "pk"
             # One extra row tells whether more exist, so no COUNT runs.
             page = list(choices.queryset[: limit + 1])
