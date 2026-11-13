@@ -1277,8 +1277,9 @@
   footer counts them. A typed date can be in the format the input shows, in a
   <code>DATE_INPUT_FORMATS</code> format or ISO, and month names can be short or lowercase.
   <code>presets=True</code> adds Today, Past 7 days, This month and This year buttons, and a
-  function of today gives other ranges. <code>DateTimeRangePicker</code> adds a start and an end
-  time under the calendar.</li>
+  function of today gives other ranges. <code>choices</code> adds options that are not a range,
+  such as No date, posted as a third value. <code>DateTimeRangePicker</code> adds a start and an
+  end time under the calendar.</li>
 <li><code>DateTimeRangeField</code>, which cleans to a <code>DateTimeRange(start, end)</code> of two datetimes
   and uses <code>DateTimeRangePicker</code>.</li>
 <li><code>ClearableFileInput</code>: a file upload in one row, as high as a text input. It shows the
@@ -1287,8 +1288,13 @@
   It posts the same fields as Django's widget, so <code>widget=widgets.ClearableFileInput</code>
   is the only change a form needs.</li>
 <li><code>Select</code> and <code>SelectMultiple</code> take <code>counts</code>, a mapping of option values to numbers.
-  Each option shows its number at the end of the row, as a faceted filter does, and an
-  option with 0 is dimmed.</li>
+  Each option shows its number in a badge at the end of the row, as a faceted filter
+  does, and an option with 0 is dimmed.</li>
+<li><code>data-formwork-dirty</code> marks a changed field outside a fieldset, such as a widget in a
+  table cell: put <code>data-formwork-field</code> on the element around it. A field that the
+  server renders with <code>data-formwork-changed</code> stays marked, so the page can start from
+  posted values after a failed save. The form sends a <code>formwork:dirty</code> event with the
+  number of changed fields. See <a href="../forms/#changed-field-highlight">Forms</a>.</li>
 <li><code>django_formwork.admin</code> (experimental): a Django admin on formwork forms, django-filter,
   htmx and Jinja2, styled with DaisyUI. It keeps the options, hooks, URL names and
   permissions of <code>django.contrib.admin</code>, so an <code>admin.py</code> ports by importing
@@ -1297,14 +1303,25 @@
   exports in a background task, so run <code>migrate</code> after you add the app. With
   <code>import_formats</code> set, a list also imports CSV, Excel or JSON files: a preview shows
   the new, changed and invalid rows before anything is saved. Columns that do
-  not fit the width of a list hide behind a button that shows them all. With
+  not fit the width of a list hide behind a button that shows them all. A long list
+  fits the window, and its rows scroll under the header. In a list with
+  <code>list_editable</code>, a changed cell shows in the accent color, and a bar at the bottom of
+  the window counts the changes and saves or discards them. With
   <code>django.contrib.auth</code> installed, the admin has pages for users and groups, with the
   password page of Django's user admin. A Show counts switch in the filter row shows
   the number of rows for each filter option, as <code>show_facets</code> does in Django. Dates are
   typed in the language's first <code>DATE_INPUT_FORMATS</code>, in a calendar dropdown, and a
   datetime field has a time input next to its date. The buttons next to a relation add
   a row or change the chosen one in a dialog, where Django's admin opens a popup
-  window.</li>
+  window. A <code>form</code> must subclass <code>FormworkModelForm</code>, and a system check names one that
+  does not. Django's admin widgets on a <code>form</code> render as formwork's. Generic inlines
+  come from <code>django_formwork.admin.contenttypes</code>. A <code>class Media</code> on an admin or an
+  inline loads its files, without Django's jQuery. <code>@admin.action</code> takes Django 6.1's
+  <code>location</code> and <code>description_plural</code>, also on Django 6.0, and the change form shows
+  its actions in an Actions menu. The change form shows the history of the object next
+  to its fields, with the values before and after each change. The admin keeps that
+  history in its own table, so it does not need <code>django.contrib.admin</code>, and with
+  <code>history = PghistoryHistory()</code> on the site it reads the events of django-pghistory.</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1399,6 +1416,14 @@
   in its <code>widget</code> attribute like Django admin's <code>RelatedFieldWidgetWrapper</code>, rendered
   without the stacked choice list. <code>BoundField.widget_type</code> names the wrapped widget
   now.</li>
+<li>With <code>data-formwork-dirty</code>, a field kept its changed mark after an htmx morph of an
+  element around the form, such as the page content, even when the server sent the
+  saved value back. The marks compared against the values from before the morph. They
+  now start again from the values the server sent.</li>
+<li>In a dark theme, the dropdown of a <code>Select</code>, <code>SelectMultiple</code> or <code>ComboBox</code> showed no
+  hover on an option and no mark on the option the arrow keys reached. The option took
+  <code>base-200</code>, which DaisyUI's dark theme draws almost like the panel. It now mixes 10%
+  of <code>base-content</code> into the panel, as DaisyUI's menu does.</li>
 </ul>
 <h2 id="010a3-2026-11-06">0.1.0a3 (2026-11-06)<a class="headerlink" href="#010a3-2026-11-06" title="Permanent link">&para;</a></h2>
 <h3 id="breaking-changes_1">Breaking changes<a class="headerlink" href="#breaking-changes_1" title="Permanent link">&para;</a></h3>

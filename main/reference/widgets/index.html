@@ -2088,7 +2088,7 @@ instead; see <a href="../views/#server-side-search">Server-side search</a>.</p>
 <td><code>counts</code></td>
 <td><code>Mapping \| None</code></td>
 <td><code>None</code></td>
-<td>A number at the end of each option, keyed by the option value, as faceted filters show; a value missing from the mapping shows 0, dimmed. A list that the server pages shows no counts</td>
+<td>A number in a badge at the end of each option, keyed by the option value, as faceted filters show; a value missing from the mapping shows 0, dimmed. A list that the server pages shows no counts</td>
 </tr>
 </tbody>
 </table>
@@ -2491,6 +2491,12 @@ tuples. <code>DateRangePicker.default_presets</code> returns the four above:</p>
 </span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>
 </span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="n">period</span> <span class="o">=</span> <span class="n">DateRangeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateRangePicker</span><span class="p">(</span><span class="n">presets</span><span class="o">=</span><span class="n">presets</span><span class="p">))</span>
 </span></code></pre></div>
+<p><code>choices</code> adds <code>(value, label)</code> buttons next to the presets for an option that is not a
+range, such as "No date". A choice clears both dates and posts its value as a third
+hidden input, <code>period_2</code>. While neither input holds a date, the field shows the label of
+the choice. A picked date clears the choice. <code>DateRangeField</code> reads only the two dates,
+so a form that takes a choice needs a <code>MultiValueField</code> with a third subfield. The
+admin's date filter uses one for No date and Has date.</p>
 <p>The field label names the two inputs as a group. <code>data-*</code> and <code>hx-*</code> attrs
 go on the end's hidden input, which fires one <code>change</code> when the range
 changes. <code>aria-describedby</code>, <code>aria-invalid</code> and <code>aria-required</code> go on both
