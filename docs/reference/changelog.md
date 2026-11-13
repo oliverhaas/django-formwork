@@ -42,8 +42,8 @@
   It posts the same fields as Django's widget, so `widget=widgets.ClearableFileInput`
   is the only change a form needs.
 - `Select` and `SelectMultiple` take `counts`, a mapping of option values to numbers.
-  Each option shows its number at the end of the row, as a faceted filter does, and an
-  option with 0 is dimmed.
+  Each option shows its number in a badge at the end of the row, as a faceted filter
+  does, and an option with 0 is dimmed.
 - `data-formwork-dirty` marks a changed field outside a fieldset, such as a widget in a
   table cell: put `data-formwork-field` on the element around it. A field that the
   server renders with `data-formwork-changed` stays marked, so the page can start from
