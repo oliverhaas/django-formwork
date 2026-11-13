@@ -129,6 +129,45 @@ def test_site_pages_render(admin_client, name, kwargs):
     assert admin_client.get(reverse(f"admin:{name}", kwargs=kwargs)).status_code == 200
 
 
+@pytest.fixture
+def support_client(client, django_user_model):
+    user = django_user_model.objects.create_user("helper")
+    user.groups.add(Group.objects.create(name="Support"))
+    user.user_permissions.add(*Permission.objects.filter(content_type__app_label="admin_app"))
+    client.force_login(user)
+    return client
+
+
+@pytest.mark.parametrize(
+    ("client_fixture", "site_name", "status"),
+    [("support_client", "support", 200), ("support_client", "admin", 302), ("admin_client", "support", 302)],
+)
+def test_second_site_admits_only_the_users_its_has_permission_names(request, client_fixture, site_name, status):
+    client = request.getfixturevalue(client_fixture)
+
+    assert client.get(reverse(f"{site_name}:index")).status_code == status
+
+
+@pytest.mark.parametrize("name", ["index", "admin_app_item_changelist", "admin_app_item_change"])
+def test_second_site_links_to_its_own_pages(support_client, catalog, name):
+    page = reverse(f"support:{name}", args=[catalog.alpha.pk] if name.endswith("_change") else [])
+
+    soup = BeautifulSoup(support_client.get(page).content, "html.parser")
+
+    links = [a["href"] for a in soup.select("a[href^='/']") if not a["href"].startswith("/static/")]
+    assert any(link.startswith("/support/admin_app/") for link in links)
+    assert not [link for link in links if link.startswith("/admin/")]
+
+
+@pytest.mark.parametrize(("site_name", "status"), [("support", 200), ("admin", 403)])
+def test_relation_search_follows_the_access_rule_of_its_site(support_client, catalog, site_name, status):
+    params = {"widget": "select", "site": site_name, "model": "admin_app.item", "field": "category", "q": "kit"}
+
+    response = support_client.get(reverse("formwork:search", args=[RELATION_SEARCH_KEY]), params)
+
+    assert response.status_code == status
+
+
 def test_anonymous_request_redirects_to_login(client):
     response = client.get(url(Item, "changelist"))
 

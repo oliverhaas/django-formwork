@@ -149,6 +149,64 @@ login page, so the URLs do not show which models are registered.
 
 ![The deal list in the dark theme](../img/admin/changelist-dark.webp)
 
+### Several sites
+
+A project can run more than one site, for example one for the whole staff and a smaller
+one for the support team. Each site has its own URL prefix, login page, dashboard and
+models. `has_permission()` decides who can sign in:
+
+```python
+# helpdesk/sites.py
+from django_formwork.admin import AdminSite
+
+
+class SupportSite(AdminSite):
+    site_header = "Support"
+
+    def has_permission(self, request):
+        return request.user.is_active and request.user.groups.filter(name="Support").exists()
+
+
+support_site = SupportSite(name="support")
+```
+
+```python
+# helpdesk/admin.py
+from django_formwork import admin
+
+from .models import Ticket
+from .sites import support_site
+
+
+@admin.register(Ticket)
+@admin.register(Ticket, site=support_site)
+class TicketAdmin(admin.ModelAdmin):
+    search_fields = ["subject"]
+```
+
+```python
+# urls.py
+from django_formwork.admin import site
+from helpdesk.sites import support_site
+
+urlpatterns = [
+    path("__formwork__/", include("django_formwork.urls")),
+    path("admin/", site.urls),
+    path("support/", support_site.urls),
+]
+```
+
+- The `name` of a site is its URL namespace, as in
+  `reverse("support:helpdesk_ticket_changelist")`. Give every site its own name.
+- A site shows only the models registered on it. A relation field gets its add and
+  change buttons only when the related model is registered on the same site.
+- The relation dropdowns search through the site of the page, so they follow that
+  site's `has_permission()`.
+- The model permissions apply on every site: a user sees a model only with its view or
+  change permission, as on the default site.
+- All sites write to one history. The recent actions on a dashboard link to an object
+  only when its model is registered on that site.
+
 ## ModelAdmin
 
 The list, add, change, delete and history pages read the same options as Django's
