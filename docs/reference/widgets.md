@@ -519,6 +519,13 @@ def presets(today):
 period = DateRangeField(widget=widgets.DateRangePicker(presets=presets))
 ```
 
+`choices` adds `(value, label)` buttons next to the presets for an option that is not a
+range, such as "No date". A choice clears both dates and posts its value as a third
+hidden input, `period_2`. While neither input holds a date, the field shows the label of
+the choice. A picked date clears the choice. `DateRangeField` reads only the two dates,
+so a form that takes a choice needs a `MultiValueField` with a third subfield. The
+admin's date filter uses one for No date and Has date.
+
 The field label names the two inputs as a group. `data-*` and `hx-*` attrs
 go on the end's hidden input, which fires one `change` when the range
 changes. `aria-describedby`, `aria-invalid` and `aria-required` go on both

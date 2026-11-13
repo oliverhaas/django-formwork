@@ -23,6 +23,10 @@ document.addEventListener("alpine:init", () => {
         // leaves them as they were, so the calendar keeps still while typing.
         draft: { start: "", end: "" },
         time: { start: "00:00", end: "23:59" },
+        // The option picked in place of a range, as its hidden input posts
+        // it, and the labels of the options.
+        choice: "",
+        choiceLabels: {},
         // Which end the next day picked sets.
         picking: "start",
         hoverIso: "",
@@ -37,17 +41,22 @@ document.addEventListener("alpine:init", () => {
           this.$watch("open", (open) => (open ? this.$nextTick(() => this.showPanel()) : this.hidePanel()));
           this.start = el.dataset.start || "";
           this.end = el.dataset.end || "";
+          this.choice = el.dataset.choice || "";
+          for (const button of el.querySelectorAll("button[data-choice]")) {
+            this.choiceLabels[button.dataset.choice] = button.textContent.trim();
+          }
           this.readInputs();
           // A morph keeps this component, so init() runs once. The range the
           // server sends re-syncs it; text the user is typing stays.
           new MutationObserver(() => {
             this.start = el.dataset.start || "";
             this.end = el.dataset.end || "";
+            this.choice = el.dataset.choice || "";
             for (const part of PARTS) {
               if (this.input(part) !== document.activeElement) this.input(part).value = this.textOf(this[part]);
             }
             this.readInputs();
-          }).observe(el, { attributes: true, attributeFilter: ["data-start", "data-end"] });
+          }).observe(el, { attributes: true, attributeFilter: ["data-start", "data-end", "data-choice"] });
           el._formworkAcceptMorph = (newNode) => this.acceptMorph(newNode);
         },
 
@@ -105,7 +114,10 @@ document.addEventListener("alpine:init", () => {
         commit() {
           const start = this.postValue("start");
           const end = this.postValue("end");
-          if (start === this.start && end === this.end) return;
+          // A range replaces the option.
+          if (start || end) this.choice = "";
+          const choice = this.$refs.choice;
+          if (start === this.start && end === this.end && (!choice || choice.value === this.choice)) return;
           this.start = start;
           this.end = end;
           this.$refs.start.value = start;
@@ -114,6 +126,10 @@ document.addEventListener("alpine:init", () => {
           // still reads as a change.
           this.$root.dataset.start = start;
           this.$root.dataset.end = end;
+          if (choice) {
+            choice.value = this.choice;
+            this.$root.dataset.choice = this.choice;
+          }
           this.notePick();
           this.$refs.end.dispatchEvent(new Event("change", { bubbles: true }));
         },
@@ -264,6 +280,7 @@ document.addEventListener("alpine:init", () => {
         },
         clear() {
           this.draft = { start: "", end: "" };
+          this.choice = "";
           this.writeText("start");
           this.writeText("end");
           this.commit();
@@ -287,6 +304,33 @@ document.addEventListener("alpine:init", () => {
         applyPreset(button) {
           this.draft = { start: button.dataset.start, end: button.dataset.end };
           this.time = { start: "00:00", end: "23:59" };
+          this.writeText("start");
+          this.writeText("end");
+          this.picking = "start";
+          this.done();
+        },
+
+        // --- The options in place of a range ---
+
+        // The label the field shows for the option, while no input names a day.
+        get choiceLabel() {
+          if (!this.choice || this.draft.start || this.draft.end) return "";
+          return this.choiceLabels[this.choice] || "";
+        },
+        // The start shows the option's label as its placeholder, and the end shows none.
+        placeholder(input) {
+          if (!this.choiceLabel) return input.dataset.placeholder;
+          return input === this.$refs.startInput ? this.choiceLabel : "";
+        },
+        isChoice(button) {
+          return Boolean(this.choiceLabel) && this.choice === button.dataset.choice;
+        },
+        choiceClass(button) {
+          return this.isChoice(button) ? SELECTED : "btn-ghost";
+        },
+        pickChoice(button) {
+          this.draft = { start: "", end: "" };
+          this.choice = button.dataset.choice;
           this.writeText("start");
           this.writeText("end");
           this.picking = "start";

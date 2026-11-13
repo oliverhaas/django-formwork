@@ -54,6 +54,7 @@ class DateRangePicker(forms.MultiWidget):
 
     ``format`` is how the inputs show each date: a Django format setting name or a format string.
     ``presets`` adds buttons that pick a range: True for ``default_presets``, or a function of today.
+    ``choices`` adds ``(value, label)`` options in place of a range, posted as a third value.
     """
 
     template_name = "formwork/widgets/date_range_picker.html"
@@ -76,10 +77,13 @@ class DateRangePicker(forms.MultiWidget):
         *,
         format: str | None = None,  # noqa: A002
         presets: bool | Callable[[dt.date], Iterable[Preset]] = False,
+        choices: Iterable[tuple[str, object]] = (),
     ) -> None:
         self.format = format or self.default_format
         self.presets = presets
-        super().__init__([forms.HiddenInput(), forms.HiddenInput()], attrs)
+        self.choices = list(choices)
+        # The start, the end and, with choices, the choice.
+        super().__init__([forms.HiddenInput() for _input in range(3 if self.choices else 2)], attrs)
 
     @staticmethod
     def default_presets(today: dt.date) -> list[Preset]:
@@ -114,7 +118,7 @@ class DateRangePicker(forms.MultiWidget):
         calendar = calendar_context(months=2, value=self.format, input_formats=list(input_formats))
         widget["calendar"] = calendar
         value_format = calendar["formats"]["value"]
-        for part, subwidget in zip(("start", "end"), widget["subwidgets"], strict=True):
+        for part, subwidget in zip(("start", "end"), widget["subwidgets"][:2], strict=True):
             text = subwidget["value"] or ""
             parsed = self._parse(text)
             # Text that names no day goes back as it came, next to the error it gets.
@@ -122,7 +126,13 @@ class DateRangePicker(forms.MultiWidget):
             widget[f"{part}_text"] = format_date(parsed, value_format) if parsed else text
         widget["start_placeholder"] = start_placeholder = gettext("Start date")
         widget["end_placeholder"] = end_placeholder = gettext("End date")
-        widget["sizing_texts"] = _sizing_texts(value_format, start_placeholder, end_placeholder)
+        labels = {str(value): str(label) for value, label in self.choices}
+        widget["choices"] = [{"value": value, "label": label} for value, label in labels.items()]
+        choice = str(widget["subwidgets"][2]["value"] or "") if labels else ""
+        widget["choice"] = choice if choice in labels else ""
+        # The field shows the choice's label while neither input names a day.
+        widget["choice_label"] = "" if widget["start"] or widget["end"] else labels.get(widget["choice"], "")
+        widget["sizing_texts"] = _sizing_texts(value_format, start_placeholder, end_placeholder, *labels.values())
         widget["count_text"] = _plural_forms(_days_text)
         presets = self.default_presets if self.presets is True else self.presets
         widget["presets"] = (

@@ -238,6 +238,18 @@ def test_presets_come_from_a_function_of_today(monkeypatch, presets, expected):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("value", "shown"), [(["", "", "none"], "No date"), (["2026-03-01", "", "none"], "Start date")]
+)
+def test_a_choice_posts_as_a_third_value_and_names_the_field_while_no_day_is_set(value, shown):
+    with translation.override("en"):
+        soup = render_widget(DateRangePicker(choices=[("none", "No date")]), name="period", value=value)
+
+    assert soup.find("input", attrs={"name": "period_2"})["value"] == "none"
+    assert soup.select_one(".date-range-input")["placeholder"] == shown
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(("language", "longest"), [("en", "Sept. 00, 0000"), ("de", "00. September 0000")])
 def test_each_input_is_as_wide_as_the_longest_date_the_format_writes(language, longest):
     """The end input keeps its place whatever the start holds."""

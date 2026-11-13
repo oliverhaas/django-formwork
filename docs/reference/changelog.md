@@ -31,8 +31,9 @@
   footer counts them. A typed date can be in the format the input shows, in a
   `DATE_INPUT_FORMATS` format or ISO, and month names can be short or lowercase.
   `presets=True` adds Today, Past 7 days, This month and This year buttons, and a
-  function of today gives other ranges. `DateTimeRangePicker` adds a start and an end
-  time under the calendar.
+  function of today gives other ranges. `choices` adds options that are not a range,
+  such as No date, posted as a third value. `DateTimeRangePicker` adds a start and an
+  end time under the calendar.
 - `DateTimeRangeField`, which cleans to a `DateTimeRange(start, end)` of two datetimes
   and uses `DateTimeRangePicker`.
 - `ClearableFileInput`: a file upload in one row, as high as a text input. It shows the
