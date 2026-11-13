@@ -48,12 +48,13 @@
 /* Focus ring in primary, like the floating label above a focused field.
    DaisyUI draws it in base-content.  Formwork's widget rules @apply it
    next to input/select/textarea, so it carries their specificity and the
-   more specific error and dirty-field variants still win. */
+   more specific error variants still win.  A changed field sets
+   --formwork-focus-color to accent, so it keeps its color while focused. */
 @utility focus-primary {
     &:focus,
     &:focus-within,
     &:open {
-        --input-color: var(--color-primary);
+        --input-color: var(--formwork-focus-color, var(--color-primary));
     }
 }
 
@@ -64,7 +65,7 @@
     @layer daisyui.l1.l2.l3 {
         :is(.input, .select, .textarea):is(:focus, :focus-within),
         .select:open {
-            --input-color: var(--color-primary);
+            --input-color: var(--formwork-focus-color, var(--color-primary));
         }
     }
 }
@@ -136,7 +137,7 @@
    error while invalid.  :where() keeps both rules at one specificity, so
    source order decides and the error colour wins over the focus colour. */
 .floating-label:where(:focus-within, :has(details[open])) > span {
-    @apply text-primary;
+    color: var(--formwork-focus-color, var(--color-primary));
 }
 
 .floating-label:where(:has([aria-invalid="true"])) > span {
@@ -825,7 +826,7 @@ details.formwork-select-multiple > summary {
    search box takes focus. */
 details.formwork-select[open] > summary,
 details.formwork-select-multiple[open] > summary {
-    --input-color: var(--color-primary);
+    --input-color: var(--formwork-focus-color, var(--color-primary));
     background-image: linear-gradient(135deg, #0000 50%, currentColor 50%), linear-gradient(45deg, currentColor 50%, #0000 50%);
 }
 
@@ -1284,50 +1285,56 @@ details.formwork-disclosure[open] > summary > .formwork-disclosure-row > .icon {
 /* ================================================================
    Dirty-field indicator (opt-in via data-formwork-dirty on <form>)
    When a field's value changes from its initial server-rendered state,
-   formwork.js adds .formwork-dirty to the containing fieldset.
+   formwork.js adds .formwork-dirty to the containing fieldset, or to
+   the element marked data-formwork-field (a table cell).
    DaisyUI's -accent variants highlight the modified input.
    ================================================================ */
 
-fieldset.formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.input *):not(.otp > input):not(.date-picker-label *):not(.date-range-field *) {
+/* The focus ring and the floating label of a changed field stay accent. */
+.formwork-dirty {
+    --formwork-focus-color: var(--color-accent);
+}
+
+.formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.input *):not(.otp > input):not(.date-picker-label *):not(.date-range-field *) {
     @apply input-accent;
 }
 
-fieldset.formwork-dirty .otp {
+.formwork-dirty .otp {
     @apply otp-accent;
 }
 
-fieldset.formwork-dirty .date-picker-label,
-fieldset.formwork-dirty .date-range-field,
-fieldset.formwork-dirty .clearable-file-input-row {
+.formwork-dirty .date-picker-label,
+.formwork-dirty .date-range-field,
+.formwork-dirty .clearable-file-input-row {
     @apply input-accent;
 }
 
-fieldset.formwork-dirty textarea {
+.formwork-dirty textarea {
     @apply textarea-accent;
 }
 
-fieldset.formwork-dirty select {
+.formwork-dirty select {
     @apply select-accent;
 }
 
-fieldset.formwork-dirty input[type="checkbox"]:not(.hidden) {
+.formwork-dirty input[type="checkbox"]:not(.hidden) {
     @apply checkbox-accent;
 }
 
-fieldset.formwork-dirty input[type="radio"]:not(.mask):not(.rating-hidden) {
+.formwork-dirty input[type="radio"]:not(.mask):not(.rating-hidden) {
     @apply radio-accent;
 }
 
-fieldset.formwork-dirty input[type="range"] {
+.formwork-dirty input[type="range"] {
     @apply range-accent;
 }
 
-fieldset.formwork-dirty input.toggle {
+.formwork-dirty input.toggle {
     @apply toggle-accent;
 }
 
-fieldset.formwork-dirty details.formwork-select > summary,
-fieldset.formwork-dirty details.formwork-select-multiple > summary {
+.formwork-dirty details.formwork-select > summary,
+.formwork-dirty details.formwork-select-multiple > summary {
     @apply border-accent;
 }
 

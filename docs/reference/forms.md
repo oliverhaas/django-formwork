@@ -180,6 +180,35 @@ where it covers the field-level skips.
 The [cookbook](../cookbook.md#step-6-skip-validation-for-unchanged-fields)
 walks through a legacy-data example.
 
+## Changed-field highlight
+
+`data-formwork-dirty` on a `<form>` marks each field whose value differs from
+the value the page loaded with. The field's border and focus ring take the
+accent color, and typing the old value back removes the mark. It works on any
+form, bound to a formwork form or not:
+
+```html
+<form method="post" data-formwork-dirty>
+  {% csrf_token %}
+  {{ form }}
+  <button type="submit" class="btn btn-primary">Save</button>
+</form>
+```
+
+The browser compares the values; the server is not asked. A few attributes
+and an event adapt it to markup that is not a field group:
+
+| Name | On | Effect |
+|---|---|---|
+| `data-formwork-field` | any element around a control | Gets the mark, as a field group's `fieldset` does. A table cell with an input is the usual case |
+| `data-formwork-changed` | a `fieldset` or a `data-formwork-field` element | Keeps the mark from the server. Set it when a failed save renders a value the user changed, since that value is the page's value now |
+| `formwork:dirty` | dispatched on the form, bubbles | `event.detail.count` is the number of marked fields, sent after each change. A save bar can show it |
+
+A morph of the form, or of an element around it, makes the new values the ones
+to compare against, and keeps only the marks that the server set. The
+[admin](admin.md#editable-columns) marks the changed cells of a list with
+`list_editable` this way.
+
 ## Async validation and saving
 
 `ais_valid()`, `afull_clean()`, and `asave()` are async counterparts to

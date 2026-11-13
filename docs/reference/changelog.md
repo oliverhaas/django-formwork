@@ -44,6 +44,11 @@
 - `Select` and `SelectMultiple` take `counts`, a mapping of option values to numbers.
   Each option shows its number at the end of the row, as a faceted filter does, and an
   option with 0 is dimmed.
+- `data-formwork-dirty` marks a changed field outside a fieldset, such as a widget in a
+  table cell: put `data-formwork-field` on the element around it. A field that the
+  server renders with `data-formwork-changed` stays marked, so the page can start from
+  posted values after a failed save. The form sends a `formwork:dirty` event with the
+  number of changed fields. See [Forms](forms.md#changed-field-highlight).
 - `django_formwork.admin` (experimental): a Django admin on formwork forms, django-filter,
   htmx and Jinja2, styled with DaisyUI. It keeps the options, hooks, URL names and
   permissions of `django.contrib.admin`, so an `admin.py` ports by importing
@@ -154,6 +159,10 @@
   in its `widget` attribute like Django admin's `RelatedFieldWidgetWrapper`, rendered
   without the stacked choice list. `BoundField.widget_type` names the wrapped widget
   now.
+- With `data-formwork-dirty`, a field kept its changed mark after an htmx morph of an
+  element around the form, such as the page content, even when the server sent the
+  saved value back. The marks compared against the values from before the morph. They
+  now start again from the values the server sent.
 
 ## 0.1.0a3 (2026-11-06)
 

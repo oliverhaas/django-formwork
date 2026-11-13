@@ -11,7 +11,8 @@
  *   2. Native browser validation disabling on forms with formwork error
  *      tooltips (CSP-safe replacement for an inline <script>).
  *   3. Dirty-field highlighting (opt-in via data-formwork-dirty) that
- *      toggles a .formwork-dirty class on the containing fieldset.
+ *      toggles a .formwork-dirty class on the containing fieldset, or on
+ *      an element marked data-formwork-field.
  *
  * Load via {% formwork_core_js %} if you're using {{ form.media }} for
  * the per-widget Alpine code; the bundle {% formwork_js %} already
@@ -44,9 +45,15 @@ document.addEventListener("htmx:after:swap", disableNativeValidation);
 
 // --- Dirty-field highlighting (opt-in via data-formwork-dirty) ---
 // Tracks each field's initial value and toggles a .formwork-dirty class
-// on the containing fieldset when the current value differs.
+// on the containing fieldset when the current value differs.  A field
+// outside a fieldset, such as a widget in a table cell, sits in an element
+// marked data-formwork-field.  The server marks a field data-formwork-changed
+// when the posted value already differs from the initial one: after a failed
+// save, the page starts from the posted values.  After each check the form
+// sends formwork:dirty with the number of changed fields.
 
 const DIRTY_CLS = "formwork-dirty";
+const FIELD = "fieldset.fieldset, [data-formwork-field]";
 
 const getFieldValue = (el) => {
   if (el.type === "checkbox" || el.type === "radio") return el.checked ? el.value : "";
@@ -113,22 +120,34 @@ const initDirtyTracking = (form) => {
 
   // A field with several inputs (a date range) is dirty while any of them
   // differs, whichever one the event came from.
-  const check = (el) => {
-    const selectMultiple = el.closest?.("details.formwork-select-multiple");
-    const fieldset = (selectMultiple || el).closest?.("fieldset.fieldset");
-    if (!fieldset) return;
-    if (selectMultiple) {
-      fieldset.classList.toggle(DIRTY_CLS, getSelectMultipleValue(selectMultiple) !== (baseline.get(selectMultiple) ?? ""));
-      return;
-    }
-    const controls = [...fieldset.querySelectorAll("input[name], select[name], textarea[name]")];
-    const dirty = controls.some(
-      (control) => control.form === form && !control.closest("details.formwork-select-multiple") && changed(control),
-    );
-    fieldset.classList.toggle(DIRTY_CLS, dirty);
+  const dirty = (field) => {
+    if (field.hasAttribute("data-formwork-changed")) return true;
+    const selectMultiple = field.querySelector("details.formwork-select-multiple");
+    if (selectMultiple) return getSelectMultipleValue(selectMultiple) !== (baseline.get(selectMultiple) ?? "");
+    const controls = [...field.querySelectorAll("input[name], select[name], textarea[name]")];
+    return controls.some((control) => control.form === form && changed(control));
   };
 
-  snapshot();
+  const report = () => {
+    const count = form.querySelectorAll(`.${DIRTY_CLS}`).length;
+    form.dispatchEvent(new CustomEvent("formwork:dirty", { bubbles: true, detail: { count } }));
+  };
+
+  const check = (el) => {
+    const field = (el.closest?.("details.formwork-select-multiple") || el).closest?.(FIELD);
+    if (!field || !form.contains(field)) return;
+    field.classList.toggle(DIRTY_CLS, dirty(field));
+    report();
+  };
+
+  // Every field again: a new baseline leaves only the ones the server marked.
+  const refresh = () => {
+    snapshot();
+    for (const field of form.querySelectorAll(FIELD)) field.classList.toggle(DIRTY_CLS, dirty(field));
+    report();
+  };
+
+  refresh();
   form.addEventListener("input", (e) => check(e.target));
   form.addEventListener("change", (e) => check(e.target));
 
@@ -137,11 +156,11 @@ const initDirtyTracking = (form) => {
   form.addEventListener("htmx:after:swap", (e) => {
     const target = e.detail?.ctx?.target;
     if (target instanceof Element && !target.contains(form)) return;
-    requestAnimationFrame(snapshot);
+    requestAnimationFrame(refresh);
   });
 
   // Expose snapshot for programmatic reset.
-  form._formworkDirtySnapshot = snapshot;
+  form._formworkDirtySnapshot = refresh;
 };
 
 const initAllDirtyForms = () => {
@@ -155,7 +174,17 @@ if (document.readyState === "loading") {
 } else {
   initAllDirtyForms();
 }
-document.addEventListener("htmx:after:swap", initAllDirtyForms);
+// A morph of an element around a tracked form brings new server values too;
+// the form's own listener sees only the swaps of the form and inside it.
+document.addEventListener("htmx:after:swap", (e) => {
+  const target = e.detail?.ctx?.target;
+  for (const form of document.querySelectorAll("form[data-formwork-dirty]")) {
+    if (!form._formworkDirtySnapshot) initDirtyTracking(form);
+    else if (target instanceof Element && target !== form && target.contains(form)) {
+      requestAnimationFrame(form._formworkDirtySnapshot);
+    }
+  }
+});
 
 // --- Inline disclosure sizing (help text + inline errors) ---
 // The help/error collapsible is a native <details class="formwork-disclosure">.
