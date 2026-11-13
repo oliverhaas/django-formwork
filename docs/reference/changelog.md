@@ -163,6 +163,10 @@
   element around the form, such as the page content, even when the server sent the
   saved value back. The marks compared against the values from before the morph. They
   now start again from the values the server sent.
+- In a dark theme, the dropdown of a `Select`, `SelectMultiple` or `ComboBox` showed no
+  hover on an option and no mark on the option the arrow keys reached. The option took
+  `base-200`, which DaisyUI's dark theme draws almost like the panel. It now mixes 10%
+  of `base-content` into the panel, as DaisyUI's menu does.
 
 ## 0.1.0a3 (2026-11-06)
 

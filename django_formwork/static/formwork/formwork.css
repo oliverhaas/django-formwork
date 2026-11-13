@@ -1414,7 +1414,7 @@ body.htmx-request .htmx-indicator-inverse {
 
 /* Option rows: mirror DaisyUI's native option:active press feedback (invert
    to neutral).  MUST be unlayered: mousedown implies hover, and the rows'
-   hover:bg-base-200 utility would beat a layered background-color. */
+   hover:bg-base-content/10 utility would beat a layered background-color. */
 details.formwork-select [data-value]:active,
 details.formwork-select-multiple [data-value]:active,
 .dropdown.formwork-combobox [data-value]:active {
