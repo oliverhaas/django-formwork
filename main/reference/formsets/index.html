@@ -1202,8 +1202,9 @@ way, as one <code>&lt;tbody&gt;</code>. <a href="#saving-a-row">Saving a row</a>
 </tr>
 </tbody>
 </table>
-<p><code>table</code> is a <code>django_formwork.tables.Table</code>, with the <code>headers</code>, the <code>rows</code> and the
-<code>empty_row</code> that Add another copies. Each row is a <code>TableRow</code>, with the <code>form</code>, its
+<p><code>table</code> is a <code>django_formwork.tables.Table</code>, with the <code>headers</code>, the <code>rows</code>, the
+<code>empty_row</code> that Add another copies and the <code>footer</code> markup at the right end of the Add
+another row, where the admin puts the pager of an inline. Each row is a <code>TableRow</code>, with the <code>form</code>, its
 <code>cells</code> and its <code>hidden</code> inputs; each cell is a <code>TableCell</code>, with the bound <code>field</code> or
 the <code>display</code> text of a disabled one.</p>
 <p>To override one for the whole project, put a template at the same path in a
