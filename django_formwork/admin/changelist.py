@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from django.contrib.admin.exceptions import DisallowedModelAdminLookup, DisallowedModelAdminToField
 from django.contrib.admin.options import IS_FACETS_VAR, IncorrectLookupParameters, ShowFacets
@@ -58,6 +58,7 @@ __all__ = [
     "PER_PAGE_VAR",
     "PRESERVED_FILTERS_VAR",
     "SEARCH_VAR",
+    "BarFilter",
     "ChangeList",
 ]
 
@@ -69,6 +70,19 @@ PRESERVED_FILTERS_VAR = "_changelist_filters"
 
 # Characters of text after which a changelist column can wrap.
 WRAP_AFTER = 40
+
+# What a filter's cleaned value is while it does not narrow the list.
+_EMPTY: tuple[object, ...] = (None, "", [], ())
+
+
+class BarFilter(NamedTuple):
+    """One filter of the bar."""
+
+    name: str
+    label: str
+    field: BoundField
+    # It has a value, so it narrows the list.
+    active: bool
 
 
 class ChangeList:
@@ -266,17 +280,32 @@ class ChangeList:
         return [form[name] for name in names]
 
     @cached_property
+    def bar_filters(self) -> list[BarFilter]:
+        """The filters of the bar in ``list_filter`` order, each with the name the More menu lists it under."""
+        fields = self.filter_fields
+        if not fields or self.filterset is None:
+            return []
+        form = self.filter_form
+        form.is_valid()
+        filters = self.filterset.filters
+        return [
+            BarFilter(
+                name=field.name,
+                label=capfirst(str(filters[field.name].label)),
+                field=field,
+                active=form.cleaned_data.get(field.name) not in _EMPTY,
+            )
+            for field in fields
+        ]
+
+    @cached_property
     def query(self) -> str:
         return self.request.GET.get(SEARCH_VAR, "").strip() if self.search_fields else ""
 
     @cached_property
     def active_filter_count(self) -> int:
         """How many filters narrow the list; the search box does not count."""
-        if self.filterset is None:
-            return 0
-        form = self.filter_form
-        form.is_valid()
-        return sum(form.cleaned_data.get(name) not in (None, "", [], ()) for name in self.filter_names)
+        return sum(filter_.active for filter_ in self.bar_filters)
 
     @property
     def has_filters(self) -> bool:

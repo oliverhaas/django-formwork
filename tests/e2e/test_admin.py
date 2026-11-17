@@ -4,9 +4,10 @@ import re
 
 import django_filters
 import pytest
-from admin_app.admin import TagAdmin
+from admin_app.admin import LowStockFilter, TagAdmin
 from admin_app.models import Category, Item, Part, Tag
 from django import forms
+from django.contrib.admin import EmptyFieldListFilter
 from django.core.exceptions import PermissionDenied
 from django.db.models import ForeignKey
 from django.utils import timezone
@@ -79,8 +80,8 @@ def test_a_date_filter_preset_filters_the_list(admin_page, live_server, kitchen)
     Item.objects.create(name="Toaster", category=kitchen, released=today.replace(year=today.year - 1))
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
 
-    admin_page.get_by_role("button", name="Filters").click()
-    admin_page.locator("#id_released").click()
+    admin_page.get_by_role("button", name="More filters").click()
+    admin_page.get_by_role("menuitem", name="Released").click()
     admin_page.get_by_role("button", name="This year").click()
 
     first, after = today.replace(month=1, day=1), today.replace(year=today.year + 1, month=1, day=1)
@@ -90,32 +91,248 @@ def test_a_date_filter_preset_filters_the_list(admin_page, live_server, kitchen)
     assert admin_page.errors == []
 
 
-def test_filter_toggle_shows_the_row_and_counts_active_filters(admin_page, live_server, kitchen, monkeypatch):
+def test_a_filter_value_narrows_the_list_until_clear_resets_it(admin_page, live_server, kitchen, monkeypatch):
     monkeypatch.setattr(site.get_model_admin(Item), "list_filter", [django_filters.RangeFilter(field_name="quantity")])
     Item.objects.create(name="Kettle", category=kitchen, quantity=5)
     Item.objects.create(name="Toaster", category=kitchen, quantity=40)
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
-    row = admin_page.locator("#changelist-filter-row")
-    toggle = admin_page.get_by_role("button", name="Filters")
-    expect(row).to_be_hidden()
+    rows = admin_page.locator("#changelist tbody tr")
+    at_least = admin_page.locator("[name=quantity__gte]")
+    marked = admin_page.locator("[data-filter=quantity].formwork-dirty")
+    clear = admin_page.get_by_role("link", name="Clear all filters")
+    expect(clear).to_have_attribute("aria-disabled", "true")
 
-    toggle.click()
-    expect(toggle).to_have_attribute("aria-expanded", "true")
-    admin_page.locator("[name=quantity__gte]").fill("10")
-    admin_page.locator("[name=quantity__gte]").blur()
+    at_least.fill("10")
+    at_least.blur()
 
     expect(admin_page).to_have_url(re.compile(r"\?quantity__gte=10$"))
-    expect(admin_page.locator("#changelist tbody tr")).to_have_count(1)
-    expect(toggle.locator(".badge")).to_have_text("1")
-    clear = admin_page.get_by_role("link", name="Clear all filters")
+    expect(rows).to_have_count(1)
+    expect(marked).to_be_visible()
     expect(clear).to_have_attribute("href", "/admin/admin_app/item/")
 
     clear.click()
     expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
-    expect(admin_page.locator("#changelist tbody tr")).to_have_count(2)
-    expect(toggle.locator(".badge")).to_have_text("0")
-    expect(row).to_be_visible()
-    expect(admin_page.locator("[name=quantity__gte]")).to_have_value("")
+    expect(rows).to_have_count(2)
+    expect(at_least).to_have_value("")
+    expect(marked).to_have_count(0)
+    expect(clear).to_have_attribute("aria-disabled", "true")
+    assert admin_page.errors == []
+
+
+def expect_filters(page, *labels):
+    """The filters in the search row, in order."""
+    row = page.locator("#changelist-filter-bar [data-filter]:visible")
+    expect(row).to_have_text([re.compile(rf"^\s*{label}") for label in labels])
+
+
+def test_a_filter_picked_from_more_opens_in_the_row_and_stays_while_it_has_a_value(admin_page, live_server, kitchen):
+    Item.objects.create(name="Kettle", category=kitchen, quantity=5)
+    Item.objects.create(name="Toaster", category=kitchen, quantity=40)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    more = admin_page.get_by_role("button", name="More filters")
+    expect_filters(admin_page, "Status", "Category", "Is featured")
+    expect(more.locator("[data-more-count]")).to_have_text("3")
+
+    more.click()
+    admin_page.get_by_role("menuitem", name="Stock").click()
+
+    expect(admin_page.locator("#id_stock_wrapper")).to_have_attribute("open", "")
+    expect_filters(admin_page, "Status", "Category", "Stock")
+    expect(more.locator("[data-more-count]")).to_have_text("3")
+
+    admin_page.get_by_role("option", name="Low", exact=True).click()
+    expect(admin_page).to_have_url(re.compile(r"\?stock=low$"))
+    expect(admin_page.locator("#changelist tbody tr")).to_have_count(1)
+    expect_filters(admin_page, "Status", "Category", "Stock")
+
+    admin_page.get_by_role("link", name="Clear all filters").click()
+    expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
+    expect_filters(admin_page, "Status", "Category", "Is featured")
+
+    admin_page.go_back()
+    expect(admin_page).to_have_url(re.compile(r"\?stock=low$"))
+    expect_filters(admin_page, "Status", "Category", "Stock")
+    assert admin_page.errors == []
+
+
+@pytest.mark.parametrize("leave", ["pointer", "keyboard"])
+def test_an_empty_filter_picked_from_more_stays_in_the_row_while_it_has_the_focus(
+    admin_page, live_server, kitchen, leave
+):
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+
+    admin_page.get_by_role("button", name="More filters").click()
+    admin_page.get_by_role("menuitem", name="Tags").click()
+    expect(admin_page.locator("#id_tags__id__exact_wrapper")).to_have_attribute("open", "")
+    admin_page.set_viewport_size({"width": 1300, "height": 720})
+    admin_page.evaluate("() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))")
+    expect_filters(admin_page, "Status", "Category", "Tags")
+
+    admin_page.keyboard.press("Escape")
+    if leave == "pointer":
+        admin_page.locator("h1").click()
+    else:
+        admin_page.keyboard.press("Tab")
+
+    expect_filters(admin_page, "Status", "Category", "Is featured")
+    assert admin_page.errors == []
+
+
+def test_the_row_shows_as_many_filters_as_the_window_has_room_for(admin_page, live_server, kitchen):
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    more = admin_page.get_by_role("button", name="More filters")
+    expect_filters(admin_page, "Status", "Category", "Is featured")
+
+    admin_page.set_viewport_size({"width": 1920, "height": 720})
+    expect_filters(admin_page, "Status", "Category", "Is featured", "Released", "Stock", "Tags")
+    expect(more).to_have_count(0)
+    expect(admin_page.get_by_role("button", name="Filter options")).to_be_visible()
+
+    admin_page.set_viewport_size({"width": 1280, "height": 720})
+    expect_filters(admin_page, "Status", "Category", "Is featured")
+    expect(more.locator("[data-more-count]")).to_have_text("3")
+    assert admin_page.errors == []
+
+
+def test_a_filter_with_a_long_option_keeps_its_width(admin_page, live_server):
+    Item.objects.create(name="Kettle", category=Category.objects.create(name="Kitchen and household appliances"))
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    category = admin_page.locator("#changelist-filter-bar [data-filter=category__id__exact]")
+    trigger = category.locator("summary")
+    expect(trigger).to_be_visible()
+
+    assert trigger.bounding_box()["width"] <= category.bounding_box()["width"]
+    assert admin_page.errors == []
+
+
+def test_a_narrow_list_gives_the_filters_a_row_of_their_own(admin_page, live_server, kitchen):
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.set_viewport_size({"width": 390, "height": 800})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    bar = admin_page.locator("#changelist-filter-bar")
+    expect(bar).to_have_attribute("data-stacked", "")
+    search = bar.locator("[data-search]").bounding_box()
+    below = search["y"] + search["height"]
+
+    assert bar.get_by_role("button", name="More filters").bounding_box()["y"] < below
+    assert bar.get_by_role("link", name="Clear all filters").bounding_box()["y"] < below
+    assert bar.locator("[data-filter=status__exact]").bounding_box()["y"] >= below
+    assert admin_page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
+    assert admin_page.errors == []
+
+
+MANY_FILTERS = [
+    "status",
+    "category",
+    "is_featured",
+    "released",
+    LowStockFilter,
+    "tags",
+    "available_from",
+    ("website", EmptyFieldListFilter),
+    ("notes", EmptyFieldListFilter),
+    django_filters.RangeFilter(field_name="quantity"),
+    django_filters.RangeFilter(field_name="price"),
+]
+
+
+def test_the_more_menu_finds_a_filter_by_name_and_enter_puts_it_in_the_row(
+    admin_page, live_server, kitchen, monkeypatch
+):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_filter", MANY_FILTERS)
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    found = admin_page.get_by_role("menu", name="More filters").get_by_role("menuitem")
+
+    admin_page.get_by_role("button", name="More filters").click()
+    find = admin_page.get_by_role("searchbox", name="Find a filter")
+    expect(find).to_be_focused()
+    find.fill("zz")
+    expect(found).to_have_count(0)
+    expect(admin_page.get_by_text("No filter matches.")).to_be_visible()
+
+    find.fill("pri")
+    expect(found).to_have_text(["Price"])
+    find.press("Enter")
+
+    expect(admin_page.locator("[name=price__gte]")).to_be_focused()
+    expect_filters(admin_page, "Status", "Category", "Price")
+    assert admin_page.errors == []
+
+
+def test_a_list_whose_filters_all_fit_keeps_the_counts_switch_behind_an_options_button(
+    admin_page, live_server, kitchen, monkeypatch
+):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_filter", ["status", "is_featured"])
+    Item.objects.create(name="Kettle", category=kitchen, status="active")
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    options = admin_page.get_by_role("button", name="Filter options")
+    expect(admin_page.get_by_role("button", name="More filters")).to_have_count(0)
+
+    options.click()
+    admin_page.get_by_label("Show counts").check()
+
+    expect(admin_page).to_have_url(re.compile(r"\?_facets=True$"))
+    expect(options).to_be_visible()
+    expect(options.locator("[data-more-count]")).to_be_hidden()
+    admin_page.locator("#id_status__exact").click()
+    expect(admin_page.get_by_role("option", name="Active")).to_contain_text("1")
+    assert admin_page.errors == []
+
+
+def test_the_filters_fit_the_row_in_the_first_frame(admin_page, live_server, kitchen):
+    """A held admin.js keeps the page from DOMContentLoaded, as a slow connection does."""
+    Item.objects.create(name="Kettle", category=kitchen)
+    held = []
+
+    def hold(route):
+        held.append(route)
+
+    admin_page.route("**/formwork_admin/admin.js", hold)
+    admin_page.add_init_script(
+        """requestAnimationFrame(() => setTimeout(() => {
+            const filters = [...document.querySelectorAll("#changelist-filter-bar [data-filter]")];
+            window.firstFrame = filters.filter((filter) => filter.checkVisibility()).length;
+        }))"""
+    )
+
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/", wait_until="commit")
+    admin_page.wait_for_function("window.firstFrame !== undefined")
+    first_frame = admin_page.evaluate("window.firstFrame")
+    for route in held:
+        route.continue_()
+    admin_page.wait_for_load_state()
+
+    assert first_frame == 3
+    expect_filters(admin_page, "Status", "Category", "Is featured")
+    assert admin_page.errors == []
+
+
+def test_a_list_that_a_link_loads_shows_only_the_filters_that_fit_from_its_first_frame(
+    admin_page, live_server, kitchen
+):
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/")
+    admin_page.evaluate("""() => {
+        window.filters = [];
+        const sample = () => {
+            const filters = [...document.querySelectorAll("#changelist-filter-bar [data-filter]")];
+            if (filters.length) window.filters.push(filters.filter((filter) => filter.checkVisibility()).length);
+            requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+        window.swapped = new Promise((resolve) => document.addEventListener("htmx:after:swap", resolve, { once: true }));
+    }""")
+
+    model_list(admin_page).get_by_role("link", name="Items").click()
+
+    admin_page.evaluate(
+        "window.swapped.then(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))"
+    )
+    expect_filters(admin_page, "Status", "Category", "Is featured")
+    assert set(admin_page.evaluate("window.filters")) == {3}
     assert admin_page.errors == []
 
 
@@ -451,23 +668,22 @@ def test_a_long_list_on_a_phone_keeps_the_selection_and_the_save_in_view(admin_p
     assert admin_page.errors == []
 
 
-def test_a_long_list_takes_its_height_back_when_the_filters_close(admin_page, live_server, kitchen):
+def test_a_long_list_takes_its_height_back_when_the_filters_return_to_the_search_row(admin_page, live_server, kitchen):
     Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen) for i in range(40))
     admin_page.set_viewport_size({"width": 1280, "height": 1000})
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
     admin_page.wait_for_load_state("networkidle")
     scroller = admin_page.locator("#changelist-scroll")
-    row = admin_page.locator("#changelist-filter-row")
-    toggle = admin_page.get_by_role("button", name="Filters")
+    bar = admin_page.locator("#changelist-filter-bar")
     frames = "() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))"
     fitted = scroller.bounding_box()["height"]
 
-    toggle.click()
-    expect(row).to_be_visible()
+    admin_page.set_viewport_size({"width": 1040, "height": 1000})
+    expect(bar).to_have_attribute("data-stacked", "")
     admin_page.evaluate(frames)
     assert scroller.bounding_box()["height"] < fitted
-    toggle.click()
-    expect(row).to_be_hidden()
+    admin_page.set_viewport_size({"width": 1280, "height": 1000})
+    expect(bar).not_to_have_attribute("data-stacked", "")
     admin_page.evaluate(frames)
 
     assert scroller.bounding_box()["height"] == fitted

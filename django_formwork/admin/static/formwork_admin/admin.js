@@ -218,11 +218,8 @@ document.addEventListener("alpine:init", () => {
   Alpine.data("formworkFilters", () => ({
     timer: null,
     last: "",
-    // The filter row starts open while a filter is active.
-    open: false,
 
     init() {
-      this.open = this.$root.dataset.open === "1";
       this.last = this.query();
       // "Clear all filters" and "Clear search" morph the fields empty without an input event, so the next
       // change always counts.
@@ -234,10 +231,6 @@ document.addEventListener("alpine:init", () => {
 
     destroy() {
       document.removeEventListener("click", this.cleared);
-    },
-
-    toggle() {
-      this.open = !this.open;
     },
 
     query() {

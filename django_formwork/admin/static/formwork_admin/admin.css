@@ -168,6 +168,106 @@ tr:not(:hover, :focus-within) > [data-editable]:not(.formwork-dirty, [data-inval
   @apply relative mt-2 pt-3 before:absolute before:inset-x-3 before:top-0 before:border-t before:border-base-300;
 }
 
+/* The changelist's search row. The search takes the room the filters leave. A filter has
+   a fixed width, so the row keeps its shape while values change. filters.js hides the
+   filters the row has no room for and lists them in the More menu. */
+.formwork-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  /* A filter with a value is a picked state, so its border is primary. Accent stays the
+     mark of an unsaved change in the list below. */
+  --formwork-dirty-color: var(--color-primary);
+
+  > [data-search] {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  /* The menu and the Clear link end the row, also on a list without a search box. */
+  > [data-filter-more]:not([hidden]),
+  > [data-filter-more][hidden] + a {
+    margin-inline-start: auto;
+  }
+
+  /* No filter waits in the menu: the button is an options icon, and the menu its switch. */
+  [data-filter-more][data-bare] {
+    > [role="button"] {
+      padding-inline: 0.75rem;
+    }
+
+    :is([data-more-label], [data-more-find], [role="menu"], .icon-list-filter) {
+      display: none;
+    }
+  }
+
+  [data-filter-more]:not([data-bare]) .icon-sliders-horizontal {
+    display: none;
+  }
+
+  /* A line parts the switch from the filters above it. */
+  [data-filter-more]:not([data-bare]) [data-more-facets] {
+    @apply mt-1 border-t border-base-200 pt-2.5;
+  }
+
+  [data-filter] {
+    flex: 0 0 var(--filter-width, 10rem);
+    min-width: 0;
+
+    /* The row sets the spacing, so the controls line up with the search box. A dropdown is
+       as wide as its longest option: the track keeps it to the filter's width. */
+    > .fieldset {
+      grid-template-columns: minmax(0, 1fr);
+      padding-block: 0;
+    }
+  }
+
+  /* The number range draws its two inputs as one field, which takes the color. */
+  .formwork-dirty .input {
+    --input-color: var(--formwork-dirty-color);
+  }
+
+  /* Two dates need more room than one value. */
+  [data-filter]:has(.date-range-filter) {
+    --filter-width: 15rem;
+  }
+
+  /* A filter the More menu's search does not match. Unlayered, so it beats the menu's own display. */
+  [data-miss] {
+    display: none;
+  }
+}
+
+/* The filters sit in the row itself. */
+.formwork-filter-list {
+  display: contents;
+}
+
+/* A list too narrow for the filters next to the search gives them a row of their own,
+   which they fill. filters.js decides. */
+.formwork-filter-bar[data-stacked] {
+  /* A filter's label stands above its border, so the rows need more room between them. */
+  row-gap: 0.75rem;
+
+  /* The search shrinks before the menu and the Clear link wrap. */
+  > [data-search] {
+    flex-basis: 6rem;
+  }
+
+  > .formwork-filter-list {
+    display: flex;
+    flex-wrap: wrap;
+    flex-basis: 100%;
+    gap: 0.75rem 0.5rem;
+    order: 1;
+  }
+
+  [data-filter] {
+    flex-grow: 1;
+  }
+}
+
 /* The date range filter drops its calendar icon in a narrow filter column,
    so both dates keep their room. */
 .date-range-filter {

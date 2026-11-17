@@ -120,6 +120,17 @@ def test_select_floating_label_names_the_trigger(cls):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(("empty_label", "text"), [("All", "All"), ("---------", "Select…")])
+def test_floating_select_empty_trigger_reads_as_the_clearing_row(empty_label, text):
+    """An empty floating trigger takes the name a field gives its clearing row; Django's blank label does not count."""
+    widget = Select(attrs={"placeholder": "Status"}, floating=True, allow_clear=True)
+    field = forms.ChoiceField(choices=[("", empty_label), ("a", "Active")], required=False, widget=widget)
+    soup = render_widget(field.widget, name="status", value="")
+    assert soup.select_one("details")["data-placeholder"] == text
+    assert soup.find("span", attrs={"x-text": "triggerText"}).get_text(strip=True) == text
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("floating_cls", "stock_cls"),
     [(TextInput, forms.TextInput), (Textarea, forms.Textarea)],

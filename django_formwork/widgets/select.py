@@ -180,6 +180,7 @@ class SearchableSelectMixin(_SelectBase):
         # options to render and the selected ones for the closed toggle.
         options: list[dict[str, Any]] = []
         selected: list[dict[str, Any]] = []
+        clear: dict[str, Any] | None = None
         total = 0
         # The server's pages of a long list carry no counts, so the first page shows none either.
         counts = None
@@ -198,7 +199,8 @@ class SearchableSelectMixin(_SelectBase):
                 # only when it clears; the placeholder covers it otherwise.
                 if str(option["value"]) == "":
                     if self.allow_clear:
-                        options.append(self.clear_row(option, widget["attrs"]))
+                        clear = self.clear_row(option, widget["attrs"])
+                        options.append(clear)
                     continue
                 # The rows of the first page give way to one row that loads them.
                 row = pending if pending is not None and option.get("page_row") else option
@@ -230,7 +232,7 @@ class SearchableSelectMixin(_SelectBase):
         widget["show_search"] = (
             self.show_search if self.show_search is not None else total > self.search_threshold or self.truncated
         )
-        self._floating_context(widget)
+        self._floating_context(widget, clear)
         return context
 
     def clear_row(self, option: dict[str, Any], attrs: Mapping[str, Any]) -> dict[str, Any]:
@@ -317,7 +319,7 @@ class SearchableSelectMixin(_SelectBase):
             option["page_row"] = True
         return [(None, options, 0)] if options else []
 
-    def _floating_context(self, widget: dict[str, Any]) -> None:
+    def _floating_context(self, widget: dict[str, Any], clear: Mapping[str, Any] | None) -> None:
         """The floating label's id, the trigger's name and its empty text."""
         widget["floating"] = self.floating
         placeholder = widget["attrs"].get("placeholder", "")
@@ -328,8 +330,9 @@ class SearchableSelectMixin(_SelectBase):
         if not placeholder:
             msg = f"{type(self).__name__}(floating=True) needs a placeholder: it is the label text."
             raise ImproperlyConfigured(msg)
-        # The placeholder text is the label, so an empty trigger shows the default text.
-        widget["trigger_placeholder"] = ""
+        # The placeholder text is the label. An empty trigger takes the name of the field's
+        # clearing row, such as a filter's "All", or the default text.
+        widget["trigger_placeholder"] = "" if clear is None else str(clear["label"])
         id_ = widget["attrs"].get("id")
         if id_:
             widget["floating_label_id"] = f"{id_}_floating_label"

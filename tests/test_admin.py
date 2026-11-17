@@ -329,7 +329,7 @@ def test_declared_range_filter_reads_min_and_max(admin_client, catalog, monkeypa
     assert b"Alpha kettle" not in response.content
     assert soup.find("input", attrs={"name": "quantity__gte"})["value"] == "10"
     assert soup.find("input", attrs={"name": "quantity__lte"}) is not None
-    assert soup.select_one("#changelist-filter-row [data-clear-filters]")["href"] == url(Item, "changelist")
+    assert soup.select_one("#changelist-filter-bar a[data-clear-filters]")["href"] == url(Item, "changelist")
 
 
 @pytest.mark.parametrize(
@@ -342,19 +342,22 @@ def test_date_filter_picks_the_rows_without_a_date_or_with_one(admin_client, cat
     assert shown in response.content
     assert hidden not in response.content
     assert soup.find("input", attrs={"name": "released__isnull"})["value"] == isnull
-    assert soup.select_one("#changelist-filter-row [data-clear-filters]")["href"] == url(Item, "changelist")
+    assert soup.select_one("#changelist-filter-bar a[data-clear-filters]")["href"] == url(Item, "changelist")
 
 
 @pytest.mark.parametrize(
-    ("params", "shown"),
-    [({}, False), ({"q": "kettle"}, False), ({"status__exact": "archived"}, True)],
+    ("params", "marked"),
+    [
+        ({}, []),
+        ({"q": "kettle"}, []),
+        ({"status__exact": "archived", "tags__isnull": "True"}, ["status__exact", "tags__id__exact"]),
+    ],
     ids=["unfiltered", "search_only", "filtered"],
 )
-def test_filter_row_starts_open_while_a_filter_is_active(admin_client, catalog, params, shown):
+def test_only_a_filter_with_a_value_carries_the_mark(admin_client, catalog, params, marked):
     soup = BeautifulSoup(admin_client.get(url(Item, "changelist"), params).content, "html.parser")
 
-    row = soup.find(id="changelist-filter-row")
-    assert ("display: none" not in row.get("style", "")) is shown
+    assert [filter_["data-filter"] for filter_ in soup.select("[data-filter].formwork-dirty")] == marked
 
 
 def test_clear_all_filters_keeps_the_search(admin_client, catalog):
@@ -362,8 +365,7 @@ def test_clear_all_filters_keeps_the_search(admin_client, catalog):
         admin_client.get(url(Item, "changelist"), {"status__exact": "archived", "q": "kettle"}).content, "html.parser"
     )
 
-    assert soup.find(id="changelist-filter-count").get_text(strip=True) == "1"
-    assert soup.select_one("#changelist-filter-row [data-clear-filters]")["href"] == "?q=kettle"
+    assert soup.select_one("#changelist-filter-bar a[data-clear-filters]")["href"] == "?q=kettle"
 
 
 @pytest.mark.parametrize(
@@ -388,7 +390,7 @@ def test_clear_all_filters_keeps_other_lookups(admin_client, catalog):
     response = admin_client.get(url(Item, "changelist"), {"status__exact": "archived", "name__startswith": "Alpha"})
     soup = BeautifulSoup(response.content, "html.parser")
 
-    assert soup.select_one("#changelist-filter-row [data-clear-filters]")["href"] == "?name__startswith=Alpha"
+    assert soup.select_one("#changelist-filter-bar a[data-clear-filters]")["href"] == "?name__startswith=Alpha"
     assert soup.select_one('#changelist-filters input[name="name__startswith"]')["value"] == "Alpha"
 
 
@@ -430,22 +432,20 @@ def test_clear_all_filters_is_dimmed_while_only_a_search_is_active(admin_client,
     soup = BeautifulSoup(admin_client.get(url(Item, "changelist"), {"q": "kettle"}).content, "html.parser")
 
     assert soup.select_one("[data-clear-filters]") is None
-    assert soup.select_one("#changelist-filter-row a[aria-disabled=true]").get("href") is None
+    assert soup.select_one("#changelist-filter-bar a[aria-disabled=true]").get("href") is None
 
 
-def test_filters_keep_the_list_filter_order(admin_client, catalog, monkeypatch):
+def test_filters_keep_the_list_filter_order_in_the_row_and_in_the_menu(admin_client, catalog, monkeypatch):
     list_filter = [LowStockFilter, "status", django_filters.RangeFilter(field_name="quantity"), "category"]
     monkeypatch.setattr(site.get_model_admin(Item), "list_filter", list_filter)
 
     soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
 
-    fieldsets = soup.select("#changelist-filter-row fieldset")
-    assert [fieldset["id"] for fieldset in fieldsets] == [
-        "id_stock_field",
-        "id_status__exact_field",
-        "id_quantity_field",
-        "id_category__id__exact_field",
-    ]
+    names = ["stock", "status__exact", "quantity", "category__id__exact"]
+    assert [filter_["data-filter"] for filter_ in soup.select("#changelist-filter-bar [data-filter]")] == names
+    items = soup.select("#changelist-filter-bar [data-more-item]")
+    assert [item["data-more-item"] for item in items] == names
+    assert [item.get_text(strip=True) for item in items] == ["Stock", "Status", "Quantity", "Category"]
 
 
 def option_texts(soup, name):
@@ -514,7 +514,7 @@ def test_empty_relation_option_reads_and_writes_django_isnull(admin_client, cata
     assert b"Beta lamp" in response.content
     assert b"Alpha kettle" not in response.content
     assert soup.find("input", attrs={"name": "tags__id__exact"})["value"] == "null"
-    assert soup.select_one("#changelist-filter-row [data-clear-filters]")["href"] == url(Item, "changelist")
+    assert soup.select_one("#changelist-filter-bar a[data-clear-filters]")["href"] == url(Item, "changelist")
 
 
 @pytest.mark.usefixtures("catalog")
@@ -1573,22 +1573,16 @@ def test_delete_confirmation_groups_the_objects_of_a_model(admin_client, catalog
     assert "Part:" not in listed
 
 
-def test_filter_count_shows_zero_without_filters(admin_client, catalog):
-    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
-
-    assert soup.find(id="changelist-filter-count").get_text(strip=True) == "0"
-
-
 @pytest.mark.parametrize("search_fields", [["name"], []], ids=["search", "no_search"])
-def test_list_without_filters_keeps_the_filter_button(admin_client, catalog, monkeypatch, search_fields):
+def test_list_without_filters_shows_only_its_search(admin_client, catalog, monkeypatch, search_fields):
     monkeypatch.setattr(site.get_model_admin(Tag), "search_fields", search_fields)
 
     soup = BeautifulSoup(admin_client.get(url(Tag, "changelist")).content, "html.parser")
 
-    assert soup.select_one("#changelist-filters [aria-controls=changelist-filter-row]") is not None
-    row = soup.find(id="changelist-filter-row")
-    assert row.find("fieldset") is None
-    assert "No filters" in row.get_text()
+    assert (soup.select_one("#changelist-filter-bar input[name=q]") is not None) is bool(search_fields)
+    assert (soup.find(id="changelist-filter-bar") is not None) is bool(search_fields)
+    assert soup.select_one("#changelist-filters [data-filter-more]") is None
+    assert soup.select_one("#changelist-filters a[aria-disabled]") is None
 
 
 def test_change_of_a_missing_object_redirects(admin_client):

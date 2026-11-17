@@ -30,8 +30,9 @@
   {% for src in scripts %}
   <script src="{{ src if "//" in src else static(src) }}"></script>
   {% endfor %}
-  {#- A classic script, so it fits the changelist's columns while the page parses. #}
+  {#- Classic scripts, so they fit the changelist's columns and its filters while the page parses. #}
   <script src="{{ static("formwork_admin/columns.js") }}"></script>
+  <script src="{{ static("formwork_admin/filters.js") }}"></script>
   <script type="module" src="{{ static("formwork/formwork.js") }}"></script>
   <script type="module" src="{{ static("formwork_admin/admin.js") }}"></script>
   {% if media is defined %}{{ media }}{% endif %}

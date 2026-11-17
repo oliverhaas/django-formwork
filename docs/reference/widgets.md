@@ -99,7 +99,8 @@ role = forms.ChoiceField(
 )
 ```
 
-On a select, the label always floats above the trigger.
+On a select, the label always floats above the trigger. With `allow_clear`, the empty
+trigger shows the label of the clearing row.
 
 ---
 

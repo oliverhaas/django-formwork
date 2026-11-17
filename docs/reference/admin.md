@@ -389,10 +389,22 @@ row, under the admin's `empty_value_display`. A nullable boolean offers Unknown.
 relation lists its rows in the order of the related model's admin and leaves out the rows
 that the field's `limit_choices_to` excludes, as Django's filter does.
 
-The filters sit in a row under the search box, in the order of `list_filter`. The
-Filters button opens the row and shows how many filters are active. The row is open
-when the page loads with an active filter. A list without `list_filter` keeps the button
-in the same place, and its row says that the list has no filters.
+The filters follow the search box in its row, in the order of `list_filter`. Each has a
+fixed width, and the row shows as many as fit the window. The others wait in the More
+menu, which lists them by name and counts them on its button. A pick from the menu puts
+that filter in the row and opens it. With more than eight filters the menu has a search
+box, and Enter picks the first match. Put the filters that people use most first in
+`list_filter`: they are the ones that show.
+
+A filter with a value always shows, with a border in the primary color. In a full row it
+takes the place of the last filter without a value, so the row keeps its height and the
+other filters keep their place. An empty filter that came from the menu returns to it
+when the focus leaves. Clear at the end of the row empties every filter and keeps the
+search. It is dimmed while no filter has a value.
+
+A window too narrow for two filters next to the search box, such as a phone's, gives the
+filters a row of their own under it. A list without `list_filter` shows only its search
+box.
 
 The search box filters the same way, through `get_search_results()`, so `^`, `=` and `@`
 prefixes in `search_fields` work as in Django. A filter on a many-to-many relation picks
@@ -421,8 +433,10 @@ lookup through a relation that `list_filter` does not name with a 400 response. 
 that the list cannot apply returns to the list with `?e=1` and a warning that the list
 shows all rows.
 
-With `show_facets` at its default, `admin.ShowFacets.ALLOW`, the filter row has a Show
-counts switch. The switch adds `_facets` to the URL, as Django's link does, and each
+With `show_facets` at its default, `admin.ShowFacets.ALLOW`, the More menu has a Show
+counts switch. On a list whose filters all fit the row, the button shows an options icon
+and its menu holds only the switch. The switch adds `_facets` to the URL, as Django's
+link does, and each
 option then shows how many rows it matches, in a badge at the end of the option. An
 option that matches no rows shows 0, dimmed. The count applies the search and the other
 filters, but not the filter of the option itself. `ShowFacets.ALWAYS` shows the counts
