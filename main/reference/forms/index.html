@@ -1144,7 +1144,9 @@ Build markup with <code>format_html()</code> or <code>mark_safe()</code>:</p>
 <p>A widget with a <code>label_links()</code> method puts links at the end of its field's label row.
 The method gets the field's HTML name, its value and the form's renderer, and returns
 HTML. The field template renders the links after the label, not inside it, so they stay
-out of the field's accessible name and come before the widget in the tab order.</p>
+out of the field's accessible name and come before the widget in the tab order. The label
+row sets the size and color of the links and puts their text on the label's baseline; an
+icon in a link centers on its text.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.html</span><span class="w"> </span><span class="kn">import</span> <span class="n">format_html</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">widgets</span>
