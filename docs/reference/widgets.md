@@ -180,7 +180,7 @@ instead; see [Server-side search](views.md#server-side-search).
 | `choices` | iterable | `()` | Choices, as for `forms.Select` |
 | `show_search` | `bool \| None` | `None` | `True` or `False` forces the search box; `None` shows it past the threshold or when the list is truncated |
 | `show_spinner` | `bool` | `True` | Spinner in the search box during a server search |
-| `allow_clear` | `bool` | `False` | Offer the empty choice as a row that clears the value |
+| `allow_clear` | `bool` | `False` | Offer the empty choice as a row that clears the value. A field's own `empty_label` labels the row; Django's default blank label gives way to the placeholder, in muted text |
 | `floating` | `bool` | `False` | [Floating label](#floating-labels) |
 | `search_queryset` | `callable \| None` | `None` | `callable(request, **params)` that returns the rows to search |
 | `search_fields` | `Sequence[str] \| None` | `None` | Field paths the query matches |

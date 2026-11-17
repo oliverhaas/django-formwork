@@ -59,7 +59,7 @@ class CityForm(FormworkForm):
 | `search_decorator` | Required. A view decorator that wraps the endpoint, such as `login_required` or `permission_required("app.view_city")`. Pass `None` for a public endpoint. |
 | `search_ranked` | Orders the rows by match quality on PostgreSQL. See [Ranked search](#ranked-search). |
 | `search_key`, `search_params` | Reuse another field's search with its own params. See [Search templates](#search-templates). |
-| `allow_clear` | `Select` and `SelectMultiple`: the list starts with the empty choice of an optional field (`empty_label` of a `ModelChoiceField`), so the user can clear it. |
+| `allow_clear` | `Select` and `SelectMultiple`: the list starts with the empty choice of an optional field (`empty_label` of a `ModelChoiceField`, or the placeholder in place of Django's default label), so the user can clear it. |
 
 The form class registers each search when Python creates it, under a stable
 key built from the module, the form class, the field name, and the place where

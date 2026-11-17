@@ -93,6 +93,18 @@ class _ClearableUserForm(FormworkForm):
     )
 
 
+class _PlaceholderClearUserForm(FormworkForm):
+    """An optional field that leaves Django's blank label, so its clear row shows the placeholder."""
+
+    people = forms.ModelChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        widget=Select(
+            search_fields=["email"], search_queryset=_users, search_decorator=None, attrs={"placeholder": "Anyone"}
+        ),
+    )
+
+
 def _group_members(request: HttpRequest, *, group: int) -> QuerySet[User]:
     return User.objects.filter(groups=group).order_by("pk")
 
@@ -522,6 +534,17 @@ def test_malformed_param_is_not_found(group: str, suffix: str) -> None:
     response = Client().get(f"{url}{suffix}")
 
     assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_clear_row_shows_the_placeholder_in_place_of_djangos_blank_label() -> None:
+    User.objects.create(username="ada", email="ada@example.com")
+    url = search_url(_key(_PlaceholderClearUserForm, "people"), {}, widget="select", allow_clear=True)
+
+    response = Client().get(url)
+
+    row = BeautifulSoup(response.content.decode(), "html.parser").select_one('button[data-value=""]')
+    assert row.get_text(strip=True) == "Anyone"
 
 
 @pytest.mark.django_db

@@ -126,6 +126,13 @@
   color. A radio change marks the old and the new option. After a failed save, the
   field template sends the first checked options in `data-formwork-initial`, so checking
   them again drops the marks. If you override `formwork/forms/field.html`, copy it again.
+- The row that clears a `Select` or `SelectMultiple` with `allow_clear` shows the
+  widget's placeholder in muted text, the way the empty control shows it. It showed
+  Django's blank label, which Django 6.1 changed from "---------" to "- Select an
+  option -" and which also widened the control. A field's own `empty_label`, such as
+  "Unassigned", still shows as is. The admin's optional choice fields and relations get
+  the placeholder. If you override `formwork/widgets/select.html` or
+  `formwork/widgets/select_multiple.html`, copy it again for the muted row.
 
 ### Fixed
 

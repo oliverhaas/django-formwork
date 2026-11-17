@@ -20,7 +20,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from django_formwork.search import SEARCH_PAGE_SIZE, declared_params, get_field, ranked_search
 from django_formwork.widgets import ComboBox, Select, SelectMultiple
-from django_formwork.widgets.select import label_extras
+from django_formwork.widgets.select import SearchableSelectMixin, label_extras
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -141,7 +141,8 @@ class FormworkSearchView(View):
         # Only an optional field clears, with the label of its blank choice.
         clear_label = None if field.required else getattr(field, "empty_label", None)
         if offset == 0 and clear_label is not None and request.GET.get("allow_clear") == "1":
-            options.insert(0, {"value": "", "label": str(clear_label)})
+            row = {"value": "", "label": str(clear_label)}
+            options.insert(0, widget.clear_row(row, widget.attrs) if isinstance(widget, SearchableSelectMixin) else row)
         more = request.GET.copy()
         more["offset"] = str(offset + SEARCH_PAGE_SIZE)
         html = render_to_string(

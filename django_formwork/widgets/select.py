@@ -7,9 +7,11 @@ from urllib.parse import urlencode
 
 from django import forms
 from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.db.models import fields as model_fields
 from django.forms.models import ModelChoiceIterator
 from django.utils.choices import flatten_choices
 from django.utils.formats import number_format
+from django.utils.translation import gettext
 
 from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search_url
 
@@ -195,7 +197,7 @@ class SearchableSelectMixin(_SelectBase):
                 # only when it clears; the placeholder covers it otherwise.
                 if str(option["value"]) == "":
                     if self.allow_clear:
-                        options.append(option)
+                        options.append(self.clear_row(option, widget["attrs"]))
                     continue
                 options.append(option)
                 total += 1
@@ -240,6 +242,16 @@ class SearchableSelectMixin(_SelectBase):
         )
         self._floating_context(widget)
         return context
+
+    def clear_row(self, option: dict[str, Any], attrs: Mapping[str, Any]) -> dict[str, Any]:
+        """The row that clears the value. Django's default blank label gives way to the placeholder, muted."""
+        # Django 6.0 writes "---------". 6.1 writes BLANK_CHOICE_LABEL, which a project may rename in ready().
+        defaults = (model_fields.BLANK_CHOICE_DASH[0][1], getattr(model_fields, "BLANK_CHOICE_LABEL", None))
+        if str(option["label"]) not in {str(label) for label in defaults if label is not None}:
+            return option
+        # The text of the empty trigger: a floating label's placeholder is its label, not the empty text.
+        placeholder = "" if self.floating else attrs.get("placeholder", "")
+        return {**option, "label": placeholder or gettext("Select…"), "placeholder": True}
 
     def optgroups(
         self, name: str, value: list[str], attrs: dict[str, Any] | None = None

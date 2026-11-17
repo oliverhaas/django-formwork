@@ -6,6 +6,7 @@ import re
 
 import pytest
 from django import forms
+from django.contrib.auth.models import User
 from django.http import QueryDict
 from django.utils.safestring import mark_safe
 
@@ -295,6 +296,16 @@ def test_select_empty_option_excluded():
     soup = render_widget(widget, name="test")
     buttons = soup.select("button[type=button][data-value]")
     assert len(buttons) == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("labels", "row"), [({}, "Pick one"), ({"empty_label": "Unassigned"}, "Unassigned")])
+def test_select_clear_row_shows_the_placeholder_in_place_of_djangos_blank_label(labels, row):
+    """Django's own blank label gives way to the placeholder; a field's own label stays."""
+    widget = Select(allow_clear=True, attrs={"placeholder": "Pick one"})
+    field = forms.ModelChoiceField(queryset=User.objects.none(), required=False, widget=widget, **labels)
+    soup = render_widget(field.widget)
+    assert soup.select_one('li[role=option] button[data-value=""]').get_text(strip=True) == row
 
 
 @pytest.mark.unit
