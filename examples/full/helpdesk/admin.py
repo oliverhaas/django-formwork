@@ -1,9 +1,11 @@
 from django.db.models import Count, F, Q
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from django_formwork import admin
 
 from .models import CannedResponse, Reply, Ticket
+from .stats import ticket_figures, ticket_stats
 
 
 class ResponseTimeFilter(admin.SimpleListFilter):
@@ -69,6 +71,13 @@ class TicketAdmin(admin.ModelAdmin):
     ]
     inlines = [ReplyInline]
     actions = ["solve", "escalate"]
+
+    @admin.slot(lazy=True, skeleton="charts/stats_skeleton.html")
+    def list_top(self, request, queryset):
+        return render_to_string("charts/stats.html", ticket_stats(queryset), request)
+
+    def change_top(self, request, obj):
+        return render_to_string("charts/figures.html", ticket_figures(obj), request)
 
     def get_queryset(self, request):
         return (

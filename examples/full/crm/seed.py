@@ -113,8 +113,12 @@ def seed(rng: random.Random, scale: float) -> str:
     for _ in range(fake.scaled(320, scale)):
         company = rng.choice(companies)
         stage = rng.choices(list(Deal.Stage), weights=[5, 4, 3, 2, 4, 3])[0]
-        closed = stage in (Deal.Stage.WON, Deal.Stage.LOST)
-        expected_close = fake.day(rng, 120, 180)
+        created_at = fake.moment(rng, 400)
+        closed_on = None
+        expected_close = fake.day(rng, 30, 180)
+        if stage in (Deal.Stage.WON, Deal.Stage.LOST):
+            closed_on = fake.day(rng, (timezone.now() - created_at).days)
+            expected_close = closed_on + timedelta(days=rng.randint(0, 20))
         deals.append(
             Deal(
                 name=f"{company.name.split()[0]} {rng.choice(DEAL_KINDS).lower()}",
@@ -128,11 +132,11 @@ def seed(rng: random.Random, scale: float) -> str:
                     stage
                 ],
                 expected_close=expected_close,
-                closed_on=expected_close - timedelta(days=rng.randint(0, 20)) if closed else None,
+                closed_on=closed_on,
                 lost_reason=rng.choice(["Budget", "Went with a competitor", "No decision", "Timing"])
                 if stage == Deal.Stage.LOST
                 else "",
-                created_at=fake.moment(rng, 400),
+                created_at=created_at,
             )
         )
     Deal.objects.bulk_create(deals)

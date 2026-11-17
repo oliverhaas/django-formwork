@@ -1,0 +1,8 @@
+{# The legend of a chart: a legend() of taskmanager/figures.py. A chart of one series has none. #}
+{% if legend %}
+<ul class="flex h-5 shrink-0 items-center gap-4 text-xs text-base-content/60" aria-hidden="true">
+  {% for entry in legend %}
+  <li class="flex items-center gap-1.5"><span class="{% if entry.line %}h-0.5 w-3 rounded-full{% else %}size-2.5 rounded-xs{% endif %}" style="background: {{ entry.css }}"></span>{{ entry.label }}</li>
+  {% endfor %}
+</ul>
+{% endif %}

@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Count, Q
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -9,6 +10,7 @@ from django_formwork import admin
 from django_formwork.admin.contenttypes import GenericStackedInline, GenericTabularInline
 
 from .models import Activity, Company, Contact, Deal, FollowUp
+from .stats import deal_figures, deal_stats
 from .widgets import WebsiteInput
 
 
@@ -119,6 +121,13 @@ class DealAdmin(admin.ModelAdmin):
     ]
     inlines = [FollowUpInline, ActivityInline]
     actions = ["mark_won", "mark_lost"]
+
+    @admin.slot(lazy=True, skeleton="charts/stats_skeleton.html")
+    def list_top(self, request, queryset):
+        return render_to_string("charts/stats.html", deal_stats(queryset), request)
+
+    def change_top(self, request, obj):
+        return render_to_string("charts/figures.html", deal_figures(obj), request)
 
     @admin.action(description="Mark selected deals as won", icon="trophy")
     def mark_won(self, request, queryset):

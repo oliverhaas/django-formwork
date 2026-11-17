@@ -1,0 +1,18 @@
+{% comment %}The card over the fields of a change page: four figures, under the steps of a pipeline when
+the object has one (taskmanager/figures.py).{% endcomment %}
+<div class="card border border-base-300 bg-base-100">
+  {% if steps %}
+  <div class="overflow-x-auto border-b border-base-300 px-2 py-4">
+    <ol class="steps w-full text-xs">
+      {% for step in steps %}<li class="step {{ step.class }}"{% if step.mark %} data-content="{{ step.mark }}"{% endif %}{% if step.current %} aria-current="step"{% endif %}>{{ step.label }}</li>{% endfor %}
+    </ol>
+  </div>
+  {% endif %}
+  <dl class="grid grid-cols-2 md:grid-cols-4">
+    {% for figure in figures %}
+    <div class="{% cycle 'border-e border-b border-base-300 md:border-b-0' 'border-b border-base-300 md:border-e md:border-b-0' 'border-e border-base-300' '' %} p-4 sm:p-5">
+      {% include "charts/figure.html" %}
+    </div>
+    {% endfor %}
+  </dl>
+</div>

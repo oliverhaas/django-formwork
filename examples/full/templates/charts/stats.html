@@ -1,0 +1,32 @@
+{% comment %}The card over an admin list: four figures and a chart. The two lower figures have a bar.
+stats_skeleton.html has the same boxes, and the lines under the figures truncate, so the card keeps its
+height when it loads.{% endcomment %}
+<div class="card border border-base-300 bg-base-100">
+  <div class="grid xl:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
+    <dl class="grid grid-cols-2 border-base-300 max-xl:border-b md:max-xl:grid-cols-4 xl:border-e">
+      {% for figure in figures %}
+      <div class="{% cycle 'border-e border-b border-base-300 md:max-xl:border-b-0' 'border-b border-base-300 md:max-xl:border-e md:max-xl:border-b-0' 'border-e border-base-300' '' %} p-4 sm:p-5">
+        {% include "charts/figure.html" %}
+      </div>
+      {% endfor %}
+    </dl>
+    <figure class="block min-w-0 p-4 sm:p-5">
+      <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <figcaption class="truncate text-sm leading-5 font-medium">{{ caption }}</figcaption>
+        {% include "charts/legend.html" %}
+      </div>
+      {% if chart %}
+      {# Chart.js draws the chart (taskmanager/charts.js); the table under it reads the figures out. #}
+      {% include "charts/chart.html" with label=caption class="mt-4 h-[12.375rem]" %}
+      <table class="sr-only">
+        <thead><tr>{% for name in table.head %}<th>{{ name }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in table.rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="mt-4 grid h-[12.375rem] place-items-center text-sm text-base-content/60">{{ empty }}</p>
+      {% endif %}
+    </figure>
+  </div>
+</div>

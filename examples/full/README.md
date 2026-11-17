@@ -45,12 +45,19 @@ changelists and the change forms look like a real back office:
 |---|---|---|
 | `taskmanager` | Tasks, members, tags, profile | Status and priority badges, a reminder with its day and time in one calendar, an inline of assigned tasks, a singleton without an add page |
 | `people` | Departments, employees, time off, equipment | A self-referencing manager, empty-value filters, approvals as actions |
-| `crm` | Companies, contacts, deals, activities, follow-ups | Autocomplete, related-only filters, stacked and tabular inlines, follow-ups as generic inlines on companies, contacts and deals, a website field whose widget adds an Open link to its label row (`label_links()`) |
-| `billing` | Invoices, payments | Line and payment inlines, file fields, `raw_id_fields` |
-| `helpdesk` | Tickets, canned responses | Over a thousand tickets, a reply inline, horizontal radios |
+| `crm` | Companies, contacts, deals, activities, follow-ups | Autocomplete, related-only filters, stacked and tabular inlines, follow-ups as generic inlines on companies, contacts and deals, a website field whose widget adds an Open link to its label row (`label_links()`), the deals of each stage as a chart over the list, a deal's pipeline steps over its form |
+| `billing` | Invoices, payments | Line and payment inlines, file fields, `raw_id_fields`, each month's invoices as stacked columns over the list |
+| `helpdesk` | Tickets, canned responses | Over a thousand tickets, a reply inline, horizontal radios, opened and solved tickets per week over the list |
 | `recruiting` | Openings, candidates, applications, interviews | A JSON field, a range filter, stage actions |
-| `events` | Venues, events, registrations | Prepopulated slugs, an editable list column, about 20,000 registrations |
+| `events` | Venues, events, registrations | Prepopulated slugs, an editable list column, about 20,000 registrations, registrations per month over the list, an event's sign-ups over time under its form |
 | `content` | Topics, posts, comments | Many-to-many topics, image covers, comment moderation, a word count under a post's body from the admin's `class Media`, placeholder icons (no `icon` set) |
+
+The figures and charts over the lists of deals, invoices, tickets and events are
+`list_top` slots. They load after the page and follow the list's search and filters.
+The cards over a change form are `change_top` slots. Each app computes its numbers
+in `stats.py`, `taskmanager/figures.py` has the helpers they share, and
+`templates/charts/` has the templates. The charts are [Chart.js](https://www.chartjs.org/)
+with the theme's colors (`taskmanager/static/taskmanager/charts.js`).
 
 ## PostgreSQL and pghistory
 

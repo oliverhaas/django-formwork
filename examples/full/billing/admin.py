@@ -1,8 +1,10 @@
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from django_formwork import admin
 
 from .models import Invoice, InvoiceLine, Payment
+from .stats import invoice_figures, invoice_stats
 
 
 class InvoiceLineInline(admin.TabularInline):
@@ -39,6 +41,13 @@ class InvoiceAdmin(admin.ModelAdmin):
     ]
     inlines = [InvoiceLineInline, PaymentInline]
     actions = ["mark_sent", "mark_paid", "void"]
+
+    @admin.slot(lazy=True, skeleton="charts/stats_skeleton.html")
+    def list_top(self, request, queryset):
+        return render_to_string("charts/stats.html", invoice_stats(queryset), request)
+
+    def change_top(self, request, obj):
+        return render_to_string("charts/figures.html", invoice_figures(obj), request)
 
     def get_readonly_fields(self, request, obj=None):
         if obj and obj.status == Invoice.Status.PAID:

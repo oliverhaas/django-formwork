@@ -1,0 +1,5 @@
+{# A tile of a card: a figure() of taskmanager/figures.py. #}
+<dt class="truncate text-sm text-base-content/60">{{ figure.label }}</dt>
+<dd class="mt-1 truncate text-3xl font-semibold tracking-tight tabular-nums">{{ figure.value }}{% if figure.of %}<span class="text-lg font-medium text-base-content/50"> / {{ figure.of }}</span>{% endif %}</dd>
+{% if figure.bar %}<dd class="mt-1.5"><progress class="progress {{ figure.bar.class }} block h-1.5" value="{{ figure.bar.share }}" max="100" aria-label="{{ figure.label }}"></progress></dd>{% endif %}
+<dd class="{% if figure.bar %}mt-1.5{% else %}mt-1{% endif %} truncate text-sm text-base-content/60" title="{{ figure.note }}">{{ figure.note }}</dd>
