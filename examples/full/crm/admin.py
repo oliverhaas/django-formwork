@@ -50,6 +50,7 @@ class CompanyAdmin(admin.ModelAdmin):
     list_display = ["name", "industry", "size", "country", "account_manager", "contact_count", "open_deals"]
     list_filter = ["industry", "size", "country", "account_manager"]
     search_fields = ["name", "website", "contacts__email"]
+    choice_description = ["industry", "country"]
     fieldsets = [
         (None, {"fields": ["name", "website", ("industry", "size"), ("country", "account_manager")]}),
         ("Finance", {"fields": ["annual_revenue"]}),
@@ -84,6 +85,7 @@ class ContactAdmin(admin.ModelAdmin):
     list_select_related = ["company"]
     list_filter = ["is_primary", "newsletter", "company__industry", ("last_contacted", admin.EmptyFieldListFilter)]
     search_fields = ["first_name", "last_name", "email", "company__name"]
+    choice_description = ["company", "job_title"]
     autocomplete_fields = ["company"]
     import_formats = ("csv", "xlsx")
     import_id_fields = ["email"]

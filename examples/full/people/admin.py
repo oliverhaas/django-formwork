@@ -50,6 +50,7 @@ class EmployeeAdmin(admin.ModelAdmin):
     list_filter = ["department", "employment_type", "remote", ("end_date", admin.EmptyFieldListFilter), "start_date"]
     list_badges = {"employment_type": Employee.TYPE_COLORS}
     search_fields = ["member__name", "member__email", "job_title"]
+    choice_description = ["job_title", "department"]
     autocomplete_fields = ["member", "manager"]
     fieldsets = [
         (None, {"fields": ["member", ("department", "job_title"), "manager"]}),

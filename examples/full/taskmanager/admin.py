@@ -51,6 +51,7 @@ class MemberAdmin(admin.ModelAdmin):
     icon = "users"
     list_display = ["name", "email", "open_tasks"]
     search_fields = ["name", "email"]
+    choice_description = ["employee__job_title", "email"]
     inlines = [AssignedTaskInline]
 
     def get_queryset(self, request):

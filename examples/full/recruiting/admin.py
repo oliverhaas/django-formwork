@@ -83,6 +83,7 @@ class OpeningAdmin(admin.ModelAdmin):
     list_badges = {"status": Opening.STATUS_COLORS}
     list_defer_fields = ["description", "screening_questions"]
     search_fields = ["title", "department__name"]
+    choice_description = ["department", "workplace"]
     date_hierarchy = "opened_on"
     autocomplete_fields = ["department", "hiring_manager"]
     radio_fields = {"workplace": admin.HORIZONTAL}
@@ -156,6 +157,7 @@ class CandidateAdmin(admin.ModelAdmin):
         "created_at",
     ]
     search_fields = ["first_name", "last_name", "^email", "city"]
+    choice_description = ["email", "city"]
     date_hierarchy = "created_at"
     autocomplete_fields = ["referred_by"]
     import_formats = ("csv", "xlsx", "json")

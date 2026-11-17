@@ -26,6 +26,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     list_filter = ["status", "currency", ("company", admin.RelatedOnlyFieldListFilter), "issued_on", "due_on"]
     list_badges = {"status": Invoice.STATUS_COLORS}
     search_fields = ["=number", "company__name"]
+    choice_description = ["company", "total"]
     date_hierarchy = "issued_on"
     autocomplete_fields = ["company"]
     readonly_fields = ["total"]

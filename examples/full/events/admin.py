@@ -53,6 +53,7 @@ class VenueAdmin(admin.ModelAdmin):
     list_editable = ["capacity"]
     list_filter = ["is_virtual", "country"]
     search_fields = ["name", "city"]
+    choice_description = ["city", "country"]
     fieldsets = [
         (None, {"fields": ["name", "is_virtual", "capacity"]}),
         ("Location", {"fields": [("city", "country"), "address", "url"]}),
@@ -84,6 +85,7 @@ class EventAdmin(admin.ModelAdmin):
     list_badges = {"kind": Event.KIND_COLORS}
     list_defer_fields = ["description"]
     search_fields = ["title", "venue__name", "venue__city"]
+    choice_description = ["starts_at", "venue"]
     date_hierarchy = "starts_at"
     autocomplete_fields = ["venue", "host"]
     prepopulated_fields = {"slug": ["title"]}
