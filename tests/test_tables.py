@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from bs4 import BeautifulSoup
 from django import forms
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -52,12 +53,11 @@ def test_as_rows_renders_table_with_header_and_one_tbody_per_row():
     formset_cls = formwork_modelformset_factory(UniqueCode, form=CodeRowForm, extra=0)
     formset = formset_cls(queryset=UniqueCode.objects.order_by("code"))
 
-    html = formset.as_rows(save_url="/save/")
+    soup = BeautifulSoup(formset.as_rows(save_url="/save/"), "html.parser")
 
-    assert html.count("<thead>") == 1
-    assert "<th>Code</th>" in html
-    assert html.count("<tbody") == 2
-    assert "alpha" in html and "beta" in html
+    assert "Code" in soup.thead.get_text()
+    assert len(soup.select("table > tbody")) == 2
+    assert "alpha" in soup.get_text() and "beta" in soup.get_text()
 
 
 def test_disabled_multiple_choice_cell_shows_the_chosen_labels():
@@ -178,3 +178,112 @@ def test_row_save_passes_uploaded_files_to_the_form():
 
     obj.refresh_from_db()
     assert obj.code == "Z"
+
+
+class HelpRowForm(FormworkModelForm):
+    class Meta:
+        model = UniqueCode
+        fields = ["code", "label"]
+        help_texts = {"label": "Shown in lists"}
+
+
+CodeFormSet = formwork_modelformset_factory(UniqueCode, form=HelpRowForm, extra=0, can_delete=True)
+
+
+def posted_inputs(html):
+    soup = BeautifulSoup(html, "html.parser")
+    inputs = [field for field in soup.find_all("input") if not field.find_parent("template")]
+    return {
+        field["name"]: field.get("value", "")
+        for field in inputs
+        if field.get("type") != "checkbox" or field.has_attr("checked")
+    }
+
+
+def test_as_rows_posts_back_as_a_valid_formset():
+    UniqueCode.objects.create(code="A", label="alpha")
+    queryset = UniqueCode.objects.all()
+
+    formset = CodeFormSet(posted_inputs(CodeFormSet(queryset=queryset).as_rows()), queryset=queryset)
+
+    assert formset.is_valid(), formset.errors
+
+
+@pytest.mark.parametrize(
+    ("attrs", "save_url", "can_add"),
+    [({}, "", True), ({}, "/save/", False), ({"can_add": False}, "", False), ({"edit_only": True}, "", False)],
+)
+def test_add_another_needs_a_formset_that_grows_on_one_save(attrs, save_url, can_add):
+    formset = type("Rows", (CodeFormSet,), attrs)(queryset=UniqueCode.objects.none())
+
+    soup = BeautifulSoup(formset.as_rows(save_url), "html.parser")
+
+    template = soup.find("template")
+    assert (
+        template is not None and template.find("input", attrs={"name": "form-__prefix__-code"}) is not None
+    ) is can_add
+    assert ("Add another" in soup.get_text()) is can_add
+
+
+def test_a_saved_row_has_a_delete_toggle_and_a_new_row_a_remove_button():
+    UniqueCode.objects.create(code="A")
+    formset = formwork_modelformset_factory(UniqueCode, form=HelpRowForm, extra=1, can_delete=True)(
+        queryset=UniqueCode.objects.all()
+    )
+
+    soup = BeautifulSoup(formset.as_rows(), "html.parser")
+
+    saved, new = soup.select("table > tbody")
+    assert saved.find("input", attrs={"name": "form-0-DELETE", "type": "checkbox"}) is not None
+    assert new.find("input", attrs={"name": "form-1-DELETE"}) is None
+    assert new.find("button", attrs={"aria-label": "Remove"}) is not None
+    assert "Delete" not in soup.thead.get_text()
+
+
+def test_a_required_column_has_the_asterisk_and_help_text_shows_in_the_header():
+    formset = CodeFormSet(queryset=UniqueCode.objects.none())
+
+    code, label = BeautifulSoup(formset.as_rows(), "html.parser").thead.find_all("th")[:2]
+
+    assert code.find(string="*") is not None
+    assert label.find(string="*") is None
+    assert label.find(attrs={"data-tip": "Shown in lists"}) is not None
+
+
+def test_an_invalid_row_keeps_its_changed_marks_and_describes_the_error():
+    UniqueCode.objects.create(code="A", label="alpha")
+    queryset = UniqueCode.objects.all()
+    data = {**posted_inputs(CodeFormSet(queryset=queryset).as_rows()), "form-0-code": ""}
+    formset = CodeFormSet(data, queryset=queryset)
+    assert not formset.is_valid()
+
+    soup = BeautifulSoup(formset.as_rows(), "html.parser")
+
+    code = soup.find("td", attrs={"data-field": "code"})
+    label = soup.find("td", attrs={"data-field": "label"})
+    assert code.has_attr("data-formwork-changed")
+    assert not label.has_attr("data-formwork-changed")
+    error = code.find(attrs={"role": "tooltip"})
+    assert error["id"] in code.find("input", attrs={"name": "form-0-code"})["aria-describedby"].split()
+    assert "required" in error.get_text()
+
+
+@pytest.mark.parametrize(("code", "marked"), [("Z", False), ("", True)])
+def test_row_save_drops_the_changed_marks_only_when_the_row_saved(code, marked):
+    obj = UniqueCode.objects.create(code="A", label="alpha")
+
+    class SaveView(FormworkRowSaveMixin):
+        form_class = CodeRowForm
+        queryset = UniqueCode.objects.all()
+
+    response = SaveView().post(
+        RequestFactory().post("/save/", {"code": code, "id": str(obj.pk), PREFIX_INPUT_NAME: ""})
+    )
+
+    assert (b"data-formwork-changed" in response.content) is marked
+
+
+def test_formset_media_loads_the_table_script():
+    formset = CodeFormSet(queryset=UniqueCode.objects.none())
+
+    assert "formwork/tables.js" in str(formset.media)

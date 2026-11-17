@@ -98,29 +98,6 @@ tr:not(:hover, :focus-within) > [data-editable]:not(.formwork-dirty, [data-inval
   }
 }
 
-/* A table cell's errors: a box in the top layer that admin.js lays over the cell's widget. DaisyUI's
-   tooltip draws the message under it, and the table's scroll box does not clip it. */
-[data-cell-error]:popover-open {
-  position: fixed;
-  inset: auto;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  overflow: visible;
-  pointer-events: none;
-}
-
-/* DaisyUI's .tooltip display would beat the browser's display: none of a closed popover. */
-[data-cell-error]:not(:popover-open) {
-  display: none;
-}
-
-/* An inline row marked for deletion fades and strikes its values. */
-[data-inline-row]:has([name$="-DELETE"]:checked) :is(td:not(:last-child), [data-inline-fields]) {
-  @apply line-through opacity-45;
-}
-
 /* The changelist's column toggle stays hidden until columns.js finds columns that don't fit.
    Without the script, the table scrolls sideways as in Django's admin. */
 #changelist-table [data-col-toggle] {

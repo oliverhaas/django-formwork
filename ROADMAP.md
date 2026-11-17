@@ -77,11 +77,9 @@ screenshot coverage, dropdown a11y, a settings page, and the config surface.
 
 ## Post-1.0 (additive; define the ceiling, don't block the freeze)
 
-- [ ] **Inline-formset editing UI: add/remove/reorder rows.** The rendering and per-row
-  autosave half landed (`as_row`/`as_rows`/`FormworkRowSaveMixin`, keyed on the posted pk),
-  so formsets render in the browser. What is left is the dynamic-row half: add, remove,
-  and reorder are demonstrated ad hoc in `examples/full` but not shipped as a reusable
-  widget JS module wired to `FormworkBaseInlineFormSet`. (medium)
+- [ ] **Reorder formset rows.** `as_rows()` adds, removes and deletes rows (`tables.js`,
+  shared with the admin's inlines). A formset with `can_order` still shows its `ORDER`
+  field as a number cell; drag handles that renumber it are left. (medium)
 - [ ] **Declarative form layout system** (fieldset grouping, multi-column, column span).
   `{{ form }}` can only produce one-column stacks; every non-trivial CRUD screen loses to
   crispy/manual templates. Design the API deliberately rather than rushing into the
@@ -108,10 +106,9 @@ screenshot coverage, dropdown a11y, a settings page, and the config surface.
 ## Open questions (your calls; decide before the relevant work)
 
 1. **Which strategic feature is the 1.0 differentiator?** You can realistically land one
-   large feature for 1.0: conditional fields (medium, highest value-per-effort), the
-   layout system (large, decides non-trivial CRUD adoption), or finishing the
-   inline-formset UI (now medium, since rendering and per-row autosave already landed and
-   only add/remove/reorder rows remains). Pick deliberately.
+   large feature for 1.0: conditional fields (medium, highest value-per-effort) or the
+   layout system (large, decides non-trivial CRUD adoption). The formset table already
+   adds, removes and deletes rows; only reordering is left. Pick deliberately.
 2. **Type-checking direction:** keep both mypy and ty (pay the double-suppression tax,
    flip `respect-type-ignore-comments=true`), or drop one checker for the library source?
 3. **Should `max_size`/`accept` be enforced server-side** (auto-attach validators,

@@ -1,6 +1,50 @@
-{% load i18n %}<tbody{% if row_id %} id="{{ row_id }}"{% endif %}{% if save_url %} hx-post="{{ save_url }}" hx-trigger="change delay:400ms" hx-target="this" hx-swap="outerMorph" hx-include="closest tbody"{% endif %}>
+{% load i18n %}<tbody id="{{ row.id }}" class="not-first-of-type:border-t not-first-of-type:border-base-content/5" data-formset-row="{{ row.form.prefix|default_if_none:"" }}"{% if row.new %} data-formset-new{% endif %}{% if row.save_url %} hx-post="{{ row.save_url }}" hx-trigger="change delay:400ms" hx-target="this" hx-swap="outerMorph" hx-include="closest tbody"{% endif %}>
+  {% if row.non_field_errors %}
   <tr>
-    {% for cell in cells %}<td>{% if forloop.first %}{% if save_url %}{{ form.row_hidden_inputs }}{% else %}{% for hidden in hidden_fields %}{{ hidden }}{% endfor %}{% endif %}{% endif %}{% if cell.editable %}{{ cell.bound_field }}{% if cell.bound_field.errors %}<span class="text-error text-xs mt-1 block" role="alert">{{ cell.bound_field.errors|join:" " }}</span>{% endif %}{% else %}<span class="text-sm">{{ cell.display }}</span>{% endif %}</td>{% endfor %}
+    <td colspan="{{ row.columns }}" class="pb-0">
+      <p class="flex items-center gap-1.5 text-xs text-error"><i class="icon icon-circle-exclamation-point size-3.5" aria-hidden="true"></i> {{ row.non_field_errors|join:" " }}</p>
+    </td>
   </tr>
-  {% if form.non_field_errors %}<tr><td colspan="{{ cells|length }}"><div role="alert" class="alert alert-error alert-soft">{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div></td></tr>{% endif %}
+  {% endif %}
+  <tr class="align-top">
+    {% for cell in row.cells %}
+    {% with bf=cell.field %}
+    <td class="min-w-36" data-field="{{ cell.name }}"{% if bf %} data-formwork-field{% if cell.changed %} data-formwork-changed{% if bf.initial_checked %} data-formwork-initial="{{ bf.initial_checked }}"{% endif %}{% endif %}{% if bf.errors %} data-invalid{% endif %}{% endif %}>
+      {% if forloop.first and not row.actions %}{{ row.hidden }}{% endif %}
+      {% if bf %}
+      {% if cell.links %}
+      {# A cell has no label row, so the links follow the widget. #}
+      <div class="flex items-center gap-3"><div class="min-w-0 flex-1">{{ cell.widget }}</div><span class="formwork-label-links">{{ cell.links }}</span></div>
+      {% else %}
+      {{ cell.widget }}
+      {% endif %}
+      {% if bf.auto_id %}<span id="{{ bf.auto_id }}_label" hidden>{{ bf.label }}</span>{% if bf.help_text %}<span id="{{ bf.auto_id }}_helptext" hidden>{{ bf.help_text|striptags }}</span>{% endif %}{% endif %}
+      {% if bf.errors %}<div popover="manual" class="tooltip tooltip-error tooltip-bottom" data-cell-error><div class="tooltip-content formwork-errors" role="tooltip"{% if bf.auto_id %} id="{{ bf.auto_id }}_error"{% endif %}>{% for error in bf.errors %}<p>{{ error }}</p>{% endfor %}</div></div>{% endif %}
+      {% else %}
+      <div class="min-h-10 py-2.5 text-sm">{{ cell.display }}</div>
+      {% endif %}
+    </td>
+    {% endwith %}
+    {% endfor %}
+    {% if row.actions %}
+    <td class="w-px whitespace-nowrap">
+      {{ row.hidden }}
+      <div class="flex h-10 items-center justify-end gap-0.5">
+        {% if row.link %}
+        <a href="{{ row.link }}" class="btn btn-ghost btn-sm btn-square text-base-content/60" title="{% translate "Open" %}" aria-label="{% translate "Open" %}"><i class="icon icon-square-arrow-out-up-right size-4" aria-hidden="true"></i></a>
+        {% endif %}
+        {% if row.new %}
+        <button type="button" class="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error" x-show="canRemove" @click="remove($el)" title="{% translate "Remove" %}" aria-label="{% translate "Remove" %}"><i class="icon icon-x size-4" aria-hidden="true"></i></button>
+        {% elif row.deletion_field %}
+        {% with df=row.deletion_field %}
+        <label class="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error has-checked:bg-error/10 has-checked:text-error" title="{% translate "Delete" %}" data-formwork-field{% if df.value %} data-formwork-changed data-formwork-initial="[]"{% endif %}>
+          <input type="checkbox" name="{{ df.html_name }}" id="{{ df.auto_id }}" class="sr-only"{% if df.value %} checked{% endif %} aria-label="{% translate "Delete" %}">
+          <i class="icon icon-trash size-4" aria-hidden="true"></i>
+        </label>
+        {% endwith %}
+        {% endif %}
+      </div>
+    </td>
+    {% endif %}
+  </tr>
 </tbody>

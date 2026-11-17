@@ -36,6 +36,7 @@
  */
 
 import "./formwork-core.js";
+import "./tables.js";
 import "./widgets/select.js";
 import "./widgets/select_multiple.js";
 import "./widgets/clearable_file_input.js";

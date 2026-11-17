@@ -374,8 +374,7 @@
 {% if errors %}<span class="badge badge-error badge-soft badge-sm ml-auto">{{ _("Errors") }}</span>{% endif %}
 {% endset %}
 {% if inline.collapsible %}
-<details id="{{ inline.prefix }}-group" class="card group/inline border border-base-300 bg-base-100"{% if errors %} open{% endif %}
-         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}">
+<details id="{{ inline.prefix }}-group" class="card group/inline border border-base-300 bg-base-100"{% if errors %} open{% endif %}{% if inline.prepopulated_fields %} x-data="formworkInline" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}"{% endif %}>
   <summary class="flex cursor-pointer list-none items-center gap-2 px-6 py-4 select-none [&::-webkit-details-marker]:hidden">
     {{ title }}
     {{ icon("chevron-down", "size-4 text-base-content/50 transition-transform group-open/inline:rotate-180" ~ ("" if errors else " ml-auto")) }}
@@ -383,8 +382,7 @@
   <div class="border-t border-base-300">{{ caller() }}</div>
 </details>
 {% else %}
-<section id="{{ inline.prefix }}-group" class="card border border-base-300 bg-base-100"
-         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}">
+<section id="{{ inline.prefix }}-group" class="card border border-base-300 bg-base-100"{% if inline.prepopulated_fields %} x-data="formworkInline" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}"{% endif %}>
   <header class="flex items-center gap-2 border-b border-base-300 px-6 py-4">{{ title }}</header>
   {{ caller() }}
 </section>

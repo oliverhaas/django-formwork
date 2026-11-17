@@ -23,6 +23,7 @@ from django.utils.safestring import SafeString, mark_safe
 from django.utils.text import capfirst
 
 from django_formwork.admin.cells import cell_for_field, cell_for_value, html
+from django_formwork.tables import Table, TableCell, TableRow
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -384,6 +385,37 @@ class InlineAdminFormSet:
     @property
     def can_add(self) -> bool:
         return self.has_add_permission and self.formset.max_num > len(self.formset.forms)
+
+    def _table_row(self, admin_form: InlineAdminForm, *, can_delete: bool) -> TableRow:
+        new = admin_form.original is None
+        form = admin_form.form
+        return TableRow(
+            form=form,
+            cells=[
+                TableCell(cell.name, field=cell.field)
+                if cell.field is not None
+                else TableCell(cell.name, display=cast("ReadonlyField", cell.readonly).contents)
+                for cell in admin_form.cells
+            ],
+            hidden=mark_safe("".join(str(bf) for bf in admin_form.hidden)),  # noqa: S308
+            new=new,
+            deletion_field=admin_form.deletion_field if can_delete and not new else None,
+            link=admin_form.change_url,
+            actions=True,
+        )
+
+    def table(self) -> SafeString:
+        """The tabular layout: formwork's formset table, flush in the inline's card."""
+        can_delete = self.formset.can_delete and self.has_delete_permission
+        return Table(
+            formset=self.formset,
+            headers=self.headers,
+            rows=[self._table_row(admin_form, can_delete=can_delete) for admin_form in self.forms],
+            empty_row=self._table_row(self.empty_form, can_delete=can_delete) if self.has_add_permission else None,
+            flush=True,
+            verbose_name=self.verbose_name,
+            verbose_name_plural=self.group_name,
+        ).render()
 
     @property
     def non_form_errors(self) -> Any:

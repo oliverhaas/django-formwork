@@ -85,27 +85,74 @@ Two cases compare values in Python where Django compares them in SQL:
 
 ## Editable tables
 
-`formset.as_rows(save_url)` renders the formset as one `<table>`, with a header row
-from the formset's `empty_form`. `form.as_row(save_url)` renders one `FormworkForm`
-or `FormworkModelForm` as a `<tbody>`, with one cell per visible field and the
-hidden inputs in the first cell.
+`formset.as_rows()` renders a formset as one editable `<table>`: the management form,
+a header row from the formset's `empty_form`, one `<tbody>` per form, and a button to
+add a row. Put it in a `<form>` and save it as any other formset:
 
-With a `save_url`, each row posts its own fields to that URL 400 ms after a change
-and morphs the response in place. Without one, the rows are static.
+```python
+def task_edit_all(request):
+    formset = TaskFormSet(request.POST or None, queryset=Task.objects.filter(owner=request.user))
+    if request.method == "POST" and formset.is_valid():
+        formset.save()
+        return redirect("task_list")
+    return render(request, "tasks/edit_all.html", {"formset": formset})
+```
 
-A disabled field shows as text: the instance's `get_<field>_display()`, else the
-instance's value (a comma-separated list for a many-to-many field), else the labels
-of the chosen values.
+```html
+<form method="post" data-formwork-dirty>
+  {% csrf_token %}
+  {{ formset.as_rows }}
+  <button class="btn btn-primary">Save</button>
+</form>
+```
 
-`as_rows()` does not render the management form. Add
-`{{ formset.management_form }}` if the table is also submitted as a whole formset.
+- **Header.** Each column has the field's label, a red asterisk for a required field,
+  and the help text in a tooltip on an info icon.
+- **Cells.** A row has one cell per visible field. A disabled field shows as text:
+  the instance's `get_<field>_display()`, else the instance's value (a
+  comma-separated list for a many-to-many field), else the labels of the chosen
+  values.
+- **Errors.** A cell keeps its errors in a tooltip under the widget. The tooltip shows
+  while the pointer is on the cell or the focus is in it, so the row keeps its
+  height. The errors of a whole row show above the row, the formset's own errors
+  above the table.
+- **Changed values.** In a bound formset, a cell whose value differs from the initial
+  one carries the same marks as a changed field of a form. `data-formwork-dirty` on
+  the `<form>` shows them.
+- **Rows.** Add another appends a row from the formset's `empty_form`, and a new row
+  has Remove. With `can_delete`, a saved row has a Delete toggle instead: the row
+  fades and is struck through until the save deletes it. Add another hides at
+  `max_num`, Remove at `min_num`, and the indexes of the rows stay contiguous.
+  `can_add = False` on the formset class, or `edit_only=True`, removes Add another.
+- **Empty table.** Without rows, the table shows "No *tasks* yet.", with the model's
+  `verbose_name_plural`.
+
+`as_rows(flush=True)` is for a table in a card: the table runs to the card's edges,
+and its first and last columns take the card's padding.
+
+The rows need `tables.js`. `{% formwork_js %}` loads it, and so does
+`{{ formset.media }}` after `{% formwork_core_js %}`.
+
+### Saving row by row
+
+`formset.as_rows(save_url)` saves each row by itself: a row posts its own fields to
+`save_url` 400 ms after a change and morphs the response in place. A row is saved
+the moment it changes, so this table has no Add another, Remove or Delete.
+`form.as_row(save_url)` renders one `FormworkForm` or `FormworkModelForm` the same
+way, as one `<tbody>`. [Saving a row](#saving-a-row) describes the view behind
+`save_url`.
 
 ### Templates
 
-| Template                     | Renders                       | Set per class on         |
-|------------------------------|-------------------------------|--------------------------|
-| `formwork/tables/table.html` | `as_rows()`: the `<table>`    | the formset, `template_name_table` |
-| `formwork/tables/row.html`   | `as_row()`: one `<tbody>`     | the form, `template_name_row`      |
+| Template                     | Renders                    | Context           | Set per class on                   |
+|------------------------------|----------------------------|-------------------|------------------------------------|
+| `formwork/tables/table.html` | `as_rows()`: the `<table>` | `table`, `formset`| the formset, `template_name_table` |
+| `formwork/tables/row.html`   | `as_row()`: one `<tbody>`  | `row`, `form`     | the form, `template_name_row`      |
+
+`table` is a `django_formwork.tables.Table`, with the `headers`, the `rows` and the
+`empty_row` that Add another copies. Each row is a `TableRow`, with the `form`, its
+`cells` and its `hidden` inputs; each cell is a `TableCell`, with the bound `field` or
+the `display` text of a disabled one.
 
 To override one for the whole project, put a template at the same path in a
 directory of your `TEMPLATES` setting.

@@ -29,6 +29,18 @@
   override one of the widget templates, copy it again for the `data-formwork-lazy`
   attribute. Without it, the widget starts on load as before.
 
+- `formset.as_rows()` renders the formset's management form. Remove a
+  `{{ formset.management_form }}` that a template adds next to the table: the form
+  counts would post twice, and Add another changes only the table's own.
+- An overridden `formwork/tables/table.html` or `formwork/tables/row.html` gets a new
+  context: `table` and `formset` for the table, `row` and `form` for a row.
+  `header_fields`, `cells`, `save_url` and `row_id` are no longer in it, and the forms
+  no longer have `get_row_context()` and `row_cells()`. Copy the templates again from
+  the package. `form.row_id` and `form.row_hidden_inputs` stay for hand-authored rows.
+- `form.as_row()` without an argument renders a row that does not save. It no longer
+  reads a `save_url` that an earlier `as_rows(save_url)` set on the form, so pass the URL:
+  `form.as_row(save_url)`.
+
 ### Added
 
 - `MultipleFileField` for several uploads in one field. A plain `FileField` with a
@@ -111,6 +123,16 @@
   next to a slug, with a `label_links(name, value, renderer=None)` method that returns
   HTML. The field template renders them after the label, not inside it, so they stay out
   of the field's accessible name. The admin puts a relation's Edit and Add links there.
+- `formset.as_rows()` edits a whole formset in one table, as the admin's tabular inline
+  does. Add another appends a row from the formset's `empty_form`, a new row has Remove,
+  and with `can_delete` a saved row has a Delete toggle that fades the row and strikes it
+  through. A required column has a red asterisk, and the help text shows in a tooltip on
+  the column's header. A cell keeps its errors in a tooltip under the widget, so an
+  invalid row keeps its height, and a changed cell shows the marks of
+  `data-formwork-dirty`. `can_add = False` on the formset class removes Add another, and
+  `as_rows(flush=True)` lays the table out to the edges of a card. The rows need
+  `tables.js`, which `{% formwork_js %}` and `{{ formset.media }}` load. With a
+  `save_url`, each row still saves by itself, without Add another, Remove or Delete.
 
 ### Changed
 

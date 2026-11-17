@@ -357,7 +357,7 @@ def test_an_inline_cell_error_shows_in_a_tooltip(admin_page, live_server, kitche
     Part.objects.create(item=item, name="Lid")
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
     quantity = admin_page.locator("[name=parts-0-quantity]")
-    row = admin_page.locator("#parts-0 tr")
+    row = admin_page.locator("[data-formset-row=parts-0] tr")
     height = row.bounding_box()["height"]
     quantity.fill("-1")
     admin_page.get_by_role("button", name="Save", exact=True).click()
@@ -822,15 +822,15 @@ def test_a_tag_added_in_the_dialog_shows_in_inline_rows_added_after(admin_page, 
     add.click()
     group.locator("[name=items-0-name]").fill("Kettle")
 
-    group.locator("#items-0").get_by_role("link", name="Add another tag").click()
+    group.locator("[data-formset-row=items-0]").get_by_role("link", name="Add another tag").click()
     dialog = related_dialog(admin_page)
     dialog.locator("[name=name]").fill("eco")
     dialog.get_by_role("button", name="Save", exact=True).click()
     expect(admin_page.locator("dialog")).to_have_count(0)
-    expect(group.locator("#items-0 [data-related] summary")).to_match_aria_snapshot("- text: eco")
+    expect(group.locator("[data-formset-row=items-0] [data-related] summary")).to_match_aria_snapshot("- text: eco")
     add.click()
     group.locator("[name=items-1-name]").fill("Toaster")
-    tags = group.locator("#items-1 [data-related]")
+    tags = group.locator("[data-formset-row=items-1] [data-related]")
     tags.locator("summary").click()
     tags.get_by_role("option", name="eco").click()
     admin_page.get_by_role("button", name="Save", exact=True).click()
@@ -859,7 +859,7 @@ def test_inline_rows_fill_their_own_slug_and_a_saved_row_keeps_its_slug(admin_pa
     add.click()
     add.click()
     group.locator("[name=items-1-name]").fill("Tea Pot")
-    group.locator("#items-1").get_by_role("button", name="Remove").click()
+    group.locator("[data-formset-row=items-1]").get_by_role("button", name="Remove").click()
     group.locator("[name=items-1-name]").fill("Mug Set")
 
     expect(group.locator("[name=items-0-slug]")).to_have_value("kettle-classic")
@@ -1061,7 +1061,7 @@ def test_inline_rows_stay_contiguous_after_a_removal(admin_page, live_server, ki
 
     add.click()
     add.click()
-    group.locator(f"#parts-{initial}").get_by_role("button", name="Remove").click()
+    group.locator(f"[data-formset-row=parts-{initial}]").get_by_role("button", name="Remove").click()
     group.locator(f"[name=parts-{initial}-name]").fill("Handle")
     admin_page.get_by_role("button", name="Save", exact=True).click()
 

@@ -348,6 +348,35 @@ fieldset.fieldset:has(> .tooltip > input[type="checkbox"]:not(.toggle):not(.hidd
     display: none;
 }
 
+/* ================================================================
+   Formset tables (formset.as_rows)
+   ================================================================ */
+
+/* A table cell's errors: a box in the top layer that tables.js lays over
+   the cell's widget.  DaisyUI's tooltip draws the message under it, and the
+   table's scroll box does not clip it. */
+[data-cell-error]:popover-open {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    overflow: visible;
+    pointer-events: none;
+}
+
+/* DaisyUI's .tooltip display in @layer utilities would beat the browser's
+   display: none of a closed popover, so this MUST be unlayered. */
+[data-cell-error]:not(:popover-open) {
+    display: none;
+}
+
+/* A row marked for deletion fades and strikes its values. */
+[data-formset-row]:has([name$="-DELETE"]:checked) :is(td:not(:last-child), [data-formset-fields]) {
+    @apply line-through opacity-45;
+}
+
 /* Django's ClearableFileInput renders loose text between inline elements:
    "Currently: <a>name</a> [ ] Clear <br> Change: <input type=file>".
    The field template wraps it in .clearable-file, and a grid lays the parts

@@ -3,7 +3,7 @@
 {% set can_delete = formset.can_delete and inline.has_delete_permission %}
 
 {% macro item(admin_form, inline, can_delete) %}
-<div id="{{ admin_form.form.prefix }}" class="px-6 pt-4 pb-5" data-inline-row{% if admin_form.original is none %}="new"{% endif %}>
+<div id="{{ admin_form.form.prefix }}" class="px-6 pt-4 pb-5" data-formset-row="{{ admin_form.form.prefix }}"{% if admin_form.original is none %} data-formset-new{% endif %}>
   <div class="flex items-center gap-2">
     {% if admin_form.original is not none %}
     <h3 class="min-w-0 flex-1 truncate text-sm font-medium">{{ admin_form.original }}</h3>
@@ -29,7 +29,7 @@
   {% if admin_form.form.non_field_errors() %}
   <p class="mt-2 flex items-center gap-1.5 text-sm text-error">{{ icon("circle-exclamation-point", "size-4") }} {{ admin_form.form.non_field_errors()|join(" ") }}</p>
   {% endif %}
-  <div data-inline-fields>
+  <div data-formset-fields>
     {% for hidden in admin_form.hidden %}{{ hidden }}{% endfor %}
     {% for fieldset in admin_form.fieldsets %}
     {% if fieldset.name %}<h4 class="mt-4 text-xs font-semibold tracking-wide text-base-content/50 uppercase">{{ fieldset.name }}</h4>{% endif %}
@@ -41,6 +41,7 @@
 {% endmacro %}
 
 {% call m.inline_group(inline) %}
+<div x-data="formworkFormset" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}">
   {{ formset.management_form }}
   {% if inline.non_form_errors %}
   <div role="alert" class="alert alert-error alert-soft mx-4 mt-4">{{ icon("circle-exclamation-point", "size-5") }}<span>{{ inline.non_form_errors|join(" ") }}</span></div>
@@ -60,4 +61,5 @@
     <button type="button" class="btn btn-ghost btn-sm text-primary" @click="add()">{{ icon("plus") }} {{ _("Add another %(name)s", name=inline.verbose_name) }}</button>
   </div>
   {% endif %}
+</div>
 {% endcall %}
