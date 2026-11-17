@@ -6,30 +6,11 @@ from datetime import timedelta
 from django.db.models import BooleanField, Count, ExpressionWrapper, Q, Sum
 from django.db.models.functions import TruncDate, TruncMonth
 from django.utils import timezone
-from django.utils.formats import date_format, number_format
+from django.utils.formats import date_format
 from django.utils.timesince import timeuntil
+from taskmanager.figures import BARS, month_labels, months_between, number, percent, plural, stacked
 
 from .models import Event, Registration
-
-# A longer range shows its last months.
-MONTHS = 24
-
-# Whole class names, so Tailwind finds them.
-BARS = {
-    "info": "progress-info",
-    "warning": "progress-warning",
-    "success": "progress-success",
-    "error": "progress-error",
-    "neutral": "",
-}
-
-
-def number(value):
-    return number_format(value, force_grouping=True)
-
-
-def percent(part, whole):
-    return round(100 * part / whole) if whole else None
 
 
 def by_month(ids, taken, now):
@@ -58,44 +39,15 @@ def by_month(ids, taken, now):
     )
     if not events:
         return None, []
-    months = [min(events)]
-    while (month := months[-1]) < max(events):
-        months.append(month.replace(year=month.year + month.month // 12, month=month.month % 12 + 1))
-    months = months[-MONTHS:]
+    months = months_between(min(events), max(events))
     held = [counts.get(month, (0, 0))[0] for month in months]
     upcoming = [counts.get(month, (0, 0))[1] for month in months]
     names = [date_format(month, "F Y") for month in months]
     held_events = [events.get(month, 0) for month in months]
-    top = {"topLeft": 3, "topRight": 3}
+    series = [("Held", held, "--color-base-content/25"), ("Upcoming", upcoming, "--color-primary")]
     chart = {
         "type": "bar",
-        "data": {
-            # The year shows under the first month and under each January.
-            "labels": [
-                [date_format(month, "M"), date_format(month, "Y") if index == 0 or month.month == 1 else ""]
-                for index, month in enumerate(months)
-            ],
-            "datasets": [
-                {
-                    "label": "Held",
-                    "data": held,
-                    "backgroundColor": "--color-base-content/25",
-                    "borderRadius": [0 if above else top for above in upcoming],
-                    "maxBarThickness": 24,
-                },
-                {
-                    "label": "Upcoming",
-                    "data": upcoming,
-                    "backgroundColor": "--color-primary",
-                    "borderRadius": top,
-                    # A gap in the card's color parts the two stacked bars.
-                    "borderColor": "--color-base-100",
-                    "borderWidth": [{"bottom": 2} if below else 0 for below in held],
-                    "borderSkipped": False,
-                    "maxBarThickness": 24,
-                },
-            ],
-        },
+        "data": {"labels": month_labels(months), "datasets": stacked(*series)},
         "options": {
             "scales": {
                 "x": {"stacked": True, "grid": {"display": False}, "ticks": {"maxRotation": 0}},
@@ -104,7 +56,7 @@ def by_month(ids, taken, now):
             "plugins": {
                 "tooltip": {
                     "titles": names,
-                    "footers": [f"{count} event{'' if count == 1 else 's'}" for count in held_events],
+                    "footers": [plural(count, "event") for count in held_events],
                 }
             },
         },
