@@ -1931,7 +1931,8 @@ without a <code>placeholder</code> raises <code>ImproperlyConfigured</code>.</p>
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"placeholder"</span><span class="p">:</span> <span class="s2">"Role"</span><span class="p">},</span> <span class="n">floating</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
 </span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="p">)</span>
 </span></code></pre></div>
-<p>On a select, the label always floats above the trigger.</p>
+<p>On a select, the label always floats above the trigger. With <code>allow_clear</code>, the empty
+trigger shows the label of the clearing row.</p>
 <hr />
 <h2 id="choicelabel">ChoiceLabel<a class="headerlink" href="#choicelabel" title="Permanent link">&para;</a></h2>
 <p><code>ChoiceLabel</code> is a choice label whose <code>str()</code> is its text. The extras are

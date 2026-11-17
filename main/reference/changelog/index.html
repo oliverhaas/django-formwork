@@ -1348,8 +1348,10 @@
   counts the changes and saves or discards them. A cell's error shows in a tooltip, here
   and in a <code>TabularInline</code>, so a failed save keeps the height of the rows. With
   <code>django.contrib.auth</code> installed, the admin has pages for users and groups, with the
-  password page of Django's user admin. A Show counts switch in the filter row shows the
-  number of rows for each filter option, as <code>show_facets</code> does in Django. Dates are
+  password page of Django's user admin. A list's filters follow its search box in one
+  row, as many as fit the window, and a More menu holds the others. A Show counts switch
+  in that menu shows the number of rows for each filter option, as <code>show_facets</code> does in
+  Django. Dates are
   typed in the language's first <code>DATE_INPUT_FORMATS</code>, in a calendar dropdown, and a
   datetime field picks its day and time in one calendar, typed in the first
   <code>DATETIME_INPUT_FORMATS</code> without the seconds. The buttons next to a relation add a row
@@ -1437,6 +1439,9 @@
   "Unassigned", still shows as is. The admin's optional choice fields and relations get
   the placeholder. If you override <code>formwork/widgets/select.html</code> or
   <code>formwork/widgets/select_multiple.html</code>, copy it again for the muted row.</li>
+<li>An empty floating <code>Select</code> with <code>allow_clear</code> shows the label of its clearing row when
+  the field sets one, such as an <code>empty_label</code> of "Unassigned". It showed "Select…",
+  which it still shows for Django's blank label.</li>
 <li>The end of a long <code>Select</code>, <code>SelectMultiple</code> or <code>ComboBox</code> list shows a "Load more"
   row in the style of the option rows. The info alert with "Showing the first 20
   matches. Keep typing to narrow them down." and its button made a narrow dropdown

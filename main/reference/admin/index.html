@@ -1812,10 +1812,20 @@ An entry can be:</p>
 row, under the admin's <code>empty_value_display</code>. A nullable boolean offers Unknown. A
 relation lists its rows in the order of the related model's admin and leaves out the rows
 that the field's <code>limit_choices_to</code> excludes, as Django's filter does.</p>
-<p>The filters sit in a row under the search box, in the order of <code>list_filter</code>. The
-Filters button opens the row and shows how many filters are active. The row is open
-when the page loads with an active filter. A list without <code>list_filter</code> keeps the button
-in the same place, and its row says that the list has no filters.</p>
+<p>The filters follow the search box in its row, in the order of <code>list_filter</code>. Each has a
+fixed width, and the row shows as many as fit the window. The others wait in the More
+menu, which lists them by name and counts them on its button. A pick from the menu puts
+that filter in the row and opens it. With more than eight filters the menu has a search
+box, and Enter picks the first match. Put the filters that people use most first in
+<code>list_filter</code>: they are the ones that show.</p>
+<p>A filter with a value always shows, with a border in the primary color. In a full row it
+takes the place of the last filter without a value, so the row keeps its height and the
+other filters keep their place. An empty filter that came from the menu returns to it
+when the focus leaves. Clear at the end of the row empties every filter and keeps the
+search. It is dimmed while no filter has a value.</p>
+<p>A window too narrow for two filters next to the search box, such as a phone's, gives the
+filters a row of their own under it. A list without <code>list_filter</code> shows only its search
+box.</p>
 <p>The search box filters the same way, through <code>get_search_results()</code>, so <code>^</code>, <code>=</code> and <code>@</code>
 prefixes in <code>search_fields</code> work as in Django. A filter on a many-to-many relation picks
 one row, as Django's related filter does.</p>
@@ -1861,8 +1871,10 @@ both admins:</p>
 lookup through a relation that <code>list_filter</code> does not name with a 400 response. A lookup
 that the list cannot apply returns to the list with <code>?e=1</code> and a warning that the list
 shows all rows.</p>
-<p>With <code>show_facets</code> at its default, <code>admin.ShowFacets.ALLOW</code>, the filter row has a Show
-counts switch. The switch adds <code>_facets</code> to the URL, as Django's link does, and each
+<p>With <code>show_facets</code> at its default, <code>admin.ShowFacets.ALLOW</code>, the More menu has a Show
+counts switch. On a list whose filters all fit the row, the button shows an options icon
+and its menu holds only the switch. The switch adds <code>_facets</code> to the URL, as Django's
+link does, and each
 option then shows how many rows it matches, in a badge at the end of the option. An
 option that matches no rows shows 0, dimmed. The count applies the search and the other
 filters, but not the filter of the option itself. <code>ShowFacets.ALWAYS</code> shows the counts
