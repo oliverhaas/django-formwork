@@ -1,14 +1,29 @@
-"""Tests for tasks: the Member assignee and the inline row edit."""
+"""Tests for tasks: My work, the board and the task page."""
 
 from __future__ import annotations
 
-from django.urls import reverse
+from datetime import timedelta
 
-from taskmanager.models import Member, Task
+import pytest
+from django.urls import reverse
+from django.utils import timezone
+
+from taskmanager.models import Activity, Member, Profile, Task
+from taskmanager.views import DONE_ON_BOARD
 
 
 def _member(name="Mira Chen", email="mira@example.com"):
     return Member.objects.create(name=name, email=email)
+
+
+@pytest.fixture
+def me(db):
+    """The member the profile names, as Settings sets it."""
+    member = _member(name="Devon Vega", email="devon@example.com")
+    profile = Profile.load()
+    profile.member = member
+    profile.save()
+    return member
 
 
 def test_member_initials_from_full_and_single_names(db):
@@ -32,92 +47,6 @@ def test_task_create_assigns_a_member(client, db):
     assert task.assignee == member
 
 
-def _row_post(task, **changes):
-    """A per-row autosave payload: the row's editable fields, plus overrides."""
-    data = {
-        "id": str(task.pk),
-        "_formwork_prefix": "",
-        "status": task.status,
-        "priority": task.priority,
-        "assignee": task.assignee_id or "",
-    }
-    data.update(changes)
-    return data
-
-
-def test_row_edit_reassigns_via_htmx(client, db):
-    member = _member()
-    task = Task.objects.create(title="Reassign me")
-    response = client.post(
-        reverse("task_row_save"),
-        _row_post(task, assignee=member.pk),
-        headers={"HX-Request": "true"},
-    )
-    assert response.status_code == 200
-    task.refresh_from_db()
-    assert task.assignee == member
-
-
-def test_row_edit_can_unassign(client, db):
-    member = _member()
-    task = Task.objects.create(title="Unassign me", assignee=member)
-    response = client.post(
-        reverse("task_row_save"),
-        _row_post(task, assignee=""),
-        headers={"HX-Request": "true"},
-    )
-    assert response.status_code == 200
-    task.refresh_from_db()
-    assert task.assignee is None
-
-
-def test_row_edit_cannot_clobber_readonly_fields(client, db):
-    """A row POST may change editable columns; a disabled column (title) is ignored."""
-    task = Task.objects.create(title="Keep my title", status=Task.Status.REVIEW)
-    client.post(
-        reverse("task_row_save"),
-        _row_post(task, title="HACKED", status=Task.Status.DONE),
-        headers={"HX-Request": "true"},
-    )
-    task.refresh_from_db()
-    assert task.title == "Keep my title"  # disabled column, untouched by POST
-    assert task.status == Task.Status.DONE  # editable column, saved
-
-
-def test_list_rows_are_keyed_by_task_pk(client, db):
-    """Rows carry a pk-based identity (id + prefix), not a positional formset
-    index, so htmx morph tracks each row across re-renders instead of swapping
-    content between slots."""
-    a = Task.objects.create(title="First")
-    b = Task.objects.create(title="Second")
-    content = client.get(reverse("task_list")).content.decode()
-    for task in (a, b):
-        assert f'id="formwork-row-task-{task.pk}"' in content
-        assert f'value="task-{task.pk}"' in content  # round-tripped _formwork_prefix
-    assert 'id="formwork-row-form-0"' not in content  # no positional ids
-
-
-def test_add_task_appends_a_draft_row(client, db):
-    before = Task.objects.count()
-    response = client.post(reverse("task_add"), headers={"HX-Request": "true"})
-    assert response.status_code == 200
-    assert Task.objects.count() == before + 1
-    assert b"<tbody" in response.content
-    task = Task.objects.latest("id")
-    content = response.content.decode()
-    assert f'id="formwork-row-task-{task.pk}"' in content  # same pk scheme as the list
-
-
-def test_inline_delete_removes_the_task(client, db):
-    task = Task.objects.create(title="Delete me")
-    response = client.post(
-        reverse("task_delete", kwargs={"pk": task.pk}),
-        headers={"HX-Request": "true"},
-    )
-    assert response.status_code == 200
-    assert not Task.objects.filter(pk=task.pk).exists()
-
-
 def test_deleting_a_member_keeps_the_task(client, db):
     member = _member()
     task = Task.objects.create(title="Orphan me", assignee=member)
@@ -126,42 +55,101 @@ def test_deleting_a_member_keeps_the_task(client, db):
     assert task.assignee is None
 
 
-def test_search_filter_is_type_search_with_magnifier(client, db):
-    """The filter search box is a type=search input named q (django-filter field),
-    wrapped by SearchInput's leading magnifier."""
-    content = client.get(reverse("task_list")).content.decode()
-    assert '<input type="search" name="q"' in content
-    assert "icon-search" in content  # framework-rendered leading magnifier
+def test_my_work_lists_my_open_tasks_by_due_date(client, me):
+    today = timezone.localdate()
+    Task.objects.create(title="Later task", assignee=me, due_date=today + timedelta(days=30))
+    Task.objects.create(title="Week task", assignee=me, due_date=today + timedelta(days=2))
+    Task.objects.create(title="Overdue task", assignee=me, due_date=today - timedelta(days=1))
+    Task.objects.create(title="Someone else's task", assignee=_member(), due_date=today)
+    content = client.get(reverse("dashboard")).content.decode()
+    assert content.index("Overdue task") < content.index("Week task") < content.index("Later task")
+    assert "Someone else&#x27;s task" not in content
 
 
-def test_status_and_priority_filters_have_floating_labels(client, db):
-    """The select filters carry floating labels so the active filter reads clearly."""
-    content = client.get(reverse("task_list")).content.decode()
-    assert content.count('class="floating-label formwork-floating-select"') == 2
-    assert '<span id="id_status_floating_label">Status</span>' in content
-    assert '<span id="id_priority_floating_label">Priority</span>' in content
+def test_quick_add_assigns_the_task_to_me(client, me):
+    response = client.post(reverse("dashboard"), {"title": "Book the room"})
+    assert response.status_code == 302
+    assert Task.objects.get(title="Book the room").assignee == me
 
 
-def test_filter_narrows_the_task_list(client, db):
-    """django-filter's ?status= narrows the queryset the list renders."""
-    Task.objects.create(title="Done thing", status=Task.Status.DONE)
-    Task.objects.create(title="Todo thing", status=Task.Status.TODO)
-    content = client.get(reverse("task_list"), {"status": Task.Status.DONE}).content.decode()
-    assert "Done thing" in content
-    assert "Todo thing" not in content
+def test_ticking_a_task_marks_it_done_and_unticking_reopens_it(client, me):
+    task = Task.objects.create(title="Tick me", assignee=me, status=Task.Status.IN_PROGRESS)
+    client.post(reverse("task_done", args=[task.pk]), {"done": "on"})
+    task.refresh_from_db()
+    assert task.status == Task.Status.DONE
+    client.post(reverse("task_done", args=[task.pk]))
+    task.refresh_from_db()
+    assert task.status == Task.Status.TODO
+    assert list(task.activity.values_list("value", flat=True)) == ["Done", "To Do"]
 
 
-def test_task_row_priority_trigger_carries_severity_class(client, db):
-    """The priority Select seeds its trigger class from the saved severity."""
-    Task.objects.create(title="Recolor me", priority=Task.Priority.HIGH)
-    response = client.get(reverse("task_list"))
+def test_board_puts_my_tasks_first_in_a_column(client, me):
+    today = timezone.localdate()
+    Task.objects.create(title="Their task", assignee=_member(), due_date=today)
+    Task.objects.create(title="My task", assignee=me, due_date=today + timedelta(days=9))
+    content = client.get(reverse("board")).content.decode()
+    assert content.index("My task") < content.index("Their task")
+
+
+def test_board_filter_narrows_the_columns(client, db):
+    Task.objects.create(title="Urgent thing", priority=Task.Priority.CRITICAL)
+    Task.objects.create(title="Minor thing", priority=Task.Priority.LOW)
+    content = client.get(reverse("board"), {"priority": Task.Priority.CRITICAL}).content.decode()
+    assert "Urgent thing" in content
+    assert "Minor thing" not in content
+
+
+def test_board_leaves_older_done_tasks_to_the_admin(client, db):
+    tasks = [Task.objects.create(title=f"Finished {i:02d}", status=Task.Status.DONE) for i in range(DONE_ON_BOARD + 1)]
+    content = client.get(reverse("board")).content.decode()
+    assert tasks[-1].title in content
+    assert tasks[0].title not in content
+    assert "status__exact=done" in content
+
+
+def test_board_move_changes_the_status_and_records_it(client, me):
+    task = Task.objects.create(title="Move me")
+    response = client.post(reverse("board_move"), {"task": task.pk, "status": Task.Status.REVIEW})
+    assert response.status_code == 302
+    task.refresh_from_db()
+    assert task.status == Task.Status.REVIEW
+    entry = task.activity.get()
+    assert (entry.author, entry.field, entry.value) == (me, "Status", "In Review")
+
+
+def test_board_add_assigns_the_task_to_me_and_keeps_the_filters(client, me):
+    response = client.post(
+        f"{reverse('board_add')}?priority=high", {"title": "Draft the agenda", "status": Task.Status.IN_PROGRESS}
+    )
+    assert response["Location"] == f"{reverse('board')}?priority=high"
+    task = Task.objects.get(title="Draft the agenda")
+    assert (task.assignee, task.status) == (me, Task.Status.IN_PROGRESS)
+
+
+def test_task_page_saves_a_change_and_records_it(client, me):
+    task = Task.objects.create(title="Finish me", priority=Task.Priority.HIGH)
+    response = client.post(
+        reverse("task_detail", args=[task.pk]),
+        {"_formwork_section": "details", "status": Task.Status.DONE, "priority": Task.Priority.HIGH, "assignee": ""},
+    )
+    assert response["HX-Trigger"] == "task-changed"
+    task.refresh_from_db()
+    assert task.status == Task.Status.DONE
+    entry = task.activity.get()
+    assert (entry.author, entry.field, entry.value) == (me, "Status", "Done")
+
+
+def test_comment_is_saved_with_my_name(client, me):
+    task = Task.objects.create(title="Discuss me")
+    response = client.post(reverse("task_comment", args=[task.pk]), {"comment": "  Looks good.  "})
+    assert response["Location"] == task.get_absolute_url()
+    entry = task.activity.get()
+    assert (entry.author, entry.comment) == (me, "Looks good.")
+
+
+def test_blank_comment_is_rejected(client, me):
+    task = Task.objects.create(title="Discuss me")
+    response = client.post(reverse("task_comment", args=[task.pk]), {"comment": "   "})
     assert response.status_code == 200
-    assert b'data-selected-toggle-class="select-soft select-warning"' in response.content
-
-
-def test_dashboard_shows_assignee_initials_badge(client, db):
-    Task.objects.create(title="Badge check", assignee=_member())
-    response = client.get(reverse("dashboard"))
-    assert response.status_code == 200
-    assert b"badge-neutral" in response.content
-    assert b"MC" in response.content
+    assert b'aria-invalid="true"' in response.content
+    assert not Activity.objects.exists()

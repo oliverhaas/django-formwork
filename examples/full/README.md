@@ -1,6 +1,6 @@
 # Full example — Taskwork
 
-A small project-management UI built on django-formwork. Five pages exercise the framework end-to-end: dashboard, task list with inline edit, task detail, multi-step project wizard, and a settings page that picks up the widgets the task domain doesn't.
+A small task tracker built on django-formwork. The app pages are what a team member works in: their own tasks, a board, a page per task, a project wizard and the settings. The admin at `/admin/` holds the tables, filters and bulk actions, so the two do not repeat each other.
 
 ## Setup
 
@@ -29,9 +29,10 @@ tenth of the rows, `--seed 2` gives a different but repeatable data set.
 
 | URL | What it shows |
 |---|---|
-| `/` | Dashboard — DaisyUI `stats` cards, recent activity feed, inline quick-add form |
-| `/tasks/` | Tasks list — htmx-driven filter bar, table with inline status edit per row |
-| `/tasks/new/` and `/tasks/<id>/edit/` | Two-column task form: full `ModelForm` left, metadata sidebar right |
+| `/` | My work: your open tasks by due date (overdue, this week, later), what you finished this week, the team's latest activity and a quick add. A checkbox ticks a task off. |
+| `/tasks/` | The board: one column per status, your tasks first in each. Drag a card to another column to move it (on a touch screen, change the status on the task page), or add a task at the foot of a column. The filters live in the URL. |
+| `/tasks/<id>/` | The task page: description, comments and changes on the left. Status, assignee, due date, priority and tags on the right save each change by themselves (section forms). |
+| `/tasks/new/` and `/tasks/<id>/edit/` | The full task form, with every field |
 | `/wizard/` | Four-step project wizard (Project → Configuration → First task → Review) with the DaisyUI `steps` component |
 | `/settings/` | Showcase page for `PhoneInput`, `Select`, `ImageDropzoneInput`, `PasswordInput`, `OTPInput`, `ComboBox`, `Rating`, persisted on a single local `Profile` row |
 
@@ -77,8 +78,9 @@ The seed writes its rows without a user, so their first event names no user.
 
 Every widget in the package gets airtime across these pages. Quick lookup:
 
-- **Dashboard quick-add**: plain Django inputs (a four-option priority doesn't need a fancy widget)
-- **Tasks list filter bar**: plain selects + plain text input
+- **My work quick add**: a text input and `DatePicker`
+- **Board filters**: `SearchInput`, `Select` with a placeholder for "any"
+- **Task page side column**: `Select`, `SelectMultiple` and `DatePicker` in a section form that saves on change
 - **Task form**: `Select` (assignee, backed by the `Member` model with an initials badge and email per option, server search), `SelectMultiple` (tags, server search), `DatePicker`, `DateTimePicker` (reminder), `ImageDropzoneInput`, `FileDropzoneInput`, `Rating`
 - **Wizard**: `ValidatedTextarea`, `ToggleInput`, `Range`, `RadioSelect`, `DatePicker`, `SelectMultiple`
 - **Settings**: `PhoneInput`, `Select` (country), `ImageDropzoneInput`, `PasswordInput`, `OTPInput`, `ComboBox`, `Rating`
@@ -97,7 +99,7 @@ The example doubles as an integration test bed for the package:
 uv run pytest
 ```
 
-Covers the persisted settings flow (Profile singleton, phone validation, avatar upload), the task flows (Member assignee, htmx inline row edits) and a smoke test that renders the changelist, add and change page of every model in the admin. With the variables from "PostgreSQL and pghistory" set, `uv run --group postgres pytest` runs them on PostgreSQL.
+Covers the persisted settings flow (Profile singleton, phone validation, avatar upload), the task flows (My work, the board, the task page and its activity) and a smoke test that renders the changelist, add and change page of every model in the admin. With the variables from "PostgreSQL and pghistory" set, `uv run --group postgres pytest` runs them on PostgreSQL.
 
 ## CSS theme switching
 

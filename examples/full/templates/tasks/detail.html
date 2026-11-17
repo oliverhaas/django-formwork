@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load formwork taskwork %}
+
+{% block title %}{{ task.title }}{% endblock %}
+{% block head %}{% formwork_sections_js %}{% endblock %}
+{% block header %}
+  <nav aria-label="Breadcrumb" class="breadcrumbs text-sm py-0">
+    <ul>
+      <li><a href="{% url 'board' %}">Board</a></li>
+      <li><span aria-current="page" class="text-base-content/60">Task #{{ task.pk }}</span></li>
+    </ul>
+  </nav>
+{% endblock %}
+{% block topbar_actions %}
+  <a href="{% url 'task_edit' task.pk %}" class="btn btn-ghost btn-sm gap-2 max-sm:btn-square">
+    <i class="icon icon-pencil size-4"></i><span class="max-sm:sr-only">Edit</span>
+  </a>
+{% endblock %}
+
+{% block content %}
+{# On a phone the details follow the description; from lg on they get their own column. #}
+<div class="grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_1fr] xl:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
+  <article class="card bg-base-100 border border-base-300 min-w-0">
+    <div class="card-body p-6 lg:p-8 gap-5">
+      <header>
+        <h1 class="text-2xl font-semibold leading-tight text-balance break-words">{{ task.title }}</h1>
+        <p class="text-sm text-base-content/60 mt-2">
+          Opened {{ task.created_at|ago }}
+          {% if task.assignee %}· assigned to {% if task.assignee == me %}you{% else %}{{ task.assignee.name }}{% endif %}{% endif %}
+        </p>
+      </header>
+      {% if task.cover_image %}
+        <img src="{{ task.cover_image.url }}" alt="" class="rounded-box w-full max-h-72 object-cover">
+      {% endif %}
+      {% if task.description %}
+        <div class="max-w-prose leading-relaxed space-y-3 break-words">{{ task.description|linebreaks }}</div>
+      {% else %}
+        <p class="text-sm text-base-content/50">No description. <a href="{% url 'task_edit' task.pk %}" class="link">Add one</a></p>
+      {% endif %}
+      {% if task.attachment %}
+        <a href="{{ task.attachment.url }}" class="inline-flex items-center gap-2 self-start max-w-full rounded-box border border-base-300 px-3 py-2 text-sm hover:bg-base-200">
+          <i class="icon icon-paperclip size-4 shrink-0"></i><span class="truncate">{{ task.attachment.name|cut:"attachments/" }}</span>
+        </a>
+      {% endif %}
+    </div>
+  </article>
+
+  <aside class="grid gap-4 lg:col-start-2 lg:row-span-2">
+    <section aria-labelledby="details-heading" class="card bg-base-100 border border-base-300">
+      <div class="card-body p-5 gap-1">
+        <h2 id="details-heading" class="font-semibold mb-1">Details</h2>
+        <div data-section-forms>
+          <form id="details_form" data-section-form novalidate method="post"
+                hx-post="{{ request.path }}" hx-trigger="change delay:300ms"
+                hx-select="#details_form" hx-swap="outerMorph"
+                hx-sync="closest [data-section-forms]:queue all">
+            {% csrf_token %}{% formwork_section "details" %}
+            {{ details }}
+          </form>
+        </div>
+        <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm border-t border-base-300 pt-4 mt-3">
+          <dt class="text-base-content/60">Reminder</dt>
+          <dd class="text-end">{{ task.remind_at|date:"M j, H:i"|default:"None" }}</dd>
+          <dt class="text-base-content/60">Rating</dt>
+          <dd class="text-end">{% if task.rating %}{{ task.rating }} of 5{% else %}Not rated{% endif %}</dd>
+          <dt class="text-base-content/60">Created</dt>
+          <dd class="text-end">{{ task.created_at|date:"M j, Y" }}</dd>
+          <dt class="text-base-content/60">Updated</dt>
+          <dd class="text-end">{{ task.updated_at|ago }}</dd>
+        </dl>
+      </div>
+    </section>
+    <a href="{% url 'task_delete' task.pk %}" class="btn btn-ghost btn-sm text-error justify-self-start gap-2">
+      <i class="icon icon-trash size-4"></i> Delete task
+    </a>
+  </aside>
+
+  <section id="discussion" aria-labelledby="activity-heading" class="card bg-base-100 border border-base-300 min-w-0">
+    <div class="card-body p-6 lg:p-8 gap-6">
+      <h2 id="activity-heading" class="font-semibold">Activity</h2>
+      {# A save in the side column sends a task-changed event, and the list reloads. #}
+      <ol id="activity"
+          hx-get="{{ request.path }}" hx-trigger="task-changed from:body"
+          hx-select="#activity" hx-target="this" hx-swap="outerMorph"
+          class="relative grid gap-5 before:absolute before:start-4 before:inset-y-3 before:w-px before:bg-base-300">
+        {% for entry in activity %}
+          {% if entry.comment %}
+            <li class="relative flex gap-3">
+              {% include "tasks/avatar.html" with member=entry.author size="size-8" %}
+              <div class="min-w-0 flex-1">
+                <p class="text-sm">
+                  <span class="font-medium">{% if entry.author and entry.author == me %}You{% else %}{{ entry.author.name|default:"Someone" }}{% endif %}</span>
+                  <time datetime="{{ entry.created_at|date:'c' }}" class="text-base-content/50">· {{ entry.created_at|ago }}</time>
+                </p>
+                <div class="mt-1.5 rounded-box border border-base-300 px-4 py-3 text-sm leading-relaxed break-words">{{ entry.comment|linebreaksbr }}</div>
+              </div>
+            </li>
+          {% else %}
+            <li class="relative flex items-center gap-3 text-sm text-base-content/60">
+              <span class="grid place-items-center size-8 shrink-0">
+                <span class="grid place-items-center size-6 rounded-full bg-base-100 border border-base-300">
+                  <i class="icon icon-{% if entry.field == 'Status' %}circle-dot{% else %}pencil{% endif %} size-3"></i>
+                </span>
+              </span>
+              <p class="min-w-0">
+                <span class="font-medium text-base-content">{% if entry.author and entry.author == me %}You{% else %}{{ entry.author.name|default:"Someone" }}{% endif %}</span>
+                set {{ entry.field|lower }} to <span class="font-medium text-base-content">{{ entry.value|default:"none" }}</span>
+                <time datetime="{{ entry.created_at|date:'c' }}" class="text-base-content/50">· {{ entry.created_at|ago }}</time>
+              </p>
+            </li>
+          {% endif %}
+        {% empty %}
+          <li class="text-sm text-base-content/50">No comments or changes yet.</li>
+        {% endfor %}
+      </ol>
+
+      <form method="post" action="{% url 'task_comment' task.pk %}" novalidate
+            hx-post="{% url 'task_comment' task.pk %}" hx-select="#discussion" hx-target="#discussion" hx-swap="outerMorph"
+            class="flex gap-3 border-t border-base-300 pt-6">
+        {% csrf_token %}
+        {% include "tasks/avatar.html" with member=me size="size-8" %}
+        <div class="min-w-0 flex-1">
+          {{ comment_form }}
+          <div class="flex justify-end">
+            <button type="submit" class="btn btn-sm gap-2"><i class="icon icon-message-square size-4"></i> Comment</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}

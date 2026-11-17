@@ -2,6 +2,12 @@
 
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.formats import date_format
+
+# A due date within this many days shows as its weekday.
+DAYS_IN_WEEK = 7
 
 
 class Tag(models.Model):
@@ -100,6 +106,9 @@ class Task(models.Model):
     def __str__(self):
         return self.title
 
+    def get_absolute_url(self) -> str:
+        return reverse("task_detail", args=[self.pk])
+
     @property
     def status_color(self) -> str:
         return self.STATUS_COLORS.get(self.status, "neutral")
@@ -107,6 +116,46 @@ class Task(models.Model):
     @property
     def priority_color(self) -> str:
         return self.PRIORITY_COLORS.get(self.priority, "neutral")
+
+    @property
+    def days_left(self) -> int | None:
+        """Days until the due date, negative after it."""
+        return (self.due_date - timezone.localdate()).days if self.due_date else None
+
+    @property
+    def is_overdue(self) -> bool:
+        return self.status != self.Status.DONE and self.days_left is not None and self.days_left < 0
+
+    @property
+    def due_label(self) -> str:
+        """The due date as a person says it: Today, Tomorrow, Friday, 3 days ago or Nov 28."""
+        days = self.days_left
+        if days is None:
+            return ""
+        near = {-1: "Yesterday", 0: "Today", 1: "Tomorrow"}
+        if days in near:
+            return near[days]
+        if days < 0:
+            return f"{-days} days ago"
+        return date_format(self.due_date, "l" if days < DAYS_IN_WEEK else "M j")
+
+
+class Activity(models.Model):
+    """One entry of a task's timeline: a comment, or a field someone changed."""
+
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="activity")
+    author = models.ForeignKey(Member, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    comment = models.TextField(blank=True)
+    field = models.CharField(max_length=40, blank=True, help_text="The label of a changed field. Empty on a comment.")
+    value = models.CharField(max_length=200, blank=True, help_text="The changed field's new value, as text.")
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        verbose_name_plural = "activity"
+
+    def __str__(self):
+        return self.comment[:60] if self.comment else f"{self.field}: {self.value}"
 
 
 class Profile(models.Model):
@@ -141,6 +190,14 @@ class Profile(models.Model):
 
     full_name = models.CharField(max_length=100)
     email = models.EmailField()
+    member = models.OneToOneField(
+        Member,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="The member you are: My work lists their tasks, and your comments carry their name.",
+    )
     phone = models.CharField(
         max_length=30,
         blank=True,

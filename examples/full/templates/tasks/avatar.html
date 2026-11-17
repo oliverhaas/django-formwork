@@ -1,0 +1,6 @@
+{# A member's initials; primary for you. Takes `member`, `me` and an optional `size`. #}
+<div class="avatar avatar-placeholder shrink-0 self-start"{% if member %} title="{{ member.name }}"{% endif %}>
+  <div class="{{ size|default:'size-6' }} rounded-full {% if member and member == me %}bg-primary text-primary-content{% else %}bg-base-300 text-base-content/70{% endif %}">
+    {% if member %}<span class="text-xs font-semibold">{{ member.initials }}</span>{% else %}<i class="icon icon-user-round size-3.5"></i>{% endif %}
+  </div>
+</div>

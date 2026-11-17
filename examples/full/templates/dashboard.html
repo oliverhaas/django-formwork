@@ -1,88 +1,136 @@
 {% extends "base.html" %}
-{% load formwork %}
+{% load formwork taskwork %}
 
-{% block title %}Dashboard{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block title %}My work{% endblock %}
+{% block page_title %}My work{% endblock %}
 {% block page_subtitle %}
-  <p class="text-xs text-base-content/50">{{ total }} task{{ total|pluralize }} · last activity {{ recent.0.updated_at|timesince|default:"—" }} ago</p>
+  <p class="text-xs text-base-content/50">{{ today|date:"l, F j" }}</p>
 {% endblock %}
 {% block topbar_actions %}
-  <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm gap-2">
-    <i class="icon icon-plus size-4"></i> New task
+  <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm gap-2 max-sm:btn-square">
+    <i class="icon icon-plus size-4"></i><span class="max-sm:sr-only">New task</span>
   </a>
 {% endblock %}
 
 {% block content %}
-<div class="grid gap-6">
-  <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-    {% for s in stats %}
-      <div class="card bg-base-100 border border-base-300">
-        <div class="card-body p-5 flex-row items-center gap-4">
-          <div class="grid place-items-center size-14 rounded-box bg-base-200 text-base-content/70">
-            <i class="icon {{ s.icon }} size-7"></i>
-          </div>
-          <div class="min-w-0">
-            <p class="text-xs uppercase tracking-wider text-base-content/50">{{ s.label }}</p>
-            <p class="text-3xl font-bold tabular-nums leading-none mt-1">{{ s.count }}</p>
-          </div>
-        </div>
+{# Ticking a task and adding one both morph this whole block from the response. #}
+<div id="my-work" class="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
+  <div class="card bg-base-100 border border-base-300">
+    {% if not me %}
+      <div class="card-body items-center text-center py-16">
+        <i class="icon icon-user-round size-10 text-base-content/30"></i>
+        <h2 class="font-semibold mt-2">Who are you?</h2>
+        <p class="text-sm text-base-content/60 max-w-sm">Pick your member in Settings, and this page lists the tasks assigned to you.</p>
+        <a href="{% url 'settings' %}" class="btn btn-sm mt-2">Open Settings</a>
       </div>
-    {% endfor %}
-  </section>
-
-  <section class="grid lg:grid-cols-3 gap-6">
-    <div class="card bg-base-100 border border-base-300 lg:col-span-2">
-      <div class="card-body p-6">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h2 class="card-title text-base">Recent activity</h2>
-            <p class="text-xs text-base-content/50">Last 8 task updates</p>
-          </div>
-          <a href="{% url 'task_list' %}" class="link link-hover text-sm">See all →</a>
+    {% else %}
+      {% for key, label, tasks in groups %}
+        {% if tasks %}
+          <section aria-labelledby="group-{{ key }}" class="border-b border-base-300 last:border-b-0">
+            <h2 id="group-{{ key }}" class="flex items-center gap-2 px-5 pt-4 pb-2 text-sm font-semibold {% if key == 'overdue' %}text-error{% endif %}">
+              {{ label }} <span class="badge badge-sm badge-ghost tabular-nums">{{ tasks|length }}</span>
+            </h2>
+            <ul>{% for task in tasks %}{% partial task-row %}{% endfor %}</ul>
+          </section>
+        {% endif %}
+      {% endfor %}
+      {% if not open_count %}
+        <div class="card-body items-center text-center py-14">
+          <i class="icon icon-circle-check-big size-10 text-success"></i>
+          <h2 class="font-semibold mt-2">Nothing open</h2>
+          <p class="text-sm text-base-content/60">Add a task, or pick one from the <a href="{% url 'board' %}" class="link">board</a>.</p>
         </div>
-        {% if recent %}
-          <ul class="divide-y divide-base-200">
-            {% for t in recent %}
-              <li class="py-3 flex items-center gap-3">
-                {% if t.assignee %}
-                  <span class="badge badge-neutral badge-sm w-8 shrink-0">{{ t.assignee.initials }}</span>
-                {% else %}
-                  <span class="badge badge-ghost badge-sm shrink-0"><i class="icon icon-user size-3"></i></span>
-                {% endif %}
-                <div class="min-w-0 flex-1">
-                  <a href="{% url 'task_edit' t.pk %}" class="font-medium hover:underline truncate block">{{ t.title }}</a>
-                  <p class="text-xs text-base-content/50">
-                    {% if t.assignee %}{{ t.assignee }} · {% endif %}
-                    updated {{ t.updated_at|timesince }} ago
+      {% endif %}
+      {% if done %}
+        <section aria-labelledby="group-done" class="border-t border-base-300 bg-base-200/40 rounded-b-box">
+          <h2 id="group-done" class="flex items-center gap-2 px-5 pt-4 pb-2 text-sm font-semibold text-base-content/60">
+            Done this week <span class="badge badge-sm badge-ghost tabular-nums">{{ done|length }}</span>
+          </h2>
+          <ul>{% for task in done %}{% partial task-row %}{% endfor %}</ul>
+        </section>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div class="grid gap-6">
+    <div class="card bg-base-100 border border-base-300">
+      <form method="post" novalidate class="card-body p-5 gap-1"
+            hx-post="{% url 'dashboard' %}" hx-select="#my-work" hx-target="#my-work" hx-swap="outerMorph"
+            hx-on::after:request="if (ctx.response.raw.redirected) this.reset()">
+        {% csrf_token %}
+        <h2 class="font-semibold mb-1">Add a task</h2>
+        {{ form }}
+        <div class="flex items-center justify-between gap-3 mt-2">
+          <p class="text-xs text-base-content/50">{% if me %}Assigned to you{% else %}Unassigned{% endif %}</p>
+          <button type="submit" class="btn btn-sm gap-2"><i class="icon icon-plus size-4"></i> Add task</button>
+        </div>
+      </form>
+    </div>
+
+    <section aria-labelledby="feed-heading" class="card bg-base-100 border border-base-300">
+      <div class="card-body p-5 gap-3">
+        <h2 id="feed-heading" class="font-semibold">Team activity</h2>
+        {% if feed %}
+          <ol class="grid gap-4">
+            {% for entry in feed %}
+              <li class="flex items-start gap-3 text-sm">
+                {% include "tasks/avatar.html" with member=entry.author size="size-7" %}
+                <div class="min-w-0">
+                  <p class="leading-snug">
+                    <span class="font-medium">{% if entry.author and entry.author == me %}You{% else %}{{ entry.author.name|default:"Someone" }}{% endif %}</span>
+                    {% if entry.comment %}
+                      <span class="text-base-content/60">commented on</span>
+                    {% else %}
+                      <span class="text-base-content/60">set {{ entry.field|lower }} to</span> {{ entry.value|default:"none" }} <span class="text-base-content/60">on</span>
+                    {% endif %}
+                    <a href="{{ entry.task.get_absolute_url }}" class="link link-hover">{{ entry.task.title }}</a>
                   </p>
+                  {% if entry.comment %}<p class="text-base-content/70 line-clamp-1 mt-0.5">{{ entry.comment }}</p>{% endif %}
+                  <time datetime="{{ entry.created_at|date:'c' }}" class="text-xs text-base-content/50">{{ entry.created_at|ago }}</time>
                 </div>
-                <span class="badge badge-{{ t.status_color }} badge-soft whitespace-nowrap">{{ t.get_status_display }}</span>
-                <span class="badge badge-{{ t.priority_color }} badge-soft badge-sm whitespace-nowrap">{{ t.get_priority_display }}</span>
               </li>
             {% endfor %}
-          </ul>
+          </ol>
         {% else %}
-          <div class="text-center py-12 text-base-content/50">
-            <i class="icon icon-inbox size-10 mx-auto mb-3 opacity-50"></i>
-            <p>No tasks yet. Add one on the right or run the seed command.</p>
-          </div>
+          <p class="text-sm text-base-content/60">No activity yet. Comments and changes on any task show up here.</p>
         {% endif %}
       </div>
-    </div>
-
-    <div class="card bg-base-100 border border-base-300">
-      <div class="card-body p-6">
-        <h2 class="card-title text-base">Quick add</h2>
-        <p class="text-xs text-base-content/50 mb-3">A one-line task entry: title plus a plain priority select.</p>
-        <form method="post" action="{% url 'dashboard' %}" class="space-y-3">
-          {% csrf_token %}
-          {{ form }}
-          <button type="submit" class="btn btn-primary btn-block btn-sm gap-2">
-            <i class="icon icon-plus size-4"></i> Add task
-          </button>
-        </form>
-      </div>
-    </div>
-  </section>
+    </section>
+  </div>
 </div>
+
+{% partialdef task-row %}
+<li class="flex items-start gap-3 px-5 py-3 hover:bg-base-200/60">
+  <form method="post" action="{% url 'task_done' task.pk %}" class="pt-0.5"
+        hx-post="{% url 'task_done' task.pk %}" hx-trigger="change" hx-select="#my-work" hx-target="#my-work" hx-swap="outerMorph">
+    {% csrf_token %}
+    <input type="checkbox" name="done" class="checkbox checkbox-sm checkbox-primary" aria-label="Done: {{ task.title }}"
+           {% if task.status == 'done' %}checked{% endif %}>
+  </form>
+  <div class="min-w-0 flex-1">
+    <a href="{{ task.get_absolute_url }}" class="font-medium hover:underline {% if task.status == 'done' %}line-through text-base-content/50{% endif %}">{{ task.title }}</a>
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-base-content/60">
+      {% if task.status == 'done' %}
+        <span>Done {{ task.updated_at|ago }}</span>
+      {% else %}
+        {% if task.due_date %}
+          <span class="inline-flex items-center gap-1 {% if task.is_overdue %}text-error font-medium{% elif task.days_left == 0 %}text-warning font-medium{% endif %}" title="{{ task.due_date|date:'l, F j' }}">
+            <i class="icon icon-calendar size-3.5"></i> {{ task.due_label }}
+          </span>
+        {% endif %}
+        <span class="badge badge-xs {{ task.priority_color|badge }}">{{ task.get_priority_display }}</span>
+      {% endif %}
+      {% for tag in task.tags.all %}<span>#{{ tag.name }}</span>{% endfor %}
+      {% if task.comment_count %}
+        <span class="inline-flex items-center gap-1" title="{{ task.comment_count }} comment{{ task.comment_count|pluralize }}">
+          <i class="icon icon-message-square size-3.5"></i> {{ task.comment_count }}
+        </span>
+      {% endif %}
+    </div>
+  </div>
+  {% if task.status != 'done' %}
+    <span class="badge badge-sm {{ task.status_color|badge }} shrink-0 max-sm:hidden">{{ task.get_status_display }}</span>
+  {% endif %}
+</li>
+{% endpartialdef %}
 {% endblock %}

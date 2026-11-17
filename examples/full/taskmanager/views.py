@@ -2,161 +2,251 @@
 
 from __future__ import annotations
 
-from django.contrib import messages
-from django.db.models import Count
-from django.http import HttpResponse, QueryDict
-from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
-from django.utils import timezone
-from django.views import View
+from datetime import timedelta
+from operator import attrgetter
 
-from django_formwork import FormworkRowSaveMixin, formwork_modelformset_factory
+from django.contrib import messages
+from django.db.models import Count, DateField, F, Q
+from django.http import QueryDict
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.formats import date_format
+from django.views.decorators.http import require_POST
+
+from django_formwork import section_forms
 
 from .filters import TaskFilter
 from .forms import (
+    BoardAddForm,
+    BoardMoveForm,
+    CommentForm,
+    QuickAddForm,
     SettingsForm,
+    TaskDetailsForm,
     TaskEditForm,
-    TaskQuickAddForm,
-    TaskRowForm,
     WizardConfigForm,
     WizardFirstTaskForm,
     WizardProjectForm,
 )
-from .models import Profile, Task
+from .models import Activity, Member, Profile, Task
 
-# One TaskRowForm per row, rendered as an autosaving table (form.as_row / row_hidden_inputs).
-# The form carries only the inline-editable columns, so a row POST can't touch the rest.
-TaskRowFormSet = formwork_modelformset_factory(Task, form=TaskRowForm, extra=0)
-
-
-def _key_rows_by_pk(formset):
-    """Prefix each row form with its task pk (``task-<pk>``) instead of the
-    formset's positional index, so htmx morph tracks rows by identity across
-    filter/add/reorder re-renders rather than swapping content between slots."""
-    for form in formset.forms:
-        form.prefix = f"task-{form.instance.pk}"
+# The board shows this many of the latest done tasks; the admin lists the rest.
+DONE_ON_BOARD = 8
 
 
-# ─── Dashboard ──────────────────────────────────────────────────────────
+def with_comment_count(tasks):
+    return tasks.annotate(comment_count=Count("activity", filter=~Q(activity__comment="")))
+
+
+def set_status(task: Task, status: str, author: Member | None) -> None:
+    """Move a task and note the move in its activity."""
+    if task.status == status:
+        return
+    task.status = status
+    task.save(update_fields=["status", "updated_at"])
+    Activity.objects.create(task=task, author=author, field="Status", value=task.get_status_display())
+
+
+# ─── My work ────────────────────────────────────────────────────────────
 
 
 def dashboard(request):
-    """Stats cards, recent activity, and a quick-add form."""
-    qs = Task.objects.all()
-    by_status = dict(qs.values_list("status").annotate(n=Count("id")))
-    status_icons = {
-        Task.Status.TODO: "icon-circle-dashed",
-        Task.Status.IN_PROGRESS: "icon-loader",
-        Task.Status.REVIEW: "icon-eye",
-        Task.Status.DONE: "icon-check",
-    }
-    stats_data = [
-        {
-            "key": status,
-            "label": status.label,
-            "icon": status_icons[status],
-            "count": by_status.get(status, 0),
-        }
-        for status in Task.Status
-    ]
-    recent = qs.prefetch_related("assignee").order_by("-updated_at")[:8]
-
+    """Your open tasks by due date, what you finished this week, and the team's latest activity."""
+    me = Profile.load().member
     if request.method == "POST":
-        form = TaskQuickAddForm(request.POST)
+        form = QuickAddForm(request.POST)
         if form.is_valid():
-            Task.objects.create(
-                title=form.cleaned_data["title"],
-                priority=form.cleaned_data["priority"],
-            )
-            messages.success(request, "Task added.")
+            Task.objects.create(assignee=me, **form.cleaned_data)
             return redirect("dashboard")
     else:
-        form = TaskQuickAddForm()
+        form = QuickAddForm()
 
+    today = timezone.localdate()
+    mine = with_comment_count(Task.objects.filter(assignee=me) if me else Task.objects.none())
+    open_tasks = list(mine.exclude(status=Task.Status.DONE).prefetch_related("tags").order_by("due_date", "-id"))
+    week_end = today + timedelta(days=7)
+    groups = [
+        ("overdue", "Overdue", [t for t in open_tasks if t.due_date and t.due_date < today]),
+        ("week", "Due this week", [t for t in open_tasks if t.due_date and today <= t.due_date < week_end]),
+        ("later", "Later", [t for t in open_tasks if not t.due_date or t.due_date >= week_end]),
+    ]
+    done = mine.filter(status=Task.Status.DONE, updated_at__gte=timezone.now() - timedelta(days=7))
     return render(
         request,
         "dashboard.html",
         {
-            "stats": stats_data,
-            "total": qs.count(),
-            "recent": recent,
+            "me": me,
             "form": form,
-            "now": timezone.now(),
+            "groups": groups,
+            "done": done.prefetch_related("tags").order_by("-updated_at"),
+            "open_count": len(open_tasks),
+            "feed": Activity.objects.select_related("author", "task").order_by("-created_at")[:6],
+            "today": today,
         },
     )
 
 
-# ─── Tasks ──────────────────────────────────────────────────────────────
+@require_POST
+def task_done(request, pk):
+    """Tick a task off on My work, or untick it to reopen it."""
+    task = get_object_or_404(Task, pk=pk)
+    set_status(task, Task.Status.DONE if "done" in request.POST else Task.Status.TODO, Profile.load().member)
+    return redirect("dashboard")
 
 
-def task_list(request):
-    """List tasks with htmx search/filter."""
-    task_filter = TaskFilter(request.GET, queryset=Task.objects.prefetch_related("tags", "assignee"))
-    formset = TaskRowFormSet(queryset=task_filter.qs)
-    _key_rows_by_pk(formset)
+# ─── Board ──────────────────────────────────────────────────────────────
 
-    if request.headers.get("HX-Request") == "true":
-        return render(request, "tasks/list.html#task-rows", {"formset": formset})
-    return render(request, "tasks/list.html", {"formset": formset, "filter": task_filter})
+
+def board(request):
+    """Tasks in one column per status, your own first in each."""
+    me = Profile.load().member
+    task_filter = TaskFilter(
+        request.GET, queryset=with_comment_count(Task.objects.select_related("assignee").prefetch_related("tags"))
+    )
+    tasks = task_filter.qs.order_by(F("due_date").asc(nulls_last=True), "-pk")
+    columns = []
+    for status in Task.Status:
+        cards = shown = [t for t in tasks if t.status == status]
+        if status == Task.Status.DONE:
+            shown = sorted(cards, key=attrgetter("updated_at"), reverse=True)[:DONE_ON_BOARD]
+        columns.append(
+            {
+                "status": status,
+                "color": Task.STATUS_COLORS[status],
+                "count": len(cards),
+                "mine": [t for t in shown if me and t.assignee_id == me.pk],
+                "others": [t for t in shown if not me or t.assignee_id != me.pk],
+                "hidden": len(cards) - len(shown),
+            }
+        )
+    return render(
+        request,
+        "tasks/board.html",
+        {"filter": task_filter, "columns": columns, "me": me},
+    )
+
+
+def back_to_board(request):
+    """The board with the filters of the page that posted."""
+    query = request.GET.urlencode()
+    return redirect(f"{reverse('board')}?{query}" if query else reverse("board"))
+
+
+@require_POST
+def board_add(request):
+    """Add a task to a column from its title field. The task is yours."""
+    form = BoardAddForm(request.POST)
+    if form.is_valid():
+        form.instance.assignee = Profile.load().member
+        form.save()
+    return back_to_board(request)
+
+
+@require_POST
+def board_move(request):
+    """Move a task that was dropped on another column."""
+    form = BoardMoveForm(request.POST)
+    if form.is_valid():
+        set_status(form.cleaned_data["task"], form.cleaned_data["status"], Profile.load().member)
+    return back_to_board(request)
+
+
+# ─── Task page ──────────────────────────────────────────────────────────
+
+
+def field_text(task: Task, name: str) -> str:
+    """A field's value as the activity shows it."""
+    field = task._meta.get_field(name)  # noqa: SLF001
+    if field.choices:
+        return getattr(task, f"get_{name}_display")()
+    value = getattr(task, name)
+    if field.many_to_many:
+        return ", ".join(str(obj) for obj in value.all())
+    if value is None:
+        return ""
+    return date_format(value, "M j, Y") if isinstance(field, DateField) else str(value)
+
+
+def task_detail(request, pk):
+    """Read a task and its activity. The side column saves each change on its own."""
+    task = get_object_or_404(Task.objects.select_related("assignee"), pk=pk)
+    sections = section_forms(request, {"details": TaskDetailsForm}, instance=task)
+    details = sections["details"]
+    changed = []
+    if details.is_bound and details.is_valid():
+        changed = details.changed_data
+        details.save()
+        me = Profile.load().member
+        Activity.objects.bulk_create(
+            Activity(task=task, author=me, field=details[name].label, value=field_text(task, name)) for name in changed
+        )
+    response = task_page(request, task, details=details)
+    if changed:
+        # The activity list reloads itself on this event.
+        response["HX-Trigger"] = "task-changed"
+    return response
+
+
+def task_page(request, task, *, details=None, comment_form=None):
+    return render(
+        request,
+        "tasks/detail.html",
+        {
+            "task": task,
+            "details": TaskDetailsForm(instance=task) if details is None else details,
+            "comment_form": CommentForm() if comment_form is None else comment_form,
+            "activity": task.activity.select_related("author"),
+            "me": Profile.load().member,
+        },
+    )
+
+
+@require_POST
+def task_comment(request, pk):
+    task = get_object_or_404(Task.objects.select_related("assignee"), pk=pk)
+    form = CommentForm(request.POST)
+    if not form.is_valid():
+        return task_page(request, task, comment_form=form)
+    form.instance.task = task
+    form.instance.author = Profile.load().member
+    form.save()
+    return redirect(task)
 
 
 def task_create(request):
-    """Create a new task."""
+    """The full form, with every field of a task."""
     if request.method == "POST":
         form = TaskEditForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            task = form.save()
             messages.success(request, "Task created.")
-            return redirect("task_list")
+            return redirect(task)
     else:
-        form = TaskEditForm()
+        form = TaskEditForm(initial={"assignee": Profile.load().member})
     return render(request, "tasks/form.html", {"form": form, "title": "New task", "task": None})
 
 
 def task_edit(request, pk):
-    """Edit an existing task."""
     task = get_object_or_404(Task, pk=pk)
     if request.method == "POST":
         form = TaskEditForm(request.POST, request.FILES, instance=task)
         if form.is_valid():
             form.save()
-            messages.success(request, "Task updated.")
-            return redirect("task_list")
+            messages.success(request, "Task saved.")
+            return redirect(task)
     else:
         form = TaskEditForm(instance=task)
     return render(request, "tasks/form.html", {"form": form, "title": task.title, "task": task})
 
 
-def task_add(request):
-    """Insert a draft task and return its row, for the list's inline "Add task"."""
-    if request.method != "POST":
-        return redirect("task_list")
-    task = Task.objects.create(title="New task")
-    formset = TaskRowFormSet(queryset=Task.objects.filter(pk=task.pk))
-    _key_rows_by_pk(formset)
-    return render(request, "tasks/list.html#task-row", {"form": formset.forms[0]})
-
-
 def task_delete(request, pk):
-    """Delete a task. Inline htmx delete removes the row in place; otherwise confirm then redirect."""
     task = get_object_or_404(Task, pk=pk)
     if request.method == "POST":
         task.delete()
-        if request.headers.get("HX-Request") == "true":
-            return HttpResponse(status=200)
-        return redirect("task_list")
+        messages.success(request, f"Deleted {task.title}.")
+        return redirect("board")
     return render(request, "tasks/confirm_delete.html", {"task": task})
-
-
-class TaskRowSave(FormworkRowSaveMixin, View):
-    """Inline row edit via htmx: save the changed row and morph it back."""
-
-    form_class = TaskRowForm
-    queryset = Task.objects.all()
-    http_method_names = ["post"]
-
-    def render_row(self, request, form):
-        return render_to_string("tasks/list.html#task-row", {"form": form}, request)
 
 
 # ─── Wizard ─────────────────────────────────────────────────────────────
@@ -208,7 +298,7 @@ def wizard_confirm(request):
 
     request.session.pop("wizard_data", None)
     messages.success(request, f"Project '{project.get('project_name')}' created.")
-    return redirect("task_edit", pk=task.pk)
+    return redirect(task)
 
 
 def _wizard_form(step, data):

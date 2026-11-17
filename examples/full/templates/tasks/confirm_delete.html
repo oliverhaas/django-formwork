@@ -12,8 +12,8 @@
     </div>
     <form method="post" class="flex justify-end gap-2 mt-4">
       {% csrf_token %}
-      <a href="{% url 'task_edit' task.pk %}" class="btn btn-ghost btn-sm">Cancel</a>
-      <button type="submit" class="btn btn-error btn-sm">Delete</button>
+      <a href="{{ task.get_absolute_url }}" class="btn btn-ghost btn-sm">Cancel</a>
+      <button type="submit" class="btn btn-error btn-sm">Delete task</button>
     </form>
   </div>
 </div>

@@ -1,4 +1,4 @@
-"""FilterSet for the task list: django-filter drives the queryset, formwork renders it."""
+"""FilterSet for the board: django-filter drives the queryset, formwork renders it."""
 
 from __future__ import annotations
 
@@ -7,31 +7,30 @@ from django.db.models import Q
 
 from django_formwork.widgets import SearchInput, Select
 
-from .models import Task
+from .models import Tag, Task
 
 
 class TaskFilter(filters.FilterSet):
     q = filters.CharFilter(
         method="search",
-        label="",
-        widget=SearchInput(attrs={"placeholder": "Search…"}),
-    )
-    status = filters.ChoiceFilter(
-        choices=Task.Status.choices,
-        empty_label="All",
-        label="",
-        widget=Select(floating=True, attrs={"placeholder": "Status"}),
+        label="Search",
+        widget=SearchInput(attrs={"placeholder": "Search tasks"}),
     )
     priority = filters.ChoiceFilter(
         choices=Task.Priority.choices,
-        empty_label="All",
-        label="",
-        widget=Select(floating=True, attrs={"placeholder": "Priority"}),
+        label="Priority",
+        widget=Select(attrs={"placeholder": "Any priority"}),
+    )
+    tag = filters.ModelChoiceFilter(
+        field_name="tags",
+        queryset=Tag.objects.all(),
+        label="Tag",
+        widget=Select(attrs={"placeholder": "Any tag"}),
     )
 
     class Meta:
         model = Task
-        fields = ["q", "status", "priority"]
+        fields = ["q", "priority", "tag"]
 
     def search(self, queryset, _name, value):
-        return queryset.filter(Q(title__icontains=value) | Q(tags__name__icontains=value)).distinct()
+        return queryset.filter(Q(title__icontains=value) | Q(description__icontains=value)).distinct()

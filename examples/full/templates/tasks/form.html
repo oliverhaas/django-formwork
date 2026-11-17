@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load formwork %}
+{% load formwork taskwork %}
 
 {% block title %}{{ title }}{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
@@ -9,7 +9,7 @@
   </p>
 {% endblock %}
 {% block topbar_actions %}
-  <a href="{% url 'task_list' %}" class="btn btn-ghost btn-sm gap-2">
+  <a href="{% if task %}{{ task.get_absolute_url }}{% else %}{% url 'board' %}{% endif %}" class="btn btn-ghost btn-sm gap-2">
     <i class="icon icon-arrow-left size-4"></i> Back
   </a>
 {% endblock %}
@@ -50,7 +50,7 @@
             </div>
             <div class="flex justify-between gap-2">
               <dt class="text-base-content/50">Updated</dt>
-              <dd>{{ task.updated_at|timesince }} ago</dd>
+              <dd>{{ task.updated_at|ago }}</dd>
             </div>
             <div class="flex justify-between gap-2">
               <dt class="text-base-content/50">ID</dt>

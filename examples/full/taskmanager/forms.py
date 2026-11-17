@@ -24,7 +24,7 @@ from django_formwork.widgets import (
     ValidatedTextarea,
 )
 
-from .models import Member, Profile, Tag, Task
+from .models import Activity, Member, Profile, Tag, Task
 from .widgets import PhoneInput
 
 if TYPE_CHECKING:
@@ -39,7 +39,7 @@ STATUS_SELECT_COLORS: dict[str, str] = {
     Task.Status.DONE: "success",
 }
 
-# Per-option trigger classes shared by the edit and row forms: the closed
+# Per-option trigger classes shared by the edit and details forms: the closed
 # Select adopts the selected option's class (priority tinted soft by
 # severity, status a solid select-{color} border on the lifecycle ramp).
 PRIORITY_CHOICES = [
@@ -90,8 +90,7 @@ class TaskEditForm(FormworkModelForm):
         choices=STATUS_CHOICES,
         initial=Task.Status.TODO,
         widget=Select,
-        help_text="Same trick as priority, but a select-{color} border instead of a soft fill: "
-        "solid here on the edit page, dotted in the inline list rows, recoloring on pick.",
+        help_text="Same trick as priority, but a select-{color} border instead of a soft fill.",
     )
     assignee = MemberChoiceField(
         queryset=Member.objects.all(),
@@ -145,61 +144,64 @@ class TaskEditForm(FormworkModelForm):
         }
 
 
-class TaskRowForm(FormworkModelForm):
-    """Inline autosaving list row: only the lifecycle columns, with widgets
-    styled for table cells (ghost inputs, dotted status border). Fields the row
-    doesn't render aren't on the form, so a row save can't touch them.
-    """
+class TaskDetailsForm(FormworkModelForm):
+    """The task page's side column: a section form that saves each change."""
 
-    priority = forms.ChoiceField(
-        choices=PRIORITY_CHOICES,
-        initial=Task.Priority.MEDIUM,
-        widget=Select,
-    )
-    status = forms.ChoiceField(
-        choices=STATUS_CHOICES,
-        initial=Task.Status.TODO,
-        widget=Select(attrs={"class": "select-dotted"}),
-    )
+    status = forms.ChoiceField(choices=STATUS_CHOICES, widget=Select)
+    priority = forms.ChoiceField(choices=PRIORITY_CHOICES, widget=Select)
     assignee = MemberChoiceField(
         queryset=Member.objects.all(),
         required=False,
         empty_label="Unassigned",
-        widget=Select(
-            search_fields=["name", "email"],
-            search_queryset=search_members,
-            search_decorator=None,
-            attrs={"class": "select-ghost"},
-        ),
+        widget=Select(search_fields=["name", "email"], search_queryset=search_members, search_decorator=None),
     )
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
-        widget=SelectMultiple(
-            search_fields=["name"],
-            search_queryset=search_tags,
-            search_decorator=None,
-            attrs={"class": "select-ghost"},
-        ),
+        widget=SelectMultiple(search_fields=["name"], search_queryset=search_tags, search_decorator=None),
     )
 
     class Meta:
         model = Task
-        fields = ["status", "priority", "assignee", "tags", "due_date"]
-        widgets = {"due_date": DatePicker(attrs={"class": "input-ghost"})}
+        fields = ["status", "assignee", "due_date", "priority", "tags"]
+        widgets = {"due_date": DatePicker}
 
 
-class TaskQuickAddForm(forms.Form):
-    """One-line dashboard quick-add: title + priority."""
+class CommentForm(FormworkModelForm):
+    class Meta:
+        model = Activity
+        fields = ["comment"]
+        widgets = {"comment": forms.Textarea(attrs={"rows": 3, "placeholder": "Ask a question or share an update"})}
+        labels = {"comment": "Add a comment"}
 
-    title = forms.CharField(
-        max_length=200,
-        widget=forms.TextInput(attrs={"placeholder": "What needs doing?"}),
-    )
-    priority = forms.ChoiceField(
-        choices=Task.Priority.choices,
-        initial=Task.Priority.MEDIUM,
-    )
+    def clean_comment(self):
+        comment = self.cleaned_data["comment"].strip()
+        if not comment:
+            raise forms.ValidationError("Write a comment first.")
+        return comment
+
+
+class QuickAddForm(FormworkForm):
+    """My work's quick add: a title and an optional due date, for a task of your own."""
+
+    title = forms.CharField(max_length=200, widget=forms.TextInput(attrs={"placeholder": "What needs doing?"}))
+    due_date = forms.DateField(widget=DatePicker, required=False)
+
+
+class BoardAddForm(forms.ModelForm):
+    """A board column's add field: the title, and the column's status in a hidden input."""
+
+    class Meta:
+        model = Task
+        fields = ["title", "status"]
+        widgets = {"status": forms.HiddenInput}
+
+
+class BoardMoveForm(forms.Form):
+    """A card dropped on a column."""
+
+    task = forms.ModelChoiceField(queryset=Task.objects.all(), widget=forms.HiddenInput)
+    status = forms.ChoiceField(choices=Task.Status.choices, widget=forms.HiddenInput)
 
 
 # --- Wizard ----------------------------------------------------------------

@@ -18,6 +18,7 @@
   <script src="https://unpkg.com/htmx.org@4.0.1/dist/htmx.min.js"></script>
   <script src="https://unpkg.com/htmx.org@4.0.1/dist/ext/hx-alpine-compat.min.js"></script>
   {% formwork_js %}
+  {% block head %}{% endblock %}
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 </head>
 <body class="min-h-screen bg-base-200 text-base-content">
@@ -45,22 +46,25 @@
         </a>
 
         <p class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 px-3 mt-2">Workspace</p>
-        <a href="{% url 'dashboard' %}"
+        <a href="{% url 'dashboard' %}" {% if nav_section == 'dashboard' %}aria-current="page"{% endif %}
            class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'dashboard' %}bg-primary/10 text-primary font-semibold{% endif %}">
-          <i class="icon icon-layout-dashboard size-5"></i> Dashboard
+          <i class="icon icon-inbox size-5"></i> My work
         </a>
-        <a href="{% url 'task_list' %}"
-           class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'tasks' %}bg-primary/10 text-primary font-semibold{% endif %}">
-          <i class="icon icon-list-checks size-5"></i> Tasks
+        <a href="{% url 'board' %}" {% if nav_section == 'board' %}aria-current="page"{% endif %}
+           class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'board' %}bg-primary/10 text-primary font-semibold{% endif %}">
+          <i class="icon icon-square-kanban size-5"></i> Board
         </a>
 
         <p class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 px-3 mt-6">Account</p>
-        <a href="{% url 'settings' %}"
+        <a href="{% url 'settings' %}" {% if nav_section == 'settings' %}aria-current="page"{% endif %}
            class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'settings' %}bg-primary/10 text-primary font-semibold{% endif %}">
           <i class="icon icon-settings size-5"></i> Settings
         </a>
 
-        <div class="mt-auto pt-6 px-3 text-xs text-base-content/50">
+        <div class="mt-auto pt-6 px-3 flex flex-col gap-3 text-xs text-base-content/50">
+          <a href="{% url 'admin:index' %}" class="link link-hover flex items-center gap-2 hover:text-base-content">
+            <i class="icon icon-shield-user size-4"></i><span class="[text-box:trim-both_cap_alphabetic]">Admin</span>
+          </a>
           <a href="https://github.com/oliverhaas/django-formwork" target="_blank" rel="noopener" class="link link-hover flex items-center gap-2 hover:text-base-content">
             <i class="icon icon-github size-4"></i><span class="[text-box:trim-both_cap_alphabetic]">GitHub</span>
           </a>
@@ -76,8 +80,10 @@
           </label>
 
           <div class="flex-1 min-w-0">
-            <h1 class="text-lg font-semibold leading-tight truncate">{% block page_title %}{% endblock %}</h1>
-            {% block page_subtitle %}{% endblock %}
+            {% block header %}
+              <h1 class="text-lg font-semibold leading-tight truncate">{% block page_title %}{% endblock %}</h1>
+              {% block page_subtitle %}{% endblock %}
+            {% endblock %}
           </div>
 
           <div class="flex items-center gap-2">
@@ -99,11 +105,15 @@
               </ul>
             </div>
 
-            <div class="avatar avatar-placeholder">
-              <div class="bg-primary text-primary-content rounded-full w-8">
-                <span class="text-xs font-semibold">DV</span>
-              </div>
-            </div>
+            <a href="{% url 'settings' %}" class="avatar{% if not profile.avatar %} avatar-placeholder{% endif %}" aria-label="Settings for {{ profile.full_name }}" title="{{ profile.full_name }}">
+              {% if profile.avatar %}
+                <div class="w-8 rounded-full"><img src="{{ profile.avatar.url }}" alt=""></div>
+              {% else %}
+                <div class="bg-primary text-primary-content rounded-full w-8">
+                  <span class="text-xs font-semibold">{{ profile.member.initials|default:"?" }}</span>
+                </div>
+              {% endif %}
+            </a>
           </div>
         </div>
       </header>
