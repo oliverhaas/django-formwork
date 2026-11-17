@@ -141,16 +141,27 @@
     }
 }
 
+/* The links have the label's size, a lighter weight and a muted color. A link's text,
+   not its icon, sits on the label's baseline; the icon centers on the text. */
 .formwork-label-links {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 0.75rem;
     font-size: var(--text-xs);
     line-height: var(--text-xs--line-height);
     color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
 
+    a {
+        align-items: baseline;
+    }
+
     a:hover {
         color: var(--color-base-content);
+    }
+
+    .icon {
+        align-self: center;
+        vertical-align: -0.125em;
     }
 }
 

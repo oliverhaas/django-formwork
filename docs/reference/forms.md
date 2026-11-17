@@ -107,7 +107,9 @@ email = forms.EmailField(
 A widget with a `label_links()` method puts links at the end of its field's label row.
 The method gets the field's HTML name, its value and the form's renderer, and returns
 HTML. The field template renders the links after the label, not inside it, so they stay
-out of the field's accessible name and come before the widget in the tab order.
+out of the field's accessible name and come before the widget in the tab order. The label
+row sets the size and color of the links and puts their text on the label's baseline; an
+icon in a link centers on its text.
 
 ```python
 from django.utils.html import format_html

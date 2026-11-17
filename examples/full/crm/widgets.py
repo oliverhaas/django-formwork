@@ -23,7 +23,7 @@ class WebsiteInput(TextInput):
             return ""
         return format_html(
             '<a href="{}" target="_blank" rel="noopener noreferrer" title="{}" '
-            'class="link link-hover inline-flex items-center gap-1">'
+            'class="link link-hover inline-flex gap-1">'
             '<i class="icon icon-external-link" aria-hidden="true"></i>Open</a>',
             value,
             value,
