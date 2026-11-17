@@ -1189,7 +1189,7 @@ which <code>FormworkSearchView</code> serves for every registered search.</p>
 </tr>
 <tr>
 <td><code>allow_clear</code></td>
-<td><code>Select</code> and <code>SelectMultiple</code>: the list starts with the empty choice of an optional field (<code>empty_label</code> of a <code>ModelChoiceField</code>), so the user can clear it.</td>
+<td><code>Select</code> and <code>SelectMultiple</code>: the list starts with the empty choice of an optional field (<code>empty_label</code> of a <code>ModelChoiceField</code>, or the placeholder in place of Django's default label), so the user can clear it.</td>
 </tr>
 </tbody>
 </table>
@@ -1215,7 +1215,7 @@ trigger class to the results. A <code>ComboBox</code> over a <code>CharField</co
 <h3 id="paging">Paging<a class="headerlink" href="#paging" title="Permanent link">&para;</a></h3>
 <p>The widget renders the first 20 rows itself, plus the selected rows that lie
 past them. A search returns the next 20 matches at most. When more exist, the
-list ends with a hint and a "Load more" button that fetches the next page. The
+list ends with a "Load more" button that fetches the next page. The
 endpoint fetches one row past the page to tell whether more exist, so it never
 runs a <code>COUNT</code>. The first "Load more" request excludes the selected rows that
 the widget already shows past the first page.</p>

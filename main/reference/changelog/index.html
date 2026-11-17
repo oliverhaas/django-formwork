@@ -1266,6 +1266,16 @@
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="p">),</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
 </span></code></pre></div>
+<ul>
+<li>A <code>Select</code>, <code>SelectMultiple</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>DateRangePicker</code> or
+  <code>DateTimeRangePicker</code> starts its Alpine component on first use: a press, focus, a
+  key, or its list opening. A script that calls <code>Alpine.$data()</code> on such a widget
+  before then gets no component, and a write to its <code>data-value</code> or <code>data-selected</code>
+  does not show until the widget starts. Dispatch <code>formwork:start</code> on the widget's
+  root first, as the <a href="../widgets/#requirements">widget reference</a> shows. If you
+  override one of the widget templates, copy it again for the <code>data-formwork-lazy</code>
+  attribute. Without it, the widget starts on load as before.</li>
+</ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>MultipleFileField</code> for several uploads in one field. A plain <code>FileField</code> with a
@@ -1282,6 +1292,11 @@
   end time under the calendar.</li>
 <li><code>DateTimeRangeField</code>, which cleans to a <code>DateTimeRange(start, end)</code> of two datetimes
   and uses <code>DateTimeRangePicker</code>.</li>
+<li><code>DateTimePicker</code>: a day and a time in one text input for a <code>DateTimeField</code>, picked in a
+  calendar with a time input under it, with Now, Clear and Done buttons. The input shows
+  <code>SHORT_DATETIME_FORMAT</code> or the <code>format</code> you pass and reads typed text in that format
+  and in <code>DATETIME_INPUT_FORMATS</code>. A hidden input posts <code>YYYY-MM-DDTHH:MM</code> in the
+  current time zone, which <code>DateTimeField</code> reads as it is.</li>
 <li><code>ClearableFileInput</code>: a file upload in one row, as high as a text input. It shows the
   stored file as a link with an icon for its type, a Browse or Replace button, and a ×
   button that clears the stored file, with a second button to keep it before the save.
@@ -1295,33 +1310,54 @@
   server renders with <code>data-formwork-changed</code> stays marked, so the page can start from
   posted values after a failed save. The form sends a <code>formwork:dirty</code> event with the
   number of changed fields. See <a href="../forms/#changed-field-highlight">Forms</a>.</li>
-<li><code>django_formwork.admin</code> (experimental): a Django admin on formwork forms, django-filter,
-  htmx and Jinja2, styled with DaisyUI. It keeps the options, hooks, URL names and
-  permissions of <code>django.contrib.admin</code>, so an <code>admin.py</code> ports by importing
+<li>After a failed save, a form with <code>data-formwork-dirty</code> keeps the marks on the fields
+  the user changed, also on a field with an error, so the count includes them and
+  leaving the page still asks first. The error color covers the accent. Formwork's
+  field template sets <code>data-formwork-changed</code> on each changed field, except a file
+  field. If you override <code>formwork/forms/field.html</code>, copy it again.</li>
+<li><code>--formwork-dirty-color</code> and <code>--formwork-dirty-content</code> set the color of the
+  changed-field marks, accent by default. See
+  <a href="../forms/#changed-field-highlight">Forms</a>.</li>
+<li><code>django_formwork.admin</code> (experimental): a Django admin on formwork forms,
+  django-filter, htmx and Jinja2, styled with DaisyUI. It keeps the options, hooks, URL
+  names and permissions of <code>django.contrib.admin</code>, so an <code>admin.py</code> ports by importing
   <code>from django_formwork import admin</code>. Install it with <code>django-formwork[admin]</code> and see
   <a href="../admin/">Admin</a> for the setup. A list exports to CSV, Excel or JSON, and a long list
   exports in a background task, so run <code>migrate</code> after you add the app. With
   <code>import_formats</code> set, a list also imports CSV, Excel or JSON files: a preview shows
-  the new, changed and invalid rows before anything is saved. Columns that do
-  not fit the width of a list hide behind a button that shows them all. A long list
-  fits the window, and its rows scroll under the header. In a list with
-  <code>list_editable</code>, a changed cell shows in the accent color, and a bar at the bottom of
-  the window counts the changes and saves or discards them. With
+  the new, changed and invalid rows before anything is saved. Columns that do not fit
+  the width of a list hide behind a button that shows them all. A long list fits the
+  window, and its rows scroll under the header. In a list with <code>list_editable</code>, a field
+  shows its box only in the row under the pointer or with the focus, so the list reads
+  as a table, and a changed cell shows in the accent color. A line under the pages
+  counts the changes and saves or discards them. A cell's error shows in a tooltip, here
+  and in a <code>TabularInline</code>, so a failed save keeps the height of the rows. With
   <code>django.contrib.auth</code> installed, the admin has pages for users and groups, with the
-  password page of Django's user admin. A Show counts switch in the filter row shows
-  the number of rows for each filter option, as <code>show_facets</code> does in Django. Dates are
+  password page of Django's user admin. A Show counts switch in the filter row shows the
+  number of rows for each filter option, as <code>show_facets</code> does in Django. Dates are
   typed in the language's first <code>DATE_INPUT_FORMATS</code>, in a calendar dropdown, and a
-  datetime field has a time input next to its date. The buttons next to a relation add
-  a row or change the chosen one in a dialog, where Django's admin opens a popup
-  window. A <code>form</code> must subclass <code>FormworkModelForm</code>, and a system check names one that
-  does not. Django's admin widgets on a <code>form</code> render as formwork's. Generic inlines
-  come from <code>django_formwork.admin.contenttypes</code>. A <code>class Media</code> on an admin or an
-  inline loads its files, without Django's jQuery. <code>@admin.action</code> takes Django 6.1's
-  <code>location</code> and <code>description_plural</code>, also on Django 6.0, and the change form shows
-  its actions in an Actions menu. The change form shows the history of the object next
-  to its fields, with the values before and after each change. The admin keeps that
-  history in its own table, so it does not need <code>django.contrib.admin</code>, and with
-  <code>history = PghistoryHistory()</code> on the site it reads the events of django-pghistory.</li>
+  datetime field picks its day and time in one calendar, typed in the first
+  <code>DATETIME_INPUT_FORMATS</code> without the seconds. The buttons next to a relation add a row
+  or change the chosen one in a dialog, where Django's admin opens a popup window. A
+  <code>form</code> must subclass <code>FormworkModelForm</code>, and a system check names one that does not.
+  Django's admin widgets on a <code>form</code> render as formwork's. Generic inlines come from
+  <code>django_formwork.admin.contenttypes</code>. A <code>class Media</code> on an admin or an inline loads
+  its files, without Django's jQuery. <code>@admin.action</code> takes Django 6.1's <code>location</code> and
+  <code>description_plural</code>, also on Django 6.0, and the change form shows its actions in an
+  Actions menu. The other ways to save sit in a menu next to Save, and the way an add or
+  change form of a model was last saved becomes its main button. The delete pages group
+  the related objects per model and list the first few of each. A list that the search
+  or the filters leave empty offers to clear them. The change form shows the history of
+  the object next to its fields, with the values before and after each change. The admin
+  keeps that history in its own table, so it does not need <code>django.contrib.admin</code>, and
+  with <code>history = PghistoryHistory()</code> on the site it reads the events of
+  django-pghistory. The recent actions on the dashboard list each object once, with what
+  its saves changed. On a phone, the line with a list's actions and save sticks to the
+  bottom of the screen while rows are selected or cells changed.</li>
+<li>A widget can put links at the end of its field's label row, for example a Generate link
+  next to a slug, with a <code>label_links(name, value, renderer=None)</code> method that returns
+  HTML. The field template renders them after the label, not inside it, so they stay out
+  of the field's accessible name. The admin puts a relation's Edit and Add links there.</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1355,6 +1391,33 @@
   accent of a changed field still wins.</li>
 <li>A link in a field's help text or error message is underlined. Tailwind's preflight
   showed it as plain text.</li>
+<li>With <code>data-formwork-dirty</code>, a changed group of checkboxes or radio buttons marks only
+  the options whose checked state changed. Every option of the group took the accent
+  color. A radio change marks the old and the new option. After a failed save, the
+  field template sends the first checked options in <code>data-formwork-initial</code>, so checking
+  them again drops the marks. If you override <code>formwork/forms/field.html</code>, copy it again.</li>
+<li>A <code>Select</code> or <code>SelectMultiple</code> with a server search loads its first page when its list
+  opens, and shows a spinner until the rows arrive. The page held those rows from the
+  start, so a form with many such selects was large and slow to start: on an admin list
+  with 100 editable rows the HTML went from 3.9 MB to 2.9 MB. A list that fits one page
+  keeps its rows in the page and filters them in the browser, and a selected option past
+  the first page still comes with the page. The search endpoint takes <code>page_only=1</code> for
+  this request, which leaves out the "more results" hint. The spinner row is
+  <code>formwork/widgets/partials/pending_rows.html</code>. Tests that read the rows of a long list
+  from the rendered page open the list first, or request the endpoint.</li>
+<li>The row that clears a <code>Select</code> or <code>SelectMultiple</code> with <code>allow_clear</code> shows the
+  widget's placeholder in muted text, the way the empty control shows it. It showed
+  Django's blank label, which Django 6.1 changed from "---------" to "- Select an
+  option -" and which also widened the control. A field's own <code>empty_label</code>, such as
+  "Unassigned", still shows as is. The admin's optional choice fields and relations get
+  the placeholder. If you override <code>formwork/widgets/select.html</code> or
+  <code>formwork/widgets/select_multiple.html</code>, copy it again for the muted row.</li>
+<li>The end of a long <code>Select</code>, <code>SelectMultiple</code> or <code>ComboBox</code> list shows a "Load more"
+  row in the style of the option rows. The info alert with "Showing the first 20
+  matches. Keep typing to narrow them down." and its button made a narrow dropdown
+  wrap over three lines and widened it. The <code>shown</code> count is gone from the context of
+  <code>formwork/widgets/partials/more_results_hint.html</code>; if you override that template,
+  copy it again.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1420,10 +1483,34 @@
   element around the form, such as the page content, even when the server sent the
   saved value back. The marks compared against the values from before the morph. They
   now start again from the values the server sent.</li>
+<li>With <code>data-formwork-dirty</code>, a changed <code>ToggleInput</code> showed no mark, most visibly
+  when it was turned off: DaisyUI's <code>toggle</code> class in its markup won over the changed
+  color. The switch now takes the changed color, on or off.</li>
 <li>In a dark theme, the dropdown of a <code>Select</code>, <code>SelectMultiple</code> or <code>ComboBox</code> showed no
   hover on an option and no mark on the option the arrow keys reached. The option took
   <code>base-200</code>, which DaisyUI's dark theme draws almost like the panel. It now mixes 10%
   of <code>base-content</code> into the panel, as DaisyUI's menu does.</li>
+<li>In Chromium-based browsers, inside a focusable element such as a
+  <code>&lt;main tabindex="-1"&gt;</code> for a skip link, a press on the scrollbar of a <code>Select</code> or
+  <code>SelectMultiple</code> closed the list, so the list could not be scrolled with the mouse. A
+  press on an empty part of a <code>DatePicker</code> calendar closed the calendar too. The
+  browser moved the focus to the element around the widget, and the widget took that
+  for a move to another control. The panels stay open now, and a list keeps the focus
+  in its search field. If you override <code>formwork/widgets/select.html</code> or
+  <code>formwork/widgets/select_multiple.html</code>, copy it again.</li>
+<li>A form with many selects or date pickers, such as a formset with a hundred rows, froze
+  the page for seconds while it loaded. Each option row of a <code>Select</code>, <code>SelectMultiple</code>
+  or <code>ComboBox</code> had four Alpine bindings, and each date picker built its calendar on
+  load. Each binding cost more the more controls the form held, because the browser
+  drops its index of the form's controls after every change to the form. The rows
+  of a list now share one effect, and a date picker builds its calendar when it first
+  opens. With the lazy first page under Changed and the start on first use under
+  Breaking changes, an admin list with 100 editable rows went from 7.9 s of script on
+  load to 0.06 s. If you override
+  <code>formwork/widgets/select.html</code>, <code>formwork/widgets/select_multiple.html</code>,
+  <code>formwork/widgets/combo_box.html</code> or <code>formwork/widgets/partials/calendar.html</code>, copy
+  it again: the row helpers <code>matches()</code>, <code>isHighlighted()</code>, <code>optionClass()</code> and
+  <code>optionId()</code> are gone.</li>
 </ul>
 <h2 id="010a3-2026-11-06">0.1.0a3 (2026-11-06)<a class="headerlink" href="#010a3-2026-11-06" title="Permanent link">&para;</a></h2>
 <h3 id="breaking-changes_1">Breaking changes<a class="headerlink" href="#breaking-changes_1" title="Permanent link">&para;</a></h3>
