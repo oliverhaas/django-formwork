@@ -29,6 +29,7 @@ from django_formwork.widgets import (
     DataList,
     DatePicker,
     DateRangePicker,
+    DateTimePicker,
     FileDropzoneInput,
     ImageDropzoneInput,
     InputMask,
@@ -1109,7 +1110,7 @@ class TextareaForm(FormworkForm):
 
 
 class NewWidgetsForm(FormworkForm):
-    """DatePicker, the range pickers, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons."""
+    """DatePicker, DateTimePicker, the range pickers, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons."""
 
     due_date = forms.DateField(
         widget=DatePicker,
@@ -1131,6 +1132,11 @@ class NewWidgetsForm(FormworkForm):
     stay = DateTimeRangeField(
         required=False,
         help_text="DateTimeRangePicker: a start and an end, each a day and a time.",
+    )
+    starts_at = forms.DateTimeField(
+        widget=DateTimePicker,
+        required=False,
+        help_text="DateTimePicker: a day and a time, picked in one calendar.",
     )
     quantity = forms.IntegerField(
         widget=StepperNumberInput(attrs={"min": "1", "max": "99", "step": "1"}),
@@ -1630,7 +1636,7 @@ _PAGES = [
         "new-widgets",
         "/new-widgets/",
         "New Widgets",
-        "DatePicker, DateRangePicker, DateTimeRangePicker, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons",
+        "DatePicker, DateTimePicker, DateRangePicker, DateTimeRangePicker, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons",
     ),
     (
         "complex",

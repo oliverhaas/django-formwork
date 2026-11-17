@@ -42,6 +42,7 @@ import "./widgets/clearable_file_input.js";
 import "./widgets/combo_box.js";
 import "./widgets/date_picker.js";
 import "./widgets/date_range_picker.js";
+import "./widgets/date_time_picker.js";
 import "./widgets/file_dropzone.js";
 import "./widgets/image_dropzone.js";
 import "./widgets/input_mask.js";

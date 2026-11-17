@@ -20,7 +20,7 @@
   )
   ```
 
-- A `Select`, `SelectMultiple`, `DatePicker`, `DateRangePicker` or
+- A `Select`, `SelectMultiple`, `DatePicker`, `DateTimePicker`, `DateRangePicker` or
   `DateTimeRangePicker` starts its Alpine component on first use: a press, focus, a
   key, or its list opening. A script that calls `Alpine.$data()` on such a widget
   before then gets no component, and a write to its `data-value` or `data-selected`
@@ -45,6 +45,11 @@
   end time under the calendar.
 - `DateTimeRangeField`, which cleans to a `DateTimeRange(start, end)` of two datetimes
   and uses `DateTimeRangePicker`.
+- `DateTimePicker`: a day and a time in one text input for a `DateTimeField`, picked in a
+  calendar with a time input under it, with Now, Clear and Done buttons. The input shows
+  `SHORT_DATETIME_FORMAT` or the `format` you pass and reads typed text in that format
+  and in `DATETIME_INPUT_FORMATS`. A hidden input posts `YYYY-MM-DDTHH:MM` in the
+  current time zone, which `DateTimeField` reads as it is.
 - `ClearableFileInput`: a file upload in one row, as high as a text input. It shows the
   stored file as a link with an icon for its type, a Browse or Replace button, and a ×
   button that clears the stored file, with a second button to keep it before the save.

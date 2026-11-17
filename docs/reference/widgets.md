@@ -599,6 +599,36 @@ buttons.
 Month and weekday names (`%B`, `%b`, `%A`, `%a`) are the English ones that
 Python's `strftime` writes.
 
+### DateTimePicker
+
+**Parent class:** `forms.Widget`
+
+A day and a time in one text input, with a calendar and a time input under
+it. Use it with Django's `DateTimeField`:
+
+```python
+starts_at = forms.DateTimeField(widget=widgets.DateTimePicker)
+starts_at = forms.DateTimeField(widget=widgets.DateTimePicker(format="d.m.Y H:i"))
+```
+
+A picked day keeps the calendar open for the time. Done, Enter and leaving
+the widget post the value. Now picks the current day and minute of the
+browser's clock and closes the calendar. Clear empties the field.
+
+`format` sets how the input shows the value: a Django format setting name or
+a format string, `SHORT_DATETIME_FORMAT` by default. The placeholder spells
+the format out. The input reads typed text in that format and in the formats
+of `DATETIME_INPUT_FORMATS` and `DATE_INPUT_FORMATS`, so `3/1/2030 2:30 pm`
+and `2030-03-01 14:30` both work in English. A day typed without a time takes
+the time under the calendar. Text that names no day posts as typed, and the
+field reports it.
+
+A hidden input posts `YYYY-MM-DDTHH:MM` in the current time zone, which
+`DateTimeField` reads without extra `input_formats`. A stored value with
+seconds posts them back while its minute stays the same. Microseconds are
+dropped, as in Django's admin. `data-*` and `hx-*` attrs go on the hidden
+input, which fires `change`. The other attrs go on the text input.
+
 ---
 
 ## Choices
@@ -800,14 +830,14 @@ class PostcodeInput(widgets.TextInput):
 ## Requirements
 
 Every widget with a `Media` class needs Alpine.js on the page: `Select`,
-`SelectMultiple`, `ComboBox`, `DatePicker`, `DateRangePicker`,
+`SelectMultiple`, `ComboBox`, `DatePicker`, `DateTimePicker`, `DateRangePicker`,
 `DateTimeRangePicker`, `StepperNumberInput`, `PasswordInput`, `SearchInput`,
 `ClearableFileInput`, `FileDropzoneInput`, `ImageDropzoneInput`, `InputMask` and
 `ValidatedTextarea`.
 A server search and `ValidatedTextarea` need htmx as well. The [installation guide](../getting-started/installation.md#5-htmx-and-alpinejs)
 shows the script order.
 
-`Select`, `SelectMultiple`, `DatePicker`, `DateRangePicker` and
+`Select`, `SelectMultiple`, `DatePicker`, `DateTimePicker`, `DateRangePicker` and
 `DateTimeRangePicker` start their Alpine component on first use: a press, focus, a
 key, or the list opening. Until then the server's markup shows the widget as it is,
 so a form with a hundred of them loads without starting a hundred components. The
