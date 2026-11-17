@@ -188,6 +188,7 @@ instead; see [Server-side search](views.md#server-side-search).
 | `search_decorator` | `callable \| None` | required with `search_queryset` | Access rule for the search; `None` for a public endpoint |
 | `search_ranked` | `bool` | `False` | Rank the results on PostgreSQL |
 | `search_key`, `search_params` | | `None` | Reuse a registered search with its own params |
+| `search_label` | `callable \| None` | `None` | `callable(obj, **params)` that labels a row of the search in place of the field's `label_from_instance`, for a search that several fields reuse |
 | `badges` | `bool` | `False` | Show each option as a badge in the `color` of its [`ChoiceLabel`](#choicelabel), in the list and in the closed trigger. A plain label gets a neutral badge. The empty choice and a label with `label_html` stay as they are |
 | `counts` | `Mapping \| None` | `None` | A number in a badge at the end of each option, keyed by the option value, as faceted filters show; a value missing from the mapping shows 0, dimmed. A list that the server pages shows no counts |
 

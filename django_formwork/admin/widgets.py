@@ -52,10 +52,13 @@ __all__ = [
     "AdminDateWidget",
     "AdminSplitDateTime",
     "AdminTimeWidget",
+    "RelatedChoiceField",
+    "RelatedMultipleChoiceField",
     "RelatedWidgetWrapper",
     "date_input_format",
     "datetime_input_format",
     "formwork_widget",
+    "relation_label",
     "relation_queryset",
     "relation_widget",
     "use_formwork_widgets",
@@ -86,6 +89,7 @@ def relation_queryset(request: HttpRequest, *, site: str, model: str, field: str
     if not model_admin.has_view_permission(request):
         raise PermissionDenied
     queryset = model_admin.get_queryset(request).complex_filter(source_field.get_limit_choices_to())
+    queryset = model_admin.choice_queryset(queryset)
     queryset, may_have_duplicates = model_admin.get_search_results(request, queryset, request.GET.get("q", "").strip())
     if may_have_duplicates:
         queryset = queryset.distinct()
@@ -97,12 +101,43 @@ def relation_queryset(request: HttpRequest, *, site: str, model: str, field: str
     return queryset
 
 
+def relation_label(obj: models.Model, *, site: str, model: str, field: str) -> object:
+    """A searched row as the related admin's ``choice_label()`` shows it."""
+    from django_formwork.admin.sites import get_site
+
+    admin_site = get_site(site)
+    model_admin = admin_site.get_model_admin_or_none(type(obj)) if admin_site is not None else None
+    return str(obj) if model_admin is None else model_admin.choice_label(obj)
+
+
+class RelatedChoiceField(forms.ModelChoiceField):
+    """A relation whose options read as the related admin's ``choice_label()`` shows them."""
+
+    def __init__(self, *args: Any, choice_label: Callable[[Any], object], **kwargs: Any) -> None:
+        self.choice_label = choice_label
+        super().__init__(*args, **kwargs)
+
+    def label_from_instance(self, obj: Any) -> Any:
+        return self.choice_label(obj)
+
+
+class RelatedMultipleChoiceField(forms.ModelMultipleChoiceField):
+    """``RelatedChoiceField`` for a many-to-many field."""
+
+    def __init__(self, *args: Any, choice_label: Callable[[Any], object], **kwargs: Any) -> None:
+        self.choice_label = choice_label
+        super().__init__(*args, **kwargs)
+
+    def label_from_instance(self, obj: Any) -> Any:
+        return self.choice_label(obj)
+
+
 class _RelationSearch(FormworkForm):
     """Registers ``relation_queryset`` once, under a key every relation widget reuses."""
 
     related: forms.ModelChoiceField[Any] = forms.ModelChoiceField(
         queryset=None,
-        widget=Select(search_queryset=relation_queryset, search_decorator=None),
+        widget=Select(search_queryset=relation_queryset, search_label=relation_label, search_decorator=None),
     )
 
 

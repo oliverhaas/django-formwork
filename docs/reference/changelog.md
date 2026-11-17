@@ -71,6 +71,9 @@
   the `color` of its `ChoiceLabel`, in the list and in the closed trigger. The admin
   sets it for a field with `choices`, so a form's select shows a value as the list's
   column does, in the colors of `list_badges`.
+- `Select` and `SelectMultiple` take `search_label`, a `callable(obj, **params)` that
+  labels the rows of a server search, so a search that several fields reuse can label
+  its rows by the params of each field.
 - `Select` and `SelectMultiple` take `counts`, a mapping of option values to numbers.
   Each option shows its number in a badge at the end of the row, as a faceted filter
   does, and an option with 0 is dimmed.
@@ -130,6 +133,9 @@
   show HTML of their own above and under a list, such as counts or a chart, and
   `change_top` and `change_bottom` do the same on a change page.
   `@admin.slot(lazy=True)` loads a slot after its page, with a skeleton until then.
+  With `choice_description` on a model's admin, the dropdown of every relation to that
+  model shows those values under each row's name, such as a job title and a department
+  under an employee.
 - A widget can put links at the end of its field's label row, for example a Generate link
   next to a slug, with a `label_links(name, value, renderer=None)` method that returns
   HTML. The field template renders them after the label, not inside it, so they stay out

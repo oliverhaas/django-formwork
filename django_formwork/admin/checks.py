@@ -217,6 +217,18 @@ def check_model_admin(model_admin: ModelAdmin) -> list[checks.CheckMessage]:
                     id="formwork_admin.E108",
                 ),
             )
+    for item in model_admin.choice_description:
+        try:
+            label_for_field(item, model_admin.model, model_admin)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+        except AttributeError:
+            errors.append(
+                checks.Error(
+                    f"The value of 'choice_description' refers to '{item}', which is not a callable, an attribute of "
+                    f"'{name}', or an attribute or method on '{opts.label}'.",
+                    obj=type(model_admin),
+                    id="formwork_admin.E503",
+                ),
+            )
     links = model_admin.list_display_links or ()
     for item in model_admin.list_editable:
         if item not in model_admin.list_display:

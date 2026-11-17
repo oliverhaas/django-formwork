@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from functools import partial
 from html import escape as html_escape
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
@@ -134,6 +135,10 @@ class FormworkSearchView(View):
         label_from_instance = (
             getattr(field, "label_from_instance", None) or getattr(widget, "label_from_instance", None) or str
         )
+        # A search that several fields share labels a row by the params of the field that asks.
+        search_label = getattr(widget, "search_label", None)
+        if search_label is not None:
+            label_from_instance = partial(search_label, **params)
         badges = getattr(widget, "badges", False)
         options = []
         for obj in rows:

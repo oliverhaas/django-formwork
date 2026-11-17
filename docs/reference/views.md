@@ -83,6 +83,10 @@ The endpoint renders each row with `label_from_instance` of the field, so a
 trigger class to the results. A `ComboBox` over a `CharField` takes its own
 `label_from_instance=` and falls back to `str()`.
 
+A search that several fields reuse has one field, and so one `label_from_instance`.
+With `search_label=callable(obj, **params)` on the widget that registers the search,
+the endpoint labels each row with it instead, with the params of the field that asks.
+
 ### Paging
 
 The widget renders the first 20 rows itself, plus the selected rows that lie

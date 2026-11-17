@@ -24,8 +24,10 @@ from django.contrib.admin.exceptions import DisallowedModelAdminToField
 from django.contrib.admin.options import IncorrectLookupParameters, ShowFacets
 from django.contrib.admin.utils import (
     NestedObjects,
+    NotRelationField,
     display_for_value,
     flatten_fieldsets,
+    get_fields_from_path,
     model_format_dict,
     model_ngettext,
     quote,
@@ -48,7 +50,7 @@ from django.http import (
 )
 from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, path, reverse
-from django.utils.html import escape, format_html
+from django.utils.html import escape, format_html, format_html_join
 from django.utils.inspect import get_func_args
 from django.utils.safestring import mark_safe
 from django.utils.text import capfirst, get_text_list
@@ -56,7 +58,7 @@ from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
 
 from django_formwork.admin import exports, formats, history, imports
-from django_formwork.admin.cells import badge_color
+from django_formwork.admin.cells import badge_color, list_cell
 from django_formwork.admin.changelist import ERROR_FLAG, PRESERVED_FILTERS_VAR, ChangeList
 from django_formwork.admin.filters import build_filterset, list_filter_path
 from django_formwork.admin.helpers import FIRST_OBJECTS, AdminForm, DeletedObject, InlineAdminFormSet, InlinePager
@@ -69,6 +71,8 @@ from django_formwork.admin.widgets import (
     RADIO_ROW_CLASS,
     TO_FIELD_VAR,
     NullBooleanSelect,
+    RelatedChoiceField,
+    RelatedMultipleChoiceField,
     RelatedWidgetWrapper,
     relation_widget,
     use_formwork_widgets,
@@ -336,7 +340,21 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
             queryset = self.get_field_queryset(db, db_field, request)
             if queryset is not None:
                 kwargs["queryset"] = queryset
+        self._related_choices(db_field, RelatedChoiceField, kwargs)
         return db_field.formfield(**kwargs)
+
+    def _related_choices(self, db_field: RelatedField[Any, Any], form_class: type[forms.Field], kwargs: Any) -> None:
+        """Label the options of a relation as the related model's admin does."""
+        related = db_field.remote_field.model
+        related_admin = self.admin_site.get_model_admin_or_none(related)
+        if related_admin is None or "form_class" in kwargs:
+            return
+        kwargs["form_class"] = form_class
+        kwargs["choice_label"] = related_admin.choice_label
+        queryset = kwargs.get("queryset")
+        if queryset is None:
+            queryset = related._default_manager.using(kwargs.get("using"))
+        kwargs["queryset"] = related_admin.choice_queryset(queryset)
 
     def formfield_for_manytomany(
         self, db_field: models.ManyToManyField[Any, Any], request: HttpRequest, **kwargs: Any
@@ -353,6 +371,7 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
             queryset = self.get_field_queryset(db, db_field, request)
             if queryset is not None:
                 kwargs["queryset"] = queryset
+        self._related_choices(db_field, RelatedMultipleChoiceField, kwargs)
         return db_field.formfield(**kwargs)
 
     # Option getters
@@ -471,6 +490,8 @@ class ModelAdmin(BaseModelAdmin):
     list_badges: ClassVar[dict[str, dict[str, str]]] = {}
     search_fields: Sequence[str] = ()
     search_help_text: str | None = None
+    #: What a row shows under its name as an option of a relation: ``list_display`` entries.
+    choice_description: Sequence[Any] = ()
     date_hierarchy: str | None = None
     save_as = False
     save_as_continue = True
@@ -713,6 +734,35 @@ class ModelAdmin(BaseModelAdmin):
 
     def get_search_fields(self, request: HttpRequest) -> Sequence[str]:
         return self.search_fields
+
+    def choice_label(self, obj: models.Model) -> str | ChoiceLabel:
+        """A row as an option of a relation to this model, in a select of any admin.
+
+        The values of ``choice_description`` follow the row's name on a second line, as the
+        list shows them. Override it for an option with an icon or a label of its own.
+        """
+        cells = [list_cell(name, obj, self) for name in self.choice_description]
+        texts = [cell["text"] for cell in cells if cell["kind"] not in {"empty", "boolean", "json"}]
+        if not texts:
+            return str(obj)
+        return ChoiceLabel(str(obj), description=format_html_join(" · ", "{}", ((text,) for text in texts)))
+
+    def choice_queryset(self, queryset: models.QuerySet[Any]) -> models.QuerySet[Any]:
+        """The rows of a relation to this model, with the relations that ``choice_description`` reads."""
+        related = []
+        for name in self.choice_description:
+            try:
+                fields = get_fields_from_path(self.model, name) if isinstance(name, str) else []
+            except FieldDoesNotExist, NotRelationField:
+                continue
+            path = []
+            for field in fields:
+                if not (field.many_to_one or field.one_to_one):
+                    break
+                path.append(field.name)
+            if path:
+                related.append("__".join(path))
+        return queryset.select_related(*related) if related else queryset
 
     def get_search_results(
         self, request: HttpRequest, queryset: models.QuerySet[Any], search_term: str

@@ -142,6 +142,29 @@ class _GroupMembersForm(FormworkForm):
             )
 
 
+def _member_of(user: User, *, group: int) -> str:
+    return f"{user.username} of group {group}"
+
+
+class _LabelledMembersForm(FormworkForm):
+    members = forms.ModelMultipleChoiceField(
+        queryset=User.objects.none(),
+        widget=SelectMultiple(search_queryset=_group_members, search_label=_member_of, search_decorator=None),
+    )
+
+
+@pytest.mark.django_db
+def test_search_label_names_a_row_with_the_params_of_the_search() -> None:
+    group = Group.objects.create(name="Editors")
+    group.user_set.add(User.objects.create(username="ada"))
+    url = search_url(_key(_LabelledMembersForm, "members"), {"group": group.pk}, widget="select_multiple")
+
+    response = Client().get(url)
+
+    soup = BeautifulSoup(response.content.decode(), "html.parser")
+    assert [row["data-label"] for row in soup.select("input[data-label]")] == [f"ada of group {group.pk}"]
+
+
 def test_search_fields_without_search_queryset_is_rejected() -> None:
     with pytest.raises(ImproperlyConfigured, match="search_queryset"):
 

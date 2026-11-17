@@ -306,6 +306,7 @@ Options this admin adds:
 |---|---|
 | `icon` | The Lucide icon next to the model in the navigation and the page title. Unset, the model gets a placeholder shape, see below. |
 | `list_badges` | Badge colors per value, by column: `{"status": {"active": "success", "archived": "warning"}}`. The select of the field on a form shows the same badges. |
+| `choice_description` | What a row shows under its name in the dropdown of a relation to this model: entries as in `list_display`. See [Related objects](#related-objects). |
 | `list_only_fields` | Load only these columns on the list page. |
 | `list_defer_fields` | Skip these columns on the list page, for a large JSON or text column that no column shows. |
 | `list_per_page_options` | The page sizes the list offers next to its pages. Default `(25, 50, 100, 250)`. `list_per_page` is always one of them. |
@@ -364,6 +365,40 @@ keeps working. A save in the dialog ends on `popup_response_template`, by defaul
 `formwork_admin/popup_response.html`. An override keeps the element with the id
 `formwork-admin-popup-response`: the dialog reads the saved row from its
 `data-popup-response` attribute.
+
+#### Option descriptions
+
+A name alone often does not tell two rows apart. `choice_description` on a model's admin
+lists what its rows show on a second line in the dropdown of every relation to that
+model, in any admin of the site:
+
+```python
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
+    search_fields = ["name", "email"]
+    choice_description = ["job_title", "department"]
+```
+
+An option then reads "Ada Kowalski" with "Account executive · Sales" under it, in the
+first rows of the form and in the search results. The closed field shows the name only.
+The entries are those of `list_display`: a field, a path such as `department__name`, a
+method of the admin or the model, or a callable. Each value shows as the list shows it,
+and an empty value is left out. `manage.py check` reports an unknown entry as
+`formwork_admin.E503`.
+
+The dropdown loads a relation that an entry reads with `select_related()`, so the
+descriptions add no query per row. Its rows come from the model's default manager, as in
+Django, not from `get_queryset()`. A method that reads an annotation gets it from
+`choice_queryset(queryset)`, which both the form and the search call:
+
+```python
+def choice_queryset(self, queryset):
+    return super().choice_queryset(queryset).annotate(open_tasks=Count("tasks"))
+```
+
+For an icon or a label of its own, override `choice_label(obj)` and return a
+[`ChoiceLabel`](widgets.md#choicelabel). A relation field that you declare on a `form`,
+or build with a `form_class` in `formfield_for_foreignkey()`, keeps its own labels.
 
 After a save in the dialog, the change form posts its values to its own URL with
 `_refresh` added, and htmx morphs the page with the response. For such a POST,

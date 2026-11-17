@@ -154,6 +154,7 @@ class SearchableSelectMixin(_SelectBase):
         search_queryset: Callable[Concatenate[HttpRequest, ...], QuerySet[Any]] | None = None,
         search_decorator: Callable[..., Any] | _UnsetDecorator | None = _UNSET_DECORATOR,
         search_ranked: bool = False,
+        search_label: Callable[..., object] | None = None,
         allow_clear: bool = False,
         floating: bool = False,
         counts: Mapping[Any, int] | None = None,
@@ -174,6 +175,7 @@ class SearchableSelectMixin(_SelectBase):
         self.search_queryset = search_queryset
         self.search_decorator = search_decorator
         self.search_ranked = search_ranked
+        self.search_label = search_label
         self.allow_clear = allow_clear
         self.floating = floating
         self.counts = counts

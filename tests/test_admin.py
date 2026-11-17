@@ -2125,6 +2125,32 @@ def test_relation_search_returns_matching_rows(admin_client, catalog):
     assert b"Office" not in response.content
 
 
+def test_relation_options_show_the_description_of_the_related_admin(admin_client, catalog, monkeypatch):
+    """The first page of the form and the rows of the search read the same."""
+    monkeypatch.setattr(site.get_model_admin(Category), "choice_description", ["slug"])
+    params = {"widget": "select", "site": "admin", "model": "admin_app.item", "field": "category", "q": "kit"}
+
+    form = admin_client.get(url(Item, "change", catalog.alpha.pk))
+    search = admin_client.get(reverse("formwork:search", args=[RELATION_SEARCH_KEY]), params)
+
+    for response in (form, search):
+        row = BeautifulSoup(response.content, "html.parser").select_one(f"button[data-value='{catalog.kitchen.pk}']")
+        assert list(row.stripped_strings) == ["Kitchen", "kitchen"]
+
+
+def test_relation_options_load_the_relations_their_description_reads(
+    rf, catalog, monkeypatch, django_assert_num_queries
+):
+    monkeypatch.setattr(site.get_model_admin(Item), "choice_description", ["category", "status"])
+    part_admin = admin.ModelAdmin(Part, site)
+
+    field = part_admin.formfield_for_foreignkey(Part._meta.get_field("item"), rf.get("/"))
+
+    with django_assert_num_queries(1):
+        descriptions = [label.description for value, label in field.choices if value]
+    assert descriptions == ["Kitchen · Archived", "Office · Draft"]
+
+
 def test_relation_search_keeps_the_model_ordering_under_an_annotated_admin(admin_client):
     """A related admin that annotates its rows still lists them in the model's ordering."""
     for name in ["Bravo", "Alpha", "Charlie"]:
@@ -2369,6 +2395,7 @@ def test_check_reports_two_sites_with_the_same_name(monkeypatch):
         ),
         ({"inlines": [type("DjangoInline", (django_admin.TabularInline,), {"model": Part})]}, "formwork_admin.E104"),
         ({"delete_confirmation_max_display": -1}, "formwork_admin.E041"),
+        ({"choice_description": ["nope"]}, "formwork_admin.E503"),
     ],
 )
 def test_checks_report_misconfigured_options(options, error_id):
