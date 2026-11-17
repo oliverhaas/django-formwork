@@ -67,6 +67,10 @@
   button that clears the stored file, with a second button to keep it before the save.
   It posts the same fields as Django's widget, so `widget=widgets.ClearableFileInput`
   is the only change a form needs.
+- `Select` and `SelectMultiple` take `badges=True`, which shows each option as a badge in
+  the `color` of its `ChoiceLabel`, in the list and in the closed trigger. The admin
+  sets it for a field with `choices`, so a form's select shows a value as the list's
+  column does, in the colors of `list_badges`.
 - `Select` and `SelectMultiple` take `counts`, a mapping of option values to numbers.
   Each option shows its number in a badge at the end of the row, as a faceted filter
   does, and an option with 0 is dimmed.

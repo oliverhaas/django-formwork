@@ -61,3 +61,45 @@ def test_counts_show_at_the_end_of_each_option(widget_class):
 
     rows = {el["data-value"]: el.get_text(" ", strip=True) for el in soup.select("[role=option] > [data-value]")}
     assert rows == {"a": "Apples 1,200", "b": "Pears 0"}
+
+
+@pytest.mark.parametrize("widget_class", [Select, SelectMultiple])
+def test_badges_show_each_option_as_a_badge_in_its_color(widget_class):
+    """The empty choice and a label with its own HTML stay as they are."""
+    choices = [
+        ("", "None"),
+        ("active", ChoiceLabel("Active", color="success")),
+        ("draft", "Draft"),
+        ("other", ChoiceLabel("Other", label_html="<b>Other</b>")),
+    ]
+    widget = widget_class(choices=choices, badges=True, allow_clear=True)
+
+    soup = BeautifulSoup(widget.render("status", ""), "html.parser")
+
+    badges = {}
+    for row in soup.select("[role=option] > [data-value]"):
+        badge = row.select_one(".badge")
+        badges[row["data-value"]] = badge and (badge.get_text(), badge["class"][2:])
+    assert badges == {
+        "": None,
+        "active": ("Active", ["badge-soft", "badge-success"]),
+        "draft": ("Draft", ["badge-ghost"]),
+        "other": None,
+    }
+
+
+def test_badge_of_the_selected_option_shows_in_the_closed_select():
+    widget = Select(choices=[("active", ChoiceLabel("Active", color="success"))], badges=True)
+
+    soup = BeautifulSoup(widget.render("status", "active"), "html.parser")
+
+    assert soup.select_one("summary [x-html=labelHtml] .badge.badge-success").get_text() == "Active"
+
+
+def test_closed_select_with_badges_takes_its_width_from_the_badges():
+    """The hidden copy that sizes the trigger holds the badges, which are wider than their text."""
+    widget = Select(choices=[("active", ChoiceLabel("Active", color="success")), ("draft", "Draft")], badges=True)
+
+    soup = BeautifulSoup(widget.render("status", "active"), "html.parser")
+
+    assert [badge.get_text() for badge in soup.select(".formwork-autowidth .badge")] == ["Active", "Draft"]

@@ -11,6 +11,7 @@ from django.db.models import fields as model_fields
 from django.forms.models import ModelChoiceIterator
 from django.utils.choices import flatten_choices
 from django.utils.formats import number_format
+from django.utils.html import format_html
 from django.utils.translation import gettext
 
 from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search_url
@@ -105,12 +106,20 @@ class ChoiceLabel:
         return hash(self.label)
 
 
-def label_extras(label: object) -> dict[str, str]:
-    """What an option row shows beside its text, blank for a plain label."""
+def label_extras(label: object, *, badges: bool = False) -> dict[str, str]:
+    """What an option row shows beside its text, blank for a plain label.
+
+    With ``badges``, a label without ``label_html`` shows as a badge in its ``color``.
+    """
+    label_html = getattr(label, "label_html", "")
+    if badges and not label_html:
+        color = getattr(label, "color", "neutral")
+        variant = "badge-ghost" if color == "neutral" else f"badge-soft badge-{color}"
+        label_html = format_html('<span class="badge badge-sm {}">{}</span>', variant, str(label))
     return {
         "icon": getattr(label, "icon", ""),
         "description": getattr(label, "description", ""),
-        "label_html": getattr(label, "label_html", ""),
+        "label_html": label_html,
         "selected_toggle_class": getattr(label, "selected_toggle_class", ""),
     }
 
@@ -148,6 +157,7 @@ class SearchableSelectMixin(_SelectBase):
         allow_clear: bool = False,
         floating: bool = False,
         counts: Mapping[Any, int] | None = None,
+        badges: bool = False,
     ) -> None:
         if search_key is not None and search_fields:
             msg = "Pass either search_key or search_fields, not both."
@@ -167,6 +177,7 @@ class SearchableSelectMixin(_SelectBase):
         self.allow_clear = allow_clear
         self.floating = floating
         self.counts = counts
+        self.badges = badges
         # Set per render by optgroups().
         self.truncated = False
         self.selected_past_page: list[str] = []
@@ -188,7 +199,8 @@ class SearchableSelectMixin(_SelectBase):
             counts = {str(key): count for key, count in self.counts.items()}
         for group, group_options, _index in widget["optgroups"]:
             for option in group_options:
-                option.update(label_extras(option["label"]))
+                # The empty choice is a placeholder or the clearing row, not a value.
+                option.update(label_extras(option["label"], badges=self.badges and str(option["value"]) != ""))
                 if counts is not None and str(option["value"]) != "":
                     count = counts.get(str(option["value"]), 0)
                     option["count"] = number_format(count, force_grouping=True)
@@ -210,6 +222,7 @@ class SearchableSelectMixin(_SelectBase):
                 if option["selected"]:
                     selected.append({**option, "label": str(option["label"])})
         widget["options"] = options
+        widget["badges"] = self.badges
         widget["selected_options"] = selected
 
         widget["aria_invalid"] = widget["attrs"].get("aria-invalid")

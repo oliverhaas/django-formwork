@@ -585,7 +585,7 @@ def test_an_editable_value_lines_up_with_its_column_header(admin_page, live_serv
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
     head = admin_page.locator("#changelist-table thead")
     row = admin_page.locator("#changelist-table tbody tr[data-pk]")
-    status = row.locator("summary [x-text=triggerText]").bounding_box()
+    status = row.locator("summary [x-html=labelHtml] .badge").bounding_box()
     quantity_end = row.locator("[name$=-quantity]").evaluate(
         "el => el.getBoundingClientRect().right - parseFloat(getComputedStyle(el).borderRightWidth) - parseFloat(getComputedStyle(el).paddingRight)"
     )

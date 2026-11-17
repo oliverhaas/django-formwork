@@ -56,6 +56,7 @@ from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
 
 from django_formwork.admin import exports, formats, history, imports
+from django_formwork.admin.cells import badge_color
 from django_formwork.admin.changelist import ERROR_FLAG, PRESERVED_FILTERS_VAR, ChangeList
 from django_formwork.admin.filters import build_filterset, list_filter_path
 from django_formwork.admin.helpers import FIRST_OBJECTS, AdminForm, DeletedObject, InlineAdminFormSet, InlinePager
@@ -79,10 +80,10 @@ from django_formwork.formsets import (
     formwork_inlineformset_factory,
     formwork_modelformset_factory,
 )
-from django_formwork.widgets import Select
+from django_formwork.widgets import ChoiceLabel, Select
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     from django.contrib.admin.options import _FieldsetSpec
     from django.db.models.fields.related import RelatedField
@@ -91,6 +92,7 @@ if TYPE_CHECKING:
     from django_stubs_ext import StrPromise
 
     from django_formwork.admin.filters import AdminFilterSet
+    from django_formwork.widgets.select import BadgeColor
 
 __all__ = [
     "ACTION_CHECKBOX_NAME",
@@ -263,8 +265,34 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
             kwargs.setdefault("widget", self._radio_select(db_field))
             if "choices" not in kwargs:
                 kwargs["choices"] = db_field.get_choices(include_blank=db_field.blank, blank_choice=[("", _("None"))])
+        if "widget" not in kwargs and "choices" not in kwargs:
+            # The select shows each value as the badge the list shows it as.
+            kwargs["choices"] = self._badge_choices(db_field, initial="initial" in kwargs)
+            kwargs["widget"] = Select(allow_clear=db_field.blank, badges=True)
         kwargs.setdefault("widget", Select(allow_clear=db_field.blank))
         return db_field.formfield(**kwargs)
+
+    def _badge_choices(self, db_field: models.Field[Any, Any], *, initial: bool) -> list[tuple[Any, Any]]:
+        # An inline has no list, so it takes the colors of its model's admin.
+        owner = self if hasattr(self, "list_badges") else self.admin_site.get_model_admin_or_none(self.model)
+        colors = getattr(owner, "list_badges", {}).get(db_field.name)
+        values = [value for value, _label in db_field.flatchoices]
+
+        def labelled(choices: Iterable[tuple[Any, Any]]) -> list[tuple[Any, Any]]:
+            rows: list[tuple[Any, Any]] = []
+            for value, label in choices:
+                if isinstance(label, list | tuple):
+                    rows.append((value, labelled(label)))
+                elif value is None or value == "":
+                    rows.append((value, label))
+                else:
+                    color = cast("BadgeColor", badge_color(value, values, colors))
+                    rows.append((value, ChoiceLabel(str(label), color=color)))
+            return rows
+
+        # As Field.formfield() decides it: a required field with a default has no empty choice.
+        include_blank = db_field.blank or not (db_field.has_default() or initial)
+        return labelled(db_field.get_choices(include_blank=include_blank))
 
     def _radio_select(self, db_field: models.Field[Any, Any]) -> forms.RadioSelect:
         # The choice group stacks its options; HORIZONTAL lays them out in a row.

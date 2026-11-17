@@ -768,6 +768,17 @@ def test_changelist_toolbar_holds_the_actions_and_the_save_the_list_has(
     assert toolbar is None or toolbar.find_next("table")["id"] == "changelist-table"
 
 
+def test_change_form_select_of_a_choice_field_shows_the_badges_of_the_list(admin_client, catalog):
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
+
+    rows = soup.select("#id_status_wrapper [role=option] > [data-value]")
+    assert {row["data-value"]: row.select_one(".badge")["class"][2:] for row in rows} == {
+        "draft": ["badge-ghost"],
+        "active": ["badge-soft", "badge-success"],
+        "archived": ["badge-soft", "badge-warning"],
+    }
+
+
 def test_changelist_wraps_only_columns_with_long_text(admin_client, catalog):
     catalog.beta.name = "Beta lamp with a shade long enough for a second line"
     catalog.beta.save()

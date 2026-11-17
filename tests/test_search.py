@@ -588,6 +588,31 @@ def test_a_required_field_never_offers_a_clear_row() -> None:
     assert "" not in _rows(response)
 
 
+class _BadgeUserField(forms.ModelChoiceField):
+    def label_from_instance(self, obj: User) -> ChoiceLabel:  # type: ignore[override]
+        return ChoiceLabel(obj.username, color="info")
+
+
+class _BadgeUserForm(FormworkForm):
+    """A select with badges, whose rows come from the search."""
+
+    user = _BadgeUserField(
+        queryset=User.objects.all(),
+        widget=Select(search_fields=["username"], search_queryset=_users, search_decorator=None, badges=True),
+    )
+
+
+@pytest.mark.django_db
+def test_search_rows_of_a_select_with_badges_are_badges() -> None:
+    User.objects.create(username="ada")
+    url = search_url(_key(_BadgeUserForm, "user"), {}, widget="select")
+
+    response = Client().get(url)
+
+    soup = BeautifulSoup(response.content.decode(), "html.parser")
+    assert [badge.get_text() for badge in soup.select("[data-value] .badge.badge-info")] == ["ada"]
+
+
 def _labelled(user: User) -> ChoiceLabel:
     return ChoiceLabel(user.username.title(), icon="*")
 

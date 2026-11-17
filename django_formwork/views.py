@@ -134,10 +134,12 @@ class FormworkSearchView(View):
         label_from_instance = (
             getattr(field, "label_from_instance", None) or getattr(widget, "label_from_instance", None) or str
         )
+        badges = getattr(widget, "badges", False)
         options = []
         for obj in rows:
             label = label_from_instance(obj)
-            options.append({"value": str(getattr(obj, to_field_name)), "label": str(label), **label_extras(label)})
+            extras = label_extras(label, badges=badges)
+            options.append({"value": str(getattr(obj, to_field_name)), "label": str(label), **extras})
         # Only an optional field clears, with the label of its blank choice.
         clear_label = None if field.required else getattr(field, "empty_label", None)
         if offset == 0 and clear_label is not None and request.GET.get("allow_clear") == "1":

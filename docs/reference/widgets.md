@@ -116,7 +116,7 @@ importable from `django_formwork` and from `django_formwork.widgets`.
 | `icon` | `str` | `""` | HTML before the text; mark it safe |
 | `description` | `str` | `""` | A second line under the text |
 | `label_html` | `str` | `""` | HTML that replaces the text in the row and the trigger; mark it safe |
-| `color` | `BadgeColor` | `"neutral"` | Badge color in `Display(badges=True)`: one of the eight DaisyUI colors |
+| `color` | `BadgeColor` | `"neutral"` | Badge color in a widget with `badges=True` (`Select`, `SelectMultiple`, `Display`): one of the eight DaisyUI colors |
 | `selected_toggle_class` | `str` | `""` | Classes that `Select` puts on its closed trigger while this option is selected |
 
 Use it in `choices`, or return it from `label_from_instance` for a model field:
@@ -188,6 +188,7 @@ instead; see [Server-side search](views.md#server-side-search).
 | `search_decorator` | `callable \| None` | required with `search_queryset` | Access rule for the search; `None` for a public endpoint |
 | `search_ranked` | `bool` | `False` | Rank the results on PostgreSQL |
 | `search_key`, `search_params` | | `None` | Reuse a registered search with its own params |
+| `badges` | `bool` | `False` | Show each option as a badge in the `color` of its [`ChoiceLabel`](#choicelabel), in the list and in the closed trigger. A plain label gets a neutral badge. The empty choice and a label with `label_html` stay as they are |
 | `counts` | `Mapping \| None` | `None` | A number in a badge at the end of each option, keyed by the option value, as faceted filters show; a value missing from the mapping shows 0, dimmed. A list that the server pages shows no counts |
 
 ```python
