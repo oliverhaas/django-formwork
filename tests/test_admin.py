@@ -740,6 +740,34 @@ def test_changelist_offers_no_page_size_while_every_size_shows_all_rows(admin_cl
     assert soup.select("#changelist-footer [role=option]") == []
 
 
+@pytest.mark.parametrize(
+    ("options", "parts"),
+    [
+        ({"actions": ["mark_active"], "list_editable": ["quantity"]}, [True, True]),
+        ({"actions": None, "list_editable": ["quantity"]}, [False, True]),
+        ({"actions": ["mark_active"], "list_editable": []}, [True, False]),
+        ({"actions": None, "list_editable": []}, None),
+    ],
+)
+def test_changelist_toolbar_holds_the_actions_and_the_save_the_list_has(
+    admin_client, catalog, monkeypatch, options, parts
+):
+    """A list without actions and without editable cells has no toolbar."""
+    item_admin = site.get_model_admin(Item)
+    for name, value in options.items():
+        monkeypatch.setattr(item_admin, name, value)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    toolbar = soup.find(id="changelist-toolbar")
+    found = toolbar and [
+        toolbar.find(id="changelist-actions") is not None,
+        toolbar.find(attrs={"data-save-bar": True}) is not None,
+    ]
+    assert found == parts
+    assert toolbar is None or toolbar.find_next("table")["id"] == "changelist-table"
+
+
 def test_changelist_wraps_only_columns_with_long_text(admin_client, catalog):
     catalog.beta.name = "Beta lamp with a shade long enough for a second line"
     catalog.beta.save()

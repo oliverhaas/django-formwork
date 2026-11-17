@@ -92,9 +92,9 @@
   `import_formats` set, a list also imports CSV, Excel or JSON files: a preview shows
   the new, changed and invalid rows before anything is saved. Columns that do not fit
   the width of a list hide behind a button that shows them all. A long list scrolls with
-  the page, and its header sticks under the top bar. In a list with `list_editable`, a field
+  the page, and its toolbar and header stick under the top bar. In a list with `list_editable`, a field
   shows its box only in the row under the pointer or with the focus, so the list reads
-  as a table, and a changed cell shows in the accent color. A line under the pages
+  as a table, and a changed cell shows in the accent color. The toolbar above the table
   counts the changes and saves or discards them. A cell's error shows in a tooltip, here
   and in a `TabularInline`, so a failed save keeps the height of the rows. With
   `django.contrib.auth` installed, the admin has pages for users and groups, with the
@@ -121,8 +121,8 @@
   keeps that history in its own table, so it does not need `django.contrib.admin`, and
   with `history = PghistoryHistory()` on the site it reads the events of
   django-pghistory. The recent actions on the dashboard list each object once, with what
-  its saves changed. The line with a list's actions and save sticks to the bottom of the
-  window while rows are selected or cells changed. `list_top` and `list_bottom` methods
+  its saves changed. The toolbar above a list's table holds the selected count, the
+  actions and the save, and stays in view while the list scrolls. `list_top` and `list_bottom` methods
   show HTML of their own above and under a list, such as counts or a chart, and
   `change_top` and `change_bottom` do the same on a change page.
   `@admin.slot(lazy=True)` loads a slot after its page, with a skeleton until then.

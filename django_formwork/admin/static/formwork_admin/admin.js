@@ -318,11 +318,6 @@ document.addEventListener("alpine:init", () => {
       return this.across ? this.total : this.selected.length;
     },
 
-    // Selected rows or changed cells: the line with their buttons then sticks to the window's bottom.
-    get pending() {
-      return this.count > 0 || this.changes > 0;
-    },
-
     get allChecked() {
       return this.pks.length > 0 && this.selected.length === this.pks.length;
     },
@@ -356,26 +351,6 @@ document.addEventListener("alpine:init", () => {
       this.selected = [];
       this.across = false;
       this.last = null;
-    },
-  }));
-
-  // A line that sticks to the window's bottom sits a pixel past the window's edge. It is stuck while the
-  // window shows part of it, and not all, and then shows a shadow over the rows under it.
-  Alpine.data("formworkStuck", () => ({
-    stuck: false,
-
-    init() {
-      this.observer = new IntersectionObserver(
-        ([entry]) => {
-          this.stuck = entry.intersectionRatio > 0 && entry.intersectionRatio < 1;
-        },
-        { threshold: [0, 1] },
-      );
-      this.observer.observe(this.$el);
-    },
-
-    destroy() {
-      this.observer.disconnect();
     },
   }));
 

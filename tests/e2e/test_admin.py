@@ -456,7 +456,7 @@ def test_a_list_that_a_link_loads_shows_only_the_columns_that_fit_from_its_first
     assert admin_page.errors == []
 
 
-def test_changed_cells_are_counted_under_the_list_until_discarded(admin_page, live_server, kitchen):
+def test_changed_cells_are_counted_above_the_list_until_discarded(admin_page, live_server, kitchen):
     for name in ("Kettle", "Toaster"):
         Item.objects.create(name=name, category=kitchen, quantity=3)
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
@@ -641,7 +641,9 @@ def test_other_results_ask_before_they_replace_the_changes(admin_page, live_serv
     assert admin_page.errors == []
 
 
-def test_a_long_list_scrolls_with_the_page_and_its_header_sticks_under_the_top_bar(admin_page, live_server, kitchen):
+def test_a_long_list_scrolls_with_the_page_and_its_toolbar_and_header_stick_under_the_top_bar(
+    admin_page, live_server, kitchen
+):
     Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen) for i in range(40))
     admin_page.set_viewport_size({"width": 1280, "height": 720})
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
@@ -652,7 +654,26 @@ def test_a_long_list_scrolls_with_the_page_and_its_header_sticks_under_the_top_b
 
     expect(admin_page.locator("#changelist-table tbody tr", has_text="Kettle 0")).not_to_be_in_viewport()
     assert admin_page.evaluate("window.scrollY") > 0
-    assert header.bounding_box()["y"] == bar["y"] + bar["height"]
+    toolbar = admin_page.locator("#changelist-toolbar").bounding_box()
+    assert toolbar["y"] == bar["y"] + bar["height"]
+    assert header.bounding_box()["y"] == toolbar["y"] + toolbar["height"]
+    assert admin_page.errors == []
+
+
+def test_a_list_with_all_columns_shown_keeps_its_header_on_top_of_its_rows(admin_page, live_server, kitchen):
+    """The table then scrolls sideways in its box, where the header cannot stick to the page."""
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.set_viewport_size({"width": 480, "height": 800})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+
+    admin_page.locator("#changelist-table [data-col-toggle] button").click()
+
+    expect(admin_page.locator("#changelist-table thead th", has_text="Released")).to_be_visible()
+    toolbar = admin_page.locator("#changelist-toolbar").bounding_box()
+    header = admin_page.locator("#changelist-table thead th", has_text="Name").bounding_box()
+    row = admin_page.locator("#changelist-table tbody tr").bounding_box()
+    assert header["y"] == pytest.approx(toolbar["y"] + toolbar["height"], abs=1)
+    assert row["y"] == pytest.approx(header["y"] + header["height"], abs=1)
     assert admin_page.errors == []
 
 
@@ -710,26 +731,23 @@ def test_a_lazy_slot_loads_again_for_a_search_and_keeps_its_content_meanwhile(
 
 
 def test_a_long_list_on_a_phone_keeps_the_selection_and_the_save_in_view(admin_page, live_server, kitchen):
-    """A phone scrolls the page past the rows, so the line under them sticks while it has work."""
+    """A phone scrolls the page past the rows, and the toolbar above them stays under the top bar."""
     Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen, quantity=3) for i in range(40))
     admin_page.set_viewport_size({"width": 390, "height": 700})
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
     actions = admin_page.locator("#changelist-actions")
     delete = actions.get_by_role("button", name="Delete", exact=True)
     save = admin_page.locator("[data-save-bar]").get_by_role("button", name="Save", exact=True)
-    expect(delete).not_to_be_in_viewport()
+    first = admin_page.locator("#changelist-table input[data-index='0']")
+    first.check()
 
-    admin_page.locator("#changelist-table input[data-index='0']").check()
-    expect(delete).to_be_in_viewport()
+    admin_page.mouse.wheel(0, 900)
+
+    expect(first).not_to_be_in_viewport()
+    expect(actions).to_contain_text("1 selected")
+    expect(delete).to_be_in_viewport(ratio=1)
     expect(delete).to_be_enabled()
-
-    actions.get_by_role("button", name="Clear selection").click()
-    expect(delete).not_to_be_in_viewport()
-
-    admin_page.locator("#changelist-table [data-col-toggle] button").click()
-    admin_page.locator("#changelist-table input[name='form-0-quantity']").fill("5")
-    expect(save).to_be_in_viewport()
-    expect(save).to_be_enabled()
+    expect(save).to_be_in_viewport(ratio=1)
     assert admin_page.errors == []
 
 

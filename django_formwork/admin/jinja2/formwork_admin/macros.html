@@ -242,13 +242,14 @@
     posts the form ``form_id`` with ``field`` set to the action's name. ``disabled`` is an Alpine expression,
     and with ``initially_disabled`` the controls render disabled until Alpine has evaluated it. The menu ends
     at the trigger's end. With ``start`` it begins at the trigger's start, and on a phone it takes the width of
-    the nearest positioned ancestor, as it would not fit next to the trigger. With ``compact`` the trigger
-    shows an ellipsis on a phone, and keeps its name for a screen reader. #}
+    the nearest positioned ancestor, as it would not fit next to the trigger. With ``compact`` a phone shows
+    a button with an icon as the icon and the trigger as an ellipsis; both keep their names for a screen reader. #}
 {% macro action_controls(actions, form_id, field, size="", up=False, start=False, compact=False, disabled=none, initially_disabled=False) %}
 {% set menu = actions|rejectattr("button")|list %}
 {% for action in actions|selectattr("button") %}
-<button type="submit" form="{{ form_id }}" name="{{ field }}" value="{{ action.name }}" class="btn {{ size }}{{ " btn-soft btn-error" if action.danger }}"{% if action.help_text %} title="{{ action.help_text }}"{% endif %}{% if disabled %} :disabled="{{ disabled }}"{% endif %}{% if initially_disabled %} disabled{% endif %}>
-  {%- if action.icon %}{{ icon(action.icon) }}{% endif %}{{ action.label -}}
+{% set bare = compact and action.icon %}
+<button type="submit" form="{{ form_id }}" name="{{ field }}" value="{{ action.name }}" class="btn {{ size }}{{ " max-sm:btn-square" if bare }}{{ " btn-soft btn-error" if action.danger }}"{% if action.help_text %} title="{{ action.help_text }}"{% endif %}{% if disabled %} :disabled="{{ disabled }}"{% endif %}{% if initially_disabled %} disabled{% endif %}>
+  {%- if action.icon %}{{ icon(action.icon) }}{% endif %}{% if bare %}<span class="max-sm:sr-only">{{ action.label }}</span>{% else %}{{ action.label }}{% endif -%}
 </button>
 {% endfor %}
 {% if menu %}

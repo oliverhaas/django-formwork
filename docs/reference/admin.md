@@ -481,12 +481,12 @@ the same way next time.
 A `list_editable` error in a hidden column shows all columns and scrolls the first error
 into view. Without JavaScript, the table scrolls sideways as in Django's admin.
 
-A long list scrolls with the page, and its header sticks under the top bar, so the
-names of the columns stay in view. While all columns show, the table scrolls sideways in
-its own box, and the header stays at the top of the table. While rows are selected or
-cells changed, the line with the actions and the save sticks to the bottom of the window.
-On a phone that line is shorter: the actions menu shows as an ellipsis, and Save changes
-as Save.
+A long list scrolls with the page. The toolbar with the actions and the save sticks under
+the top bar, and the header of the table under the toolbar, so the selection, the save and
+the names of the columns stay in view. While all columns show, the table scrolls sideways
+in its own box, and the header stays at the top of the table. On a phone the toolbar is
+shorter: the count shows as a number, Delete and Discard as icons, the actions menu as an
+ellipsis, and Save changes as Save.
 
 ### Editable columns
 
@@ -496,8 +496,8 @@ row under the pointer or with the focus. In the other rows its value shows as te
 up with the column header, and the icons of a select or a date hide. A date and its time
 share one line, so a row stays one field high.
 
-A cell whose value differs from the saved one gets the accent color, and a line under the pages
-counts the changed cells. Save changes saves the rows, and Discard loads the saved values
+A cell whose value differs from the saved one gets the accent color, and the toolbar above
+the table counts the changed cells. Save changes saves the rows, and Discard loads the saved values
 again. Both stay disabled while no cell has a change. After a failed save, every changed
 cell stays marked and counted, so Save changes stays enabled.
 
@@ -599,7 +599,7 @@ template or `format_html()`.
 
 Actions run as in Django: a function gets `(modeladmin, request, queryset)` and a name
 resolves to a method of the admin. The selected count, the Delete button and the Actions
-menu sit on a line under the pages and stay disabled until a row is selected.
+menu sit in the toolbar above the table and stay disabled until a row is selected.
 Shift-click selects a range. `@admin.action` takes these arguments on top of Django's:
 
 | Argument | Description |

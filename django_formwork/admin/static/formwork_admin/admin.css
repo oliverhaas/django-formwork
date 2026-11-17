@@ -129,18 +129,6 @@ tr:not(:hover, :focus-within) > [data-editable]:not(.formwork-dirty, [data-inval
   transition-delay: 200ms;
 }
 
-/* Rows under the list's stuck line of pending work get a shadow along its top edge, as rows under the
-   table header get one along its bottom edge. */
-[data-pending][data-stuck]::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  bottom: 100%;
-  height: 8px;
-  background: linear-gradient(#0000, light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.3)));
-  pointer-events: none;
-}
-
 /* A line parts each app in the sidebar from the app shown above it, also while the model filter hides some. */
 [data-nav-app]:not([style*="display: none"]) ~ [data-nav-app]:not([style*="display: none"]) {
   @apply relative mt-2 pt-3 before:absolute before:inset-x-3 before:top-0 before:border-t before:border-base-300;

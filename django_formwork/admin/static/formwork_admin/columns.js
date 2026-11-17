@@ -7,7 +7,8 @@
  * kept per model.
  *
  * The rows scroll with the page, and the header sticks under the page's top bar, whose
- * height base.html sets in --formwork-admin-top. The table's box clips its sides, so the
+ * height base.html sets in --formwork-admin-top, and under the list's toolbar,
+ * which sticks there first. The table's box clips its sides, so the
  * header can stick; a table with every column shown scrolls sideways in its box instead,
  * and its header then stays at the table's top.
  *
@@ -194,7 +195,11 @@
     if (!table) return;
     const head = table.tHead?.getBoundingClientRect().top ?? 0;
     state.below = head - table.getBoundingClientRect().top > 0.5;
-    const rules = [`${HEAD} > ${CELL} { position: sticky; top: var(--formwork-admin-top, 0px); z-index: 2; background-color: inherit }`];
+    // The list's toolbar sticks first, and the header under it. A table that scrolls sideways in its
+    // box keeps its header at the top of that box.
+    const bar = document.getElementById("changelist-toolbar")?.offsetHeight ?? 0;
+    const top = state.hidden.length && open() ? "0px" : `calc(var(--formwork-admin-top, 0px) + ${bar}px)`;
+    const rules = [`${HEAD} > ${CELL} { position: sticky; top: ${top}; z-index: 2; background-color: inherit }`];
     // Each cell draws its part of the shadow, edge to edge, so the shadow has no gaps.
     if (state.below) {
       rules.push(`${HEAD} > ${CELL}::after { content: ""; position: absolute; inset-inline: 0; top: 100%; height: 8px; background: linear-gradient(${UNDER}, #0000); pointer-events: none }`);
@@ -206,6 +211,8 @@
     }
   };
   window.addEventListener("resize", stick, { passive: true });
+  // The toolbar wraps on a narrow page, and its texts change with the selection.
+  const bars = new ResizeObserver(stick);
 
   // A new list whose top is scrolled out of view starts at its top, under the top bar, so a page
   // link under the rows shows the next page's first rows. A morph of the same list keeps its place.
@@ -219,6 +226,9 @@
       if (state.key && above < 0) window.scrollBy(0, above);
       state.key = key;
     }
+    bars.disconnect();
+    const bar = document.getElementById("changelist-toolbar");
+    if (bar) bars.observe(bar);
     stick();
   };
 
