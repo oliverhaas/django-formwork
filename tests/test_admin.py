@@ -8,7 +8,7 @@ import django
 import django_filters
 import pytest
 from admin_app.admin import ItemAdmin, LowStockFilter, PartInline, ReviewInline
-from admin_app.models import Category, Item, Note, Part, Tag
+from admin_app.models import Category, Item, Note, Part, Review, Tag
 from bs4 import BeautifulSoup
 from django import forms
 from django.contrib import admin as django_admin
@@ -17,10 +17,12 @@ from django.contrib.admin import widgets as django_widgets
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.admin import GenericTabularInline as DjangoGenericTabularInline
 from django.core import checks
+from django.core.paginator import Paginator
 from django.db import models
 from django.http import HttpResponse
 from django.urls import path, reverse
 from django.utils import timezone, translation
+from django.utils.html import format_html
 
 from django_formwork import __version__, admin
 from django_formwork.admin import ActionLocation, site
@@ -28,6 +30,7 @@ from django_formwork.admin.checks import check_model_admin
 from django_formwork.admin.contenttypes import GenericStackedInline
 from django_formwork.admin.info import describe_fields, describe_search, describe_table
 from django_formwork.admin.models import HistoryEntry
+from django_formwork.admin.paginator import page_links
 from django_formwork.admin.widgets import RELATION_SEARCH_KEY, AdminDateWidget
 from django_formwork.forms import FormworkModelForm
 from django_formwork.widgets import Select, SelectMultiple, Textarea, TextInput
@@ -682,6 +685,25 @@ def test_changelist_pages_rows(admin_client, catalog, monkeypatch):
     assert b"Beta lamp" not in content
 
 
+def pages(links, *, narrow):
+    return [link.page for link in links if (link.narrow if narrow else link.wide)]
+
+
+@pytest.mark.parametrize(
+    ("number", "wide", "narrow"),
+    [
+        (7, [1, None, 5, 6, 7, 8, 9, None, 13], [1, None, 7, None, 13]),
+        (4, [1, 2, 3, 4, 5, 6, None, 13], [1, None, 4, None, 13]),
+        (12, [1, None, 10, 11, 12, 13], [1, None, 12, 13]),
+    ],
+)
+def test_page_links_on_a_phone_keep_the_first_current_and_last_page(number, wide, narrow):
+    links = page_links(Paginator(range(13), 1), number)
+
+    assert pages(links, narrow=False) == wide
+    assert pages(links, narrow=True) == narrow
+
+
 @pytest.mark.parametrize(("per_page", "offered"), [("2", True), ("all", True), ("3", False), ("x", False)])
 def test_changelist_shows_an_offered_page_size_and_keeps_it_in_its_links(
     admin_client, catalog, monkeypatch, per_page, offered
@@ -1218,6 +1240,133 @@ def test_inline_of_one_row_at_most_is_named_in_the_singular(admin_client, monkey
     assert name in group.select_one("p[x-show='!total']").get_text().split()
 
 
+@pytest.fixture
+def paged_parts(catalog, monkeypatch):
+    monkeypatch.setattr(PartInline, "per_page", 2)
+    return [Part.objects.create(item=catalog.beta, name=f"Part {n}") for n in range(5)]
+
+
+def shown_pks(response, prefix="parts"):
+    group = BeautifulSoup(response.content, "html.parser").select_one(f"#{prefix}-group")
+    return [int(field["value"]) for field in group.select(f"input[name^='{prefix}-'][name$='-id'][value]")]
+
+
+@pytest.mark.parametrize(
+    ("number", "shown"), [("2", [2, 3]), ("99", [4]), ("x", [0, 1])], ids=["page", "past-the-end", "not-a-number"]
+)
+def test_inline_shows_the_saved_rows_of_one_page(admin_client, paged_parts, number, shown):
+    response = admin_client.get(url(Item, "change", paged_parts[0].item_id), {"parts-page": number})
+
+    assert shown_pks(response) == [paged_parts[index].pk for index in shown]
+
+
+def test_inline_without_per_page_shows_every_saved_row(admin_client, paged_parts, monkeypatch):
+    monkeypatch.setattr(PartInline, "per_page", None)
+
+    response = admin_client.get(url(Item, "change", paged_parts[0].item_id))
+
+    assert shown_pks(response) == [part.pk for part in paged_parts]
+
+
+@pytest.mark.parametrize(
+    ("inline", "create", "shown"),
+    [
+        (PartInline, lambda item, n: Part.objects.create(item=item, name=f"Part {n}"), 10),
+        (ReviewInline, lambda item, n: Review.objects.create(item=item, author=f"Author {n}"), 5),
+    ],
+    ids=["tabular", "stacked"],
+)
+def test_inline_pages_its_saved_rows_by_default(admin_client, catalog, inline, create, shown):
+    for n in range(12):
+        create(catalog.beta, n)
+
+    response = admin_client.get(url(Item, "change", catalog.beta.pk))
+
+    assert len(shown_pks(response, f"{inline.model._meta.model_name}s")) == shown
+
+
+@pytest.mark.parametrize(
+    ("inline", "create"),
+    [
+        (PartInline, lambda item, n: Part.objects.create(item=item, name=f"Part {n}")),
+        (ReviewInline, lambda item, n: Review.objects.create(item=item, author=f"Author {n}")),
+    ],
+    ids=["tabular", "stacked"],
+)
+def test_paged_inline_links_to_its_other_pages(admin_client, catalog, monkeypatch, inline, create):
+    monkeypatch.setattr(inline, "per_page", 2)
+    for n in range(5):
+        create(catalog.beta, n)
+    prefix = f"{inline.model._meta.model_name}s"
+
+    response = admin_client.get(url(Item, "change", catalog.beta.pk), {f"{prefix}-page": "2"})
+
+    pager = BeautifulSoup(response.content, "html.parser").select_one(f"#{prefix}-group [data-inline-pages]")
+    assert pager.select_one("[aria-current=page]").get_text(strip=True) == "2"
+    assert pager.select_one(f"a[href$='?{prefix}-page=3']") is not None
+    assert "5" in pager.get_text()
+
+
+def page_two(catalog, parts, **fields):
+    rows = {}
+    for index, (part, name) in enumerate([(parts[2], "Leg"), (parts[3], "Foot")]):
+        rows |= {
+            f"parts-{index}-id": part.pk,
+            f"parts-{index}-item": catalog.beta.pk,
+            f"parts-{index}-name": name,
+            f"parts-{index}-quantity": "1",
+        }
+    beta = catalog.beta
+    return item_data(
+        catalog.office, name=beta.name, quantity="50", **management("parts", total=2, initial=2), **rows, **fields
+    )
+
+
+def test_paged_inline_saves_the_rows_it_posted_and_keeps_the_other_pages(admin_client, catalog, paged_parts):
+    response = admin_client.post(
+        url(Item, "change", catalog.beta.pk), page_two(catalog, paged_parts, **{"parts-1-DELETE": "on"})
+    )
+
+    assert response.status_code == 302
+    assert list(catalog.beta.parts.order_by("pk").values_list("name", flat=True)) == [
+        "Part 0",
+        "Part 1",
+        "Leg",
+        "Part 4",
+    ]
+
+
+def test_save_and_continue_comes_back_at_the_inline_page(admin_client, catalog, paged_parts):
+    change = url(Item, "change", catalog.beta.pk)
+
+    response = admin_client.post(f"{change}?parts-page=2", page_two(catalog, paged_parts, _continue="1"))
+
+    assert response["location"] == f"{change}?parts-page=2"
+
+
+def test_paged_inline_leaves_the_last_page_the_share_of_max_num_and_the_blank_rows(
+    admin_client, catalog, paged_parts, monkeypatch
+):
+    monkeypatch.setattr(PartInline, "max_num", 6)
+    change = url(Item, "change", catalog.beta.pk)
+
+    tables = [
+        BeautifulSoup(admin_client.get(change, {"parts-page": page}).content, "html.parser").select_one("#parts-table")
+        for page in (1, 3)
+    ]
+
+    assert [table["data-max"] for table in tables] == ["3", "2"]
+    assert [table.select_one("[name=parts-TOTAL_FORMS]")["value"] for table in tables] == ["2", "2"]
+
+
+def test_collapsed_inline_starts_open_at_a_page_its_url_names(admin_client, catalog, paged_parts, monkeypatch):
+    monkeypatch.setattr(PartInline, "classes", ["collapse"])
+    change = url(Item, "change", catalog.beta.pk)
+
+    assert folded_inlines(admin_client.get(change)) == [("parts-group", False)]
+    assert folded_inlines(admin_client.get(change, {"parts-page": "2"})) == [("parts-group", True)]
+
+
 NOTES = "admin_app-note-content_type-object_id"
 
 
@@ -1573,14 +1722,28 @@ def test_delete_confirmation_groups_the_objects_of_a_model(admin_client, catalog
     assert "Part:" not in listed
 
 
-@pytest.mark.parametrize("search_fields", [["name"], []], ids=["search", "no_search"])
-def test_list_without_filters_shows_only_its_search(admin_client, catalog, monkeypatch, search_fields):
-    monkeypatch.setattr(site.get_model_admin(Tag), "search_fields", search_fields)
+@pytest.mark.parametrize(
+    "tools",
+    [
+        {"search_fields": ["name"], "export_formats": (), "add": False},
+        {"search_fields": [], "export_formats": ("csv",), "add": False},
+        {"search_fields": [], "export_formats": (), "add": True},
+        {"search_fields": [], "export_formats": (), "add": False},
+    ],
+    ids=["search", "export", "add", "none"],
+)
+def test_list_without_filters_shows_only_its_search_export_and_add_button(admin_client, catalog, monkeypatch, tools):
+    model_admin = site.get_model_admin(Tag)
+    monkeypatch.setattr(model_admin, "search_fields", tools["search_fields"])
+    monkeypatch.setattr(model_admin, "export_formats", tools["export_formats"])
+    monkeypatch.setattr(model_admin, "has_add_permission", lambda request: tools["add"])
 
     soup = BeautifulSoup(admin_client.get(url(Tag, "changelist")).content, "html.parser")
 
-    assert (soup.select_one("#changelist-filter-bar input[name=q]") is not None) is bool(search_fields)
-    assert (soup.find(id="changelist-filter-bar") is not None) is bool(search_fields)
+    assert (soup.select_one("#changelist-filter-bar input[name=q]") is not None) is bool(tools["search_fields"])
+    assert (soup.select_one("#changelist-filter-bar [data-export]") is not None) is bool(tools["export_formats"])
+    assert (soup.select_one("#changelist-filter-bar a[aria-label='Add tag']") is not None) is tools["add"]
+    assert (soup.find(id="changelist-filter-bar") is not None) is any(tools.values())
     assert soup.select_one("#changelist-filters [data-filter-more]") is None
     assert soup.select_one("#changelist-filters a[aria-disabled]") is None
 
@@ -1717,6 +1880,81 @@ def test_info_dialog_shows_the_table_to_superusers_only(admin_client, staff_clie
 
 def test_info_dialog_needs_view_permission(staff_client):
     assert staff_client().get(url(Item, "info")).status_code == 403
+
+
+def names_slot(**options):
+    def names(self, request, queryset):
+        listed = ", ".join(queryset.values_list("name", flat=True))
+        return format_html("<p data-names>{}</p><p data-ordered>{}</p>", listed, queryset.ordered)
+
+    return admin.slot(**options)(names) if options else names
+
+
+def test_list_top_shows_the_filtered_rows_unsorted(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "list_top", names_slot())
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist") + "?status__exact=draft&o=1").content, "html.parser")
+
+    assert soup.select_one("#changelist-top [data-names]").get_text() == "Beta lamp"
+    assert soup.select_one("#changelist-top [data-ordered]").get_text() == "False"
+    assert soup.find(id="changelist-bottom") is None
+
+
+def test_lazy_slot_shows_its_skeleton_and_loads_the_filtered_rows(
+    admin_client, catalog, monkeypatch, settings, tmp_path
+):
+    (tmp_path / "slot_skeleton.html").write_text("<div data-bars>{{ opts.verbose_name }}</div>")
+    settings.TEMPLATES = [{**settings.TEMPLATES[0], "DIRS": [tmp_path]}]
+    monkeypatch.setattr(ItemAdmin, "list_bottom", names_slot(lazy=True, skeleton="slot_skeleton.html"))
+
+    page = admin_client.get(url(Item, "changelist") + "?status__exact=draft&o=2&p=1")
+    slot = BeautifulSoup(page.content, "html.parser").find(id="changelist-bottom")
+
+    assert slot.select_one("[data-slot-skeleton] [data-bars]").get_text() == "item"
+    assert slot.select_one("[data-names]") is None
+    assert slot["hx-get"] == url(Item, "slot", "bottom") + "?status__exact=draft"
+    assert b"<p data-names>Beta lamp</p><p data-ordered>False</p>" in admin_client.get(slot["hx-get"]).content
+
+
+def test_lazy_slot_without_a_skeleton_shows_a_placeholder(admin_client, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "list_top", names_slot(lazy=True))
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    assert soup.select_one("#changelist-top [data-slot-skeleton] .skeleton") is not None
+
+
+def test_popup_list_has_no_slots(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "list_top", names_slot())
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist") + "?_popup=1").content, "html.parser")
+
+    assert soup.select_one("[data-slot]") is None
+
+
+@pytest.mark.parametrize(("codenames", "status"), [((), 403), (("view_item",), 200)], ids=["none", "view"])
+def test_slot_view_needs_view_permission(staff_client, catalog, monkeypatch, codenames, status):
+    monkeypatch.setattr(ItemAdmin, "list_top", names_slot(lazy=True))
+
+    assert staff_client(*codenames).get(url(Item, "slot", "top")).status_code == status
+
+
+@pytest.mark.parametrize("slot", ["bottom", "display"])
+def test_slot_view_of_a_slot_the_admin_does_not_fill_is_not_found(admin_client, monkeypatch, slot):
+    monkeypatch.setattr(ItemAdmin, "list_top", names_slot(lazy=True))
+
+    assert admin_client.get(url(Item, "slot", slot)).status_code == 404
+
+
+def test_slot_view_refuses_a_filter_the_list_does_not_have(admin_client, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "list_top", names_slot(lazy=True))
+
+    assert admin_client.get(url(Item, "slot", "top"), {"nonsense": "1"}).status_code == 400
+
+
+def test_slot_skeleton_needs_a_lazy_slot():
+    with pytest.raises(ValueError, match="lazy=True"):
+        names_slot(skeleton="slot_skeleton.html")
 
 
 @pytest.mark.parametrize(

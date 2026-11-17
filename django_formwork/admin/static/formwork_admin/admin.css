@@ -104,51 +104,15 @@ tr:not(:hover, :focus-within) > [data-editable]:not(.formwork-dirty, [data-inval
   display: none;
 }
 
-/* The rows' scrollbar starts under the header, which columns.js measures into --changelist-head.
-   The strip beside the header takes the header's color and line. DaisyUI's scrollbar-color
-   would switch the scrollbar pseudo-elements off, so the box resets it where they exist.
-   The height stays on the box: an inherited one would restyle every row of the table each time
-   columns.js sets it. */
-@property --changelist-head {
-  syntax: "<length>";
-  inherits: false;
-  initial-value: 0px;
+/* A list's lazy slot keeps its content while it loads again for new filters. The content dims after a
+   moment, so a quick answer does not flash. */
+[data-slot] {
+  transition: opacity 150ms;
 }
 
-@supports selector(::-webkit-scrollbar) {
-  #changelist-scroll {
-    scrollbar-color: auto;
-    scrollbar-width: auto;
-    background:
-      linear-gradient(#0000 calc(var(--changelist-head) - var(--border)), color-mix(in oklch, var(--color-base-content) 5%, #0000) 0 var(--changelist-head), #0000 0),
-      linear-gradient(color-mix(in srgb, var(--color-base-200) 50%, var(--color-base-100)) var(--changelist-head), #0000 0);
-    background-repeat: no-repeat;
-  }
-
-  #changelist-scroll::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
-    background: #0000;
-  }
-
-  #changelist-scroll::-webkit-scrollbar-thumb {
-    border: 3px solid #0000;
-    border-radius: 9999px;
-    background: color-mix(in oklab, var(--color-base-content) 30%, #0000) padding-box;
-  }
-
-  #changelist-scroll::-webkit-scrollbar-thumb:hover {
-    background-color: color-mix(in oklab, var(--color-base-content) 45%, #0000);
-  }
-
-  #changelist-scroll::-webkit-scrollbar-track:vertical {
-    --changelist-head: inherit;
-    margin-top: var(--changelist-head);
-  }
-
-  #changelist-scroll::-webkit-scrollbar-corner {
-    background: #0000;
-  }
+[data-slot].htmx-request:not(:has(> [data-slot-skeleton])) {
+  opacity: 0.5;
+  transition-delay: 200ms;
 }
 
 /* Rows under the list's stuck line of pending work get a shadow along its top edge, as rows under the
@@ -185,13 +149,14 @@ tr:not(:hover, :focus-within) > [data-editable]:not(.formwork-dirty, [data-inval
     min-width: 0;
   }
 
-  /* The menu and the Clear link end the row, also on a list without a search box. */
-  > [data-filter-more]:not([hidden]),
-  > [data-filter-more][hidden] + a {
+  /* The menu, Export and the add button end the row, also on a list without a search box. */
+  > [data-filter-more],
+  > [data-list-tools]:first-child {
     margin-inline-start: auto;
   }
 
-  /* No filter waits in the menu: the button is an options icon, and the menu its switch. */
+  /* No filter waits in the menu: the button is an options icon, and the menu holds the
+     switch and Clear all filters. */
   [data-filter-more][data-bare] {
     > [role="button"] {
       padding-inline: 0.75rem;
@@ -206,9 +171,14 @@ tr:not(:hover, :focus-within) > [data-editable]:not(.formwork-dirty, [data-inval
     display: none;
   }
 
-  /* A line parts the switch from the filters above it. */
+  /* A line parts the switch from the filters above it, and Clear all filters from both. */
   [data-filter-more]:not([data-bare]) [data-more-facets] {
     @apply mt-1 border-t border-base-200 pt-2.5;
+  }
+
+  [data-filter-more]:not([data-bare]) [data-more-clear],
+  [data-more-facets] + [data-more-clear] {
+    @apply mt-1 border-t border-base-200 pt-1;
   }
 
   [data-filter] {

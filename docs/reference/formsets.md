@@ -149,8 +149,9 @@ way, as one `<tbody>`. [Saving a row](#saving-a-row) describes the view behind
 | `formwork/tables/table.html` | `as_rows()`: the `<table>` | `table`, `formset`| the formset, `template_name_table` |
 | `formwork/tables/row.html`   | `as_row()`: one `<tbody>`  | `row`, `form`     | the form, `template_name_row`      |
 
-`table` is a `django_formwork.tables.Table`, with the `headers`, the `rows` and the
-`empty_row` that Add another copies. Each row is a `TableRow`, with the `form`, its
+`table` is a `django_formwork.tables.Table`, with the `headers`, the `rows`, the
+`empty_row` that Add another copies and the `footer` markup at the right end of the Add
+another row, where the admin puts the pager of an inline. Each row is a `TableRow`, with the `form`, its
 `cells` and its `hidden` inputs; each cell is a `TableCell`, with the bound `field` or
 the `display` text of a disabled one.
 

@@ -1,4 +1,4 @@
-"""``@register``, ``@display`` and ``@action``, as ``django.contrib.admin`` spells them."""
+"""``@register``, ``@display`` and ``@action``, as ``django.contrib.admin`` spells them, and ``@slot``."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from django_formwork.admin.sites import AdminSite
 
-__all__ = ["action", "display", "register"]
+__all__ = ["action", "display", "register", "slot"]
 
 
 def register(
@@ -104,6 +104,23 @@ def action[F: Callable[..., Any]](
             func.confirm = confirm  # type: ignore[attr-defined]
         if form is not None:
             func.form = form  # type: ignore[attr-defined]
+        return func
+
+    return decorator if function is None else decorator(function)
+
+
+def slot[F: Callable[..., Any]](function: F | None = None, *, lazy: bool = False, skeleton: str | None = None) -> Any:
+    """Options of a ``list_top`` or ``list_bottom`` method of a ``ModelAdmin``.
+
+    A lazy slot loads after the list from a URL of its own and shows ``skeleton``, a template, until then.
+    """
+
+    def decorator(func: F) -> F:
+        if skeleton is not None and not lazy:
+            msg = f"The skeleton argument to the @slot decorator needs lazy=True on {func!r}."
+            raise ValueError(msg)
+        func.slot_lazy = lazy  # type: ignore[attr-defined]
+        func.slot_skeleton = skeleton  # type: ignore[attr-defined]
         return func
 
     return decorator if function is None else decorator(function)

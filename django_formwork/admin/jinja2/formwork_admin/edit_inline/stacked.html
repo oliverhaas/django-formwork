@@ -56,9 +56,10 @@
     {{ _("No %(name)s yet.", name=inline.group_name) }}
   </p>
 
-  {% if inline.has_add_permission %}
-  <div class="border-t border-base-300 px-3 py-2" x-show="canAdd">
-    <button type="button" class="btn btn-ghost btn-sm text-primary" @click="add()">{{ icon("plus") }} {{ _("Add another %(name)s", name=inline.verbose_name) }}</button>
+  {% if inline.has_add_permission or inline.pager %}
+  <div class="flex flex-wrap items-center gap-3 border-t border-base-300 py-2 pr-6 pl-3"{% if not inline.pager %} x-show="canAdd"{% endif %}>
+    {% if inline.has_add_permission %}<button type="button" class="btn btn-ghost btn-sm text-primary" @click="add()"{% if inline.pager %} x-show="canAdd"{% endif %}>{{ icon("plus") }} {{ _("Add another %(name)s", name=inline.verbose_name) }}</button>{% endif %}
+    {{ m.inline_pager(inline) }}
   </div>
   {% endif %}
 </div>

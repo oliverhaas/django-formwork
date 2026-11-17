@@ -48,3 +48,4 @@ class GenericStackedInline(GenericInlineModelAdmin):
 
 class GenericTabularInline(GenericInlineModelAdmin):
     layout = "tabular"
+    per_page = 10

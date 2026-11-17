@@ -41,7 +41,7 @@
       <span class="badge badge-accent badge-sm min-w-6 tabular-nums" x-text="changes" data-change-count></span>
     </span>
     <button type="button" class="btn btn-ghost" :tabindex="changes ? 0 : -1" data-discard
-            hx-get="{{ request.get_full_path() }}" hx-target="#content" hx-swap="innerMorph">{{ _("Discard") }}</button>
+            hx-get="" hx-target="#content" hx-swap="innerMorph">{{ _("Discard") }}</button>
   </div>
   {% endif %}
   {% if delete_url %}

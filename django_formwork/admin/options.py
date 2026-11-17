@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from functools import cached_property, partial, update_wrapper
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, ClassVar, cast
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlencode
 
 import django
 from django import forms
@@ -32,9 +32,10 @@ from django.contrib.admin.utils import (
     unquote,
 )
 from django.core.exceptions import BadRequest, FieldDoesNotExist, FieldError, PermissionDenied, ValidationError
+from django.core.paginator import Paginator
 from django.db import IntegrityError, models, router, transaction
-from django.db.models import prefetch_related_objects
-from django.forms.formsets import DELETION_FIELD_NAME, all_valid
+from django.db.models import ManyToOneRel, prefetch_related_objects
+from django.forms.formsets import DELETION_FIELD_NAME, INITIAL_FORM_COUNT, all_valid
 from django.forms.models import BaseModelFormSet, modelform_defines_fields
 from django.forms.utils import ErrorDict
 from django.http import (
@@ -45,9 +46,11 @@ from django.http import (
     HttpResponseRedirect,
     QueryDict,
 )
+from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, path, reverse
 from django.utils.html import escape, format_html
 from django.utils.inspect import get_func_args
+from django.utils.safestring import mark_safe
 from django.utils.text import capfirst, get_text_list
 from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
@@ -55,7 +58,7 @@ from django.utils.translation import ngettext
 from django_formwork.admin import exports, formats, history, imports
 from django_formwork.admin.changelist import ERROR_FLAG, PRESERVED_FILTERS_VAR, ChangeList
 from django_formwork.admin.filters import build_filterset, list_filter_path
-from django_formwork.admin.helpers import FIRST_OBJECTS, AdminForm, DeletedObject, InlineAdminFormSet
+from django_formwork.admin.helpers import FIRST_OBJECTS, AdminForm, DeletedObject, InlineAdminFormSet, InlinePager
 from django_formwork.admin.info import describe_fields, describe_search, describe_table
 from django_formwork.admin.jinja import AdminTemplateResponse
 from django_formwork.admin.paginator import EstimatedCountPaginator
@@ -104,6 +107,8 @@ __all__ = [
 
 ACTION_CHECKBOX_NAME = "_selected_action"
 HORIZONTAL, VERTICAL = 1, 2
+#: The places on the changelist that a ``list_<name>`` method fills.
+SLOTS = ("top", "bottom")
 # What Django 6.1's deletion pages show for an object whose name is blank; Django 6.0 has no such constant.
 EMPTY_VALUE_STRING = getattr(django_options, "EMPTY_VALUE_STRING", "-")
 
@@ -476,6 +481,12 @@ class ModelAdmin(BaseModelAdmin):
     #: The fields that find the record a row updates; unset, the primary key.
     import_id_fields: Sequence[str] | None = None
 
+    #: A method ``(request, queryset)`` whose HTML the list shows above its search: charts, counts, notes.
+    #: ``queryset`` holds the rows the filters and the search leave, unsorted. ``@slot`` makes it load lazily.
+    list_top: Callable[..., str] | None = None
+    #: The same for the end of the page, under the list.
+    list_bottom: Callable[..., str] | None = None
+
     actions: Sequence[Any] | None = ()
     actions_on_top = True
     actions_on_bottom = False
@@ -509,6 +520,7 @@ class ModelAdmin(BaseModelAdmin):
             path("export/", wrap(self.export_view), name="{}_{}_export".format(*info)),
             path("import/", wrap(self.import_view), name="{}_{}_import".format(*info)),
             path("info/", wrap(self.info_view), name="{}_{}_info".format(*info)),
+            path("slots/<str:slot>/", wrap(self.slot_view), name="{}_{}_slot".format(*info)),
             path("<path:object_id>/history/", wrap(self.history_view), name="{}_{}_history".format(*info)),
             path("<path:object_id>/delete/", wrap(self.delete_view), name="{}_{}_delete".format(*info)),
             path("<path:object_id>/change/", wrap(self.change_view), name="{}_{}_change".format(*info)),
@@ -917,6 +929,44 @@ class ModelAdmin(BaseModelAdmin):
         }
         return self.render(request, self._templates(None, "change_list_info.html"), context)
 
+    # Slots
+
+    def _slot_method(self, slot: str) -> Callable[..., str] | None:
+        return getattr(self, f"list_{slot}", None) if slot in SLOTS else None
+
+    def get_slots(self, request: HttpRequest, cl: ChangeList) -> dict[str, dict[str, Any]]:
+        """The list's filled slots by name: the HTML, or for a lazy slot its skeleton and its URL."""
+        if cl.is_popup:
+            return {}
+        slots = {}
+        for slot in SLOTS:
+            method = self._slot_method(slot)
+            if method is None:
+                continue
+            if getattr(method, "slot_lazy", False):
+                skeleton = getattr(method, "slot_skeleton", None)
+                if skeleton is not None:
+                    context = {"model_admin": self, "opts": self.opts}
+                    skeleton = mark_safe(render_to_string(skeleton, context, request))  # noqa: S308
+                url = reverse(self.url_name("slot"), args=(slot,), current_app=self.admin_site.name)
+                slots[slot] = {"skeleton": skeleton, "url": f"{url}?{cl.slot_query}" if cl.slot_query else url}
+            else:
+                slots[slot] = {"html": mark_safe(method(request, cl.queryset.order_by()))}  # noqa: S308
+        return slots
+
+    def slot_view(self, request: HttpRequest, slot: str) -> HttpResponse:
+        """The HTML of a lazy slot, for the rows that the list's filters in ``request.GET`` leave."""
+        if not self.has_view_or_change_permission(request):
+            raise PermissionDenied
+        method = self._slot_method(slot)
+        if method is None:
+            raise Http404
+        try:
+            queryset = self.get_changelist_instance(request).queryset.order_by()
+        except IncorrectLookupParameters:
+            return HttpResponseBadRequest(_("The list's filters name a field the list does not have."))
+        return HttpResponse(method(request, queryset))
+
     # Actions
 
     def _get_base_actions(self, action_location: ActionLocation = ActionLocation.CHANGE_LIST) -> list[Action]:
@@ -1319,7 +1369,10 @@ class ModelAdmin(BaseModelAdmin):
                 _("The {name} “{obj}” was changed successfully. You may edit it again below."), **msg_dict
             )
             self.message_user(request, msg, messages.SUCCESS)
-            return HttpResponseRedirect(self.with_preserved_filters(request, request.path))
+            # The form comes back at the pages of the inlines it showed.
+            pages = urlencode([(key, value) for key, value in request.GET.items() if key.endswith("-page")])
+            url = f"{request.path}?{pages}" if pages else request.path
+            return HttpResponseRedirect(self.with_preserved_filters(request, url))
         if "_saveasnew" in request.POST:
             msg = format_html(_("The {name} “{obj}” was added successfully. You may edit it again below."), **msg_dict)
             self.message_user(request, msg, messages.SUCCESS)
@@ -1464,6 +1517,7 @@ class ModelAdmin(BaseModelAdmin):
             + (cl.filter_form.media if cl.filter_form is not None else forms.Media()),
             is_popup=cl.is_popup,
             to_field=cl.to_field,
+            slots=self.get_slots(request, cl),
             # The dialog picks a row; exports and imports stay on the full page.
             export_formats=(
                 self.get_export_formats(request) if self.has_export_permission(request) and not cl.is_popup else []
@@ -1526,7 +1580,8 @@ class ModelAdmin(BaseModelAdmin):
             prefixes[prefix] = prefixes.get(prefix, 0) + 1
             if prefixes[prefix] != 1 or not prefix:
                 prefix = f"{prefix}-{prefixes[prefix]}"
-            formset = FormSet(**self.get_formset_kwargs(request, obj, inline, prefix))
+            kwargs = self.get_formset_kwargs(request, obj, inline, prefix)
+            formset = inline._paged_formset(request, FormSet, kwargs) if change else FormSet(**kwargs)
             # A view-only inline posts nothing for its rows, so they skip validation unless deleted.
             if not inline.has_change_permission(request, obj if change else None):
                 for index, form in enumerate(formset.initial_forms):
@@ -1578,6 +1633,7 @@ class ModelAdmin(BaseModelAdmin):
                     list(inline.get_readonly_fields(request, obj)),
                     prepopulated_fields=inline.get_prepopulated_fields(request, obj),
                     has_view_permission=inline.has_view_permission(request, obj),
+                    pager=getattr(formset, "inline_pager", None),
                     **permissions,
                 ),
             )
@@ -1920,6 +1976,8 @@ class InlineModelAdmin(BaseModelAdmin):
     classes: Sequence[str] | None = None
     #: ``"tabular"`` draws a table row per object, ``"stacked"`` a card per object.
     layout = "stacked"
+    #: The saved rows a change form shows at a time, with links to the other pages; ``None`` shows all.
+    per_page: int | None = 5
 
     def __init__(self, parent_model: type[models.Model], admin_site: Any) -> None:
         self.admin_site = admin_site
@@ -2013,6 +2071,43 @@ class InlineModelAdmin(BaseModelAdmin):
     def _formset_factory(self, defaults: dict[str, Any]) -> type[BaseModelFormSet[Any, Any]]:
         return formwork_inlineformset_factory(self.parent_model, self.model, **defaults)
 
+    def _paged_formset(
+        self, request: HttpRequest, formset_class: type[BaseModelFormSet[Any, Any]], kwargs: dict[str, Any]
+    ) -> BaseModelFormSet[Any, Any]:
+        """The formset of a change form, with one page of the saved rows when they fill more than one.
+
+        A posted form binds the rows it posted, as a changelist binds the rows of its page.
+        """
+        if not self.per_page:
+            return formset_class(**kwargs)
+        prefix = kwargs["prefix"]
+        unbound = {key: value for key, value in kwargs.items() if key not in {"data", "files"}}
+        # The formset narrows the queryset to the parent's rows and orders it; the pages follow that.
+        rows = formset_class(**unbound).get_queryset()
+        paginator = Paginator(rows.values_list("pk", flat=True), self.per_page)
+        if paginator.count <= self.per_page:
+            return formset_class(**kwargs)
+        param = f"{prefix}-page"
+        page = paginator.get_page(request.GET.get(param))
+        data = kwargs.get("data")
+        pks = (
+            list(page.object_list)
+            if data is None
+            else _posted_pks(self.model, prefix, data, formset_class.absolute_max)
+        )
+        formset = formset_class(**{**kwargs, "queryset": kwargs["queryset"].filter(pk__in=pks)})
+        # The rows of the other pages count against the inline's limits; the blank rows follow the
+        # last row, on the last page.
+        others = paginator.count - len(pks)
+        max_num = formset.max_num
+        formset.max_num = max(max_num - others, 0)
+        if page.has_next():
+            formset.min_num = formset.extra = 0
+        else:
+            formset.min_num = max(formset.min_num - others, 0)
+        formset.inline_pager = InlinePager(paginator, page, param, request, max_num)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        return formset
+
     def get_queryset(self, request: HttpRequest) -> models.QuerySet[Any]:
         queryset = super().get_queryset(request)
         if not self.has_view_or_change_permission(request):
@@ -2021,6 +2116,25 @@ class InlineModelAdmin(BaseModelAdmin):
 
     def _get_form_for_get_fields(self, request: HttpRequest, obj: models.Model | None = None) -> Any:
         return self.get_formset(request, obj, fields=None).form
+
+
+def _posted_pks(model: type[models.Model], prefix: str, data: Any, limit: int) -> list[Any]:
+    """The saved rows of ``model`` a formset's form posted, skipping a key it lacks or a value that is no key."""
+    name = model._meta.pk.name
+    field = model._meta.pk
+    while isinstance(field.remote_field, ManyToOneRel):
+        field = field.remote_field.get_related_field()
+    try:
+        initial = int(data.get(f"{prefix}-{INITIAL_FORM_COUNT}", 0))
+    except ValueError:
+        return []
+    pks = []
+    for index in range(min(initial, limit)):
+        try:
+            pks.append(field.to_python(data[f"{prefix}-{index}-{name}"]))
+        except KeyError, ValidationError:
+            continue
+    return pks
 
 
 def _delete_protected_form(
@@ -2075,3 +2189,4 @@ class StackedInline(InlineModelAdmin):
 
 class TabularInline(InlineModelAdmin):
     layout = "tabular"
+    per_page = 10

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     )
     from django.contrib.admin.options import ShowFacets
 
-    from django_formwork.admin.decorators import action, display, register
+    from django_formwork.admin.decorators import action, display, register, slot
     from django_formwork.admin.options import (
         HORIZONTAL,
         VERTICAL,
@@ -57,6 +57,7 @@ _EXPORTS = {
     "display": "django_formwork.admin.decorators",
     "register": "django_formwork.admin.decorators",
     "site": "django_formwork.admin.sites",
+    "slot": "django_formwork.admin.decorators",
 }
 
 __all__ = [
@@ -83,6 +84,7 @@ __all__ = [
     "display",
     "register",
     "site",
+    "slot",
 ]
 
 

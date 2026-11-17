@@ -48,26 +48,23 @@
     {% if import_url %}
     <a href="{{ import_url }}{% if preserved_filters %}?{{ preserved_filters }}{% endif %}" class="btn gap-2">{{ icon("upload") }} {{ _("Import") }}</a>
     {% endif %}
-    {{ m.export_menu(cl, export_formats, export_url, csrf_input) }}
-    {% if has_add_permission %}
-    {#- In the dialog the add page answers the relation that opened it, as a picked row does. #}
-    {% set add_query = [preserved_filters, cl.popup_params|urlencode]|select|join("&") %}
-    {#- "Add" alone keeps the button the same width on every list; the screen reader still hears the model. #}
-    {% set add_url = url(model_admin.url_name("add")) ~ ("?" ~ add_query if add_query else "") %}
-    <a {% if cl.is_popup %}href="{{ add_url }}"{% else %}{{ m.page_link(add_url, "add") }}{% endif %} class="btn btn-primary"
-       aria-label="{{ _("Add %(name)s", name=opts.verbose_name) }}">
-      {{ icon("plus") }} {{ _("Add") }}
-    </a>
-    {% endif %}
     {% endblock %}
   </div>
 </div>
 
+{% block slot_top %}
+{% if "top" in slots %}<div class="mb-6">{{ m.slot("top", slots["top"]) }}</div>{% endif %}
+{% endblock %}
+
 {% block filters %}
 {#- The search and the filters share one row. filters.js shows the filters the row has room for, in
-    list_filter order, and lists the others in the More menu. A filter with a value always shows. #}
+    list_filter order, and lists the others in the More menu. A filter with a value always shows.
+    The Export menu and the add button end the row, next to the table they act on. The export
+    form stands outside, as forms do not nest. #}
 {% set filters = cl.bar_filters %}
-<form id="changelist-filters" method="get" action="{{ request.path }}" role="search"{% if cl.search_field is not none or filters %} class="mb-4"{% endif %}
+{% set bar = cl.search_field is not none or filters or export_formats or has_add_permission %}
+{{ m.export_form(cl, export_formats, export_url, csrf_input) }}
+<form id="changelist-filters" method="get" action="{{ request.path }}" role="search"{% if bar %} class="mb-4"{% endif %}
       hx-get="{{ request.path }}" hx-target="#content" hx-swap="innerMorph" hx-push-url="true"
       x-data="formworkFilters" @input="typed()" @change="changed()">
   {#- Lookups no filter reads, such as a link from a related page; they stay while the filters change. #}
@@ -75,7 +72,7 @@
   <input type="hidden" name="{{ key }}" value="{{ value }}">
   {% endfor %}{% endfor %}
   {{ m.popup_inputs(cl.is_popup, cl.to_field) }}
-  {% if cl.search_field is not none or filters %}
+  {% if bar %}
   <div id="changelist-filter-bar" class="formwork-filter-bar">
     {% if cl.search_field is not none %}
     <div data-search>{{ cl.search_field }}</div>
@@ -87,7 +84,7 @@
       <div data-filter="{{ filter.name }}"{% if filter.active %} class="formwork-dirty"{% endif %}>{{ filter.field.as_field_group() }}</div>
       {% endfor %}
     </div>
-    <div class="dropdown dropdown-end" data-filter-more{% if cl.is_facets_optional %} data-always{% endif %}>
+    <div class="dropdown dropdown-end" data-filter-more>
       {#- While no filter waits in the menu, filters.js drops the label and the count, and the options icon shows. #}
       <div tabindex="0" role="button" class="btn gap-2 max-sm:px-3" aria-haspopup="menu" aria-label="{{ _("More filters") }}"
            data-label="{{ _("More filters") }}" data-label-bare="{{ _("Filter options") }}">
@@ -114,15 +111,30 @@
           <input type="checkbox" name="_facets" value="True" class="toggle toggle-sm toggle-primary"{% if cl.add_facets %} checked{% endif %}>
         </label>
         {% endif %}
+        {#- The menu always ends with it, dimmed while no filter is set. Like Django's, it keeps the search and the sort. #}
+        <ul class="menu w-full p-0" data-more-clear>
+          {% if cl.has_active_filters %}
+          <li><a {{ m.list_link(cl.clear_all_filters_qs) }} data-clear-filters class="gap-2">{{ icon("x") }} {{ _("Clear all filters") }}</a></li>
+          {% else %}
+          <li class="menu-disabled"><a role="link" aria-disabled="true" class="gap-2">{{ icon("x") }} {{ _("Clear all filters") }}</a></li>
+          {% endif %}
+        </ul>
       </div>
     </div>
-    {# The link stays in place, dimmed while no filter is set. Like Django's, it keeps the search and the sort. #}
-    {% if cl.has_active_filters %}
-    <a {{ m.list_link(cl.clear_all_filters_qs) }} data-clear-filters class="btn btn-ghost gap-1.5 px-3 text-base-content/70" aria-label="{{ _("Clear all filters") }}" title="{{ _("Clear all filters") }}">{{ icon("x") }}<span class="max-sm:hidden">{{ _("Clear") }}</span></a>
-    {% else %}
-    <a role="link" aria-disabled="true" class="btn btn-ghost pointer-events-none gap-1.5 px-3 text-base-content/70 opacity-35" aria-label="{{ _("Clear all filters") }}">{{ icon("x") }}<span class="max-sm:hidden">{{ _("Clear") }}</span></a>
-    {% endif %}
     <noscript><button type="submit" class="btn">{{ _("Filter") }}</button></noscript>
+    {% endif %}
+    {% if export_formats or has_add_permission %}
+    <div class="flex shrink-0 items-center gap-2" data-list-tools>
+      {{ m.export_menu(cl, export_formats) }}
+      {% if has_add_permission %}
+      {#- In the dialog the add page answers the relation that opened it, as a picked row does. #}
+      {% set add_query = [preserved_filters, cl.popup_params|urlencode]|select|join("&") %}
+      {#- "Add" alone keeps the button the same width on every list; the screen reader still hears the model. #}
+      {% set add_url = url(model_admin.url_name("add")) ~ ("?" ~ add_query if add_query else "") %}
+      <a {% if cl.is_popup %}href="{{ add_url }}"{% else %}{{ m.page_link(add_url, "add") }}{% endif %} class="btn btn-primary gap-2 max-sm:px-3"
+         aria-label="{{ _("Add %(name)s", name=opts.verbose_name) }}">{{ icon("plus") }}<span class="max-sm:sr-only">{{ _("Add") }}</span></a>
+      {% endif %}
+    </div>
     {% endif %}
   </div>
   {% endif %}
@@ -134,5 +146,9 @@
 <div x-data="formworkChangelist" data-discard-question="{{ _("Discard your unsaved changes?") }}">
   {% include "formwork_admin/change_list_results.html" %}
 </div>
+{% endblock %}
+
+{% block slot_bottom %}
+{% if "bottom" in slots %}<div class="mt-6">{{ m.slot("bottom", slots["bottom"]) }}</div>{% endif %}
 {% endblock %}
 {% endblock %}

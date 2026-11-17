@@ -4,16 +4,17 @@ import re
 
 import django_filters
 import pytest
-from admin_app.admin import LowStockFilter, TagAdmin
+from admin_app.admin import ItemAdmin, LowStockFilter, PartInline, TagAdmin
 from admin_app.models import Category, Item, Part, Tag
 from django import forms
-from django.contrib.admin import EmptyFieldListFilter
+from django.contrib.admin import EmptyFieldListFilter, ShowFacets
 from django.core.exceptions import PermissionDenied
 from django.db.models import ForeignKey
 from django.utils import timezone
+from django.utils.html import format_html
 from playwright.sync_api import expect
 
-from django_formwork.admin import VERTICAL, ActionLocation, TabularInline, action, site
+from django_formwork.admin import VERTICAL, ActionLocation, TabularInline, action, site, slot
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -91,15 +92,20 @@ def test_a_date_filter_preset_filters_the_list(admin_page, live_server, kitchen)
     assert admin_page.errors == []
 
 
-def test_a_filter_value_narrows_the_list_until_clear_resets_it(admin_page, live_server, kitchen, monkeypatch):
+def test_a_filter_value_narrows_the_list_until_clear_in_the_menu_resets_it(
+    admin_page, live_server, kitchen, monkeypatch
+):
     monkeypatch.setattr(site.get_model_admin(Item), "list_filter", [django_filters.RangeFilter(field_name="quantity")])
+    monkeypatch.setattr(site.get_model_admin(Item), "show_facets", ShowFacets.NEVER)
     Item.objects.create(name="Kettle", category=kitchen, quantity=5)
     Item.objects.create(name="Toaster", category=kitchen, quantity=40)
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
     rows = admin_page.locator("#changelist tbody tr")
     at_least = admin_page.locator("[name=quantity__gte]")
     marked = admin_page.locator("[data-filter=quantity].formwork-dirty")
+    options = admin_page.get_by_role("button", name="Filter options")
     clear = admin_page.get_by_role("link", name="Clear all filters")
+    options.click()
     expect(clear).to_have_attribute("aria-disabled", "true")
 
     at_least.fill("10")
@@ -108,6 +114,7 @@ def test_a_filter_value_narrows_the_list_until_clear_resets_it(admin_page, live_
     expect(admin_page).to_have_url(re.compile(r"\?quantity__gte=10$"))
     expect(rows).to_have_count(1)
     expect(marked).to_be_visible()
+    options.click()
     expect(clear).to_have_attribute("href", "/admin/admin_app/item/")
 
     clear.click()
@@ -115,6 +122,8 @@ def test_a_filter_value_narrows_the_list_until_clear_resets_it(admin_page, live_
     expect(rows).to_have_count(2)
     expect(at_least).to_have_value("")
     expect(marked).to_have_count(0)
+    expect(clear).to_be_hidden()
+    options.click()
     expect(clear).to_have_attribute("aria-disabled", "true")
     assert admin_page.errors == []
 
@@ -130,28 +139,29 @@ def test_a_filter_picked_from_more_opens_in_the_row_and_stays_while_it_has_a_val
     Item.objects.create(name="Toaster", category=kitchen, quantity=40)
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
     more = admin_page.get_by_role("button", name="More filters")
-    expect_filters(admin_page, "Status", "Category", "Is featured")
-    expect(more.locator("[data-more-count]")).to_have_text("3")
+    expect_filters(admin_page, "Status", "Category")
+    expect(more.locator("[data-more-count]")).to_have_text("4")
 
     more.click()
     admin_page.get_by_role("menuitem", name="Stock").click()
 
     expect(admin_page.locator("#id_stock_wrapper")).to_have_attribute("open", "")
-    expect_filters(admin_page, "Status", "Category", "Stock")
-    expect(more.locator("[data-more-count]")).to_have_text("3")
+    expect_filters(admin_page, "Status", "Stock")
+    expect(more.locator("[data-more-count]")).to_have_text("4")
 
     admin_page.get_by_role("option", name="Low", exact=True).click()
     expect(admin_page).to_have_url(re.compile(r"\?stock=low$"))
     expect(admin_page.locator("#changelist tbody tr")).to_have_count(1)
-    expect_filters(admin_page, "Status", "Category", "Stock")
+    expect_filters(admin_page, "Status", "Stock")
 
+    more.click()
     admin_page.get_by_role("link", name="Clear all filters").click()
     expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
-    expect_filters(admin_page, "Status", "Category", "Is featured")
+    expect_filters(admin_page, "Status", "Category")
 
     admin_page.go_back()
     expect(admin_page).to_have_url(re.compile(r"\?stock=low$"))
-    expect_filters(admin_page, "Status", "Category", "Stock")
+    expect_filters(admin_page, "Status", "Stock")
     assert admin_page.errors == []
 
 
@@ -167,7 +177,7 @@ def test_an_empty_filter_picked_from_more_stays_in_the_row_while_it_has_the_focu
     expect(admin_page.locator("#id_tags__id__exact_wrapper")).to_have_attribute("open", "")
     admin_page.set_viewport_size({"width": 1300, "height": 720})
     admin_page.evaluate("() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))")
-    expect_filters(admin_page, "Status", "Category", "Tags")
+    expect_filters(admin_page, "Status", "Tags")
 
     admin_page.keyboard.press("Escape")
     if leave == "pointer":
@@ -175,7 +185,7 @@ def test_an_empty_filter_picked_from_more_stays_in_the_row_while_it_has_the_focu
     else:
         admin_page.keyboard.press("Tab")
 
-    expect_filters(admin_page, "Status", "Category", "Is featured")
+    expect_filters(admin_page, "Status", "Category")
     assert admin_page.errors == []
 
 
@@ -188,7 +198,7 @@ def test_a_wide_list_shows_three_filters_and_a_narrower_one_shows_those_that_fit
     expect_filters(admin_page, "Status", "Category", "Is featured")
     expect(waiting).to_have_text("3")
 
-    admin_page.set_viewport_size({"width": 1160, "height": 720})
+    admin_page.set_viewport_size({"width": 1300, "height": 720})
     expect_filters(admin_page, "Status", "Category")
     expect(waiting).to_have_text("4")
     expect(bar).not_to_have_attribute("data-stacked", "")
@@ -237,7 +247,7 @@ def test_a_narrow_list_gives_the_filters_a_row_of_their_own(admin_page, live_ser
     below = search["y"] + search["height"]
 
     assert bar.get_by_role("button", name="More filters").bounding_box()["y"] < below
-    assert bar.get_by_role("link", name="Clear all filters").bounding_box()["y"] < below
+    assert bar.get_by_role("link", name="Add item").bounding_box()["y"] < below
     assert bar.locator("[data-filter=status__exact]").bounding_box()["y"] >= below
     assert admin_page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
     assert admin_page.errors == []
@@ -278,7 +288,7 @@ def test_the_more_menu_finds_a_filter_by_name_and_enter_puts_it_in_the_row(
     find.press("Enter")
 
     expect(admin_page.locator("[name=price__gte]")).to_be_focused()
-    expect_filters(admin_page, "Status", "Category", "Price")
+    expect_filters(admin_page, "Status", "Price")
     assert admin_page.errors == []
 
 
@@ -325,8 +335,8 @@ def test_the_filters_fit_the_row_in_the_first_frame(admin_page, live_server, kit
         route.continue_()
     admin_page.wait_for_load_state()
 
-    assert first_frame == 3
-    expect_filters(admin_page, "Status", "Category", "Is featured")
+    assert first_frame == 2
+    expect_filters(admin_page, "Status", "Category")
     assert admin_page.errors == []
 
 
@@ -351,8 +361,8 @@ def test_a_list_that_a_link_loads_shows_only_the_filters_that_fit_from_its_first
     admin_page.evaluate(
         "window.swapped.then(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))"
     )
-    expect_filters(admin_page, "Status", "Category", "Is featured")
-    assert set(admin_page.evaluate("window.filters")) == {3}
+    expect_filters(admin_page, "Status", "Category")
+    assert set(admin_page.evaluate("window.filters")) == {2}
     assert admin_page.errors == []
 
 
@@ -631,36 +641,71 @@ def test_other_results_ask_before_they_replace_the_changes(admin_page, live_serv
     assert admin_page.errors == []
 
 
-def test_a_long_list_fits_the_window_from_the_first_frame_and_scrolls_under_the_header(
-    admin_page, live_server, kitchen
-):
-    """A held admin.js keeps the page from DOMContentLoaded, as a slow connection does."""
+def test_a_long_list_scrolls_with_the_page_and_its_header_sticks_under_the_top_bar(admin_page, live_server, kitchen):
     Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen) for i in range(40))
     admin_page.set_viewport_size({"width": 1280, "height": 720})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    header = admin_page.locator("#changelist-table thead th", has_text="Name")
+    bar = admin_page.locator(".drawer-content > header").bounding_box()
+
+    admin_page.mouse.wheel(0, 600)
+
+    expect(admin_page.locator("#changelist-table tbody tr", has_text="Kettle 0")).not_to_be_in_viewport()
+    assert admin_page.evaluate("window.scrollY") > 0
+    assert header.bounding_box()["y"] == bar["y"] + bar["height"]
+    assert admin_page.errors == []
+
+
+def rows_slot(**options):
+    def rows(self, request, queryset):
+        return format_html("<p data-rows>{} rows</p>", queryset.count())
+
+    return slot(**options)(rows)
+
+
+def test_a_lazy_slot_at_the_bottom_loads_as_it_scrolls_into_view(admin_page, live_server, kitchen, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "list_bottom", rows_slot(lazy=True))
+    Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen) for i in range(40))
+    admin_page.set_viewport_size({"width": 1280, "height": 720})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    admin_page.wait_for_load_state("networkidle")
+    bottom = admin_page.locator("#changelist-bottom")
+    expect(bottom.locator("[data-slot-skeleton]")).to_be_attached()
+
+    bottom.scroll_into_view_if_needed()
+
+    expect(bottom.locator("[data-rows]")).to_have_text("40 rows")
+    expect(bottom.locator("[data-slot-skeleton]")).not_to_be_attached()
+    assert admin_page.errors == []
+
+
+def test_a_lazy_slot_loads_again_for_a_search_and_keeps_its_content_meanwhile(
+    admin_page, live_server, kitchen, monkeypatch
+):
+    monkeypatch.setattr(ItemAdmin, "list_top", rows_slot(lazy=True))
+    for name in ("Kettle", "Toaster", "Kettle lid"):
+        Item.objects.create(name=name, category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    top = admin_page.locator("#changelist-top")
+    expect(top.locator("[data-rows]")).to_have_text("3 rows")
     held = []
 
     def hold(route):
         held.append(route)
 
-    admin_page.route("**/formwork_admin/admin.js", hold)
-    admin_page.add_init_script(
-        "requestAnimationFrame(() => { window.firstFrame = document.documentElement.scrollHeight })"
-    )
-    admin_page.goto(f"{live_server.url}/admin/admin_app/item/", wait_until="commit")
-    admin_page.wait_for_function("window.firstFrame !== undefined")
-    first_frame = admin_page.evaluate("window.firstFrame")
-    for route in held:
-        route.continue_()
-    admin_page.wait_for_load_state()
-    assert first_frame <= 720
-    header = admin_page.locator("#changelist-table thead th", has_text="Name")
-    top = header.bounding_box()["y"]
+    admin_page.route(re.compile(r"/slots/top/"), hold)
 
-    admin_page.locator("#changelist-scroll").evaluate("(el) => el.scrollBy(0, 400)")
+    admin_page.locator("#changelist-table thead a", has_text="Name").click()
+    expect(admin_page).to_have_url(re.compile(r"\?o="))
+    admin_page.locator("[data-search] input:not([type=hidden])").fill("kettle")
+    expect(admin_page.locator("#changelist tbody tr")).to_have_count(2)
 
-    expect(admin_page.locator("#changelist-footer [data-pending]")).to_be_in_viewport()
-    assert admin_page.evaluate("document.documentElement.scrollHeight") <= 720
-    assert header.bounding_box()["y"] == top
+    expect(top).to_have_css("opacity", "0.5")
+    expect(top.locator("[data-rows]")).to_have_text("3 rows")
+    assert len(held) == 1
+    held[0].continue_()
+    expect(top.locator("[data-rows]")).to_have_text("2 rows")
+    expect(top).to_have_css("opacity", "1")
     assert admin_page.errors == []
 
 
@@ -685,28 +730,6 @@ def test_a_long_list_on_a_phone_keeps_the_selection_and_the_save_in_view(admin_p
     admin_page.locator("#changelist-table input[name='form-0-quantity']").fill("5")
     expect(save).to_be_in_viewport()
     expect(save).to_be_enabled()
-    assert admin_page.errors == []
-
-
-def test_a_long_list_takes_its_height_back_when_the_filters_return_to_the_search_row(admin_page, live_server, kitchen):
-    Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen) for i in range(40))
-    admin_page.set_viewport_size({"width": 1280, "height": 1000})
-    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
-    admin_page.wait_for_load_state("networkidle")
-    scroller = admin_page.locator("#changelist-scroll")
-    bar = admin_page.locator("#changelist-filter-bar")
-    frames = "() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))"
-    fitted = scroller.bounding_box()["height"]
-
-    admin_page.set_viewport_size({"width": 1040, "height": 1000})
-    expect(bar).to_have_attribute("data-stacked", "")
-    admin_page.evaluate(frames)
-    assert scroller.bounding_box()["height"] < fitted
-    admin_page.set_viewport_size({"width": 1280, "height": 1000})
-    expect(bar).not_to_have_attribute("data-stacked", "")
-    admin_page.evaluate(frames)
-
-    assert scroller.bounding_box()["height"] == fitted
     assert admin_page.errors == []
 
 
@@ -1253,6 +1276,82 @@ def test_an_inline_row_marked_for_deletion_counts_as_a_change(admin_page, live_s
     admin_page.locator("[name=parts-0-DELETE]").check(force=True)
 
     expect(count).to_have_text("1")
+    assert admin_page.errors == []
+
+
+def test_another_inline_page_asks_before_it_drops_the_changes_on_this_one(
+    admin_page, live_server, kitchen, monkeypatch
+):
+    monkeypatch.setattr(PartInline, "per_page", 2)
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    for name in ["Lid", "Handle", "Spout"]:
+        Part.objects.create(item=item, name=name)
+    url = f"{live_server.url}/admin/admin_app/item/{item.pk}/change/"
+    admin_page.goto(url)
+    first = admin_page.locator("[name=parts-0-name]")
+    count = admin_page.locator("[data-save-bar] [data-change-count]")
+    first.fill("Cap")
+
+    admin_page.once("dialog", lambda prompt: prompt.dismiss())
+    with admin_page.expect_event("dialog"):
+        admin_page.locator("#parts-page-next").click()
+    expect(admin_page).to_have_url(url)
+    expect(first).to_have_value("Cap")
+
+    admin_page.once("dialog", lambda prompt: prompt.accept())
+    admin_page.locator("#parts-page-next").click()
+    expect(admin_page).to_have_url(f"{url}?parts-page=2")
+    expect(first).to_have_value("Spout")
+    expect(admin_page.locator("#parts-page-2")).to_be_focused()
+    expect(count).to_have_text("0")
+
+    admin_page.locator("#parts-page-prev").click()
+    expect(admin_page).to_have_url(url)
+    expect(first).to_have_value("Lid")
+    assert admin_page.errors == []
+
+
+@pytest.fixture
+def paged_kettle(live_server, kitchen, monkeypatch):
+    monkeypatch.setattr(PartInline, "per_page", 2)
+    monkeypatch.setattr(PartInline, "extra", 0)
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    for name in ["Lid", "Handle", "Spout"]:
+        Part.objects.create(item=item, name=name)
+    return f"{live_server.url}/admin/admin_app/item/{item.pk}/change/"
+
+
+def test_inline_pager_keeps_its_place_next_to_a_shorter_page(admin_page, paged_kettle):
+    admin_page.set_viewport_size({"width": 1280, "height": 400})
+    admin_page.goto(paged_kettle)
+    pager = admin_page.locator("#parts-group [data-inline-pages]")
+    first = admin_page.locator("[name=parts-0-name]")
+    pager.evaluate("pager => pager.scrollIntoView({block: 'end'})")
+    top = pager.bounding_box()["y"]
+
+    admin_page.locator("#parts-page-next").click()
+    expect(first).to_have_value("Spout")
+    assert pager.bounding_box()["y"] == pytest.approx(top, abs=1)
+
+    admin_page.locator("#parts-page-prev").click()
+    expect(first).to_have_value("Lid")
+    assert pager.bounding_box()["y"] == pytest.approx(top, abs=1)
+    assert admin_page.errors == []
+
+
+def test_another_inline_page_adds_after_its_own_rows_and_discard_stays_on_it(admin_page, paged_kettle):
+    admin_page.goto(paged_kettle)
+    admin_page.locator("#parts-page-next").click()
+    expect(admin_page.locator("[name=parts-0-name]")).to_have_value("Spout")
+
+    admin_page.locator("#parts-group").get_by_role("button", name="Add another").click()
+    added = admin_page.locator("[name=parts-1-name]")
+    added.fill("Base")
+    admin_page.locator("[data-discard]").click()
+
+    expect(added).to_have_count(0)
+    expect(admin_page).to_have_url(f"{paged_kettle}?parts-page=2")
+    expect(admin_page.locator("[name=parts-0-name]")).to_have_value("Spout")
     assert admin_page.errors == []
 
 

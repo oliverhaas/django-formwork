@@ -164,14 +164,14 @@
           {% if cl.per_page_select %}
           {#- A new size starts again at the first page, with the filters, the search and the sort it had. #}
           <form method="get" action="{{ request.path }}" class="flex items-center gap-2"
-                hx-get="{{ request.path }}" hx-trigger="change" hx-target="#content" hx-swap="innerMorph scroll:top scrollTarget:window" hx-push-url="true">
+                hx-get="{{ request.path }}" hx-trigger="change" hx-target="#content" hx-swap="innerMorph" hx-push-url="true">
             {% for key, value in cl.per_page_inputs %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
             <span class="whitespace-nowrap text-sm text-base-content/60 max-sm:hidden" aria-hidden="true">{{ _("Rows per page") }}</span>
             <div class="w-fit">{{ cl.per_page_select }}</div>
             <noscript><button class="btn btn-sm">{{ _("Show") }}</button></noscript>
           </form>
           {% elif cl.multi_page and cl.can_show_all and not cl.show_all %}
-          <a {{ m.list_link(cl.get_query_string({"all": "", "p": none}), top=true) }} class="btn btn-ghost btn-sm">{{ _("Show all") }}</a>
+          <a {{ m.list_link(cl.get_query_string({"all": "", "p": none})) }} class="btn btn-ghost btn-sm">{{ _("Show all") }}</a>
           {% endif %}
           {{ m.pagination(cl) }}
         </div>

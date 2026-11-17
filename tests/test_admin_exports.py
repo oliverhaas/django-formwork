@@ -135,9 +135,10 @@ def test_export_menu_offers_the_formats_and_keeps_the_filters(admin_client, item
         admin_client.get(reverse("admin:admin_app_item_changelist") + "?status__exact=draft&p=1").content, "html.parser"
     )
 
-    menu = soup.select_one("form:has(> input[name=query])")
-    assert [button["value"] for button in menu.select("button[name=format]")] == ["csv", "xlsx", "json"]
-    assert menu.select_one("input[name=query]")["value"] == "status__exact=draft"
+    form = soup.select_one("form:has(> input[name=query])")
+    buttons = soup.select(f"button[form={form['id']}][name=format]")
+    assert [button["value"] for button in buttons] == ["csv", "xlsx", "json"]
+    assert form.select_one("input[name=query]")["value"] == "status__exact=draft"
 
 
 def test_export_menu_follows_the_filters_in_a_content_morph(admin_client, items):

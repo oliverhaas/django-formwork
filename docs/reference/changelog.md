@@ -91,15 +91,16 @@
   exports in a background task, so run `migrate` after you add the app. With
   `import_formats` set, a list also imports CSV, Excel or JSON files: a preview shows
   the new, changed and invalid rows before anything is saved. Columns that do not fit
-  the width of a list hide behind a button that shows them all. A long list fits the
-  window, and its rows scroll under the header. In a list with `list_editable`, a field
+  the width of a list hide behind a button that shows them all. A long list scrolls with
+  the page, and its header sticks under the top bar. In a list with `list_editable`, a field
   shows its box only in the row under the pointer or with the focus, so the list reads
   as a table, and a changed cell shows in the accent color. A line under the pages
   counts the changes and saves or discards them. A cell's error shows in a tooltip, here
   and in a `TabularInline`, so a failed save keeps the height of the rows. With
   `django.contrib.auth` installed, the admin has pages for users and groups, with the
   password page of Django's user admin. A list's first three filters follow its search
-  box in one row, and a More menu holds the others. A Show counts switch
+  box in one row, and a More menu holds the others and Clear all filters. The Export
+  menu and the add button end that row, next to the list. A Show counts switch
   in that menu shows the number of rows for each filter option, as `show_facets` does in
   Django. Dates are
   typed in the language's first `DATE_INPUT_FORMATS`, in a calendar dropdown, and a
@@ -107,9 +108,10 @@
   `DATETIME_INPUT_FORMATS` without the seconds. The buttons next to a relation add a row
   or change the chosen one in a dialog, where Django's admin opens a popup window. A
   `form` must subclass `FormworkModelForm`, and a system check names one that does not.
-  Django's admin widgets on a `form` render as formwork's. Generic inlines come from
-  `django_formwork.admin.contenttypes`. A `class Media` on an admin or an inline loads
-  its files, without Django's jQuery. `@admin.action` takes Django 6.1's `location` and
+  Django's admin widgets on a `form` render as formwork's. An inline shows its saved
+  rows in pages of `per_page`, 10 in a table and 5 in a stack by default, with a pager
+  next to Add another. Generic inlines come from `django_formwork.admin.contenttypes`.
+  A `class Media` on an admin or an inline loads its files, without Django's jQuery. `@admin.action` takes Django 6.1's `location` and
   `description_plural`, also on Django 6.0, and the change form shows its actions in an
   Actions menu. The other ways to save sit in a menu next to Save, and the way an add or
   change form of a model was last saved becomes its main button. The delete pages group
@@ -119,8 +121,10 @@
   keeps that history in its own table, so it does not need `django.contrib.admin`, and
   with `history = PghistoryHistory()` on the site it reads the events of
   django-pghistory. The recent actions on the dashboard list each object once, with what
-  its saves changed. On a phone, the line with a list's actions and save sticks to the
-  bottom of the screen while rows are selected or cells changed.
+  its saves changed. The line with a list's actions and save sticks to the bottom of the
+  window while rows are selected or cells changed. `list_top` and `list_bottom` methods
+  show HTML of their own above and under a list, such as counts or a chart, and
+  `@admin.slot(lazy=True)` loads it after the list, with a skeleton until then.
 - A widget can put links at the end of its field's label row, for example a Generate link
   next to a slug, with a `label_links(name, value, renderer=None)` method that returns
   HTML. The field template renders them after the label, not inside it, so they stay out

@@ -1,2 +1,2 @@
 {% import "formwork_admin/macros.html" as m %}
-{% call m.inline_group(inline) %}{{ inline.table() }}{% endcall %}
+{% call m.inline_group(inline) %}{{ inline.table(footer=m.inline_pager(inline) if inline.pager else "") }}{% endcall %}

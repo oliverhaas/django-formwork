@@ -1,0 +1,74 @@
+{% comment %}The figures over the event list (EventAdmin.list_top). stats_skeleton.html has the same boxes, and
+the lines under the figures truncate, so the card keeps its height when it loads.{% endcomment %}
+<div class="card border border-base-300 bg-base-100">
+  <div class="grid xl:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
+    <dl class="grid grid-cols-2 border-base-300 max-xl:border-b md:max-xl:grid-cols-4 xl:border-e">
+      <div class="border-e border-b border-base-300 p-4 sm:p-5 md:max-xl:border-b-0">
+        <dt class="truncate text-sm text-base-content/60">Events</dt>
+        <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{{ events }}</dd>
+        <dd class="mt-1 truncate text-sm text-base-content/60">{{ upcoming }} upcoming</dd>
+      </div>
+      <div class="border-b border-base-300 p-4 sm:p-5 md:max-xl:border-e md:max-xl:border-b-0">
+        <dt class="truncate text-sm text-base-content/60">Registrations</dt>
+        <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{{ taken }}</dd>
+        <dd class="mt-1 truncate text-sm text-base-content/60">{{ waitlist }} on the wait list</dd>
+      </div>
+      <div class="border-e border-base-300 p-4 sm:p-5">
+        <dt class="truncate text-sm text-base-content/60">Upcoming seats</dt>
+        <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{% if filled is None %}&#8211;{% else %}{{ filled }}%{% endif %}</dd>
+        <dd class="mt-1.5"><progress class="progress progress-primary block h-1.5" value="{{ filled|default_if_none:0 }}" max="100" aria-label="Upcoming seats taken"></progress></dd>
+        <dd class="mt-1.5 truncate text-sm text-base-content/60">{% if filled is None %}No seat limits{% else %}{{ seats_taken }} of {{ seats }}{% endif %}</dd>
+      </div>
+      <div class="p-4 sm:p-5">
+        <dt class="truncate text-sm text-base-content/60">Attendance</dt>
+        <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{% if attendance is None %}&#8211;{% else %}{{ attendance }}%{% endif %}</dd>
+        <dd class="mt-1.5"><progress class="progress progress-primary block h-1.5" value="{{ attendance|default_if_none:0 }}" max="100" aria-label="Attendance"></progress></dd>
+        <dd class="mt-1.5 truncate text-sm text-base-content/60">{{ no_show }} no-shows</dd>
+      </div>
+    </dl>
+    <figure class="block min-w-0 p-4 sm:p-5">
+      <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <figcaption class="truncate text-sm leading-5 font-medium">Registrations by event month</figcaption>
+        <ul class="flex h-5 shrink-0 items-center gap-4 text-xs text-base-content/60" aria-hidden="true">
+          <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-xs bg-base-content/25"></span>Held</li>
+          <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-xs bg-primary"></span>Upcoming</li>
+        </ul>
+      </div>
+      {% if columns %}
+      {# The tooltips name each month's figures, toward the middle of the chart; the table under the chart reads them out. #}
+      <div class="mt-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2" aria-hidden="true">
+        <div class="relative h-40 text-end text-xs tabular-nums text-base-content/50">
+          {% for tick in ticks %}<span class="block h-0 leading-none opacity-0">{{ tick.label }}</span>{% endfor %}
+          {% for tick in ticks %}<span class="absolute end-0 translate-y-1/2 leading-none" style="bottom: {{ tick.at }}%">{{ tick.label }}</span>{% endfor %}
+        </div>
+        <div class="relative h-40">
+          {% for tick in ticks %}<div class="absolute inset-x-0 border-t border-base-content/10" style="bottom: {{ tick.at }}%"></div>{% endfor %}
+          <div class="relative flex h-full items-end">
+            {% for column in columns %}
+            <div class="tooltip {% if column.late %}tooltip-left{% else %}tooltip-right{% endif %} flex h-full min-w-0 flex-1 flex-col items-center justify-end rounded-sm px-px transition-colors hover:bg-base-content/5"
+                 data-tip="{{ column.name }}: {{ column.registrations }} registrations, {{ column.events }} event{{ column.events|pluralize }}">
+              {% if column.upcoming %}<div class="w-full max-w-6 rounded-t-sm bg-primary" style="height: {{ column.upcoming }}%"></div>{% endif %}
+              {% if column.held %}<div class="w-full max-w-6 bg-base-content/25 {% if column.upcoming %}mt-0.5{% else %}rounded-t-sm{% endif %}" style="height: {{ column.held }}%"></div>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div></div>
+        <div class="mt-1.5 flex h-8 text-center text-xs leading-4 text-base-content/50">
+          {% for column in columns %}
+          <span class="min-w-0 flex-1{% if column.minor %} max-sm:invisible{% endif %}">{{ column.label }}{% if column.year %}<span class="block text-base-content/40">{{ column.year }}</span>{% endif %}</span>
+          {% endfor %}
+        </div>
+      </div>
+      <table class="sr-only">
+        <thead><tr><th>Month</th><th>Registrations</th><th>Events</th></tr></thead>
+        <tbody>
+          {% for column in columns %}<tr><td>{{ column.name }}</td><td>{{ column.registrations }}</td><td>{{ column.events }}</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="mt-4 grid h-[12.375rem] place-items-center text-sm text-base-content/60">No events match the filters.</p>
+      {% endif %}
+    </figure>
+  </div>
+</div>

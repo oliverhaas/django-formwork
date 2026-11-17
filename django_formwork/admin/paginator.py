@@ -1,16 +1,17 @@
-"""A paginator that reads PostgreSQL's row estimate for a large unfiltered list."""
+"""A paginator that reads PostgreSQL's row estimate for a large unfiltered list, and the links of a pager."""
 
 from __future__ import annotations
 
 import logging
-from typing import Any
+from itertools import pairwise
+from typing import Any, NamedTuple
 
 from django.core.paginator import Paginator
 from django.db import DatabaseError, connections
 from django.db.models import QuerySet
 from django.utils.functional import cached_property
 
-__all__ = ["EstimatedCountPaginator", "table_estimate"]
+__all__ = ["EstimatedCountPaginator", "PageLink", "page_links", "table_estimate"]
 
 logger = logging.getLogger(__name__)
 
@@ -55,3 +56,34 @@ class EstimatedCountPaginator(Paginator):
     def _estimable(queryset: QuerySet[Any]) -> bool:
         query = queryset.query
         return not (query.where or query.distinct or query.combinator or query.is_sliced)
+
+
+class PageLink(NamedTuple):
+    """A page number of a pager, or None for an ellipsis where the run skips pages.
+
+    ``wide`` and ``narrow`` tell whether the link shows on a wide and on a narrow screen.
+    """
+
+    page: int | None
+    wide: bool
+    narrow: bool
+
+
+def page_links(paginator: Paginator[Any], number: int) -> list[PageLink]:
+    """The links of a pager at page ``number``.
+
+    A wide screen shows two pages on each side of the current one. A narrow screen shows the first,
+    the current and the last page, so that the pager fits on a phone.
+    """
+    wide = list(paginator.get_elided_page_range(number, on_each_side=2, on_ends=1))
+    narrow = list(paginator.get_elided_page_range(number, on_each_side=0, on_ends=1))
+    wide_gaps = {page for before, page in pairwise(wide) if not isinstance(before, int)}
+    narrow_gaps = {page for before, page in pairwise(narrow) if not isinstance(before, int)}
+    links = []
+    for page in wide:
+        if not isinstance(page, int):
+            continue
+        if page in wide_gaps or page in narrow_gaps:
+            links.append(PageLink(None, wide=page in wide_gaps, narrow=page in narrow_gaps))
+        links.append(PageLink(page, wide=True, narrow=page in narrow))
+    return links

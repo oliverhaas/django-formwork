@@ -23,14 +23,19 @@ from django.utils.safestring import SafeString, mark_safe
 from django.utils.text import capfirst
 
 from django_formwork.admin.cells import cell_for_field, cell_for_value, html
+from django_formwork.admin.paginator import page_links
 from django_formwork.tables import Table, TableCell, TableRow
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
     from django.contrib.admin.options import _FieldsetSpec
+    from django.core.paginator import Page, Paginator
     from django.forms import BaseForm, BoundField, Media, ModelForm
+    from django.http import HttpRequest
     from django_stubs_ext import StrPromise
+
+    from django_formwork.admin.paginator import PageLink
 
 __all__ = [
     "AdminField",
@@ -40,6 +45,7 @@ __all__ = [
     "Fieldset",
     "InlineAdminForm",
     "InlineAdminFormSet",
+    "InlinePager",
     "ReadonlyField",
     "deleted_groups",
 ]
@@ -272,6 +278,47 @@ class InlineAdminForm:
         return bool(self.form.errors)
 
 
+@dataclass
+class InlinePager:
+    """The page of an inline's rows that a change form shows, and links to the other pages.
+
+    ``param`` names the page in the change form's URL. ``max_num`` is the inline's own limit; the
+    formset holds the share of it that is left for this page.
+    """
+
+    paginator: Paginator[Any]
+    page: Page[Any]
+    param: str
+    request: HttpRequest
+    max_num: int
+
+    @property
+    def count(self) -> int:
+        return self.paginator.count
+
+    @property
+    def page_num(self) -> int:
+        return self.page.number
+
+    @cached_property
+    def page_links(self) -> list[PageLink]:
+        """The pager's links around the current page."""
+        return page_links(self.paginator, self.page.number)
+
+    def page_url(self, number: int) -> str:
+        """The change form at another page of these rows, the other inlines at the pages they show."""
+        query = self.request.GET.copy()
+        query.pop(self.param, None)
+        if number > 1:
+            query[self.param] = str(number)
+        return f"{self.request.path}?{query.urlencode()}" if query else self.request.path
+
+    @property
+    def requested(self) -> bool:
+        """True when the URL names a page of these rows, so their group starts open."""
+        return self.param in self.request.GET
+
+
 class InlineAdminFormSet:
     """An inline's formset, its rows split into fieldsets and its empty row for adding."""
 
@@ -287,9 +334,11 @@ class InlineAdminFormSet:
         has_change_permission: bool = True,
         has_delete_permission: bool = True,
         has_view_permission: bool = True,
+        pager: InlinePager | None = None,
     ) -> None:
         self.opts = inline
         self.formset = formset
+        self.pager = pager
         self.fieldsets_spec = fieldsets
         self.readonly_fields = readonly_fields
         self.prepopulated_fields = [
@@ -380,7 +429,13 @@ class InlineAdminFormSet:
     @property
     def group_name(self) -> str:
         """The name of the whole inline: singular when it holds one row at most, as in Django."""
-        return self.verbose_name if self.formset.max_num == 1 else self.verbose_name_plural
+        max_num = self.pager.max_num if self.pager else self.formset.max_num
+        return self.verbose_name if max_num == 1 else self.verbose_name_plural
+
+    @property
+    def count(self) -> int:
+        """The saved rows of the inline, on every page."""
+        return self.pager.count if self.pager else self.formset.initial_form_count()
 
     @property
     def can_add(self) -> bool:
@@ -404,8 +459,11 @@ class InlineAdminFormSet:
             actions=True,
         )
 
-    def table(self) -> SafeString:
-        """The tabular layout: formwork's formset table, flush in the inline's card."""
+    def table(self, footer: str = "") -> SafeString:
+        """The tabular layout: formwork's formset table, flush in the inline's card.
+
+        ``footer`` goes at the right end of the Add another row: the pager, for a paged inline.
+        """
         can_delete = self.formset.can_delete and self.has_delete_permission
         return Table(
             formset=self.formset,
@@ -415,6 +473,7 @@ class InlineAdminFormSet:
             flush=True,
             verbose_name=self.verbose_name,
             verbose_name_plural=self.group_name,
+            footer=footer,
         ).render()
 
     @property

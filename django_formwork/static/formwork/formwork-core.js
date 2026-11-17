@@ -107,10 +107,18 @@ const initDirtyTracking = (form) => {
   const baseline = new Map();
   const checkedAtStart = new Map();
 
-  const snapshot = () => {
-    baseline.clear();
-    checkedAtStart.clear();
-    for (const el of form.elements) {
+  // A part of the form that a swap replaced takes a new baseline for its own fields only.
+  const snapshot = (root) => {
+    const part = root !== form;
+    if (!part) {
+      baseline.clear();
+      checkedAtStart.clear();
+    }
+    const elements = part
+      ? [...root.querySelectorAll("input, select, textarea")].filter((el) => el.form === form)
+      : form.elements;
+    const radios = new Set();
+    for (const el of elements) {
       // Hidden inputs stay tracked: widgets (Select, InputMask)
       // hold their real value in a hidden input and dispatch events on it.
       // SelectMultiple internals are tracked as one unit below.
@@ -121,8 +129,9 @@ const initDirtyTracking = (form) => {
         checkedAtStart.set(el, checked);
         // Radio groups: track the checked value under the group name.
         if (el.type === "radio") {
+          if (!radios.has(el.name)) baseline.set(el.name, "");
+          radios.add(el.name);
           if (checked) baseline.set(el.name, el.value);
-          if (!baseline.has(el.name)) baseline.set(el.name, "");
         } else {
           baseline.set(el.id || el.name, checked ? el.value : "");
         }
@@ -130,7 +139,7 @@ const initDirtyTracking = (form) => {
         baseline.set(el.id || el.name, getFieldValue(el));
       }
     }
-    for (const details of form.querySelectorAll("details.formwork-select-multiple")) {
+    for (const details of root.querySelectorAll("details.formwork-select-multiple")) {
       baseline.set(details, getSelectMultipleBaseline(details));
     }
   };
@@ -173,10 +182,12 @@ const initDirtyTracking = (form) => {
     report();
   };
 
-  // Every field again: a new baseline leaves only the ones the server marked.
-  const refresh = () => {
-    snapshot();
-    for (const field of form.querySelectorAll(FIELD)) mark(field);
+  // Every field again, or those of a part of the form: a new baseline leaves only the ones the
+  // server marked.
+  const refresh = (part) => {
+    const root = part instanceof Element && form.contains(part) ? part : form;
+    snapshot(root);
+    for (const field of root.querySelectorAll(FIELD)) mark(field);
     report();
   };
 

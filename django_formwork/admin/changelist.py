@@ -36,7 +36,7 @@ from django.utils.translation import gettext as _
 
 from django_formwork.admin.cells import list_cell, list_field
 from django_formwork.admin.filters import SEARCH_VAR
-from django_formwork.admin.paginator import EstimatedCountPaginator
+from django_formwork.admin.paginator import EstimatedCountPaginator, PageLink, page_links
 from django_formwork.admin.widgets import IS_POPUP_VAR, TO_FIELD_VAR
 from django_formwork.widgets import Select
 
@@ -329,6 +329,14 @@ class ChangeList:
         return self.encode(params)
 
     @cached_property
+    def slot_query(self) -> str:
+        """The filters and the search that a slot of this list reads; a new sort or page leaves it as it is."""
+        params = self.params.copy()
+        for key in (ORDER_VAR, PAGE_VAR, ALL_VAR, IS_FACETS_VAR, PER_PAGE_VAR):
+            params.pop(key, None)
+        return self.encode(params)
+
+    @cached_property
     def clear_all_filters_qs(self) -> str:
         """The list without the bar's filters; the other lookups, the search and the sort stay, as in Django."""
         written = [key for key, _value in self.filterset.written_params()] if self.filterset is not None else []
@@ -578,11 +586,11 @@ class ChangeList:
         ]
 
     @cached_property
-    def page_links(self) -> list[int | None]:
-        """Page numbers around the current one, None where the run skips pages."""
+    def page_links(self) -> list[PageLink]:
+        """The pager's links around the current page; none while one page shows every row."""
         if self.show_all or not self.multi_page:
             return []
-        return list(self.paginator.get_elided_page_range(self.page.number, on_each_side=2, on_ends=1))
+        return page_links(self.paginator, self.page.number)
 
     # Columns and rows
 

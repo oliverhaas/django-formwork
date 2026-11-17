@@ -3,6 +3,7 @@
  *
  * The first three filters follow the search box in list_filter order, fewer when the row
  * has less room. The others wait in the More menu, which puts one in the row and opens it.
+ * The menu also holds Clear all filters, so it stays in the row when every filter shows.
  * A filter with a value always shows: it takes the place of the last filter without one,
  * so the row keeps its height and the other filters keep their place. A list too narrow
  * for two filters next to the search gives them a row of their own.
@@ -45,7 +46,7 @@
     const count = more.querySelector("[data-more-count]");
     const button = more.querySelector("[role=button]");
     // Everything in the flow at its widest, to be measured.
-    for (const el of [...filters, more, count]) el.hidden = false;
+    for (const el of [...filters, count]) el.hidden = false;
     delete bar.dataset.stacked;
     delete more.dataset.bare;
 
@@ -71,12 +72,11 @@
     };
 
     const search = bar.querySelector(":scope > [data-search]");
-    const clear = bar.querySelector(":scope > a");
+    const tools = bar.querySelector(":scope > [data-list-tools]");
     const menu = more.offsetWidth + gap;
-    const always = more.hasAttribute("data-always");
     let room = bar.clientWidth + gap;
     if (search) room -= px(getComputedStyle(search).flexBasis) + gap;
-    if (clear) room -= clear.offsetWidth + gap;
+    if (tools) room -= tools.offsetWidth + gap;
     // The filters get their own row when fewer than two fit next to the search, or when
     // those with a value do not. Without a search they are the row.
     const beside = pick(room - menu, []).filter(Boolean).length;
@@ -87,8 +87,7 @@
       bar.dataset.stacked = "";
       shown = pick(list.clientWidth + gap);
     } else {
-      shown = always ? null : pick(room);
-      if (!shown || shown.includes(false)) shown = pick(room - menu);
+      shown = pick(room - menu);
     }
     if (!shown.includes(true)) shown[0] = true;
 
@@ -100,12 +99,11 @@
     }
     count.textContent = waiting;
     count.hidden = waiting === 0;
-    // With every filter in the row, the menu holds only its switch and the button is its icon.
+    // With every filter in the row, the button is an options icon.
     more.toggleAttribute("data-bare", waiting === 0);
     const label = waiting === 0 ? button.dataset.labelBare : button.dataset.label;
     button.setAttribute("aria-label", label);
     button.title = waiting === 0 ? label : "";
-    more.hidden = waiting === 0 && !always;
     width = bar.clientWidth;
   };
 

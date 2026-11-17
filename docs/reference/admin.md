@@ -309,6 +309,7 @@ Options this admin adds:
 | `list_only_fields` | Load only these columns on the list page. |
 | `list_defer_fields` | Skip these columns on the list page, for a large JSON or text column that no column shows. |
 | `list_per_page_options` | The page sizes the list offers next to its pages. Default `(25, 50, 100, 250)`. `list_per_page` is always one of them. |
+| `list_top`, `list_bottom` | Methods that return HTML for the list page, above the search row and under the list. See [Slots](#slots). |
 
 `list_only_fields` is opt-in. A `__str__` that reads a deferred field runs one query per
 row.
@@ -401,12 +402,13 @@ A filter with a value always shows, with a border in the primary color. It takes
 place of the last filter without a value, so the row keeps its height and the other
 filters keep their place. When more than three filters have a value, the row shows them
 all. An empty filter that came from the menu returns to it when the focus leaves. Clear
-at the end of the row empties every filter and keeps the search. It is dimmed while no
-filter has a value.
+all filters, the last item of the More menu, empties every filter and keeps the search.
+It is dimmed while no filter has a value, and the menu shows on every list with filters.
 
-A window too narrow for two filters next to the search box, such as a phone's, gives the
-filters a row of their own under it. A list without `list_filter` shows only its search
-box.
+The Export menu and the add button end the row, next to the list they act on. On a phone
+the add button shows only its plus icon. A window too narrow for two filters next to the
+search box, such as a phone's, gives the filters a row of their own under it. A list
+without `list_filter` shows only its search box, Export and the add button.
 
 The search box filters the same way, through `get_search_results()`, so `^`, `=` and `@`
 prefixes in `search_fields` work as in Django. A filter on a many-to-many relation picks
@@ -437,8 +439,8 @@ shows all rows.
 
 With `show_facets` at its default, `admin.ShowFacets.ALLOW`, the More menu has a Show
 counts switch. On a list whose filters all show in the row, the button shows an options
-icon and its menu holds only the switch. The switch adds `_facets` to the URL, as
-Django's link does, and each
+icon and its menu holds the switch and Clear all filters. The switch adds `_facets` to
+the URL, as Django's link does, and each
 option then shows how many rows it matches, in a badge at the end of the option. An
 option that matches no rows shows 0, dimmed. The count applies the search and the other
 filters, but not the filter of the option itself. `ShowFacets.ALWAYS` shows the counts
@@ -478,12 +480,12 @@ the same way next time.
 A `list_editable` error in a hidden column shows all columns and scrolls the first error
 into view. Without JavaScript, the table scrolls sideways as in Django's admin.
 
-In a window at least 40rem wide, a long list fits the window: the rows scroll under the
-header, and the footer with the page links stays in view. A short list keeps its height.
-In a narrow window, in a dialog, or when less than 288 pixels are left for the rows, the
-page scrolls as usual. While rows are selected or cells changed, the line with the
-actions and the save then sticks to the bottom of the window. On a phone that line
-is shorter: the actions menu shows as an ellipsis, and Save changes as Save.
+A long list scrolls with the page, and its header sticks under the top bar, so the
+names of the columns stay in view. While all columns show, the table scrolls sideways in
+its own box, and the header stays at the top of the table. While rows are selected or
+cells changed, the line with the actions and the save sticks to the bottom of the window.
+On a phone that line is shorter: the actions menu shows as an ellipsis, and Save changes
+as Save.
 
 ### Editable columns
 
@@ -529,6 +531,45 @@ rows and the indexes on PostgreSQL, MySQL and on SQLite builds with the `dbstat`
 table. The dialog loads from the
 `info/` URL the first time it opens, so the list page runs no extra queries. Override
 `formwork_admin/change_list_info.html` to change what it shows.
+
+### Slots
+
+A list page can show HTML of its own, such as counts, a chart or a note: `list_top`
+above the search row and `list_bottom` under the list. Each is a method of the admin
+that gets the request and the rows that the filters and the search let through, unsorted,
+and returns the HTML. A count or a sum over those rows matches the list.
+
+```python
+from django.db.models import Count, Q
+from django.template.loader import render_to_string
+
+
+@admin.register(Ticket)
+class TicketAdmin(admin.ModelAdmin):
+    @admin.slot(lazy=True, skeleton="tickets/stats_skeleton.html")
+    def list_top(self, request, queryset):
+        stats = queryset.aggregate(open=Count("pk", filter=Q(status="open")), total=Count("pk"))
+        return render_to_string("tickets/stats.html", stats, request)
+```
+
+Without `@admin.slot`, the method runs while the list page renders. With `lazy=True`,
+the page shows the skeleton in the slot's place and loads the HTML from the slot's own
+URL, `slots/top/` or `slots/bottom/` under the list's URL, with the list's filters and
+search. The top slot loads at once, the bottom slot when it scrolls into view. A slow
+query in a slot then does not hold up the list.
+
+`skeleton` names a template that shows while the slot loads. It renders with
+`render_to_string()`, so a template of any of the project's engines works, and it gets
+`model_admin` and `opts`. Without a skeleton, a gray block shows. Give the skeleton the
+height of the loaded HTML, so the list does not move when the HTML comes in.
+
+A new filter or search loads a lazy slot again. Its HTML stays until the new HTML is
+in, and dims when the load takes more than a moment. A new sort or page does not load
+it again. The slot URL needs the view permission, as the list does. The list in a
+dialog that picks a related row shows no slots.
+
+The page shows what the method returns as HTML, so escape the values in it, with a
+template or `format_html()`.
 
 ### Actions
 
@@ -619,6 +660,17 @@ saved row keeps its value. An inline's `form` subclasses `FormworkModelForm`, as
 With `"collapse"` in `classes`, the inline folds behind its title and row count, as a
 fieldset with `"collapse"` does. It starts open when one of its rows has an error.
 
+An inline shows its saved rows in pages of `per_page`: 10 in a `TabularInline` and 5 in
+a `StackedInline` by default. When it has more, a pager at the right of the Add another
+row links to the other pages, and the URL names the page with the formset's prefix, for
+example `?registrations-page=2`. A page link morphs the rows of that inline only, and the
+pager keeps its place on the screen. It asks first when the rows have unsaved changes. A
+save keeps the rows of the other pages, and Save and continue editing comes back at the
+same page. The blank rows of `extra` and `min_num` go on the last page, and `max_num`
+counts the saved rows of all pages. A collapsed inline starts open at a page that the
+URL names. Save as new copies only the rows of the page on screen. With
+`per_page = None`, the inline shows all its rows, as Django's does.
+
 For a model that points at its parent through a `GenericForeignKey`, import
 `GenericTabularInline` or `GenericStackedInline` from `django_formwork.admin.contenttypes`.
 They take `ct_field` and `ct_fk_field` as Django's do. An inline class from
@@ -627,7 +679,7 @@ the error names the class to import instead.
 
 ### Export
 
-The Export menu next to the add button writes the list as a CSV, Excel or JSON file. The
+The Export menu in the search row, before the add button, writes the list as a CSV, Excel or JSON file. The
 file holds every row that the filters and the search let through, in the list's sort
 order, not only the current page.
 
@@ -697,7 +749,7 @@ file.
 ### Import
 
 Import is off by default. `import_formats` turns it on and adds an Import button next
-to the Export menu:
+to the list's title:
 
 ```python
 @admin.register(Contact)

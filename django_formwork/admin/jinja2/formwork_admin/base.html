@@ -59,7 +59,8 @@
     {% include "formwork_admin/nav_sidebar.html" %}
   </aside>
   {% endif %}
-  <div class="drawer-content flex min-h-screen min-w-0 flex-col">
+  {#- --formwork-admin-top: the top bar's height and its line, which the list's header sticks under. #}
+  <div class="drawer-content flex min-h-screen min-w-0 flex-col [--formwork-admin-top:calc(var(--spacing)*14+1px)]">
     <header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/85 backdrop-blur supports-[backdrop-filter]:bg-base-100/70">
       <div class="flex h-14 items-center gap-2 px-4 lg:px-8">
         <label for="formwork-admin-nav" class="drawer-button btn btn-ghost btn-sm btn-square lg:hidden" aria-label="{{ _("Open navigation") }}">

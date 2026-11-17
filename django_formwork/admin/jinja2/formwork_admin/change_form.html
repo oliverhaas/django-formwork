@@ -15,10 +15,11 @@
 {% endblock %}
 
 {% block content %}
-{#- formwork marks each field that differs from the saved object. A new object has nothing saved to differ from. #}
+{#- formwork marks each field that differs from the saved object. A new object has nothing saved to differ from.
+    A refresh and Discard go to the URL in the address bar, which another page of an inline changes. #}
 <form id="{{ opts.model_name }}_form" method="post" action="{{ form_url }}"{% if has_file_field %} enctype="multipart/form-data"{% endif %} novalidate
       class="mx-auto {{ "@container max-w-[83.5rem]" if show_history else "max-w-5xl" }}"{% if not add %} data-formwork-dirty{% endif %} x-data="formworkChangeForm" data-leave-question="{{ _("Discard your unsaved changes?") }}" data-prepopulated="{{ adminform.prepopulated_fields|tojson_attr }}" data-add="{{ "1" if add else "" }}"
-      hx-post="{{ form_url or request.get_full_path() }}" hx-trigger="formwork-admin:refresh" hx-vals='{"_refresh": "{{ "errors" if error_count else "1" }}"}' hx-target="#content" hx-swap="innerMorph" hx-sync="this:replace">
+      hx-post="{{ form_url }}" hx-trigger="formwork-admin:refresh" hx-vals='{"_refresh": "{{ "errors" if error_count else "1" }}"}' hx-target="#content" hx-swap="innerMorph" hx-sync="this:replace">
   {{ csrf_input }}
   {{ m.popup_inputs(is_popup, to_field) }}
 

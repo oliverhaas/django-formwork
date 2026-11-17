@@ -22,7 +22,18 @@ document.addEventListener("alpine:init", () => {
     min: 0,
     max: 1000,
 
+    // A morph keeps this state, so the numbers come again from the markup after each swap.
     init() {
+      this.read();
+      this.onSwap = () => this.$root.isConnected && this.read();
+      document.addEventListener("htmx:after:swap", this.onSwap);
+    },
+
+    destroy() {
+      document.removeEventListener("htmx:after:swap", this.onSwap);
+    },
+
+    read() {
       this.prefix = this.$root.dataset.prefix;
       this.min = Number(this.$root.dataset.min) || 0;
       this.max = Number(this.$root.dataset.max) || 1000;

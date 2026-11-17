@@ -160,6 +160,8 @@ class Table:
     flush: bool = False
     verbose_name: Any = ""
     verbose_name_plural: Any = ""
+    #: Markup at the right end of the Add another row, such as a pager. The row shows while it has any.
+    footer: Any = ""
     template_name: str = TABLE_TEMPLATE
 
     @classmethod

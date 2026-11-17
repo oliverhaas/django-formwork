@@ -427,11 +427,13 @@ document.addEventListener("alpine:init", () => {
         if (this.dirty && !leaving) event.preventDefault();
       };
       // A page link replaces the form without leaving the page, so it asks here. The form's own
-      // requests keep it.
+      // requests keep it, except another page of an inline's rows, which replaces the rows on screen.
       this.guard = (event) => {
         const { ctx } = event.detail;
-        if (!this.dirty || !(ctx.target instanceof Element) || !ctx.target.contains(form)) return;
-        if (form.contains(ctx.sourceElement)) return;
+        if (!this.dirty || !(ctx.target instanceof Element)) return;
+        if (ctx.sourceElement?.closest?.("[data-inline-pages]")) {
+          if (!ctx.target.querySelector(".formwork-dirty")) return;
+        } else if (!ctx.target.contains(form) || form.contains(ctx.sourceElement)) return;
         if (!window.confirm(form.dataset.leaveQuestion)) event.preventDefault();
       };
       window.addEventListener("beforeunload", this.leave);
@@ -712,6 +714,15 @@ document.addEventListener("htmx:config:request", (event) => {
   ctx.request.body = body;
 });
 
+// A list's lazy slot (macros.html slot) is busy while it loads.
+for (const [name, busy] of [["htmx:before:request", true], ["htmx:finally:request", false]]) {
+  document.addEventListener(name, (event) => {
+    if (!event.target.matches?.("[data-slot]")) return;
+    if (busy) event.target.setAttribute("aria-busy", "true");
+    else event.target.removeAttribute("aria-busy");
+  });
+}
+
 // A page link (data-page-link) morphs the page into the next one, so the sidebar keeps its place.
 document.addEventListener("htmx:config:request", (event) => {
   const { ctx } = event.detail;
@@ -845,6 +856,43 @@ document.addEventListener("htmx:before:swap", (event) => {
     const fragment = document.createDocumentFragment();
     fragment.append(...incoming.childNodes);
     tasks.push({ type: "partial", fragment, target: current, swapSpec: "innerHTML", sourceElement: ctx.sourceElement });
+  }
+});
+
+// Another page of an inline's rows (macros.html inline_pager) morphs the group's content. The
+// pager keeps its place on the screen, also next to the shorter last page. The fields take their
+// own baseline for the count of changes, and the focus stays in the pager: on the link with the
+// same id, or else on the current page.
+document.addEventListener("htmx:before:request", (event) => {
+  const { ctx } = event.detail;
+  if (ctx.sourceElement?.closest?.("[data-inline-pages]")) ctx.formworkInlinePage = true;
+});
+
+const inlinePagerTop = (group) => group.querySelector("[data-inline-pages]")?.getBoundingClientRect().top;
+
+document.addEventListener("htmx:before:swap", (event) => {
+  const { ctx } = event.detail;
+  if (ctx.formworkInlinePage && ctx.target instanceof Element) ctx.target._formworkPagerTop = inlinePagerTop(ctx.target);
+});
+
+// Settling starts right after the morph, before the browser draws the new rows.
+document.addEventListener("htmx:before:settle", (event) => {
+  const group = event.target;
+  const before = group._formworkPagerTop;
+  if (before === undefined) return;
+  delete group._formworkPagerTop;
+  const after = inlinePagerTop(group);
+  if (after !== undefined && after !== before) window.scrollBy({ top: after - before, behavior: "instant" });
+});
+
+document.addEventListener("htmx:after:swap", (event) => {
+  const { ctx } = event.detail;
+  const group = ctx.target;
+  if (!ctx.formworkInlinePage || !(group instanceof Element) || !group.isConnected) return;
+  const form = group.closest("form");
+  requestAnimationFrame(() => form?._formworkDirtySnapshot?.(group));
+  if (!group.contains(document.activeElement)) {
+    group.querySelector("[data-inline-pages] [aria-current=page]")?.focus({ preventScroll: true });
   }
 });
 

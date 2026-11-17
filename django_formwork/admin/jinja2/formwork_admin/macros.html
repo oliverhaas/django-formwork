@@ -88,25 +88,31 @@
 {% if to_field %}<input type="hidden" name="_to_field" value="{{ to_field }}">{% endif %}
 {% endmacro %}
 
-{% macro pagination(cl) %}
+{#- Links to the other pages of a list, cl (a ChangeList, or an inline's InlinePager). link writes a
+    link's attributes, list_link by default. With ids, a prefix, each item has an id, so the focus
+    stays on it when a swap replaces the links; the current page then takes the focus too. #}
+{% macro pagination(cl, link=none, ids=none) %}
+{% set link = link or list_link %}
 {% if cl.page_links %}
 <nav class="join" aria-label="{{ _("Pages") }}">
   {% if cl.page.has_previous() %}
-  <a class="join-item btn btn-sm btn-square" {{ list_link(cl.page_url(cl.page.previous_page_number()), top=true) }} rel="prev" aria-label="{{ _("Previous page") }}">{{ icon("chevron-left") }}</a>
+  <a class="join-item btn btn-sm btn-square"{% if ids %} id="{{ ids }}-prev"{% endif %} {{ link(cl.page_url(cl.page.previous_page_number())) }} rel="prev" aria-label="{{ _("Previous page") }}">{{ icon("chevron-left") }}</a>
   {% else %}
   <span class="join-item btn btn-sm btn-square btn-disabled" aria-hidden="true">{{ icon("chevron-left") }}</span>
   {% endif %}
-  {% for n in cl.page_links %}
-  {% if n == cl.paginator.ELLIPSIS %}
-  <span class="join-item btn btn-sm btn-disabled pointer-events-none">&hellip;</span>
+  {% for item in cl.page_links %}
+  {% set n = item.page %}
+  {% set screens = " max-sm:hidden" if not item.narrow else " sm:hidden" if not item.wide else "" %}
+  {% if n is none %}
+  <span class="join-item btn btn-sm btn-disabled pointer-events-none{{ screens }}">&hellip;</span>
   {% elif n == cl.page_num %}
-  <span class="join-item btn btn-sm btn-primary tabular-nums" aria-current="page">{{ number(n) }}</span>
+  <span class="join-item btn btn-sm btn-primary tabular-nums"{% if ids %} id="{{ ids }}-{{ n }}" tabindex="-1"{% endif %} aria-current="page">{{ number(n) }}</span>
   {% else %}
-  <a class="join-item btn btn-sm tabular-nums" {{ list_link(cl.page_url(n), top=true) }}>{{ number(n) }}</a>
+  <a class="join-item btn btn-sm tabular-nums{{ screens }}"{% if ids %} id="{{ ids }}-{{ n }}"{% endif %} {{ link(cl.page_url(n)) }}>{{ number(n) }}</a>
   {% endif %}
   {% endfor %}
   {% if cl.page.has_next() %}
-  <a class="join-item btn btn-sm btn-square" {{ list_link(cl.page_url(cl.page.next_page_number()), top=true) }} rel="next" aria-label="{{ _("Next page") }}">{{ icon("chevron-right") }}</a>
+  <a class="join-item btn btn-sm btn-square"{% if ids %} id="{{ ids }}-next"{% endif %} {{ link(cl.page_url(cl.page.next_page_number())) }} rel="next" aria-label="{{ _("Next page") }}">{{ icon("chevron-right") }}</a>
   {% else %}
   <span class="join-item btn btn-sm btn-square btn-disabled" aria-hidden="true">{{ icon("chevron-right") }}</span>
   {% endif %}
@@ -114,9 +120,12 @@
 {% endif %}
 {% endmacro %}
 
-{# A changelist link that morphs the page content in place and pushes the URL.
-   With top, the page goes back to its top, as after a page load: for a link to other rows. #}
-{% macro list_link(href, top=false) %}href="{{ href }}" hx-get="{{ href }}" hx-target="#content" hx-swap="innerMorph{{ " scroll:top scrollTarget:window" if top }}" hx-push-url="true"{% endmacro %}
+{#- A link to another page of an inline's rows. The pager around it names what the response replaces. #}
+{% macro inline_page_link(href) %}href="{{ href }}" hx-get="{{ href }}"{% endmacro %}
+
+{# A changelist link that morphs the page content in place and pushes the URL. When the rows change
+   while the list's top is scrolled out of view, columns.js brings the top back under the top bar. #}
+{% macro list_link(href) %}href="{{ href }}" hx-get="{{ href }}" hx-target="#content" hx-swap="innerMorph" hx-push-url="true"{% endmacro %}
 
 {# A link to another page of the site. htmx morphs the page around the content, so the sidebar
    keeps its place, and admin.js puts the new content in fresh. A page that needs files this
@@ -127,21 +136,43 @@
    as its heading. #}
 {% macro page_link(href, skeleton="page", title=none) %}href="{{ href }}" hx-get="{{ href }}" hx-target="body" hx-swap="outerMorph scroll:top scrollTarget:window" hx-push-url="true" hx-sync="body:replace" hx-preload="formwork-admin:intent, mousedown, touchstart" data-page-link="{{ skeleton }}"{% if title %} data-page-title="{{ title }}"{% endif %}{% endmacro %}
 
-{# The export formats for the rows on screen. #}
-{% macro export_menu(cl, formats, export_url, csrf_input) %}
+{# The export formats for the rows the list's filters leave. The menu sits in the filter form's row, so its
+   buttons send the form of export_form, which holds the list's query. #}
+{% macro export_form(cl, formats, export_url, csrf_input) %}
 {% if formats %}
-{% set format_icons = {"csv": "file-text", "xlsx": "file-spreadsheet", "json": "file-braces"} %}
-<form method="post" action="{{ export_url }}" class="dropdown dropdown-end">
+<form id="changelist-export" method="post" action="{{ export_url }}" hidden>
   {{ csrf_input }}
   <input type="hidden" name="query" value="{{ cl.export_query }}">
-  <div tabindex="0" role="button" class="btn gap-2">{{ icon("download") }} {{ _("Export") }} {{ icon("chevron-down", "size-3.5 opacity-50") }}</div>
+</form>
+{% endif %}
+{% endmacro %}
+
+{% macro export_menu(cl, formats) %}
+{% if formats %}
+{% set format_icons = {"csv": "file-text", "xlsx": "file-spreadsheet", "json": "file-braces"} %}
+<div class="dropdown dropdown-end shrink-0" data-export>
+  <div tabindex="0" role="button" class="btn gap-2 max-sm:px-3" aria-label="{{ _("Export") }}">{{ icon("download") }}<span class="max-sm:sr-only">{{ _("Export") }}</span>{{ icon("chevron-down", "size-3.5 opacity-50 max-sm:hidden") }}</div>
   <ul tabindex="-1" class="dropdown-content menu z-30 mt-2 w-60 rounded-box border border-base-300 bg-base-100 p-1 shadow-lg">
     <li class="menu-title text-xs font-normal">{% if cl.is_filtered %}{% trans trimmed count=cl.result_count, total=number(cl.result_count) %}The {{ total }} filtered row{% pluralize %}The {{ total }} filtered rows{% endtrans %}{% else %}{% trans trimmed count=cl.result_count, total=number(cl.result_count) %}All {{ total }} row{% pluralize %}All {{ total }} rows{% endtrans %}{% endif %}</li>
     {% for format in formats %}
-    <li><button type="submit" name="format" value="{{ format.name }}">{{ icon(format_icons.get(format.name, "file")) }} {{ format.label }}<span class="ml-auto text-xs text-base-content/50">.{{ format.extension }}</span></button></li>
+    <li><button type="submit" form="changelist-export" name="format" value="{{ format.name }}">{{ icon(format_icons.get(format.name, "file")) }} {{ format.label }}<span class="ml-auto text-xs text-base-content/50">.{{ format.extension }}</span></button></li>
     {% endfor %}
   </ul>
-</form>
+</div>
+{% endif %}
+{% endmacro %}
+
+{#- A slot of the list, which a list_top or list_bottom method fills. A lazy slot shows its skeleton and loads
+    from its own URL: the top one right away, the bottom one as it scrolls into view. A new filter or search
+    changes the URL, and the slot loads again; until the new content is in, the old one stays, dimmed. #}
+{% macro slot(name, slot) %}
+{% if "url" in slot %}
+<div id="changelist-{{ name }}" data-slot="{{ name }}" hx-get="{{ slot.url }}" hx-trigger="{{ "load" if name == "top" else "intersect once" }}"
+     hx-target="this" hx-swap="innerMorph" hx-sync="this:replace" hx-morph-skip-children>
+  <div data-slot-skeleton>{% if slot.skeleton is none %}<div class="skeleton h-32 rounded-box"></div>{% else %}{{ slot.skeleton }}{% endif %}</div>
+</div>
+{% else %}
+<div id="changelist-{{ name }}" data-slot="{{ name }}">{{ slot.html }}</div>
 {% endif %}
 {% endmacro %}
 
@@ -370,11 +401,11 @@
 {% set errors = inline.error_count() %}
 {% set title %}
 <h2 class="font-semibold">{{ inline.group_name|capfirst }}</h2>
-{% if formset.initial_form_count() %}<span class="badge badge-ghost badge-sm tabular-nums">{{ number(formset.initial_form_count()) }}</span>{% endif %}
+{% if inline.count %}<span class="badge badge-ghost badge-sm tabular-nums">{{ number(inline.count) }}</span>{% endif %}
 {% if errors %}<span class="badge badge-error badge-soft badge-sm ml-auto">{{ _("Errors") }}</span>{% endif %}
 {% endset %}
 {% if inline.collapsible %}
-<details id="{{ inline.prefix }}-group" class="card group/inline border border-base-300 bg-base-100"{% if errors %} open{% endif %}{% if inline.prepopulated_fields %} x-data="formworkInline" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}"{% endif %}>
+<details id="{{ inline.prefix }}-group" class="card group/inline scroll-mt-20 border border-base-300 bg-base-100"{% if errors or (inline.pager and inline.pager.requested) %} open{% endif %}{% if inline.prepopulated_fields %} x-data="formworkInline" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}"{% endif %}>
   <summary class="flex cursor-pointer list-none items-center gap-2 px-6 py-4 select-none [&::-webkit-details-marker]:hidden">
     {{ title }}
     {{ icon("chevron-down", "size-4 text-base-content/50 transition-transform group-open/inline:rotate-180" ~ ("" if errors else " ml-auto")) }}
@@ -382,10 +413,27 @@
   <div class="border-t border-base-300">{{ caller() }}</div>
 </details>
 {% else %}
-<section id="{{ inline.prefix }}-group" class="card border border-base-300 bg-base-100"{% if inline.prepopulated_fields %} x-data="formworkInline" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}"{% endif %}>
+<section id="{{ inline.prefix }}-group" class="card scroll-mt-20 border border-base-300 bg-base-100"{% if inline.prepopulated_fields %} x-data="formworkInline" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}"{% endif %}>
   <header class="flex items-center gap-2 border-b border-base-300 px-6 py-4">{{ title }}</header>
   {{ caller() }}
 </section>
+{% endif %}
+{% endmacro %}
+
+{#- The pages of an inline's saved rows, at the right of the row with Add another. Another page
+    morphs the group's content, the title with it, and pushes its URL; the scroll stays where it
+    is. admin.js asks first while the rows on screen have changes. On a phone the pager takes a
+    line of its own. #}
+{% macro inline_pager(inline) %}
+{% set pager = inline.pager %}
+{% if pager %}
+<div class="ml-auto flex flex-wrap items-center gap-3 max-sm:w-full max-sm:justify-between max-sm:pl-3" data-inline-pages
+     hx-target:inherited="#{{ inline.prefix }}-group" hx-select:inherited="#{{ inline.prefix }}-group > *" hx-swap:inherited="innerMorph" hx-push-url:inherited="true">
+  <p class="text-sm text-base-content/60">
+    {% trans trimmed start=number(pager.page.start_index()), end=number(pager.page.end_index()), total=number(pager.count) %}{{ start }}–{{ end }} of {{ total }}{% endtrans %}
+  </p>
+  {{ pagination(pager, link=inline_page_link, ids=inline.prefix ~ "-page") }}
+</div>
 {% endif %}
 {% endmacro %}
 

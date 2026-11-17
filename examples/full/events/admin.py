@@ -3,12 +3,14 @@ from datetime import timedelta
 import django_filters
 from django import forms
 from django.db.models import Count, F, Q
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from django_formwork import admin
 from django_formwork.forms import FormworkForm
 
 from .models import Event, Registration, Venue
+from .stats import event_stats
 
 
 class PostponeForm(FormworkForm):
@@ -97,6 +99,10 @@ class EventAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         taken = ~Q(registrations__status__in=[Registration.Status.CANCELLED, Registration.Status.WAITLIST])
         return super().get_queryset(request).annotate(num_registrations=Count("registrations", filter=taken))
+
+    @admin.slot(lazy=True, skeleton="events/stats_skeleton.html")
+    def list_top(self, request, queryset):
+        return render_to_string("events/stats.html", event_stats(queryset), request)
 
     @admin.display(description="Seats", ordering="num_registrations")
     def seats(self, obj):
