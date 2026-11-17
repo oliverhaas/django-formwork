@@ -331,8 +331,9 @@ the attribute.
 - Several forms on one page can each autosave their own fields of one row. See
   [section forms](reference/forms.md#section-forms).
 - The [full example](https://github.com/oliverhaas/django-formwork/tree/main/examples/full)
-  is a small task manager that combines these patterns with `SelectMultiple`,
-  `DatePicker`, and a multi-step wizard.
+  is a small task tracker that combines these patterns: a board filtered through the
+  URL, a task page whose side column saves each change as a section form, a
+  multi-step wizard, and the admin over the same models.
 
 The [Forms](reference/forms.md), [Widgets](reference/widgets.md), and
 [Views](reference/views.md) references document the details.

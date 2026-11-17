@@ -224,9 +224,52 @@ form only the columns the table shows.
 
 To lay a row out yourself, render it from your own template and override
 `render_row()` to render the same template. Put `{{ form.row_hidden_inputs }}` in
-the row: it carries the prefix and the primary key the view reads. The
-[full example](https://github.com/oliverhaas/django-formwork/tree/main/examples/full)
-renders its task list this way.
+the row: it carries the prefix and the primary key the view reads.
+
+```html
+{# tasks/row.html #}
+<tbody id="{{ form.row_id }}"
+       hx-post="{% url 'task_row_save' %}" hx-trigger="change delay:400ms"
+       hx-target="this" hx-swap="outerMorph" hx-include="closest tbody">
+  <tr>
+    <td>
+      {{ form.row_hidden_inputs }}
+      <a href="{{ form.instance.get_absolute_url }}" class="font-medium">{{ form.instance.title }}</a>
+    </td>
+    <td>{{ form.status }}</td>
+    <td>{{ form.assignee }}</td>
+    <td>{{ form.due_date }}</td>
+  </tr>
+</tbody>
+```
+
+```html
+{# tasks/list.html #}
+<table class="table">
+  <thead><tr><th>Task</th><th>Status</th><th>Assignee</th><th>Due</th></tr></thead>
+  {% for form in formset %}{% include "tasks/row.html" %}{% endfor %}
+</table>
+```
+
+```python
+from django.template.loader import render_to_string
+
+
+class TaskRowSave(FormworkRowSaveMixin, View):
+    form_class = TaskRowForm
+    http_method_names = ["post"]
+
+    def get_queryset(self, request):
+        return Task.objects.filter(owner=request.user)
+
+    def render_row(self, request, form):
+        return render_to_string("tasks/row.html", {"form": form}, request=request)
+```
+
+The row posts its own fields, `hx-include="closest tbody"`, because a `<tbody>`
+cannot hold a `<form>`. A field the template leaves out is still part of
+`form_class`, so give the row form the fields the row shows, as in
+[Saving a row](#saving-a-row).
 
 ## `FORMWORK_FORCE_ASYNC`
 
