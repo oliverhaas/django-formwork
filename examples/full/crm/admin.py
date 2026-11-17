@@ -1,9 +1,15 @@
+from django.db import models
 from django.db.models import Count, Q
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import format_html
+from django.utils.text import capfirst
 
 from django_formwork import admin
+from django_formwork.admin.contenttypes import GenericStackedInline, GenericTabularInline
 
-from .models import Activity, Company, Contact, Deal
+from .models import Activity, Company, Contact, Deal, FollowUp
+from .widgets import WebsiteInput
 
 
 class ContactInline(admin.TabularInline):
@@ -18,6 +24,18 @@ class DealInline(admin.TabularInline):
     fields = ["name", "stage", "value", "currency", "expected_close"]
     extra = 0
     show_change_link = True
+
+
+class FollowUpInline(GenericTabularInline):
+    model = FollowUp
+    fields = ["title", "due_at", "owner", "done"]
+    extra = 0
+
+
+class FollowUpStackedInline(GenericStackedInline):
+    model = FollowUp
+    fields = [("title", "done"), ("due_at", "owner")]
+    extra = 0
 
 
 class ActivityInline(admin.StackedInline):
@@ -37,7 +55,8 @@ class CompanyAdmin(admin.ModelAdmin):
         ("Finance", {"fields": ["annual_revenue"]}),
         ("Notes", {"fields": ["notes"], "classes": ["collapse"]}),
     ]
-    inlines = [ContactInline, DealInline]
+    inlines = [ContactInline, DealInline, FollowUpInline]
+    formfield_overrides = {models.URLField: {"widget": WebsiteInput}}
 
     def get_queryset(self, request):
         return (
@@ -76,6 +95,7 @@ class ContactAdmin(admin.ModelAdmin):
         ("is_primary", "newsletter"),
         "last_contacted",
     ]
+    inlines = [FollowUpStackedInline]
 
 
 @admin.register(Deal)
@@ -95,7 +115,7 @@ class DealAdmin(admin.ModelAdmin):
         ("Lost", {"fields": ["lost_reason"], "classes": ["collapse"]}),
         (None, {"fields": ["created_at"]}),
     ]
-    inlines = [ActivityInline]
+    inlines = [FollowUpInline, ActivityInline]
     actions = ["mark_won", "mark_lost"]
 
     @admin.action(description="Mark selected deals as won", icon="trophy")
@@ -119,3 +139,50 @@ class ActivityAdmin(admin.ModelAdmin):
     search_fields = ["subject", "body", "company__name"]
     date_hierarchy = "occurred_at"
     autocomplete_fields = ["company", "deal", "contact"]
+
+
+class RegardingFilter(admin.SimpleListFilter):
+    title = "regarding"
+    parameter_name = "regarding"
+
+    def lookups(self, request, model_admin):
+        return [("company", "Companies"), ("contact", "Contacts"), ("deal", "Deals")]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(content_type__app_label="crm", content_type__model=self.value())
+        return queryset
+
+
+@admin.register(FollowUp)
+class FollowUpAdmin(admin.ModelAdmin):
+    icon = "bell"
+    list_display = ["title", "regarding_link", "owner", "due_at", "done"]
+    list_select_related = ["owner", "content_type"]
+    list_filter = ["done", RegardingFilter, "owner", "due_at"]
+    search_fields = ["title"]
+    date_hierarchy = "due_at"
+    ordering = ["done", "due_at"]
+    fields = ["regarding_link", "title", ("due_at", "owner"), "done"]
+    readonly_fields = ["regarding_link"]
+    actions = ["mark_done"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("regarding")
+
+    # A follow-up is added on the company, contact or deal it is about.
+    def has_add_permission(self, request):
+        return False
+
+    @admin.display(description="Regarding")
+    def regarding_link(self, obj):
+        if obj.regarding is None:
+            return "-"
+        ct = obj.content_type
+        url = reverse(f"{self.admin_site.name}:{ct.app_label}_{ct.model}_change", args=[obj.object_id])
+        return format_html('{}: <a href="{}" class="link link-hover">{}</a>', capfirst(ct.name), url, obj.regarding)
+
+    @admin.action(description="Mark selected follow-ups as done", icon="circle-check")
+    def mark_done(self, request, queryset):
+        count = queryset.update(done=True)
+        self.message_user(request, f"{count} follow-ups marked as done.")

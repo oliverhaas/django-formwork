@@ -11,6 +11,7 @@ from django_formwork import ChoiceLabel, FormworkForm, FormworkModelForm
 from django_formwork.widgets import (
     ComboBox,
     DatePicker,
+    DateTimePicker,
     FileDropzoneInput,
     ImageDropzoneInput,
     OTPInput,
@@ -74,8 +75,8 @@ class MemberChoiceField(forms.ModelChoiceField):
 
 class TaskEditForm(FormworkModelForm):
     """Full create/edit page: every task field, solid select-{color} status
-    border. Showcases Select + SelectMultiple + DatePicker + drop zones +
-    Rating.
+    border. Showcases Select + SelectMultiple + DatePicker + DateTimePicker +
+    drop zones + Rating.
     """
 
     priority = forms.ChoiceField(
@@ -124,6 +125,7 @@ class TaskEditForm(FormworkModelForm):
             "assignee",
             "tags",
             "due_date",
+            "remind_at",
             "cover_image",
             "attachment",
             "rating",
@@ -131,11 +133,13 @@ class TaskEditForm(FormworkModelForm):
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
             "due_date": DatePicker,
+            "remind_at": DateTimePicker,
             "cover_image": ImageDropzoneInput(max_size=5 * 1024 * 1024),
             "attachment": FileDropzoneInput(max_size=10 * 1024 * 1024),
         }
         help_texts = {
             "due_date": "DatePicker with a calendar dropdown.",
+            "remind_at": "DateTimePicker: the day and the time in one calendar.",
             "cover_image": "Shown as a thumbnail in the task list (ImageDropzoneInput, ≤5 MB).",
             "attachment": "Any single file (FileDropzoneInput, ≤10 MB).",
         }

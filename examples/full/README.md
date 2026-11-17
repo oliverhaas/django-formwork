@@ -42,14 +42,36 @@ changelists and the change forms look like a real back office:
 
 | App | Models | Shows |
 |---|---|---|
-| `taskmanager` | Tasks, members, tags, profile | Status and priority badges, an inline of assigned tasks, a singleton without an add page |
+| `taskmanager` | Tasks, members, tags, profile | Status and priority badges, a reminder with its day and time in one calendar, an inline of assigned tasks, a singleton without an add page |
 | `people` | Departments, employees, time off, equipment | A self-referencing manager, empty-value filters, approvals as actions |
-| `crm` | Companies, contacts, deals, activities | Autocomplete, related-only filters, stacked and tabular inlines |
+| `crm` | Companies, contacts, deals, activities, follow-ups | Autocomplete, related-only filters, stacked and tabular inlines, follow-ups as generic inlines on companies, contacts and deals, a website field whose widget adds an Open link to its label row (`label_links()`) |
 | `billing` | Invoices, payments | Line and payment inlines, file fields, `raw_id_fields` |
 | `helpdesk` | Tickets, canned responses | Over a thousand tickets, a reply inline, horizontal radios |
 | `recruiting` | Openings, candidates, applications, interviews | A JSON field, a range filter, stage actions |
 | `events` | Venues, events, registrations | Prepopulated slugs, an editable list column, about 20,000 registrations |
-| `content` | Topics, posts, comments | Many-to-many topics, image covers, comment moderation, placeholder icons (no `icon` set) |
+| `content` | Topics, posts, comments | Many-to-many topics, image covers, comment moderation, a word count under a post's body from the admin's `class Media`, placeholder icons (no `icon` set) |
+
+## PostgreSQL and pghistory
+
+On SQLite, the admin's history panel lists the admin's own entries. On PostgreSQL,
+[django-pghistory](https://django-pghistory.readthedocs.io/) records each insert and
+update of tasks, companies, deals, tickets and posts with a database trigger, so the
+panel also shows changes made outside the admin. The `audit` app holds the event
+models, and the admin site uses `PghistoryHistory` when pghistory is installed.
+
+`TASKWORK_POSTGRES` names the database and turns this mode on. libpq's `PGHOST`,
+`PGPORT`, `PGUSER` and `PGPASSWORD` say where the database runs:
+
+```bash
+docker run -d --name taskwork-postgres -p 5433:5432 \
+  -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=taskwork postgres:18
+export TASKWORK_POSTGRES=taskwork PGHOST=localhost PGPORT=5433 PGUSER=postgres PGPASSWORD=postgres
+uv run --group postgres manage.py migrate      # also installs the triggers
+uv run --group postgres manage.py seed
+uv run --group postgres manage.py runserver
+```
+
+The seed writes its rows without a user, so their first event names no user.
 
 ## Widgets covered
 
@@ -57,7 +79,7 @@ Every widget in the package gets airtime across these pages. Quick lookup:
 
 - **Dashboard quick-add**: plain Django inputs (a four-option priority doesn't need a fancy widget)
 - **Tasks list filter bar**: plain selects + plain text input
-- **Task form**: `Select` (assignee, backed by the `Member` model with an initials badge and email per option, server search), `SelectMultiple` (tags, server search), `DatePicker`, `ImageDropzoneInput`, `FileDropzoneInput`, `Rating`
+- **Task form**: `Select` (assignee, backed by the `Member` model with an initials badge and email per option, server search), `SelectMultiple` (tags, server search), `DatePicker`, `DateTimePicker` (reminder), `ImageDropzoneInput`, `FileDropzoneInput`, `Rating`
 - **Wizard**: `ValidatedTextarea`, `ToggleInput`, `Range`, `RadioSelect`, `DatePicker`, `SelectMultiple`
 - **Settings**: `PhoneInput`, `Select` (country), `ImageDropzoneInput`, `PasswordInput`, `OTPInput`, `ComboBox`, `Rating`
 
@@ -75,7 +97,7 @@ The example doubles as an integration test bed for the package:
 uv run pytest
 ```
 
-Covers the persisted settings flow (Profile singleton, phone validation, avatar upload), the task flows (Member assignee, htmx inline row edits) and a smoke test that renders the changelist, add and change page of every model in the admin.
+Covers the persisted settings flow (Profile singleton, phone validation, avatar upload), the task flows (Member assignee, htmx inline row edits) and a smoke test that renders the changelist, add and change page of every model in the admin. With the variables from "PostgreSQL and pghistory" set, `uv run --group postgres pytest` runs them on PostgreSQL.
 
 ## CSS theme switching
 

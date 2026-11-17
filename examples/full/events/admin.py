@@ -1,10 +1,18 @@
+from datetime import timedelta
+
 import django_filters
-from django.db.models import Count, Q
+from django import forms
+from django.db.models import Count, F, Q
 from django.utils import timezone
 
 from django_formwork import admin
+from django_formwork.forms import FormworkForm
 
 from .models import Event, Registration, Venue
+
+
+class PostponeForm(FormworkForm):
+    days = forms.IntegerField(min_value=1, max_value=365, initial=7, help_text="Start and end move by this many days.")
 
 
 class WhenFilter(admin.SimpleListFilter):
@@ -40,6 +48,7 @@ class RegistrationInline(admin.TabularInline):
 class VenueAdmin(admin.ModelAdmin):
     icon = "map-pin"
     list_display = ["name", "is_virtual", "city", "country", "capacity", "event_count"]
+    list_editable = ["capacity"]
     list_filter = ["is_virtual", "country"]
     search_fields = ["name", "city"]
     fieldsets = [
@@ -60,7 +69,7 @@ class EventAdmin(admin.ModelAdmin):
     icon = "calendar-days"
     list_display = ["title", "kind", "starts_at", "venue", "host", "price", "seats", "is_published"]
     list_select_related = ["venue", "host"]
-    list_editable = ["is_published"]
+    list_editable = ["kind", "starts_at", "venue", "host", "price", "is_published"]
     list_filter = [
         WhenFilter,
         "kind",
@@ -76,7 +85,6 @@ class EventAdmin(admin.ModelAdmin):
     date_hierarchy = "starts_at"
     autocomplete_fields = ["venue", "host"]
     prepopulated_fields = {"slug": ["title"]}
-    radio_fields = {"kind": admin.HORIZONTAL}
     fieldsets = [
         (None, {"fields": ["title", "slug", "kind", ("venue", "host")]}),
         ("Schedule", {"fields": [("starts_at", "ends_at"), ("capacity", "price"), "is_published"]}),
@@ -84,7 +92,7 @@ class EventAdmin(admin.ModelAdmin):
     ]
     inlines = [RegistrationInline]
     save_as = True
-    actions = ["publish", "unpublish"]
+    actions = ["publish", "unpublish", "postpone"]
 
     def get_queryset(self, request):
         taken = ~Q(registrations__status__in=[Registration.Status.CANCELLED, Registration.Status.WAITLIST])
@@ -96,15 +104,41 @@ class EventAdmin(admin.ModelAdmin):
             return obj.num_registrations
         return f"{obj.num_registrations} / {obj.capacity}"
 
-    @admin.action(description="Publish selected events", icon="eye")
+    @admin.action(
+        description="Publish",
+        description_plural="Publish selected events",
+        icon="eye",
+        help_text="Shows them on the site and opens registration.",
+        location=[admin.ActionLocation.CHANGE_LIST, admin.ActionLocation.CHANGE_FORM],
+    )
     def publish(self, request, queryset):
         count = queryset.update(is_published=True)
         self.message_user(request, f"{count} events published.")
 
-    @admin.action(description="Unpublish selected events", icon="archive")
+    @admin.action(
+        description="Unpublish",
+        description_plural="Unpublish selected events",
+        icon="eye-off",
+        help_text="Hides them from the site. Registrations stay.",
+        confirm="Unpublish %(count)s %(name)s?",
+        location=[admin.ActionLocation.CHANGE_LIST, admin.ActionLocation.CHANGE_FORM],
+    )
     def unpublish(self, request, queryset):
         count = queryset.update(is_published=False)
         self.message_user(request, f"{count} events unpublished.")
+
+    @admin.action(
+        description="Postpone",
+        description_plural="Postpone selected events",
+        icon="calendar-clock",
+        help_text="Moves them by a number of days.",
+        form=PostponeForm,
+        location=[admin.ActionLocation.CHANGE_LIST, admin.ActionLocation.CHANGE_FORM],
+    )
+    def postpone(self, request, queryset, form):
+        delta = timedelta(days=form.cleaned_data["days"])
+        count = queryset.update(starts_at=F("starts_at") + delta, ends_at=F("ends_at") + delta)
+        self.message_user(request, f"{count} events postponed by {form.cleaned_data['days']} days.")
 
 
 @admin.register(Registration)

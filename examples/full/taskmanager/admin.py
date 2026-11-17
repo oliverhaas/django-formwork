@@ -22,7 +22,18 @@ class TaskAdmin(admin.ModelAdmin):
     date_hierarchy = "due_date"
     readonly_fields = ["created_at", "updated_at"]
     fieldsets = [
-        (None, {"fields": ["title", "description", ("status", "priority"), ("assignee", "due_date"), "tags"]}),
+        (
+            None,
+            {
+                "fields": [
+                    "title",
+                    "description",
+                    ("status", "priority"),
+                    ("assignee", "tags"),
+                    ("due_date", "remind_at"),
+                ]
+            },
+        ),
         ("Review", {"fields": ["rating"]}),
         ("Files", {"fields": ["cover_image", "attachment"], "classes": ["collapse"]}),
         ("History", {"fields": [("created_at", "updated_at")], "classes": ["collapse"]}),

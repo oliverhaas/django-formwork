@@ -1,0 +1,7 @@
+/* The word count under a post's body, in the tone of the field's help text. */
+.word-count {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+}

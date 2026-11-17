@@ -5,11 +5,13 @@ from __future__ import annotations
 import random
 from importlib import import_module
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, Permission, User
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 APPS = ["taskmanager", "people", "crm", "billing", "helpdesk", "recruiting", "events", "content"]
+# Groups with every permission of their apps.
+GROUPS = {"Sales": ["crm"], "Support": ["helpdesk"], "Editors": ["content"]}
 
 
 class Command(BaseCommand):
@@ -29,6 +31,9 @@ class Command(BaseCommand):
         rng = random.Random(seed)  # noqa: S311
         for app, module in zip(APPS, modules, strict=True):
             self.stdout.write(f"{app}: {module.seed(rng, scale)}")
+        for name, app_labels in GROUPS.items():
+            group, _ = Group.objects.get_or_create(name=name)
+            group.permissions.set(Permission.objects.filter(content_type__app_label__in=app_labels))
         if not User.objects.filter(username="admin").exists():
             User.objects.create_superuser("admin", "admin@example.com", "admin")
         self.stdout.write(self.style.SUCCESS("Done. Log in to /admin/ as admin, password admin."))

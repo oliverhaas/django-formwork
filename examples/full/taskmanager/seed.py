@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.utils import timezone
 
@@ -55,13 +55,18 @@ def seed(rng: random.Random, scale: float) -> str:  # noqa: ARG001
     tags = {name: Tag.objects.create(name=name) for name in TAGS}
     today = timezone.localdate()
     for title, status, priority, assignee, tag_names, due_offset in TASKS:
+        due_date = today + timedelta(days=due_offset)
         task = Task.objects.create(
             title=title,
             description=f"Auto-generated example task. Owner: {assignee or 'unassigned'}.",
             status=status,
             priority=priority,
             assignee=members[assignee] if assignee else None,
-            due_date=today + timedelta(days=due_offset),
+            due_date=due_date,
+            # An open task due after today reminds at 9:00 the day before.
+            remind_at=timezone.make_aware(datetime.combine(due_date - timedelta(days=1), time(9)))
+            if status != Task.Status.DONE and due_offset > 0
+            else None,
             rating=rng.choice([None, 3, 4, 4, 5]) if status == Task.Status.DONE else None,
         )
         task.tags.set([tags[name] for name in tag_names])

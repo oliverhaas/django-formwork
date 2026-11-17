@@ -13,6 +13,8 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest>=9,<10", "pytest-django>=4.12,<5"]
+# PostgreSQL with django-pghistory: see "PostgreSQL and pghistory" in the README.
+postgres = ["django-pghistory>=3.9", "psycopg[binary]>=3.2"]
 
 [tool.uv.sources]
 django-formwork = { path = "../..", editable = true }

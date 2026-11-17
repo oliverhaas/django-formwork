@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import random
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
+from django.utils import timezone
 from taskmanager import sample_data as fake
 from taskmanager.models import Member
 
-from .models import Activity, Company, Contact, Deal
+from .models import Activity, Company, Contact, Deal, FollowUp
 
 TITLES = [
     "CEO",
@@ -36,8 +37,20 @@ SUBJECTS = {
     ],
 }
 
+FOLLOW_UPS = [
+    "Call back about the pilot",
+    "Send the meeting notes",
+    "Check in after the demo",
+    "Ask for the security review",
+    "Confirm the kickoff date",
+    "Share the case study",
+    "Introduce the support team",
+    "Chase the signed contract",
+]
+
 
 def clear() -> None:
+    FollowUp.objects.all().delete()
     Activity.objects.all().delete()
     Deal.objects.all().delete()
     Contact.objects.all().delete()
@@ -143,4 +156,32 @@ def seed(rng: random.Random, scale: float) -> str:
             )
         )
     Activity.objects.bulk_create(activities)
-    return f"{len(companies)} companies, {len(contacts)} contacts, {len(deals)} deals, {len(activities)} activities"
+
+    # Follow-ups on a share of the companies, the contacts and the open deals, owned by whoever looks after them.
+    targets = (
+        [(company, company.account_manager_id, 0.3) for company in companies]
+        + [(contact, contact.company.account_manager_id, 0.1) for contact in Contact.objects.select_related("company")]
+        + [(deal, deal.owner_id, 0.4) for deal in deals if deal.stage in Deal.OPEN_STAGES]
+    )
+    now = timezone.now()
+    follow_ups = []
+    for target, owner_id, share in targets:
+        if rng.random() >= share:
+            continue
+        due_at = timezone.make_aware(
+            datetime.combine(fake.day(rng, 14, 30), time(rng.choice([9, 10, 11, 14, 15, 16]), rng.choice([0, 30])))
+        )
+        follow_ups.append(
+            FollowUp(
+                regarding=target,
+                title=rng.choice(FOLLOW_UPS),
+                due_at=due_at,
+                owner_id=owner_id,
+                done=due_at < now and rng.random() < 0.7,
+            )
+        )
+    FollowUp.objects.bulk_create(follow_ups)
+    return (
+        f"{len(companies)} companies, {len(contacts)} contacts, {len(deals)} deals, {len(activities)} activities, "
+        f"{len(follow_ups)} follow-ups"
+    )

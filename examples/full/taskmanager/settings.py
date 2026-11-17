@@ -1,5 +1,6 @@
 """Django settings for the full example project (task manager)."""
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -72,6 +73,15 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     },
 }
+
+# With TASKWORK_POSTGRES set to a database name, the example runs on PostgreSQL and
+# django-pghistory records a few models (the audit app). The README has the setup.
+if TASKWORK_POSTGRES := os.environ.get("TASKWORK_POSTGRES"):
+    DATABASES = {"default": {"ENGINE": "django.db.backends.postgresql", "NAME": TASKWORK_POSTGRES}}
+    INSTALLED_APPS += ["pgtrigger", "pghistory", "audit"]
+    # migrate installs the triggers, so the apps' own migrations stay the same on SQLite.
+    PGTRIGGER_MIGRATIONS = False
+    PGTRIGGER_INSTALL_ON_MIGRATE = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

@@ -87,6 +87,7 @@ class Task(models.Model):
     )
     tags = models.ManyToManyField(Tag, blank=True, related_name="tasks")
     due_date = models.DateField(null=True, blank=True)
+    remind_at = models.DateTimeField("reminder", null=True, blank=True)
     cover_image = models.ImageField(upload_to="covers/", blank=True, null=True)
     attachment = models.FileField(upload_to="attachments/", blank=True, null=True)
     rating = models.IntegerField(null=True, blank=True, help_text="Quality rating after completion")

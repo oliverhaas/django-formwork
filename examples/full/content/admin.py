@@ -47,6 +47,10 @@ class PostAdmin(admin.ModelAdmin):
     inlines = [CommentInline]
     actions = ["publish", "archive"]
 
+    class Media:
+        css = {"all": ["content/word_count.css"]}
+        js = ["content/word_count.js"]
+
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(num_comments=Count("comments"))
 

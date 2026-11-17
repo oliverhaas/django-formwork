@@ -54,7 +54,7 @@ def seed(rng: random.Random, scale: float) -> str:
             name=name,
             is_virtual=virtual,
             city=city,
-            country=country.upper(),
+            country=country,
             address=fake.address(rng, country) if country else "",
             url="https://live.taskwork.example" if virtual else "",
             capacity=capacity,

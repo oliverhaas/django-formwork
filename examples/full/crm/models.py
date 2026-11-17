@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.utils import timezone
@@ -45,6 +47,7 @@ class Company(models.Model):
     annual_revenue = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     notes = models.TextField(blank=True)
+    follow_ups = GenericRelation("FollowUp")
 
     class Meta:
         ordering = ["name"]
@@ -64,6 +67,7 @@ class Contact(models.Model):
     is_primary = models.BooleanField("primary contact", default=False)
     newsletter = models.BooleanField(default=False)
     last_contacted = models.DateTimeField(null=True, blank=True)
+    follow_ups = GenericRelation("FollowUp")
 
     class Meta:
         ordering = ["last_name", "first_name"]
@@ -105,6 +109,7 @@ class Deal(models.Model):
     closed_on = models.DateField(null=True, blank=True)
     lost_reason = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
+    follow_ups = GenericRelation("FollowUp")
 
     class Meta:
         ordering = ["-created_at"]
@@ -138,3 +143,28 @@ class Activity(models.Model):
 
     def __str__(self):
         return self.subject
+
+
+class FollowUp(models.Model):
+    """A to-do on a company, a contact or a deal, which it points at through a generic foreign key."""
+
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to={"app_label": "crm", "model__in": ["company", "contact", "deal"]},
+    )
+    object_id = models.PositiveBigIntegerField()
+    regarding = GenericForeignKey("content_type", "object_id")
+    title = models.CharField(max_length=160)
+    due_at = models.DateTimeField("due")
+    owner = models.ForeignKey(Member, null=True, blank=True, on_delete=models.SET_NULL, related_name="follow_ups")
+    done = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["due_at"]
+        indexes = [models.Index(fields=["content_type", "object_id"])]
+        verbose_name = "follow-up"
+        verbose_name_plural = "follow-ups"
+
+    def __str__(self):
+        return self.title
