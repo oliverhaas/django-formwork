@@ -9,7 +9,7 @@
   <tr class="align-top">
     {% for cell in row.cells %}
     {% with bf=cell.field %}
-    <td class="min-w-36" data-field="{{ cell.name }}"{% if bf %} data-formwork-field{% if cell.changed %} data-formwork-changed{% if bf.initial_checked %} data-formwork-initial="{{ bf.initial_checked }}"{% endif %}{% endif %}{% if bf.errors %} data-invalid{% endif %}{% endif %}>
+    <td class="min-w-32" data-field="{{ cell.name }}"{% if bf %} data-formwork-field{% if cell.changed %} data-formwork-changed{% if bf.initial_checked %} data-formwork-initial="{{ bf.initial_checked }}"{% endif %}{% endif %}{% if bf.errors %} data-invalid{% endif %}{% endif %}>
       {% if forloop.first and not row.actions %}{{ row.hidden }}{% endif %}
       {% if bf %}
       {% if cell.links %}
