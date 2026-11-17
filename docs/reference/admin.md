@@ -310,6 +310,7 @@ Options this admin adds:
 | `list_defer_fields` | Skip these columns on the list page, for a large JSON or text column that no column shows. |
 | `list_per_page_options` | The page sizes the list offers next to its pages. Default `(25, 50, 100, 250)`. `list_per_page` is always one of them. |
 | `list_top`, `list_bottom` | Methods that return HTML for the list page, above the search row and under the list. See [Slots](#slots). |
+| `change_top`, `change_bottom` | Methods that return HTML for the change page, above the fields and under the save bar. See [Slots](#slots). |
 
 `list_only_fields` is opt-in. A `__str__` that reads a deferred field runs one query per
 row.
@@ -567,6 +568,29 @@ A new filter or search loads a lazy slot again. Its HTML stays until the new HTM
 in, and dims when the load takes more than a moment. A new sort or page does not load
 it again. The slot URL needs the view permission, as the list does. The list in a
 dialog that picks a related row shows no slots.
+
+The change page has the same two slots: `change_top` between the title and the fields
+and `change_bottom` under the save bar. Each method gets the request and the object.
+
+```python
+@admin.register(Ticket)
+class TicketAdmin(admin.ModelAdmin):
+    def change_top(self, request, obj):
+        return render_to_string("tickets/progress.html", {"ticket": obj}, request)
+
+    @admin.slot(lazy=True)
+    def change_bottom(self, request, obj):
+        return render_to_string("tickets/replies_chart.html", {"replies": replies_by_day(obj)}, request)
+```
+
+The add page and the change page in a dialog show no slots. A lazy change slot loads
+from `slots/top/` or `slots/bottom/` under the object's URL, which needs the view
+permission for the object. `change_top` is inside the page's form, so it cannot hold a
+form of its own, and the page sends an input with a name in it along with the fields.
+`change_bottom` comes after the form and can hold one.
+
+A slot that returns an empty string takes no room on either page, so a method can
+leave the slot out for some rows or objects.
 
 The page shows what the method returns as HTML, so escape the values in it, with a
 template or `format_html()`.

@@ -714,7 +714,7 @@ document.addEventListener("htmx:config:request", (event) => {
   ctx.request.body = body;
 });
 
-// A list's lazy slot (macros.html slot) is busy while it loads.
+// A lazy slot (macros.html slot) is busy while it loads.
 for (const [name, busy] of [["htmx:before:request", true], ["htmx:finally:request", false]]) {
   document.addEventListener(name, (event) => {
     if (!event.target.matches?.("[data-slot]")) return;

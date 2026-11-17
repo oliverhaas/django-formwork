@@ -124,7 +124,8 @@
   its saves changed. The line with a list's actions and save sticks to the bottom of the
   window while rows are selected or cells changed. `list_top` and `list_bottom` methods
   show HTML of their own above and under a list, such as counts or a chart, and
-  `@admin.slot(lazy=True)` loads it after the list, with a skeleton until then.
+  `change_top` and `change_bottom` do the same on a change page.
+  `@admin.slot(lazy=True)` loads a slot after its page, with a skeleton until then.
 - A widget can put links at the end of its field's label row, for example a Generate link
   next to a slug, with a `label_links(name, value, renderer=None)` method that returns
   HTML. The field template renders them after the label, not inside it, so they stay out

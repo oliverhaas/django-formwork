@@ -1957,6 +1957,93 @@ def test_slot_skeleton_needs_a_lazy_slot():
         names_slot(skeleton="slot_skeleton.html")
 
 
+def test_list_slot_that_returns_nothing_is_left_out(admin_client, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "list_top", lambda self, request, queryset: "")
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    assert soup.select_one("[data-slot]") is None
+
+
+def object_slot(**options):
+    def named(self, request, obj):
+        return format_html("<p data-name>{}</p>", obj.name) if obj.name != "Beta lamp" else ""
+
+    return admin.slot(**options)(named) if options else named
+
+
+def test_change_top_shows_the_object_above_the_fields(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "change_top", object_slot())
+    alpha = Item.objects.get(name="Alpha kettle")
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", alpha.pk)).content, "html.parser")
+
+    slot = soup.find(id="changeform-top")
+    assert slot.select_one("[data-name]").get_text() == "Alpha kettle"
+    assert slot.find_next(attrs={"data-field": "name"}) is not None
+    assert soup.find(id="changeform-bottom") is None
+
+
+def test_change_bottom_follows_the_form(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "change_bottom", object_slot())
+    alpha = Item.objects.get(name="Alpha kettle")
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", alpha.pk)).content, "html.parser")
+
+    slot = soup.find(id="changeform-bottom")
+    assert slot.select_one("[data-name]").get_text() == "Alpha kettle"
+    assert slot.find_parent("form") is None
+    assert slot.find_previous(attrs={"data-save-bar": True}) is not None
+
+
+def test_change_slot_that_returns_nothing_is_left_out(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "change_top", object_slot())
+    beta = Item.objects.get(name="Beta lamp")
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", beta.pk)).content, "html.parser")
+
+    assert soup.select_one("[data-slot]") is None
+
+
+def test_lazy_change_slot_shows_a_placeholder_and_loads_the_object(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "change_bottom", object_slot(lazy=True))
+    alpha = Item.objects.get(name="Alpha kettle")
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", alpha.pk)).content, "html.parser")
+    slot = soup.find(id="changeform-bottom")
+
+    assert slot.select_one("[data-slot-skeleton] .skeleton") is not None
+    assert slot["hx-get"] == url(Item, "change_slot", alpha.pk, "bottom")
+    assert admin_client.get(slot["hx-get"]).content == b"<p data-name>Alpha kettle</p>"
+
+
+@pytest.mark.parametrize("query", ["add/", "{pk}/change/?_popup=1"], ids=["add", "popup"])
+def test_add_page_and_dialog_have_no_change_slots(admin_client, catalog, monkeypatch, query):
+    monkeypatch.setattr(ItemAdmin, "change_top", object_slot())
+    alpha = Item.objects.get(name="Alpha kettle")
+
+    response = admin_client.get(url(Item, "changelist") + query.format(pk=alpha.pk))
+
+    assert response.status_code == 200
+    assert BeautifulSoup(response.content, "html.parser").select_one("[data-slot]") is None
+
+
+@pytest.mark.parametrize(("codenames", "status"), [((), 403), (("view_item",), 200)], ids=["none", "view"])
+def test_change_slot_view_needs_view_permission(staff_client, catalog, monkeypatch, codenames, status):
+    monkeypatch.setattr(ItemAdmin, "change_top", object_slot(lazy=True))
+    alpha = Item.objects.get(name="Alpha kettle")
+
+    assert staff_client(*codenames).get(url(Item, "change_slot", alpha.pk, "top")).status_code == status
+
+
+@pytest.mark.parametrize(("pk", "slot"), [(None, "bottom"), (None, "display"), (0, "top")])
+def test_change_slot_view_of_a_missing_slot_or_object_is_not_found(admin_client, catalog, monkeypatch, pk, slot):
+    monkeypatch.setattr(ItemAdmin, "change_top", object_slot(lazy=True))
+    pk = Item.objects.get(name="Alpha kettle").pk if pk is None else pk
+
+    assert admin_client.get(url(Item, "change_slot", pk, slot)).status_code == 404
+
+
 @pytest.mark.parametrize(
     ("entry", "path", "lookup"),
     [

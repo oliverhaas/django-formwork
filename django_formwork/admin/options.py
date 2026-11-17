@@ -486,6 +486,10 @@ class ModelAdmin(BaseModelAdmin):
     list_top: Callable[..., str] | None = None
     #: The same for the end of the page, under the list.
     list_bottom: Callable[..., str] | None = None
+    #: A method ``(request, obj)`` whose HTML the change page shows above its fields. ``@slot`` works here too.
+    change_top: Callable[..., str] | None = None
+    #: The same for the end of the change page, under the save bar.
+    change_bottom: Callable[..., str] | None = None
 
     actions: Sequence[Any] | None = ()
     actions_on_top = True
@@ -524,6 +528,11 @@ class ModelAdmin(BaseModelAdmin):
             path("<path:object_id>/history/", wrap(self.history_view), name="{}_{}_history".format(*info)),
             path("<path:object_id>/delete/", wrap(self.delete_view), name="{}_{}_delete".format(*info)),
             path("<path:object_id>/change/", wrap(self.change_view), name="{}_{}_change".format(*info)),
+            path(
+                "<path:object_id>/slots/<str:slot>/",
+                wrap(self.change_slot_view),
+                name="{}_{}_change_slot".format(*info),
+            ),
             path("<path:object_id>/", wrap(self.redirect_to_change), name="{}_{}_redirect".format(*info)),
         ]
 
@@ -931,16 +940,16 @@ class ModelAdmin(BaseModelAdmin):
 
     # Slots
 
-    def _slot_method(self, slot: str) -> Callable[..., str] | None:
-        return getattr(self, f"list_{slot}", None) if slot in SLOTS else None
+    def _slot_method(self, slot: str, page: str = "list") -> Callable[..., str] | None:
+        return getattr(self, f"{page}_{slot}", None) if slot in SLOTS else None
 
-    def get_slots(self, request: HttpRequest, cl: ChangeList) -> dict[str, dict[str, Any]]:
-        """The list's filled slots by name: the HTML, or for a lazy slot its skeleton and its URL."""
-        if cl.is_popup:
-            return {}
+    def _slots(
+        self, request: HttpRequest, page: str, subject: Any, url: Callable[[str], str]
+    ) -> dict[str, dict[str, Any]]:
+        """A page's filled slots by name: the HTML, or for a lazy slot its skeleton and its URL."""
         slots = {}
         for slot in SLOTS:
-            method = self._slot_method(slot)
+            method = self._slot_method(slot, page)
             if method is None:
                 continue
             if getattr(method, "slot_lazy", False):
@@ -948,11 +957,29 @@ class ModelAdmin(BaseModelAdmin):
                 if skeleton is not None:
                     context = {"model_admin": self, "opts": self.opts}
                     skeleton = mark_safe(render_to_string(skeleton, context, request))  # noqa: S308
-                url = reverse(self.url_name("slot"), args=(slot,), current_app=self.admin_site.name)
-                slots[slot] = {"skeleton": skeleton, "url": f"{url}?{cl.slot_query}" if cl.slot_query else url}
-            else:
-                slots[slot] = {"html": mark_safe(method(request, cl.queryset.order_by()))}  # noqa: S308
+                slots[slot] = {"skeleton": skeleton, "url": url(slot)}
+            elif html := method(request, subject):
+                slots[slot] = {"html": mark_safe(html)}  # noqa: S308
         return slots
+
+    def get_slots(self, request: HttpRequest, cl: ChangeList) -> dict[str, dict[str, Any]]:
+        """The list's filled slots by name. A slot that returns nothing has no entry."""
+        if cl.is_popup:
+            return {}
+
+        def url(slot: str) -> str:
+            url = reverse(self.url_name("slot"), args=(slot,), current_app=self.admin_site.name)
+            return f"{url}?{cl.slot_query}" if cl.slot_query else url
+
+        return self._slots(request, "list", cl.queryset.order_by(), url)
+
+    def get_change_slots(self, request: HttpRequest, obj: models.Model) -> dict[str, dict[str, Any]]:
+        """The change page's filled slots by name. A slot that returns nothing has no entry."""
+
+        def url(slot: str) -> str:
+            return reverse(self.url_name("change_slot"), args=(quote(obj.pk), slot), current_app=self.admin_site.name)
+
+        return self._slots(request, "change", obj, url)
 
     def slot_view(self, request: HttpRequest, slot: str) -> HttpResponse:
         """The HTML of a lazy slot, for the rows that the list's filters in ``request.GET`` leave."""
@@ -966,6 +993,18 @@ class ModelAdmin(BaseModelAdmin):
         except IncorrectLookupParameters:
             return HttpResponseBadRequest(_("The list's filters name a field the list does not have."))
         return HttpResponse(method(request, queryset))
+
+    def change_slot_view(self, request: HttpRequest, object_id: str, slot: str) -> HttpResponse:
+        """The HTML of a lazy slot of an object's change page."""
+        if not self.has_view_or_change_permission(request):
+            raise PermissionDenied
+        method = self._slot_method(slot, "change")
+        obj = self.get_object(request, unquote(object_id))
+        if method is None or obj is None:
+            raise Http404
+        if not self.has_view_or_change_permission(request, obj):
+            raise PermissionDenied
+        return HttpResponse(method(request, obj))
 
     # Actions
 
@@ -1844,6 +1883,7 @@ class ModelAdmin(BaseModelAdmin):
                 "save_on_top": self.save_on_top,
                 "view_on_site_url": None if is_popup else self.get_view_on_site_url(obj),
                 "show_history": show_history,
+                "slots": self.get_change_slots(request, obj) if obj and change and not is_popup else {},
                 "delete_url": self.with_preserved_filters(
                     request, reverse(self.url_name("delete"), args=(quote(obj.pk),))
                 )

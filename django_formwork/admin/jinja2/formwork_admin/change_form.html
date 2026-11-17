@@ -50,6 +50,10 @@
 
   {% block form_top %}{% endblock %}
 
+  {% block slot_top %}
+  {% if "top" in slots %}{{ m.slot("top", slots["top"], "changeform", "mb-6") }}{% endif %}
+  {% endblock %}
+
   {#- The history sits right of the fields where both fit, and below them on a narrower page. #}
   <div class="{{ "grid grid-cols-1 gap-6 @min-[66rem]:grid-cols-[minmax(0,1fr)_18rem] @min-[66rem]:items-start" if show_history }}">
     <div class="min-w-0">
@@ -85,6 +89,12 @@
     {% endif %}
   </div>
 </form>
+{#- The bottom slot comes after the form, so it can hold a form of its own. #}
+{% block slot_bottom %}
+{% if "bottom" in slots %}
+<div class="mx-auto {{ "max-w-[83.5rem]" if show_history else "max-w-5xl" }}">{{ m.slot("bottom", slots["bottom"], "changeform", "mt-6") }}</div>
+{% endif %}
+{% endblock %}
 {% if actions %}
 {#- The menu's buttons post this form, which stays outside the change form: forms cannot nest. It loads
     a full page, so an action can answer with a confirmation page or a file. #}

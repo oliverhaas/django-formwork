@@ -53,7 +53,7 @@
 </div>
 
 {% block slot_top %}
-{% if "top" in slots %}<div class="mb-6">{{ m.slot("top", slots["top"]) }}</div>{% endif %}
+{% if "top" in slots %}{{ m.slot("top", slots["top"], class="mb-6") }}{% endif %}
 {% endblock %}
 
 {% block filters %}
@@ -149,6 +149,6 @@
 {% endblock %}
 
 {% block slot_bottom %}
-{% if "bottom" in slots %}<div class="mt-6">{{ m.slot("bottom", slots["bottom"]) }}</div>{% endif %}
+{% if "bottom" in slots %}{{ m.slot("bottom", slots["bottom"], class="mt-6") }}{% endif %}
 {% endblock %}
 {% endblock %}

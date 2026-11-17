@@ -110,6 +110,11 @@ tr:not(:hover, :focus-within) > [data-editable]:not(.formwork-dirty, [data-inval
   transition: opacity 150ms;
 }
 
+/* A lazy slot that loaded nothing. */
+[data-slot]:empty {
+  display: none;
+}
+
 [data-slot].htmx-request:not(:has(> [data-slot-skeleton])) {
   opacity: 0.5;
   transition-delay: 200ms;
