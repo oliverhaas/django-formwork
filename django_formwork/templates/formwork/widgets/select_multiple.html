@@ -13,7 +13,7 @@
   </summary>
   <input type="hidden" name="{{ widget.name }}" value=""{% if widget.disabled %} disabled{% endif %}>{% if widget.search_url %}
   <div x-ref="values" data-name="{{ widget.name }}" hidden>{% for option in widget.selected_options %}<input type="hidden" name="{{ widget.name }}" value="{{ option.value|stringformat:'s' }}"{% if widget.disabled %} disabled{% endif %}>{% endfor %}</div>{% endif %}
-  <div x-ref="panel" popover="manual" class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 max-h-72 overflow-y-auto text-sm">
+  <div x-ref="panel" popover="manual" @mousedown="keepFocus($event)" class="dropdown-content bg-base-100 rounded-box shadow-lg border border-base-300 mt-1 max-h-72 overflow-y-auto text-sm">
     {% include "formwork/widgets/partials/dropdown_search.html" %}
     <ul x-ref="options"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_listbox"{% endif %} role="listbox" aria-multiselectable="true" class="p-1" x-show="!hasError" x-effect="syncRows()" @change="toggle($event)" @mousedown.prevent>{% with options=widget.options truncated=widget.truncated more_url=widget.more_url %}{% partial option_list %}{% endwith %}
     </ul>

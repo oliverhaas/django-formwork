@@ -3,7 +3,7 @@
 // after the last comma is what's being typed.  iconMap is hydrated from
 // data-icons and grows as the user picks icon-bearing suggestions.
 
-import { dropdownBase } from "./_helpers.js";
+import { dropdownBase, outside } from "./_helpers.js";
 
 const splitValues = (v) => v.split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -110,7 +110,7 @@ document.addEventListener("alpine:init", () => {
         if (this.$root.contains(event.relatedTarget)) return;
         this.focused = false;
         // Tabbing to another control closes the list; a click is @click.outside's.
-        if (event.relatedTarget) this.close();
+        if (outside(this.$root, event.relatedTarget)) this.close();
         if (this.multiple) {
           const inp = this.$refs.input;
           inp.value = inp.value.replace(/,\s*$/, "");

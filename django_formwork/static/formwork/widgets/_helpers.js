@@ -161,6 +161,13 @@ const borderHeight = (el) => {
 
 let anchorSeq = 0;
 
+const FOCUSABLE = "input, button, select, textarea, a[href], summary, [tabindex]";
+
+// Whether focus that leaves root moved to another control. A move to an
+// element around root is none: a press on a part of root that takes no focus,
+// such as a scrollbar, focuses the nearest focusable ancestor.
+export const outside = (root, to) => Boolean(to) && !root.contains(to) && !to.contains(root);
+
 // Close any open formwork <details> dropdown when a real click lands outside
 // it, so a click anywhere else on the page (including another dropdown's
 // trigger) dismisses it. Native <details> has no such behaviour, and light
@@ -303,7 +310,13 @@ const baseData = () => ({
   // target (a click on the page, a switch to another window) it stays open:
   // the click listener above handles the click.
   onFocusOut(event) {
-    if (event.relatedTarget && !this.$root.contains(event.relatedTarget)) this.close();
+    if (outside(this.$root, event.relatedTarget)) this.close();
+  },
+
+  // A press on a part of the panel that takes no focus keeps focus where it
+  // is, so the keys still reach the widget after a drag of the scrollbar.
+  keepFocus(event) {
+    if (!this.$root.contains(event.target.closest(FOCUSABLE))) event.preventDefault();
   },
 
   // Anchor names must be unique per instance, so they are inline styles

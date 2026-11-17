@@ -282,3 +282,18 @@ def test_date_picker_escape_and_focus_leaving_close_the_calendar(new_widgets_pag
     expect(panel).to_be_visible()
     new_widgets_page.locator("#id_quantity").focus()
     expect(panel).to_be_hidden()
+
+
+@pytest.mark.e2e
+def test_date_picker_stays_open_after_a_press_between_its_buttons(new_widgets_page):
+    """In a focusable ancestor, a press that takes no focus moves focus to the ancestor, which is no other control."""
+    from playwright.sync_api import expect
+
+    new_widgets_page.evaluate("document.body.tabIndex = -1")
+    panel = new_widgets_page.locator("#id_due_date_datepicker div.dropdown-content")
+    new_widgets_page.locator("#id_due_date").click()
+    expect(panel).to_be_visible()
+    box = panel.bounding_box()
+    assert box is not None
+    new_widgets_page.mouse.click(box["x"] + 3, box["y"] + box["height"] / 2)
+    expect(panel).to_be_visible()

@@ -3,7 +3,7 @@
 // the end whose input has the focus, a start moves on to the end, and an end
 // picked before the start begins the range again there.
 
-import { countText, dropdownBase } from "./_helpers.js";
+import { countText, dropdownBase, outside } from "./_helpers.js";
 import { addMonths, parseIso, readDate, SELECTED, withCalendar } from "./_calendar.js";
 
 const DAY = 86400000;
@@ -211,7 +211,7 @@ document.addEventListener("alpine:init", () => {
           const to = event.relatedTarget;
           if (to && this.$root.contains(to)) return;
           this.commit();
-          if (to) this.close();
+          if (outside(this.$root, to)) this.close();
         },
 
         // --- The calendar ---

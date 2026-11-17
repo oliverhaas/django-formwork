@@ -229,6 +229,14 @@
   hover on an option and no mark on the option the arrow keys reached. The option took
   `base-200`, which DaisyUI's dark theme draws almost like the panel. It now mixes 10%
   of `base-content` into the panel, as DaisyUI's menu does.
+- In Chromium-based browsers, inside a focusable element such as a
+  `<main tabindex="-1">` for a skip link, a press on the scrollbar of a `Select` or
+  `SelectMultiple` closed the list, so the list could not be scrolled with the mouse. A
+  press on an empty part of a `DatePicker` calendar closed the calendar too. The
+  browser moved the focus to the element around the widget, and the widget took that
+  for a move to another control. The panels stay open now, and a list keeps the focus
+  in its search field. If you override `formwork/widgets/select.html` or
+  `formwork/widgets/select_multiple.html`, copy it again.
 - A form with many selects or date pickers, such as a formset with a hundred rows, froze
   the page for seconds while it loaded. Each option row of a `Select`, `SelectMultiple`
   or `ComboBox` had four Alpine bindings, and each date picker built its calendar on

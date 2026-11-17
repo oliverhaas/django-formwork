@@ -46,6 +46,20 @@ def test_short_select_menu_does_not_scroll(dropdowns_page):
 
 
 @pytest.mark.parametrize("name", ["city", "cities"])
+def test_a_press_beside_the_search_keeps_the_list_open_and_the_search_focused(dropdowns_page, name):
+    """In a focusable ancestor, a press that takes no focus, like one on the scrollbar, moves no focus."""
+    dropdowns_page.evaluate("document.body.tabIndex = -1")
+    panel = _open(dropdowns_page, f"id_{name}")
+    search = panel.get_by_role("searchbox")
+    search.focus()
+    box = panel.bounding_box()
+    assert box is not None
+    dropdowns_page.mouse.click(box["x"] + 2, box["y"] + 2)
+    expect(panel).to_be_visible()
+    expect(search).to_be_focused()
+
+
+@pytest.mark.parametrize("name", ["city", "cities"])
 def test_load_more_appends_the_next_page_without_repeating_the_selection(dropdowns_page, name):
     """The selection past the first page is listed once: the next page excludes it."""
     panel = _open(dropdowns_page, f"id_{name}")
