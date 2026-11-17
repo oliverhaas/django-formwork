@@ -1267,14 +1267,29 @@
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
 </span></code></pre></div>
 <ul>
-<li>A <code>Select</code>, <code>SelectMultiple</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>DateRangePicker</code> or
+<li>
+<p>A <code>Select</code>, <code>SelectMultiple</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>DateRangePicker</code> or
   <code>DateTimeRangePicker</code> starts its Alpine component on first use: a press, focus, a
   key, or its list opening. A script that calls <code>Alpine.$data()</code> on such a widget
   before then gets no component, and a write to its <code>data-value</code> or <code>data-selected</code>
   does not show until the widget starts. Dispatch <code>formwork:start</code> on the widget's
   root first, as the <a href="../widgets/#requirements">widget reference</a> shows. If you
   override one of the widget templates, copy it again for the <code>data-formwork-lazy</code>
-  attribute. Without it, the widget starts on load as before.</li>
+  attribute. Without it, the widget starts on load as before.</p>
+</li>
+<li>
+<p><code>formset.as_rows()</code> renders the formset's management form. Remove a
+  <code>{{ formset.management_form }}</code> that a template adds next to the table: the form
+  counts would post twice, and Add another changes only the table's own.</p>
+</li>
+<li>An overridden <code>formwork/tables/table.html</code> or <code>formwork/tables/row.html</code> gets a new
+  context: <code>table</code> and <code>formset</code> for the table, <code>row</code> and <code>form</code> for a row.
+  <code>header_fields</code>, <code>cells</code>, <code>save_url</code> and <code>row_id</code> are no longer in it, and the forms
+  no longer have <code>get_row_context()</code> and <code>row_cells()</code>. Copy the templates again from
+  the package. <code>form.row_id</code> and <code>form.row_hidden_inputs</code> stay for hand-authored rows.</li>
+<li><code>form.as_row()</code> without an argument renders a row that does not save. It no longer
+  reads a <code>save_url</code> that an earlier <code>as_rows(save_url)</code> set on the form, so pass the URL:
+  <code>form.as_row(save_url)</code>.</li>
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1358,6 +1373,16 @@
   next to a slug, with a <code>label_links(name, value, renderer=None)</code> method that returns
   HTML. The field template renders them after the label, not inside it, so they stay out
   of the field's accessible name. The admin puts a relation's Edit and Add links there.</li>
+<li><code>formset.as_rows()</code> edits a whole formset in one table, as the admin's tabular inline
+  does. Add another appends a row from the formset's <code>empty_form</code>, a new row has Remove,
+  and with <code>can_delete</code> a saved row has a Delete toggle that fades the row and strikes it
+  through. A required column has a red asterisk, and the help text shows in a tooltip on
+  the column's header. A cell keeps its errors in a tooltip under the widget, so an
+  invalid row keeps its height, and a changed cell shows the marks of
+  <code>data-formwork-dirty</code>. <code>can_add = False</code> on the formset class removes Add another, and
+  <code>as_rows(flush=True)</code> lays the table out to the edges of a card. The rows need
+  <code>tables.js</code>, which <code>{% formwork_js %}</code> and <code>{{ formset.media }}</code> load. With a
+  <code>save_url</code>, each row still saves by itself, without Add another, Remove or Delete.</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
