@@ -1,0 +1,35 @@
+{% comment %}Under an event's fields (EventAdmin.change_bottom). event_signups_skeleton.html has the same boxes.{% endcomment %}
+<div class="card border border-base-300 bg-base-100">
+  <div class="grid lg:grid-cols-[minmax(0,2fr)_minmax(0,5fr)]">
+    <section class="border-base-300 p-4 max-lg:border-b sm:p-5 lg:border-e" aria-labelledby="event-statuses">
+      <h2 id="event-statuses" class="text-sm leading-5 font-medium">Registrations <span class="font-normal text-base-content/60">{{ total }}</span></h2>
+      <ul class="mt-4 grid gap-3">
+        {% for status in statuses %}
+        <li>
+          <div class="flex items-center justify-between gap-3 text-sm">
+            <span class="badge badge-soft badge-sm {% if status.color == "neutral" %}badge-ghost{% else %}badge-{{ status.color }}{% endif %}">{{ status.label }}</span>
+            <span class="tabular-nums">{{ status.count }} <span class="text-base-content/50">{{ status.share }}%</span></span>
+          </div>
+          <progress class="progress {{ status.bar }} mt-1.5 block h-1" value="{{ status.share }}" max="100" aria-hidden="true"></progress>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    <figure class="block min-w-0 p-4 sm:p-5">
+      <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <figcaption class="truncate text-sm leading-5 font-medium">Sign-ups over time</figcaption>
+        {% if has_seats %}
+        <ul class="flex h-5 shrink-0 items-center gap-4 text-xs text-base-content/60" aria-hidden="true">
+          <li class="flex items-center gap-1.5"><span class="h-0.5 w-3 rounded-full bg-primary"></span>Sign-ups</li>
+          <li class="flex items-center gap-1.5"><span class="w-3 border-t-2 border-dashed border-base-content/40"></span>Seats</li>
+        </ul>
+        {% endif %}
+      </div>
+      {% if chart %}
+      {% include "charts/chart.html" with label="Sign-ups over time" class="mt-4 h-52" %}
+      {% else %}
+      <p class="mt-4 grid h-52 place-items-center text-sm text-base-content/60">Nobody has signed up yet.</p>
+      {% endif %}
+    </figure>
+  </div>
+</div>

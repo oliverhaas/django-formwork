@@ -101,7 +101,8 @@ def seed(rng: random.Random, scale: float) -> str:
         wanted = min(len(contacts), rng.randint(limit // 4, limit + limit // 5))
         past = event.starts_at < now
         for index, contact in enumerate(rng.sample(contacts, wanted)):
-            registered_at = min(now, event.starts_at - timedelta(days=rng.randint(0, 40), hours=rng.randint(0, 23)))
+            # People sign up over the six weeks before the event, or before today for an upcoming one.
+            registered_at = min(now, event.starts_at) - timedelta(days=rng.randint(0, 40), hours=rng.randint(0, 23))
             if index >= limit:
                 status = Registration.Status.WAITLIST
             elif rng.random() < 0.08:

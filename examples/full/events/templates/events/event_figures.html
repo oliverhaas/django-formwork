@@ -1,0 +1,31 @@
+{% comment %}The figures over an event's fields (EventAdmin.change_top).{% endcomment %}
+<dl class="card grid grid-cols-2 border border-base-300 bg-base-100 md:grid-cols-4">
+  <div class="border-e border-b border-base-300 p-4 sm:p-5 md:border-b-0">
+    <dt class="truncate text-sm text-base-content/60">Seats taken</dt>
+    <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{{ taken }}{% if capacity %}<span class="text-lg font-medium text-base-content/50"> / {{ capacity }}</span>{% endif %}</dd>
+    {% if capacity %}<dd class="mt-1.5"><progress class="progress progress-primary block h-1.5" value="{{ filled }}" max="100" aria-label="Seats taken"></progress></dd>{% endif %}
+    <dd class="mt-1.5 truncate text-sm text-base-content/60">{% if capacity %}{{ left }} left{% else %}No seat limit{% endif %}</dd>
+  </div>
+  <div class="border-b border-base-300 p-4 sm:p-5 md:border-e md:border-b-0">
+    <dt class="truncate text-sm text-base-content/60">Wait list</dt>
+    <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{{ waitlist }}</dd>
+    <dd class="mt-1.5 truncate text-sm text-base-content/60">{{ cancelled }} cancelled</dd>
+  </div>
+  <div class="border-e border-base-300 p-4 sm:p-5">
+    {% if upcoming %}
+    <dt class="truncate text-sm text-base-content/60">Starts in</dt>
+    <dd class="mt-1 truncate text-3xl font-semibold tracking-tight">{{ starts_in }}</dd>
+    <dd class="mt-1.5 truncate text-sm text-base-content/60">{{ starts_at|date:"D, M j, H:i" }}</dd>
+    {% else %}
+    <dt class="truncate text-sm text-base-content/60">Attendance</dt>
+    <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{% if attendance is None %}&#8211;{% else %}{{ attendance }}%{% endif %}</dd>
+    <dd class="mt-1.5"><progress class="progress progress-success block h-1.5" value="{{ attendance|default_if_none:0 }}" max="100" aria-label="Attendance"></progress></dd>
+    <dd class="mt-1.5 truncate text-sm text-base-content/60">{{ no_show }} no-shows</dd>
+    {% endif %}
+  </div>
+  <div class="p-4 sm:p-5">
+    <dt class="truncate text-sm text-base-content/60">Revenue</dt>
+    <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{% if revenue %}{{ revenue }}{% else %}Free{% endif %}</dd>
+    <dd class="mt-1.5 truncate text-sm text-base-content/60">{% if revenue %}{{ price }} a seat{% else %}No ticket price{% endif %}</dd>
+  </div>
+</dl>

@@ -34,36 +34,13 @@ the lines under the figures truncate, so the card keeps its height when it loads
           <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-xs bg-primary"></span>Upcoming</li>
         </ul>
       </div>
-      {% if columns %}
-      {# The tooltips name each month's figures, toward the middle of the chart; the table under the chart reads them out. #}
-      <div class="mt-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2" aria-hidden="true">
-        <div class="relative h-40 text-end text-xs tabular-nums text-base-content/50">
-          {% for tick in ticks %}<span class="block h-0 leading-none opacity-0">{{ tick.label }}</span>{% endfor %}
-          {% for tick in ticks %}<span class="absolute end-0 translate-y-1/2 leading-none" style="bottom: {{ tick.at }}%">{{ tick.label }}</span>{% endfor %}
-        </div>
-        <div class="relative h-40">
-          {% for tick in ticks %}<div class="absolute inset-x-0 border-t border-base-content/10" style="bottom: {{ tick.at }}%"></div>{% endfor %}
-          <div class="relative flex h-full items-end">
-            {% for column in columns %}
-            <div class="tooltip {% if column.late %}tooltip-left{% else %}tooltip-right{% endif %} flex h-full min-w-0 flex-1 flex-col items-center justify-end rounded-sm px-px transition-colors hover:bg-base-content/5"
-                 data-tip="{{ column.name }}: {{ column.registrations }} registrations, {{ column.events }} event{{ column.events|pluralize }}">
-              {% if column.upcoming %}<div class="w-full max-w-6 rounded-t-sm bg-primary" style="height: {{ column.upcoming }}%"></div>{% endif %}
-              {% if column.held %}<div class="w-full max-w-6 bg-base-content/25 {% if column.upcoming %}mt-0.5{% else %}rounded-t-sm{% endif %}" style="height: {{ column.held }}%"></div>{% endif %}
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-        <div></div>
-        <div class="mt-1.5 flex h-8 text-center text-xs leading-4 text-base-content/50">
-          {% for column in columns %}
-          <span class="min-w-0 flex-1{% if column.minor %} max-sm:invisible{% endif %}">{{ column.label }}{% if column.year %}<span class="block text-base-content/40">{{ column.year }}</span>{% endif %}</span>
-          {% endfor %}
-        </div>
-      </div>
+      {% if chart %}
+      {# Chart.js draws the columns (taskmanager/charts.js); the table under the chart reads the figures out. #}
+      {% include "charts/chart.html" with label="Registrations by event month" class="mt-4 h-[12.375rem]" %}
       <table class="sr-only">
         <thead><tr><th>Month</th><th>Registrations</th><th>Events</th></tr></thead>
         <tbody>
-          {% for column in columns %}<tr><td>{{ column.name }}</td><td>{{ column.registrations }}</td><td>{{ column.events }}</td></tr>{% endfor %}
+          {% for month in months %}<tr><td>{{ month.name }}</td><td>{{ month.registrations }}</td><td>{{ month.events }}</td></tr>{% endfor %}
         </tbody>
       </table>
       {% else %}

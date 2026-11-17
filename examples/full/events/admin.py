@@ -10,7 +10,7 @@ from django_formwork import admin
 from django_formwork.forms import FormworkForm
 
 from .models import Event, Registration, Venue
-from .stats import event_stats
+from .stats import event_figures, event_signups, event_stats
 
 
 class PostponeForm(FormworkForm):
@@ -103,6 +103,13 @@ class EventAdmin(admin.ModelAdmin):
     @admin.slot(lazy=True, skeleton="events/stats_skeleton.html")
     def list_top(self, request, queryset):
         return render_to_string("events/stats.html", event_stats(queryset), request)
+
+    def change_top(self, request, obj):
+        return render_to_string("events/event_figures.html", event_figures(obj), request)
+
+    @admin.slot(lazy=True, skeleton="events/event_signups_skeleton.html")
+    def change_bottom(self, request, obj):
+        return render_to_string("events/event_signups.html", event_signups(obj), request)
 
     @admin.display(description="Seats", ordering="num_registrations")
     def seats(self, obj):
