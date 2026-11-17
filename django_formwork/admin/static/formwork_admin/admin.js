@@ -8,6 +8,10 @@
 const THEME_KEY = "formwork-admin-theme";
 const TOAST_DELAY = 6000;
 const SEARCH_DELAY = 300;
+// How long the pointer rests on a page link before the page loads, and how long a page link waits
+// for its page before it shows the page's skeleton.
+const INTENT_DELAY = 100;
+const SKELETON_DELAY = 100;
 
 const isTyping = (el) => el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
 
@@ -32,6 +36,36 @@ const control = (form, name) => {
   return item;
 };
 
+// Fills a slug from its source fields until the user edits it; a saved slug stays as it is.
+const prepopulate = (form, field, dependencies, adding) => {
+  const target = control(form, field);
+  const sources = dependencies.map((name) => control(form, name)).filter(Boolean);
+  if (!target || !sources.length) return;
+  let edited = !adding && target.value !== "";
+  const maxLength = Number(target.getAttribute("maxlength")) || 50;
+  target.addEventListener("input", () => {
+    edited = target.value !== "";
+  });
+  const fill = () => {
+    if (edited) return;
+    const text = sources
+      .map((el) => (el.tagName === "SELECT" ? el.selectedOptions[0]?.text ?? "" : el.value))
+      .filter(Boolean)
+      .join(" ");
+    target.value = slugify(text, maxLength);
+  };
+  for (const source of sources) {
+    source.addEventListener("input", fill);
+    source.addEventListener("change", fill);
+  }
+};
+
+// The first control in an element that takes the focus.
+const focusable = (el) =>
+  [...el.querySelectorAll("input:not([type=hidden]), select, textarea, summary, button, [tabindex]")].find(
+    (item) => !item.disabled && item.tabIndex >= 0 && item.checkVisibility({ visibilityProperty: true }),
+  );
+
 const escapeHtml = (text) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -44,6 +78,14 @@ const popupFrame = () => {
   const frame = window.frameElement;
   return frame?.closest("[data-popup-level]") ? frame : null;
 };
+
+// True after a page link gave up its morph and loads the page as a whole. The user has answered
+// the page's own question by then, so the browser's leave prompt stays quiet.
+let leaving = false;
+
+// The files a page's head loads, each by its URL, or by its text for inline code.
+const headFiles = (head) =>
+  new Set([...head.querySelectorAll("script, link[rel~=stylesheet], style")].map((el) => el.src || el.href || el.textContent));
 
 // The window that shows the related-object dialogs: a page in a dialog opens the next one on top of its own.
 const popupHost = () => {
@@ -98,7 +140,12 @@ document.addEventListener("alpine:init", () => {
         const button = document.querySelector("[data-continue]") ?? document.querySelector("[data-save]");
         if (!button) return;
         event.preventDefault();
+        // The server remembers the way a form was saved, but not from the shortcut. The form data is
+        // read during requestSubmit, so the input goes again right after.
+        const shortcut = Object.assign(document.createElement("input"), { type: "hidden", name: "_shortcut", value: "1" });
+        button.form.append(shortcut);
         button.form.requestSubmit(button);
+        shortcut.remove();
       } else if (key === "escape" && !event.defaultPrevented) {
         // In a page in a dialog, Escape closes the dialog, as it does with the focus outside the page.
         const frame = popupFrame();
@@ -115,6 +162,19 @@ document.addEventListener("alpine:init", () => {
 
   Alpine.data("formworkNav", () => ({
     query: "",
+
+    // A page link keeps the sidebar; the next page starts with every model listed and its own in view.
+    init() {
+      this.page = () => {
+        this.query = "";
+        this.$nextTick(() => this.$root.querySelector("[aria-current=page]")?.scrollIntoView({ block: "nearest" }));
+      };
+      document.addEventListener("formwork-admin:page", this.page);
+    },
+
+    destroy() {
+      document.removeEventListener("formwork-admin:page", this.page);
+    },
 
     matches(el) {
       const query = this.query.trim().toLowerCase();
@@ -166,9 +226,10 @@ document.addEventListener("alpine:init", () => {
     init() {
       this.open = this.$root.dataset.open === "1";
       this.last = this.query();
-      // "Clear all filters" morphs the fields empty without an input event, so the next change always counts.
+      // "Clear all filters" and "Clear search" morph the fields empty without an input event, so the next
+      // change always counts.
       this.cleared = (event) => {
-        if (event.target.closest("[data-clear-filters]")) this.last = null;
+        if (event.target.closest("[data-clear-filters], [data-clear-search]")) this.last = null;
       };
       document.addEventListener("click", this.cleared);
     },
@@ -184,7 +245,7 @@ document.addEventListener("alpine:init", () => {
     query() {
       const params = new URLSearchParams();
       for (const [key, value] of new FormData(this.$root)) {
-        if (key !== "o" && value !== "") params.append(key, value);
+        if (key !== "o" && key !== "per_page" && value !== "") params.append(key, value);
       }
       return params.toString();
     },
@@ -217,6 +278,9 @@ document.addEventListener("alpine:init", () => {
     changes: 0,
 
     init() {
+      // After a failed save, the first cell with an error takes the focus, so its message shows.
+      const invalid = this.$root.querySelector("#changelist-form td[data-invalid]");
+      if (invalid) focusable(invalid)?.focus();
       // formwork may have counted before Alpine started.
       this.changes = this.$root.querySelectorAll("#changelist-form .formwork-dirty").length;
       this.$root.addEventListener("formwork:dirty", (event) => {
@@ -230,7 +294,7 @@ document.addEventListener("alpine:init", () => {
         if (event.target.id === "changelist-form") saving = true;
       });
       this.leave = (event) => {
-        if (this.changes && !saving) event.preventDefault();
+        if (this.changes && !saving && !leaving) event.preventDefault();
       };
       this.guard = (event) => {
         const { ctx } = event.detail;
@@ -261,6 +325,11 @@ document.addEventListener("alpine:init", () => {
 
     get count() {
       return this.across ? this.total : this.selected.length;
+    },
+
+    // Selected rows or changed cells: the line with their buttons then sticks to the window's bottom.
+    get pending() {
+      return this.count > 0 || this.changes > 0;
     },
 
     get allChecked() {
@@ -299,62 +368,88 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 
+  // A line that sticks to the window's bottom sits a pixel past the window's edge. It is stuck while the
+  // window shows part of it, and not all, and then shows a shadow over the rows under it.
+  Alpine.data("formworkStuck", () => ({
+    stuck: false,
+
+    init() {
+      this.observer = new IntersectionObserver(
+        ([entry]) => {
+          this.stuck = entry.intersectionRatio > 0 && entry.intersectionRatio < 1;
+        },
+        { threshold: [0, 1] },
+      );
+      this.observer.observe(this.$el);
+    },
+
+    destroy() {
+      this.observer.disconnect();
+    },
+  }));
+
   Alpine.data("formworkChangeForm", () => ({
-    // True after the user changed a field. The page then asks before it leaves, and the actions menu waits.
+    // True while the form has changes. The page then asks before it leaves, the actions menu waits,
+    // and the save bar stays in view.
     dirty: false,
+    // The number of fields that differ from the saved object, on a change form.
+    changes: 0,
 
     init() {
       const form = this.$root;
       const adding = Boolean(form.dataset.add);
       for (const { field, dependencies } of JSON.parse(form.dataset.prepopulated || "[]")) {
-        this.prepopulate(form, field, dependencies, adding);
+        prepopulate(form, field, dependencies, adding);
       }
       // After a failed save, the first field with an error takes the focus, so its message shows.
       form.querySelector('[aria-invalid="true"]:not([type=hidden])')?.focus();
 
-      // A widget sends its own change events, also while it starts. They count only
-      // after the user has pressed a key or a pointer in the form.
-      let used = false;
-      const use = (event) => {
-        if (event.isTrusted) used = true;
-      };
-      const mark = (event) => {
-        if (used || event.isTrusted) this.dirty = true;
-      };
-      form.addEventListener("pointerdown", use);
-      form.addEventListener("keydown", use);
-      form.addEventListener("input", mark);
-      form.addEventListener("change", mark);
+      if (form.hasAttribute("data-formwork-dirty")) {
+        // formwork compares each field with the saved object, so a change put back no longer counts.
+        const count = () => {
+          this.changes = form.querySelectorAll(".formwork-dirty").length;
+          this.dirty = this.changes > 0;
+        };
+        count();
+        form.addEventListener("formwork:dirty", count);
+        // A removed new inline row takes its changes along without a change event.
+        form.addEventListener("formset:removed", count);
+      } else {
+        // A new object has nothing saved to compare with. A widget sends its own change events,
+        // also while it starts, so they count only after the user has pressed a key or a pointer.
+        let used = false;
+        const use = (event) => {
+          if (event.isTrusted) used = true;
+        };
+        const mark = (event) => {
+          if (used || event.isTrusted) this.dirty = true;
+        };
+        form.addEventListener("pointerdown", use);
+        form.addEventListener("keydown", use);
+        form.addEventListener("input", mark);
+        form.addEventListener("change", mark);
+      }
       form.addEventListener("submit", () => {
         this.dirty = false;
       });
-      window.addEventListener("beforeunload", (event) => {
-        if (this.dirty) event.preventDefault();
-      });
+      this.leave = (event) => {
+        if (this.dirty && !leaving) event.preventDefault();
+      };
+      // A page link replaces the form without leaving the page, so it asks here. The form's own
+      // requests keep it.
+      this.guard = (event) => {
+        const { ctx } = event.detail;
+        if (!this.dirty || !(ctx.target instanceof Element) || !ctx.target.contains(form)) return;
+        if (form.contains(ctx.sourceElement)) return;
+        if (!window.confirm(form.dataset.leaveQuestion)) event.preventDefault();
+      };
+      window.addEventListener("beforeunload", this.leave);
+      document.addEventListener("htmx:before:request", this.guard);
     },
 
-    // Fills a slug from its source fields until the user edits it; a saved slug stays as it is.
-    prepopulate(form, field, dependencies, adding) {
-      const target = control(form, field);
-      const sources = dependencies.map((name) => control(form, name)).filter(Boolean);
-      if (!target || !sources.length) return;
-      let edited = !adding && target.value !== "";
-      const maxLength = Number(target.getAttribute("maxlength")) || 50;
-      target.addEventListener("input", () => {
-        edited = target.value !== "";
-      });
-      const fill = () => {
-        if (edited) return;
-        const text = sources
-          .map((el) => (el.tagName === "SELECT" ? el.selectedOptions[0]?.text ?? "" : el.value))
-          .filter(Boolean)
-          .join(" ");
-        target.value = slugify(text, maxLength);
-      };
-      for (const source of sources) {
-        source.addEventListener("input", fill);
-        source.addEventListener("change", fill);
-      }
+    destroy() {
+      window.removeEventListener("beforeunload", this.leave);
+      document.removeEventListener("htmx:before:request", this.guard);
     },
   }));
 
@@ -425,6 +520,15 @@ document.addEventListener("alpine:init", () => {
           this.answer(level, JSON.parse(response.dataset.popupResponse));
           return;
         }
+        // A row of the related list answers as a saved object does; a click with a modifier key
+        // opens the row's page in a new tab or window.
+        doc.addEventListener("click", (event) => {
+          const link = event.target.closest("a[data-popup-pick]");
+          if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          this.close(level);
+          this.answer(level, JSON.parse(link.dataset.popupPick));
+        });
         const title = doc.querySelector("#content h1")?.textContent.trim() || doc.title;
         dialog.setAttribute("aria-label", title);
         frame.title = title;
@@ -479,8 +583,7 @@ document.addEventListener("alpine:init", () => {
     },
 
     // A click with a modifier key opens the full page, in a new tab or window.
-    open(event) {
-      const link = event.currentTarget;
+    open(event, link = event.currentTarget) {
       if (!link.href || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       const url = new URL(link.href);
@@ -503,9 +606,10 @@ document.addEventListener("alpine:init", () => {
       return this.controls().filter((el) => el.type !== "radio" || el.checked).at(-1)?.value ?? "";
     },
 
-    // The change button follows the chosen row. Without one it stays in place, dimmed.
+    // The Edit link follows the chosen row. Without one it stays in place, dimmed. It sits in the
+    // field's label row, or next to the widget in a table cell.
     syncLink() {
-      const link = this.$root.querySelector('[data-related-popup="change"]');
+      const link = this.$root.closest("td, fieldset")?.querySelector('.formwork-label-links [data-related-popup="change"]');
       if (!link) return;
       const value = this.value();
       if (value) {
@@ -531,6 +635,8 @@ document.addEventListener("alpine:init", () => {
     // form, so every relation lists the rows as they are now.
     apply({ action, value, obj, new_value: newValue, chosen }) {
       const field = this.field();
+      // A dropdown that nobody has opened yet starts now, so it follows the writes below.
+      field?.dispatchEvent(new Event("formwork:start"));
       const multiple = field?.classList.contains("formwork-select-multiple");
       if (!field) this.applyToControls({ action, value, newValue, chosen });
       else if (action === "delete") {
@@ -587,6 +693,16 @@ document.addEventListener("alpine:init", () => {
       this.min = Number(this.$root.dataset.min) || 0;
       this.max = Number(this.$root.dataset.max) || 1000;
       this.total = Number(this.totalInput().value);
+      for (const row of this.$refs.rows.querySelectorAll(":scope > [data-inline-row]")) this.prepopulateRow(row);
+    },
+
+    // The prepopulated fields of a row fill from the row's own fields; a renumbering keeps the listeners.
+    prepopulateRow(row) {
+      const form = row.closest("form");
+      for (const { field, dependencies } of JSON.parse(this.$root.dataset.prepopulated || "[]")) {
+        const names = dependencies.map((name) => `${row.id}-${name}`);
+        prepopulate(form, `${row.id}-${field}`, names, row.dataset.inlineRow === "new");
+      }
     },
 
     get canAdd() {
@@ -612,6 +728,7 @@ document.addEventListener("alpine:init", () => {
       this.$refs.rows.insertAdjacentHTML("beforeend", html);
       const row = this.$refs.rows.lastElementChild;
       this.setTotal(this.total + 1);
+      this.prepopulateRow(row);
       row.dispatchEvent(new CustomEvent("formset:added", { bubbles: true, detail: { formsetName: this.prefix } }));
       this.$nextTick(() => row.querySelector("input:not([type=hidden]), select, textarea")?.focus());
     },
@@ -663,4 +780,302 @@ document.addEventListener("htmx:config:request", (event) => {
     if (value !== "") body.append(key, value);
   }
   ctx.request.body = body;
+});
+
+// A page link (data-page-link) morphs the page into the next one, so the sidebar keeps its place.
+document.addEventListener("htmx:config:request", (event) => {
+  const { ctx } = event.detail;
+  const link = ctx.sourceElement?.closest?.("[data-page-link]");
+  if (!link) return;
+  ctx.formworkLink = link;
+  // The page crossfades into the next one, unless the user asked for less motion.
+  ctx.transition = Boolean(document.startViewTransition) && matchMedia("(prefers-reduced-motion: no-preference)").matches;
+});
+
+// A page link loads its page early (hx-preload) when the pointer rests on it, so a pointer that
+// crosses the sidebar loads nothing.
+let intent;
+// The Edit and Add links of a relation sit outside its component, in the label row.
+document.addEventListener("click", (event) => {
+  const link = event.target.closest?.(".formwork-label-links [data-related-popup]");
+  const related = link?.closest("td, fieldset")?.querySelector("[data-related]");
+  if (related) Alpine.$data(related).open(event, link);
+});
+
+document.addEventListener("mouseover", (event) => {
+  const link = event.target.closest?.("[data-page-link]");
+  if (!link || link.contains(event.relatedTarget)) return;
+  clearTimeout(intent);
+  intent = setTimeout(() => link.dispatchEvent(new CustomEvent("formwork-admin:intent")), INTENT_DELAY);
+});
+document.addEventListener("mouseout", (event) => {
+  const link = event.target.closest?.("[data-page-link]");
+  if (link && !link.contains(event.relatedTarget)) clearTimeout(intent);
+});
+
+// The sidebar link of a path's model: the longest link path that starts it, as the server marks it.
+const modelLink = (path) => {
+  let found = null;
+  for (const link of document.querySelectorAll("[data-nav-app] [data-page-link=list]")) {
+    const start = new URL(link.href).pathname;
+    if (path.startsWith(start) && start.length > (found ? new URL(found.href).pathname.length : 0)) found = link;
+  }
+  return found;
+};
+
+// Puts the skeleton of the link's page (skeletons.html) in the content, with the link's title and
+// the model's icon, until the page arrives.
+const showSkeleton = (link) => {
+  const content = document.getElementById("content");
+  const template =
+    document.getElementById(`formwork-admin-skeleton-${link.dataset.pageLink}`) ?? document.getElementById("formwork-admin-skeleton-page");
+  if (!content || !template) return;
+  const skeleton = template.content.cloneNode(true);
+  const heading = skeleton.querySelector("[data-skeleton-title]");
+  const title = link.dataset.pageTitle ?? link.textContent.trim();
+  if (heading && title) heading.textContent = title;
+  const tile = skeleton.querySelector("[data-skeleton-icon]");
+  const icon = modelLink(new URL(link.href).pathname)?.querySelector(".icon");
+  if (tile && icon) {
+    tile.append(icon.cloneNode(true));
+    tile.hidden = false;
+    skeleton.querySelector("[data-skeleton-tile]")?.remove();
+  }
+  content.replaceChildren(skeleton);
+  content.setAttribute("aria-busy", "true");
+  window.scrollTo({ top: 0, behavior: "instant" });
+};
+
+// A page that takes a moment shows its skeleton; a faster or preloaded one replaces the content
+// directly. The sidebar marks the next page's model at once.
+document.addEventListener("htmx:before:request", (event) => {
+  const { ctx } = event.detail;
+  const link = ctx.formworkLink;
+  if (!link) return;
+  // The page is on its way, so a pointer that still rests on the link loads nothing more.
+  clearTimeout(intent);
+  // A form with changes can still keep the page (its guard runs after this listener).
+  queueMicrotask(() => {
+    if (event.defaultPrevented) return;
+    // The drawer of a narrow window closes on the way, so the skeleton shows; after the swap, the
+    // focus leaves the drawer.
+    const drawer = document.getElementById("formwork-admin-nav");
+    if (drawer?.checked) {
+      drawer.checked = false;
+      ctx.formworkDrawn = true;
+    }
+    const current = modelLink(new URL(link.href).pathname);
+    for (const item of document.querySelectorAll("[data-nav-app] [aria-current=page]")) {
+      if (item !== current) item.removeAttribute("aria-current");
+    }
+    current?.setAttribute("aria-current", "page");
+    const showing = document.getElementById("content")?.getAttribute("aria-busy") === "true";
+    ctx.formworkSkeleton = setTimeout(() => showSkeleton(link), showing ? 0 : SKELETON_DELAY);
+  });
+});
+for (const name of ["htmx:after:request", "htmx:finally:request"]) {
+  document.addEventListener(name, (event) => clearTimeout(event.detail.ctx.formworkSkeleton));
+}
+
+// An error page, or a page that needs files this page has not loaded, loads as a whole.
+document.addEventListener("htmx:after:request", (event) => {
+  const { ctx } = event.detail;
+  if (!ctx.formworkLink) return;
+  const head = ctx.text.match(/<head[\s>][\s\S]*?<\/head>/i)?.[0] ?? "";
+  const files = headFiles(new DOMParser().parseFromString(head, "text/html").head);
+  const loaded = headFiles(document.head);
+  // formwork.js imports every widget's module, so a widget's own script tag adds nothing the page lacks.
+  for (const entry of performance.getEntriesByType("resource")) {
+    if (entry.initiatorType === "script" || entry.initiatorType === "link") loaded.add(entry.name);
+  }
+  if (ctx.response.status < 400 && [...files].every((file) => loaded.has(file))) return;
+  event.preventDefault();
+  leaving = true;
+  location.assign(ctx.response.raw.url);
+});
+
+// A page link that gets no answer leaves it to the browser to show why.
+document.addEventListener("htmx:error", (event) => {
+  const { ctx } = event.detail;
+  if (!ctx.formworkLink) return;
+  leaving = true;
+  location.assign(ctx.formworkLink.href);
+});
+
+// A morph keeps the Alpine state of each element it matches. The sidebar and the top bar morph;
+// the next page's content and messages replace the old ones, as a page load would.
+document.addEventListener("htmx:before:swap", (event) => {
+  const { ctx, tasks } = event.detail;
+  const main = ctx.formworkLink && tasks.find((task) => task.type === "main");
+  if (!main) return;
+  for (const id of ["content", "formwork-admin-toasts"]) {
+    const incoming = main.fragment.querySelector(`#${id}`);
+    const current = document.getElementById(id);
+    if (!incoming || !current) continue;
+    const fragment = document.createDocumentFragment();
+    fragment.append(...incoming.childNodes);
+    tasks.push({ type: "partial", fragment, target: current, swapSpec: "innerHTML", sourceElement: ctx.sourceElement });
+  }
+});
+
+document.addEventListener("htmx:after:swap", (event) => {
+  const { ctx } = event.detail;
+  const link = ctx.formworkLink;
+  if (!link) return;
+  document.dispatchEvent(new CustomEvent("formwork-admin:page"));
+  // The focus stays on the link that led here while it shows; otherwise the new content takes it.
+  if (ctx.formworkDrawn || document.activeElement !== link || !link.isConnected) {
+    document.getElementById("content")?.focus({ preventScroll: true });
+  }
+  // A screen reader hears the new page's title, as after a page load.
+  const announcer = document.getElementById("formwork-admin-announcer");
+  if (announcer && ctx.title) announcer.textContent = ctx.title;
+});
+
+// --- The errors of a table cell ---
+// A field in a table cell keeps its errors in DaisyUI's tooltip (the cell_notes macro), so its row
+// keeps its height. The tooltip shows while the pointer rests on the cell or the focus is in it, and
+// Escape hides it. It waits while the cell's own dropdown is open, as that opens where it would.
+// Its box sits in the top layer over the cell's widget, so the table's scroll box does not clip the
+// message; every frame while it shows, the box follows the widget and hides with it under the
+// table's edges.
+const TIP_MARGIN = 8;
+// DaisyUI's tooltip fades out in 0.2s, after a delay of 75ms.
+const TIP_FADE = 300;
+const tip = { hovered: null, focused: null, dismissed: null, cell: null, shown: false, clips: [], frame: 0, timer: 0 };
+
+const tipBox = (cell) => cell?.querySelector(":scope > [data-cell-error]") ?? null;
+
+const invalidCell = (el) => (el instanceof Element ? el.closest("td[data-invalid]") : null);
+
+// The widget, without the cell's padding.
+const tipAnchor = (cell) =>
+  [...cell.children].find((el) => !el.matches("[data-cell-error], [hidden], input[type=hidden]") && el.getClientRects().length) ??
+  cell;
+
+const scrollBoxes = (cell) => {
+  const boxes = [];
+  for (let el = cell.parentElement; el && el !== document.body; el = el.parentElement) {
+    const { overflowX, overflowY } = getComputedStyle(el);
+    if (overflowX !== "visible" || overflowY !== "visible") boxes.push(el);
+  }
+  return boxes;
+};
+
+const placeTip = () => {
+  const { cell } = tip;
+  const box = tipBox(cell);
+  if (!box || !cell.isConnected) return hideTip(true);
+  const widget = tipAnchor(cell).getBoundingClientRect();
+  const view = document.documentElement;
+  const edges = { top: 0, right: view.clientWidth, bottom: view.clientHeight, left: 0 };
+  for (const el of tip.clips) {
+    const rect = el.getBoundingClientRect();
+    edges.top = Math.max(edges.top, rect.top);
+    edges.right = Math.min(edges.right, rect.right);
+    edges.bottom = Math.min(edges.bottom, rect.bottom);
+    edges.left = Math.max(edges.left, rect.left);
+  }
+  // The rows of a long list scroll under the table's header.
+  const head = cell.closest("table")?.tHead;
+  if (head) edges.top = Math.max(edges.top, head.getBoundingClientRect().bottom);
+  const inView = widget.bottom > edges.top && widget.top < edges.bottom && widget.right > edges.left && widget.left < edges.right;
+  const style = `left: ${widget.left}px; top: ${widget.top}px; width: ${widget.width}px; height: ${widget.height}px${inView ? "" : "; visibility: hidden"}`;
+  if (box.getAttribute("style") !== style) box.setAttribute("style", style);
+  // Under the widget, as in a form; above it when the window ends first.
+  const message = box.firstElementChild;
+  const room = message.offsetHeight + 2 * TIP_MARGIN;
+  const above = widget.bottom + room > view.clientHeight && widget.top >= room;
+  box.classList.toggle("tooltip-top", above);
+  box.classList.toggle("tooltip-bottom", !above);
+  // A message wider than the widget stays inside the window; the tail keeps pointing at the widget.
+  const width = message.offsetWidth;
+  const start = widget.left + widget.width / 2 - width / 2;
+  const shift = Math.round(Math.min(Math.max(start, TIP_MARGIN), view.clientWidth - TIP_MARGIN - width) - start);
+  const trans = shift ? `calc(-50% + ${shift}px)` : "";
+  if (message.style.getPropertyValue("--tt-trans") !== trans) message.style.setProperty("--tt-trans", trans);
+  tip.frame = requestAnimationFrame(placeTip);
+};
+
+const showTip = (cell) => {
+  clearTimeout(tip.timer);
+  if (tip.cell !== cell) {
+    hideTip(true);
+    const box = tipBox(cell);
+    tip.cell = cell;
+    tip.clips = scrollBoxes(cell);
+    if (!box.matches(":popover-open")) box.showPopover();
+    placeTip();
+  }
+  tip.shown = true;
+  // A frame after the box opens, so DaisyUI's fade runs.
+  requestAnimationFrame(() => {
+    if (tip.cell === cell && tip.shown) tipBox(cell)?.classList.add("tooltip-open");
+  });
+};
+
+const hideTip = (now) => {
+  const box = tipBox(tip.cell);
+  tip.shown = false;
+  box?.classList.remove("tooltip-open");
+  const close = () => {
+    cancelAnimationFrame(tip.frame);
+    tip.cell = null;
+    if (box?.matches(":popover-open")) box.hidePopover();
+  };
+  clearTimeout(tip.timer);
+  if (now || !tip.cell) close();
+  else tip.timer = setTimeout(close, TIP_FADE);
+};
+
+const updateTip = () => {
+  const cell = [tip.hovered, tip.focused].find(
+    (el) =>
+      el?.isConnected &&
+      el !== tip.dismissed &&
+      tipBox(el) &&
+      !el.querySelector(":popover-open:not([data-cell-error]), details[open]"),
+  );
+  if (cell) showTip(cell);
+  else if (tip.shown) hideTip(false);
+};
+
+document.addEventListener("pointerover", (event) => {
+  const cell = invalidCell(event.target);
+  if (cell === tip.hovered) return;
+  tip.hovered = cell;
+  tip.dismissed = null;
+  updateTip();
+});
+// Otherwise the next element's pointerover tells where the pointer went.
+document.addEventListener("pointerout", (event) => {
+  if (event.relatedTarget || !tip.hovered) return;
+  tip.hovered = null;
+  updateTip();
+});
+document.addEventListener("focusin", (event) => {
+  const cell = invalidCell(event.target);
+  if (cell === tip.focused) return;
+  tip.focused = cell;
+  tip.dismissed = null;
+  updateTip();
+});
+document.addEventListener("focusout", (event) => {
+  if (event.relatedTarget || !tip.focused) return;
+  tip.focused = null;
+  updateTip();
+});
+// A dropdown opens or closes. The toggle event does not bubble, so it is caught on its way down.
+document.addEventListener(
+  "toggle",
+  (event) => {
+    if ((tip.hovered || tip.focused) && !event.target.matches?.("[data-cell-error]")) updateTip();
+  },
+  true,
+);
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !tip.shown || event.defaultPrevented) return;
+  event.preventDefault();
+  tip.dismissed = tip.cell;
+  hideTip(false);
 });

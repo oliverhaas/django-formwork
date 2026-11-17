@@ -1,36 +1,48 @@
-{# The buttons, labels and order of Django's submit_line.html. #}
+{#- The ways to save and the labels of Django's submit_line.html. The main button saves the way this form of the
+    model was last saved, and the menu next to it holds the other ways. #}
 {% set continue_label = _("Save and continue editing") if can_change else _("Save and view") %}
-{% set more = [
-  ("_saveasnew", _("Save as new")) if show_save_as_new else none,
-  ("_addanother", _("Save and add another")) if show_save_and_add_another else none,
+{% set ways = [
+  ("_save", _("Save")) if show_save else none,
   ("_continue", continue_label) if show_save_and_continue else none,
+  ("_addanother", _("Save and add another")) if show_save_and_add_another else none,
+  ("_saveasnew", _("Save as new")) if show_save_as_new else none,
 ]|select|list %}
 <div class="flex flex-wrap items-center gap-2">
-  {% if show_save %}
-  <button type="submit" name="_save" value="1" class="btn btn-primary" data-save>{{ icon("check") }} {{ _("Save") }}</button>
-  {% endif %}
-  {% if more %}
-  {# A phone folds the other ways to save into one menu, so the bar stays a single row. #}
-  <div class="dropdown dropdown-top sm:hidden">
-    <div tabindex="0" role="button" class="btn btn-square" aria-label="{{ _("More ways to save") }}" title="{{ _("More ways to save") }}">{{ icon("ellipsis") }}</div>
-    <ul tabindex="-1" class="dropdown-content menu z-20 mb-2 w-56 rounded-box border border-base-300 bg-base-100 p-1.5 shadow-lg">
-      {% for name, label in more %}
-      <li><button type="submit" name="{{ name }}" value="1">{{ label }}</button></li>
-      {% endfor %}
-    </ul>
+  {% if save_way %}
+  <div class="join relative">
+    <button type="submit" name="{{ save_way }}" value="1" class="btn btn-primary join-item" data-save
+      {%- if save_way == "_continue" %} data-continue title="Ctrl+S" aria-keyshortcuts="Control+S"{% endif %}>{{ icon("check") }} {{ dict(ways)[save_way] }}</button>
+    {% if ways|length > 1 %}
+    {#- The menu lines up with the main button, so it takes its place from the join, not from the trigger. #}
+    <div class="dropdown dropdown-top dropdown-start static">
+      <div tabindex="0" role="button" class="btn btn-primary btn-square join-item border-s border-s-primary-content/20" aria-haspopup="menu" aria-label="{{ _("More ways to save") }}" title="{{ _("More ways to save") }}">{{ icon("chevron-up") }}</div>
+      <ul tabindex="-1" role="menu" class="dropdown-content menu start-0 z-30 mb-1.5 w-76 max-w-[calc(100vw-2rem)] rounded-box border border-base-300 bg-base-100 p-1 shadow-lg">
+        {% for name, label in ways if name != save_way %}
+        <li role="none">
+          <button type="submit" name="{{ name }}" value="1" role="menuitem" class="justify-between gap-6 px-3 py-2"{% if name == "_continue" %} data-continue aria-keyshortcuts="Control+S"{% endif %}>
+            {{- label }}{% if name == "_continue" %}<kbd class="kbd kbd-sm hidden lg:inline-flex" aria-hidden="true">Ctrl S</kbd>{% endif -%}
+          </button>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
   </div>
-  {% endif %}
-  {% if show_save_as_new %}
-  <button type="submit" name="_saveasnew" value="1" class="btn max-sm:hidden">{{ _("Save as new") }}</button>
-  {% endif %}
-  {% if show_save_and_add_another %}
-  <button type="submit" name="_addanother" value="1" class="btn max-sm:hidden">{{ _("Save and add another") }}</button>
-  {% endif %}
-  {% if show_save_and_continue %}
-  <button type="submit" name="_continue" value="1" class="btn max-sm:hidden" data-continue title="Ctrl+S">{{ continue_label }}</button>
   {% endif %}
   {% if show_close %}
   <a href="{{ changelist_url }}" class="btn">{{ _("Close") }}</a>
+  {% endif %}
+  {% if not add and show_save %}
+  {#- Shows while a field differs from the saved object, and keeps its place while hidden. Discard brings
+      the saved values back through the same morph as a refresh. #}
+  <div class="invisible flex items-center gap-1 ps-1" :class="{ invisible: !changes }" data-unsaved>
+    <span class="flex items-center gap-2 text-sm font-medium">
+      <span class="max-sm:sr-only">{{ _("Unsaved changes") }}</span>
+      <span class="badge badge-accent badge-sm min-w-6 tabular-nums" x-text="changes" data-change-count></span>
+    </span>
+    <button type="button" class="btn btn-ghost" :tabindex="changes ? 0 : -1" data-discard
+            hx-get="{{ request.get_full_path() }}" hx-target="#content" hx-swap="innerMorph">{{ _("Discard") }}</button>
+  </div>
   {% endif %}
   {% if delete_url %}
   <a href="{{ delete_url }}" class="btn btn-ghost ml-auto text-error hover:bg-error/10" aria-label="{{ _("Delete") }}">{{ icon("trash") }}<span class="hidden sm:inline">{{ _("Delete") }}</span></a>

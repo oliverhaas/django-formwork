@@ -31,7 +31,6 @@ from django.contrib.admin.utils import (
     quote,
     unquote,
 )
-from django.contrib.auth import get_permission_codename
 from django.core.exceptions import BadRequest, FieldDoesNotExist, FieldError, PermissionDenied, ValidationError
 from django.db import IntegrityError, models, router, transaction
 from django.db.models import prefetch_related_objects
@@ -47,7 +46,7 @@ from django.http import (
     QueryDict,
 )
 from django.urls import NoReverseMatch, path, reverse
-from django.utils.html import format_html
+from django.utils.html import escape, format_html
 from django.utils.inspect import get_func_args
 from django.utils.text import capfirst, get_text_list
 from django.utils.translation import gettext as _
@@ -56,7 +55,7 @@ from django.utils.translation import ngettext
 from django_formwork.admin import exports, formats, history, imports
 from django_formwork.admin.changelist import ERROR_FLAG, PRESERVED_FILTERS_VAR, ChangeList
 from django_formwork.admin.filters import build_filterset, list_filter_path
-from django_formwork.admin.helpers import AdminForm, InlineAdminFormSet
+from django_formwork.admin.helpers import FIRST_OBJECTS, AdminForm, DeletedObject, InlineAdminFormSet
 from django_formwork.admin.info import describe_fields, describe_search, describe_table
 from django_formwork.admin.jinja import AdminTemplateResponse
 from django_formwork.admin.paginator import EstimatedCountPaginator
@@ -222,6 +221,8 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
             can_add_related=related_admin.has_add_permission(request),
             can_change_related=related_admin.has_change_permission(request),
             can_view_related=related_admin.has_view_permission(request),
+            can_lookup_related=db_field.name in self.raw_id_fields
+            and related_admin.has_view_or_change_permission(request),
         )
         return formfield
 
@@ -387,27 +388,29 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
     def opts(self) -> Any:
         return self.model._meta
 
-    def _has_perm(self, request: HttpRequest, action: str) -> bool:
-        codename = get_permission_codename(action, self.opts)
-        return request.user.has_perm(f"{self.opts.app_label}.{codename}")  # ty: ignore[unresolved-attribute]
+    def _has_perm(self, request: HttpRequest, action: str, obj: models.Model | None = None) -> bool:
+        return self.admin_site.has_model_permission(request, self.model, action, obj)
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         return self._has_perm(request, "add")
 
     def has_change_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
-        return self._has_perm(request, "change")
+        return self._has_perm(request, "change", obj)
 
     def has_delete_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
-        return self._has_perm(request, "delete")
+        return self._has_perm(request, "delete", obj)
 
     def has_view_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
-        return self._has_perm(request, "view") or self.has_change_permission(request, obj)
+        return self._has_perm(request, "view", obj) or self.has_change_permission(request, obj)
 
     def has_view_or_change_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
         return self.has_view_permission(request, obj) or self.has_change_permission(request, obj)
 
     def has_module_permission(self, request: HttpRequest) -> bool:
-        return request.user.has_module_perms(self.opts.app_label)  # ty: ignore[unresolved-attribute]
+        # A site's has_model_permission() can grant a model without a permission in its app.
+        return request.user.has_module_perms(self.opts.app_label) or any(  # ty: ignore[unresolved-attribute]
+            self._has_perm(request, action) for action in ("view", "change", "add", "delete")
+        )
 
     def _get_form_for_get_fields(self, request: HttpRequest, obj: models.Model | None) -> Any:
         return self.get_form(request, obj, fields=None)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
@@ -423,6 +426,8 @@ class ModelAdmin(BaseModelAdmin):
     list_filter: Sequence[Any] = ()
     list_select_related: bool | Sequence[str] = False
     list_per_page = 100
+    #: The page sizes the list offers next to its pages, with ``list_per_page`` among them; empty hides the menu.
+    list_per_page_options: Sequence[int] = (25, 50, 100, 250)
     list_max_show_all = 200
     list_editable: Sequence[str] = ()
     #: Load only these columns on the changelist (opt-in: a ``__str__`` that reads a deferred field queries per row).
@@ -451,6 +456,8 @@ class ModelAdmin(BaseModelAdmin):
     change_list_template: str | Sequence[str] | None = None
     delete_confirmation_template: str | Sequence[str] | None = None
     delete_selected_confirmation_template: str | Sequence[str] | None = None
+    #: The page of an action with ``confirm`` or ``form``.
+    action_confirmation_template: str | Sequence[str] | None = None
     object_history_template: str | Sequence[str] | None = None
     import_template: str | Sequence[str] | None = None
     popup_response_template: str | Sequence[str] | None = None
@@ -992,10 +999,12 @@ class ModelAdmin(BaseModelAdmin):
     def get_action_choices(
         self, request: HttpRequest, action_location: ActionLocation = ActionLocation.CHANGE_LIST
     ) -> list[dict[str, Any]]:
-        """The actions as the page draws them: name, label, icon and whether it destroys.
+        """The actions as the page draws them: name, label, icon, help text, and whether it destroys or
+        shows as a button.
 
         The list labels an action with its plural description, the change form with its description.
         """
+        names = model_format_dict(self.opts)
         choices = []
         for action in self._actions_at(request, action_location).values():
             if action_location == ActionLocation.CHANGE_LIST:
@@ -1005,9 +1014,11 @@ class ModelAdmin(BaseModelAdmin):
             choices.append(
                 {
                     "name": action.name,
-                    "label": str(label) % model_format_dict(self.opts),
+                    "label": str(label) % names,
                     "icon": getattr(action.func, "icon", ""),
                     "danger": getattr(action.func, "danger", False),
+                    "help_text": str(getattr(action.func, "help_text", "")) % names,
+                    "button": getattr(action.func, "button", False),
                 }
             )
         return choices
@@ -1037,10 +1048,71 @@ class ModelAdmin(BaseModelAdmin):
         if not select_across:
             queryset = queryset.filter(pk__in=selected)
         func: Callable[..., Any] = actions[name].func
-        response = func(self, request, queryset)
+        form_class = getattr(func, "form", None)
+        if form_class is not None or getattr(func, "confirm", False):
+            posted = request.POST.get("post") == "yes"
+            form = form_class(request.POST if posted else None, prefix="action") if form_class else None
+            if not posted or (form is not None and not form.is_valid()):
+                return self.render_action_page(request, queryset, actions[name], action_location, form)
+            if form is not None:
+                response = func(self, request, queryset, form=form)
+            else:
+                response = func(self, request, queryset)
+        else:
+            response = func(self, request, queryset)
         if hasattr(response, "status_code"):
             return response
         return HttpResponseRedirect(request.get_full_path())
+
+    def render_action_page(
+        self,
+        request: HttpRequest,
+        queryset: models.QuerySet[Any],
+        action: Action,
+        action_location: ActionLocation,
+        form: forms.Form | None,
+    ) -> HttpResponse:
+        """The page an action with ``confirm`` or ``form`` shows before it runs.
+
+        A ``confirm`` question can use the model's names, ``%(count)s`` and ``%(name)s``, the name that
+        agrees with the count.
+        """
+        in_list = action_location == ActionLocation.CHANGE_LIST
+        select_across = in_list and request.POST.get("select_across") == "1"
+        func = action.func
+        count = queryset.count()
+        names = {**model_format_dict(self.opts), "count": count, "name": model_ngettext(self.opts, count)}
+        label = capfirst(str(action.plural_description if in_list else action.description) % names)
+        confirm = getattr(func, "confirm", False)
+        shown = list(queryset[:FIRST_OBJECTS])
+        context = self.page_context(
+            request,
+            title=label,
+            subtitle=None,
+            action={
+                "name": action.name,
+                "label": label,
+                "icon": getattr(func, "icon", ""),
+                "danger": getattr(func, "danger", False),
+                "help_text": str(getattr(func, "help_text", "")) % names,
+                "question": "" if isinstance(confirm, bool) else str(confirm) % names,
+            },
+            action_field="action" if in_list else f"{action_location.value}-action",
+            action_checkbox_name=ACTION_CHECKBOX_NAME,
+            selected=request.POST.getlist(ACTION_CHECKBOX_NAME),
+            select_across=select_across,
+            count=count,
+            objects_name=names["name"],
+            objects=[(o, reverse(self.url_name("change"), args=(quote(o.pk),))) for o in shown],
+            more=max(count - len(shown), 0),
+            object=None if in_list else (shown[0] if shown else None),
+            back_url=request.get_full_path(),
+            form=form,
+            media=self.media + (form.media if form is not None else forms.Media()),
+        )
+        return self.render(
+            request, self._templates(self.action_confirmation_template, "action_confirmation.html"), context
+        )
 
     # Saving
 
@@ -1104,13 +1176,14 @@ class ModelAdmin(BaseModelAdmin):
                 links[model] = ends
         perms_needed: set[str] = set()
 
-        def format_callback(obj: models.Model) -> str:
+        def format_callback(obj: models.Model) -> DeletedObject:
             opts = obj._meta
-            name = capfirst(opts.verbose_name)
             if type(obj) in links:
-                return f"{name}: " + " \u2192 ".join(str(getattr(obj, end)) for end in links[type(obj)])
+                return DeletedObject.of(
+                    obj, escape(" \u2192 ".join(str(getattr(obj, end)) for end in links[type(obj)]))
+                )
             if not self.admin_site.is_registered(type(obj)):
-                return f"{name}: {obj}"
+                return DeletedObject.of(obj, escape(obj))
             if not self.admin_site.get_model_admin(type(obj)).has_delete_permission(request, obj):
                 perms_needed.add(str(opts.verbose_name))
             try:
@@ -1118,9 +1191,9 @@ class ModelAdmin(BaseModelAdmin):
                     f"{self.admin_site.name}:{opts.app_label}_{opts.model_name}_change", args=(quote(obj.pk),)
                 )
             except NoReverseMatch:
-                return f"{name}: {obj}"
-            return format_html(
-                '{}: <a href="{}">{}</a>', name, change_url, display_for_value(str(obj), EMPTY_VALUE_STRING)
+                return DeletedObject.of(obj, escape(obj))
+            return DeletedObject.of(
+                obj, format_html('<a href="{}">{}</a>', change_url, display_for_value(str(obj), EMPTY_VALUE_STRING))
             )
 
         to_delete = collector.nested(format_callback)
@@ -1287,7 +1360,7 @@ class ModelAdmin(BaseModelAdmin):
 
     def _get_obj_does_not_exist_redirect(self, request: HttpRequest, object_id: str) -> HttpResponse:
         msg = _("%(name)s with ID “%(key)s” doesn’t exist. Perhaps it was deleted?") % {
-            "name": self.opts.verbose_name,
+            "name": capfirst(self.opts.verbose_name),
             "key": unquote(object_id),
         }
         self.message_user(request, msg, messages.WARNING)
@@ -1349,7 +1422,7 @@ class ModelAdmin(BaseModelAdmin):
             return response or HttpResponseRedirect(request.get_full_path())
 
         formset = None
-        if self.list_editable and self.has_change_permission(request):
+        if cl.list_editable and self.has_change_permission(request):
             FormSet = self.get_changelist_formset(request)  # noqa: N806
             if request.method == "POST" and "_save" in request.POST:
                 pks = self._get_edited_object_pks(request, FormSet.get_default_prefix())
@@ -1389,11 +1462,16 @@ class ModelAdmin(BaseModelAdmin):
             media=self.media
             + (formset.media if formset is not None else forms.Media())
             + (cl.filter_form.media if cl.filter_form is not None else forms.Media()),
-            export_formats=self.get_export_formats(request) if self.has_export_permission(request) else [],
+            is_popup=cl.is_popup,
+            to_field=cl.to_field,
+            # The dialog picks a row; exports and imports stay on the full page.
+            export_formats=(
+                self.get_export_formats(request) if self.has_export_permission(request) and not cl.is_popup else []
+            ),
             export_url=reverse(self.url_name("export"), current_app=self.admin_site.name),
             import_url=(
                 reverse(self.url_name("import"), current_app=self.admin_site.name)
-                if self.has_import_permission(request) and self.get_import_formats(request)
+                if self.has_import_permission(request) and self.get_import_formats(request) and not cl.is_popup
                 else ""
             ),
             **(extra_context or {}),
@@ -1498,6 +1576,7 @@ class ModelAdmin(BaseModelAdmin):
                     formset,
                     list(inline.get_fieldsets(request, obj)),
                     list(inline.get_readonly_fields(request, obj)),
+                    prepopulated_fields=inline.get_prepopulated_fields(request, obj),
                     has_view_permission=inline.has_view_permission(request, obj),
                     **permissions,
                 ),
@@ -1574,6 +1653,7 @@ class ModelAdmin(BaseModelAdmin):
                     self.save_model(request, new_object, form, not add)
                     self.save_related(request, form, formsets, not add)
                     change_message = self.construct_change_message(request, form, formsets, add)
+                    self._remember_save_way(request, add)
                     if add:
                         self.log_addition(request, new_object, change_message)
                         return self.response_add(request, new_object)
@@ -1637,6 +1717,23 @@ class ModelAdmin(BaseModelAdmin):
             add = False
         return self.render_change_form(request, context, add=add, change=not add, obj=obj, form_url=form_url)
 
+    def _save_way_key(self, add: bool) -> str:
+        return f"formwork_admin:save:{self.opts.label_lower}:{'add' if add else 'change'}"
+
+    def _remember_save_way(self, request: HttpRequest, add: bool) -> None:
+        """Keep the button a form was saved with, so the next add or change form of the model offers it first.
+
+        Save as new is never kept, and a dialog and the keyboard shortcut leave the choice as it was.
+        """
+        if "_shortcut" in request.POST or IS_POPUP_VAR in request.POST:
+            return
+        key = self._save_way_key(add)
+        way = next((name for name in ("_continue", "_addanother") if name in request.POST), None)
+        if way and request.session.get(key) != way:
+            request.session[key] = way
+        elif not way and "_save" in request.POST:
+            request.session.pop(key, None)
+
     def render_change_form(
         self,
         request: HttpRequest,
@@ -1660,6 +1757,18 @@ class ModelAdmin(BaseModelAdmin):
         show_history = bool(obj) and not is_popup and self.has_view_or_change_permission(request, obj)
         if show_history and obj is not None:
             context.update(self._history_context(request, obj, 0))
+        ways = {
+            "_save": show_save,
+            "_continue": not is_popup and can_save and has_view and context.get("show_save_and_continue", True),
+            "_addanother": can_add
+            and not is_popup
+            and (not self.save_as or add)
+            and can_save
+            and context.get("show_save_and_add_another", True),
+            "_saveasnew": change and not is_popup and self.save_as and can_add,
+        }
+        shown = [name for name, show in ways.items() if show]
+        remembered = request.session.get(self._save_way_key(add))
         context.update(
             {
                 "add": add,
@@ -1689,16 +1798,11 @@ class ModelAdmin(BaseModelAdmin):
                 and self.has_delete_permission(request, obj)
                 else "",
                 "show_save": show_save,
-                "show_save_and_continue": not is_popup
-                and can_save
-                and has_view
-                and context.get("show_save_and_continue", True),
-                "show_save_and_add_another": can_add
-                and not is_popup
-                and (not self.save_as or add)
-                and can_save
-                and context.get("show_save_and_add_another", True),
-                "show_save_as_new": change and not is_popup and self.save_as and can_add,
+                "show_save_and_continue": ways["_continue"],
+                "show_save_and_add_another": ways["_addanother"],
+                "show_save_as_new": ways["_saveasnew"],
+                # The main save button: the one this form of the model was last saved with, or Save.
+                "save_way": remembered if remembered in shown else next(iter(shown), None),
                 "show_close": not show_save,
                 "can_change": has_change or editable_inlines,
             }
@@ -1866,10 +1970,7 @@ class InlineModelAdmin(BaseModelAdmin):
             if field.remote_field and field.remote_field.model != self.parent_model:
                 opts = field.remote_field.model._meta
                 break
-        return any(
-            request.user.has_perm(f"{opts.app_label}.{get_permission_codename(perm, opts)}")  # ty: ignore[unresolved-attribute]
-            for perm in perms
-        )
+        return any(self.admin_site.has_model_permission(request, opts.model, perm) for perm in perms)
 
     def get_formset(
         self, request: HttpRequest, obj: models.Model | None = None, **kwargs: Any

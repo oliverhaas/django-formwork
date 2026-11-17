@@ -4,8 +4,10 @@ import re
 
 import django_filters
 import pytest
+from admin_app.admin import TagAdmin
 from admin_app.models import Category, Item, Part, Tag
 from django import forms
+from django.core.exceptions import PermissionDenied
 from django.db.models import ForeignKey
 from django.utils import timezone
 from playwright.sync_api import expect
@@ -47,6 +49,27 @@ def test_selection_works_after_a_search_swap(admin_page, live_server, kitchen):
     admin_page.locator("#changelist tbody input[type=checkbox]").first.click()
 
     expect(admin_page.locator("#changelist-actions")).to_contain_text("1 selected")
+    assert admin_page.errors == []
+
+
+def test_a_page_size_picked_under_the_list_stays_through_a_search(admin_page, live_server, kitchen, monkeypatch):
+    item_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(item_admin, "list_per_page", 1)
+    monkeypatch.setattr(item_admin, "list_per_page_options", (2,))
+    for name in ("Kettle", "Toaster", "Kettle lid"):
+        Item.objects.create(name=name, category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    rows = admin_page.locator("#changelist tbody tr")
+    expect(rows).to_have_count(1)
+
+    admin_page.get_by_label("Rows per page").click()
+    admin_page.get_by_role("option", name="2", exact=True).click()
+    expect(admin_page).to_have_url(re.compile(r"\?per_page=2$"))
+    expect(rows).to_have_count(2)
+
+    admin_page.locator("[data-search] input:not([type=hidden])").fill("kettle")
+    expect(admin_page).to_have_url(re.compile(r"\?(?=.*q=kettle)(?=.*per_page=2)"))
+    expect(rows).to_have_count(2)
     assert admin_page.errors == []
 
 
@@ -136,25 +159,81 @@ def test_columns_that_do_not_fit_hide_behind_a_toggle(admin_page, live_server, k
     assert admin_page.errors == []
 
 
-def test_changed_cells_show_in_the_save_bar_until_discarded(admin_page, live_server, kitchen):
+def test_a_cell_that_a_script_widens_before_the_page_loads_fits_the_columns_again(admin_page, live_server, kitchen):
+    """A script that fills a cell after the table is parsed gets the columns fitted to it on load."""
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.set_viewport_size({"width": 1280, "height": 800})
+    url = f"{live_server.url}/admin/admin_app/item/"
+    released = admin_page.locator("#changelist-table thead th", has_text="Released")
+    admin_page.goto(url)
+    expect(released).to_be_visible()
+    script = "<script>document.querySelector('#changelist-table > tbody a').textContent = 'K'.repeat(160);</script>"
+
+    def widen(route):
+        response = route.fetch()
+        route.fulfill(response=response, body=response.text().replace("</body>", f"{script}</body>"))
+
+    admin_page.route(url, widen)
+    admin_page.goto(url)
+
+    expect(released).to_be_hidden()
+    assert admin_page.errors == []
+
+
+def test_a_list_that_a_link_loads_shows_only_the_columns_that_fit_from_its_first_frame(
+    admin_page, live_server, kitchen
+):
+    """No frame of the crossfade to the list shows a column that then hides."""
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.set_viewport_size({"width": 480, "height": 800})
+    admin_page.goto(f"{live_server.url}/admin/")
+    admin_page.evaluate("""() => {
+        window.columns = [];
+        const sample = () => {
+            const cells = document.querySelectorAll("#changelist-table > thead > tr > th");
+            if (cells.length) window.columns.push([...cells].filter((cell) => cell.checkVisibility()).length);
+            requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+        window.swapped = new Promise((resolve) => document.addEventListener("htmx:after:swap", resolve, { once: true }));
+    }""")
+    admin_page.locator("label.drawer-button").click()
+
+    model_list(admin_page).get_by_role("link", name="Items").click()
+
+    admin_page.evaluate(
+        "window.swapped.then(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))"
+    )
+    expect(admin_page.locator("#changelist-table thead th", has_text="Released")).to_be_hidden()
+    assert len(set(admin_page.evaluate("window.columns"))) == 1
+    assert admin_page.errors == []
+
+
+def test_changed_cells_are_counted_under_the_list_until_discarded(admin_page, live_server, kitchen):
     for name in ("Kettle", "Toaster"):
         Item.objects.create(name=name, category=kitchen, quantity=3)
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
     bar = admin_page.locator("[data-save-bar]")
-    quantities = admin_page.locator("#changelist-table [data-editable] input")
-    expect(bar).to_be_hidden()
-
     count = bar.locator("[data-change-count]")
+    save = bar.get_by_role("button", name="Save changes")
+    discard = bar.get_by_role("button", name="Discard")
+    quantities = admin_page.locator("#changelist-table [data-editable] input")
+    expect(count).to_have_text("0")
+    expect(save).to_be_disabled()
+    expect(discard).to_be_disabled()
+
     quantities.nth(0).fill("5")
     quantities.nth(1).fill("7")
     expect(count).to_have_text("2")
+    expect(save).to_be_enabled()
     expect(admin_page.locator("#changelist-table td.formwork-dirty")).to_have_count(2)
 
     quantities.nth(1).fill("3")
     expect(count).to_have_text("1")
 
-    bar.get_by_role("button", name="Discard").click()
-    expect(bar).to_be_hidden()
+    discard.click()
+    expect(count).to_have_text("0")
+    expect(save).to_be_disabled()
     expect(quantities.nth(0)).to_have_value("3")
     expect(admin_page.locator("#changelist-table td.formwork-dirty")).to_have_count(0)
     assert admin_page.errors == []
@@ -163,17 +242,132 @@ def test_changed_cells_show_in_the_save_bar_until_discarded(admin_page, live_ser
 def test_list_actions_wait_until_the_changes_are_saved(admin_page, live_server, kitchen):
     item = Item.objects.create(name="Kettle", category=kitchen, quantity=3)
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
-    activate = admin_page.locator("#changelist-actions").get_by_role("button", name="Mark selected items as active")
+    actions = admin_page.locator("#changelist-actions")
+    delete = actions.get_by_role("button", name="Delete", exact=True)
+    menu = actions.get_by_role("button", name="Actions")
+    expect(delete).to_be_disabled()
+    expect(menu).to_have_attribute("aria-disabled", "true")
     admin_page.locator("#changelist tbody input[type=checkbox]").click()
-    expect(activate).to_be_enabled()
+    expect(delete).to_be_enabled()
+    expect(menu).to_have_attribute("aria-disabled", "false")
 
     admin_page.locator("#changelist-table [data-editable] input").fill("5")
-    expect(activate).to_be_disabled()
+    expect(delete).to_be_disabled()
+    expect(menu).to_have_attribute("aria-disabled", "true")
 
     admin_page.get_by_role("button", name="Save changes").click()
     expect(admin_page.get_by_role("status").filter(has_text="was changed successfully")).to_be_visible()
     item.refresh_from_db()
     assert item.quantity == 5
+    assert admin_page.errors == []
+
+
+def test_a_list_save_that_failed_saves_after_the_fix(admin_page, live_server, kitchen):
+    item = Item.objects.create(name="Kettle", category=kitchen, quantity=3)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    quantity = admin_page.locator("#changelist-table [data-editable] input")
+    save = admin_page.get_by_role("button", name="Save changes")
+    quantity.fill("-1")
+    save.click()
+    expect(quantity).to_have_attribute("aria-invalid", "true")
+    expect(admin_page.locator("[data-change-count]")).to_have_text("1")
+    expect(save).to_be_enabled()
+
+    quantity.fill("4")
+    save.click()
+
+    expect(admin_page.get_by_role("status").filter(has_text="was changed successfully")).to_be_visible()
+    item.refresh_from_db()
+    assert item.quantity == 4
+    assert admin_page.errors == []
+
+
+def test_a_list_cell_error_shows_in_a_tooltip_and_keeps_the_row_height(admin_page, live_server, kitchen):
+    Item.objects.create(name="Kettle", category=kitchen, quantity=3)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    row = admin_page.locator("#changelist-table tbody tr[data-pk]")
+    quantity = row.locator("[data-editable] input")
+    height = row.bounding_box()["height"]
+    quantity.fill("-1")
+    admin_page.get_by_role("button", name="Save changes").click()
+
+    tooltip = admin_page.get_by_role("tooltip")
+    expect(quantity).to_be_focused()
+    expect(tooltip).to_contain_text("greater than")
+    expect(tooltip).to_have_css("opacity", "1")
+    assert tooltip.bounding_box()["y"] >= quantity.bounding_box()["y"] + quantity.bounding_box()["height"]
+    assert row.bounding_box()["height"] == height
+
+    admin_page.keyboard.press("Escape")
+    expect(tooltip).to_be_hidden()
+    quantity.hover()
+    expect(tooltip).to_have_css("opacity", "1")
+    assert admin_page.errors == []
+
+
+def test_an_editable_list_shows_the_fields_of_the_hovered_row_and_of_changed_cells(
+    admin_page, live_server, kitchen, monkeypatch
+):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable", ["status", "quantity"])
+    Item.objects.create(name="Kettle", category=kitchen, quantity=3)
+    Item.objects.create(name="Mug", category=kitchen, quantity=5)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    rows = admin_page.locator("#changelist-table tbody tr[data-pk]")
+    kettle = rows.filter(has_text="Kettle")
+    status = kettle.locator("summary")
+    quantity = kettle.locator("[name$=-quantity]")
+    no_border = "rgba(0, 0, 0, 0)"
+    admin_page.mouse.move(0, 0)
+    expect(status).to_have_css("border-top-color", no_border)
+    expect(quantity).to_have_css("border-top-color", no_border)
+
+    kettle.get_by_role("link", name="Kettle").hover()
+    expect(status).not_to_have_css("border-top-color", no_border)
+
+    quantity.fill("4")
+    quantity.blur()
+    rows.filter(has_text="Mug").get_by_role("link", name="Mug").hover()
+    expect(status).to_have_css("border-top-color", no_border)
+    expect(quantity).not_to_have_css("border-top-color", no_border)
+    assert admin_page.errors == []
+
+
+def test_an_editable_value_lines_up_with_its_column_header(admin_page, live_server, kitchen, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable", ["status", "quantity", "is_featured"])
+    Item.objects.create(name="Kettle", category=kitchen, quantity=3)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    head = admin_page.locator("#changelist-table thead")
+    row = admin_page.locator("#changelist-table tbody tr[data-pk]")
+    status = row.locator("summary [x-text=triggerText]").bounding_box()
+    quantity_end = row.locator("[name$=-quantity]").evaluate(
+        "el => el.getBoundingClientRect().right - parseFloat(getComputedStyle(el).borderRightWidth) - parseFloat(getComputedStyle(el).paddingRight)"
+    )
+    featured = row.locator("[name$=-is_featured]").bounding_box()
+    status_head = head.get_by_role("link", name="Status").bounding_box()
+    quantity_head = head.get_by_role("link", name="Quantity").bounding_box()
+    featured_head = head.get_by_role("link", name="Is featured").bounding_box()
+
+    assert status["x"] == pytest.approx(status_head["x"], abs=0.5)
+    assert quantity_end == pytest.approx(quantity_head["x"] + quantity_head["width"], abs=0.5)
+    assert featured["x"] == pytest.approx(featured_head["x"], abs=0.5)
+
+
+def test_an_inline_cell_error_shows_in_a_tooltip(admin_page, live_server, kitchen):
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    Part.objects.create(item=item, name="Lid")
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
+    quantity = admin_page.locator("[name=parts-0-quantity]")
+    row = admin_page.locator("#parts-0 tr")
+    height = row.bounding_box()["height"]
+    quantity.fill("-1")
+    admin_page.get_by_role("button", name="Save", exact=True).click()
+
+    expect(quantity).to_have_attribute("aria-invalid", "true")
+    tooltip = admin_page.get_by_role("tooltip")
+    quantity.hover()
+    expect(tooltip).to_contain_text("greater than")
+    expect(tooltip).to_have_css("opacity", "1")
+    assert row.bounding_box()["height"] == height
     assert admin_page.errors == []
 
 
@@ -200,18 +394,83 @@ def test_other_results_ask_before_they_replace_the_changes(admin_page, live_serv
     assert admin_page.errors == []
 
 
-def test_a_long_list_scrolls_its_rows_under_the_header(admin_page, live_server, kitchen):
+def test_a_long_list_fits_the_window_from_the_first_frame_and_scrolls_under_the_header(
+    admin_page, live_server, kitchen
+):
+    """A held admin.js keeps the page from DOMContentLoaded, as a slow connection does."""
     Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen) for i in range(40))
     admin_page.set_viewport_size({"width": 1280, "height": 720})
-    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    held = []
+
+    def hold(route):
+        held.append(route)
+
+    admin_page.route("**/formwork_admin/admin.js", hold)
+    admin_page.add_init_script(
+        "requestAnimationFrame(() => { window.firstFrame = document.documentElement.scrollHeight })"
+    )
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/", wait_until="commit")
+    admin_page.wait_for_function("window.firstFrame !== undefined")
+    first_frame = admin_page.evaluate("window.firstFrame")
+    for route in held:
+        route.continue_()
+    admin_page.wait_for_load_state()
+    assert first_frame <= 720
     header = admin_page.locator("#changelist-table thead th", has_text="Name")
     top = header.bounding_box()["y"]
 
     admin_page.locator("#changelist-scroll").evaluate("(el) => el.scrollBy(0, 400)")
 
-    expect(admin_page.locator("#changelist-footer")).to_be_in_viewport()
+    expect(admin_page.locator("#changelist-footer [data-pending]")).to_be_in_viewport()
     assert admin_page.evaluate("document.documentElement.scrollHeight") <= 720
     assert header.bounding_box()["y"] == top
+    assert admin_page.errors == []
+
+
+def test_a_long_list_on_a_phone_keeps_the_selection_and_the_save_in_view(admin_page, live_server, kitchen):
+    """A phone scrolls the page past the rows, so the line under them sticks while it has work."""
+    Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen, quantity=3) for i in range(40))
+    admin_page.set_viewport_size({"width": 390, "height": 700})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    actions = admin_page.locator("#changelist-actions")
+    delete = actions.get_by_role("button", name="Delete", exact=True)
+    save = admin_page.locator("[data-save-bar]").get_by_role("button", name="Save", exact=True)
+    expect(delete).not_to_be_in_viewport()
+
+    admin_page.locator("#changelist-table input[data-index='0']").check()
+    expect(delete).to_be_in_viewport()
+    expect(delete).to_be_enabled()
+
+    actions.get_by_role("button", name="Clear selection").click()
+    expect(delete).not_to_be_in_viewport()
+
+    admin_page.locator("#changelist-table [data-col-toggle] button").click()
+    admin_page.locator("#changelist-table input[name='form-0-quantity']").fill("5")
+    expect(save).to_be_in_viewport()
+    expect(save).to_be_enabled()
+    assert admin_page.errors == []
+
+
+def test_a_long_list_takes_its_height_back_when_the_filters_close(admin_page, live_server, kitchen):
+    Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen) for i in range(40))
+    admin_page.set_viewport_size({"width": 1280, "height": 1000})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    admin_page.wait_for_load_state("networkidle")
+    scroller = admin_page.locator("#changelist-scroll")
+    row = admin_page.locator("#changelist-filter-row")
+    toggle = admin_page.get_by_role("button", name="Filters")
+    frames = "() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))"
+    fitted = scroller.bounding_box()["height"]
+
+    toggle.click()
+    expect(row).to_be_visible()
+    admin_page.evaluate(frames)
+    assert scroller.bounding_box()["height"] < fitted
+    toggle.click()
+    expect(row).to_be_hidden()
+    admin_page.evaluate(frames)
+
+    assert scroller.bounding_box()["height"] == fitted
     assert admin_page.errors == []
 
 
@@ -221,6 +480,180 @@ def test_ctrl_k_opens_the_navigation_filter_on_a_phone(admin_page, live_server):
 
     admin_page.keyboard.press("Control+k")
     expect(admin_page.locator("#formwork-admin-nav-filter")).to_be_focused()
+    assert admin_page.errors == []
+
+
+def model_list(page):
+    return page.get_by_role("navigation", name="Models").locator("div:has(> ul[data-nav-app])")
+
+
+def test_a_sidebar_link_changes_the_page_and_leaves_the_sidebar_where_it_was(admin_page, live_server):
+    admin_page.set_viewport_size({"width": 1280, "height": 320})
+    admin_page.goto(f"{live_server.url}/admin/")
+    models = model_list(admin_page)
+    models.evaluate("(el) => el.scrollTo(0, el.scrollHeight)")
+    top = models.evaluate("(el) => el.scrollTop")
+    admin_page.evaluate("window.unloaded = false")
+
+    models.get_by_role("link", name="Items").click()
+
+    expect(admin_page.locator("h1")).to_have_text("Items")
+    expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
+    expect(admin_page).to_have_title(re.compile(r"^Items"))
+    expect(models.locator("[aria-current=page]")).to_have_text("Items")
+    assert models.evaluate("(el) => el.scrollTop") == top > 0
+    assert admin_page.evaluate("window.unloaded") is False
+
+    admin_page.go_back()
+    expect(admin_page.locator("h1")).to_have_text("Dashboard")
+    assert models.evaluate("(el) => el.scrollTop") == top
+    assert admin_page.errors == []
+
+
+def test_a_sidebar_link_starts_the_next_list_without_the_last_selection(admin_page, live_server, kitchen):
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    Tag.objects.create(pk=item.pk, name="eco")
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    admin_page.locator("#changelist tbody input[type=checkbox]").click()
+    expect(admin_page.locator("#changelist-actions")).to_contain_text("1 selected")
+    admin_page.evaluate("window.unloaded = false")
+
+    model_list(admin_page).get_by_role("link", name="Tags").click()
+
+    expect(admin_page.locator("#changelist tbody")).to_contain_text("eco")
+    expect(admin_page.locator("#changelist tbody input[type=checkbox]")).not_to_be_checked()
+    expect(admin_page.locator("#changelist-actions")).to_contain_text("0 selected")
+    assert admin_page.evaluate("window.unloaded") is False
+    assert admin_page.errors == []
+
+
+def forbidden(self, request):
+    raise PermissionDenied
+
+
+@pytest.mark.parametrize("change", ["files", "error"])
+def test_a_sidebar_link_loads_the_whole_page_when_it_needs_new_files_or_fails(
+    admin_page, live_server, monkeypatch, change
+):
+    """A page with files of its own, or an error page, is not morphed into this one."""
+    if change == "files":
+        media = forms.Media(js=[forms.Script("formwork/sections.js", type="module")])
+        monkeypatch.setattr(TagAdmin, "media", property(lambda self: media))
+    else:
+        monkeypatch.setattr(TagAdmin, "get_queryset", forbidden)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    admin_page.evaluate("window.unloaded = false")
+
+    model_list(admin_page).get_by_role("link", name="Tags").click()
+
+    expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/tag/")
+    admin_page.wait_for_function("window.unloaded === undefined", timeout=5000)
+
+
+def hold(page, url):
+    """Holds the responses for url until each held route continues."""
+    routes = []
+
+    def keep(route):
+        routes.append(route)
+
+    page.route(url, keep)
+    return routes
+
+
+@pytest.mark.parametrize("slow", [False, True], ids=["fast", "slow"])
+def test_a_sidebar_link_on_a_phone_closes_the_navigation(admin_page, live_server, slow):
+    """The navigation closes at the tap, so a slow page shows its skeleton; the page then takes the focus."""
+    admin_page.set_viewport_size({"width": 390, "height": 800})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    admin_page.locator("label.drawer-button").click()
+    models = model_list(admin_page)
+    routes = hold(admin_page, f"{live_server.url}/admin/admin_app/tag/") if slow else []
+
+    models.get_by_role("link", name="Tags").click()
+
+    if slow:
+        expect(models).to_be_hidden()
+        expect(admin_page.locator("#content")).to_have_attribute("aria-busy", "true")
+    for route in routes:
+        route.continue_()
+    expect(admin_page.locator("h1")).to_have_text("Tags")
+    expect(models).to_be_hidden()
+    expect(admin_page.locator("#content")).to_be_focused()
+    assert admin_page.errors == []
+
+
+def test_the_sidebar_shows_the_current_model_on_a_page_load(admin_page, live_server):
+    admin_page.set_viewport_size({"width": 1280, "height": 320})
+
+    admin_page.goto(f"{live_server.url}/admin/admin_app/tag/")
+
+    expect(model_list(admin_page).locator("[aria-current=page]")).to_be_in_viewport(ratio=1)
+    assert admin_page.errors == []
+
+
+SKELETON_PAGES = {
+    "list": ("/admin/", '[data-nav-app] a[href="/admin/admin_app/item/"]', "", "Items"),
+    "change": ("/admin/admin_app/item/", "#changelist tbody a", "{pk}/change/", ""),
+    "add": ("/admin/admin_app/item/", '#content a[href="/admin/admin_app/item/add/"]', "add/", ""),
+}
+
+
+@pytest.mark.parametrize("kind", SKELETON_PAGES)
+def test_a_slow_page_shows_its_skeleton_until_it_arrives(admin_page, live_server, kitchen, kind):
+    start, link, target, heading = SKELETON_PAGES[kind]
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    url = f"{live_server.url}/admin/admin_app/item/{target.format(pk=item.pk)}"
+    admin_page.goto(f"{live_server.url}{start}")
+    routes = hold(admin_page, url)
+    content = admin_page.locator("#content")
+
+    admin_page.locator(link).click()
+
+    expect(content).to_have_attribute("aria-busy", "true")
+    expect(content.locator("h1")).to_have_text(heading)
+    expect(content.locator("[data-skeleton-icon] .icon")).to_be_visible()
+    expect(model_list(admin_page).locator("[aria-current=page]")).to_have_text("Items")
+    for route in routes:
+        route.continue_()
+    expect(admin_page).to_have_url(url)
+    expect(content.locator("[data-skeleton-icon]")).to_have_count(0)
+    expect(content).not_to_have_attribute("aria-busy", "true")
+    assert admin_page.errors == []
+
+
+def test_a_link_under_the_pointer_loads_its_page_before_the_click(admin_page, live_server):
+    """The click takes the loaded page, and no skeleton shows, then or later."""
+    url = f"{live_server.url}/admin/admin_app/tag/"
+    admin_page.goto(f"{live_server.url}/admin/")
+    requests = []
+    admin_page.on("request", lambda request: requests.append(request) if request.url == url else None)
+    link = model_list(admin_page).get_by_role("link", name="Tags")
+    with admin_page.expect_response(url):
+        link.hover()
+    admin_page.evaluate(
+        "new MutationObserver(() => { window.busy = true }).observe(document.getElementById('content'), {attributeFilter: ['aria-busy']})"
+    )
+
+    link.click()
+
+    expect(admin_page.locator("h1")).to_have_text("Tags")
+    admin_page.wait_for_timeout(300)
+    assert len(requests) == 1
+    assert admin_page.evaluate("window.busy") is None
+    assert admin_page.errors == []
+
+
+def test_a_link_that_a_form_with_changes_holds_back_leaves_the_sidebar(admin_page, live_server, kitchen):
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/add/")
+    admin_page.locator("[name=name]").fill("Kettle")
+    models = model_list(admin_page)
+
+    admin_page.once("dialog", lambda prompt: prompt.dismiss())
+    models.get_by_role("link", name="Tags").click()
+
+    expect(models.locator("[aria-current=page]")).to_have_text("Items")
+    expect(admin_page.locator("[name=name]")).to_have_value("Kettle")
     assert admin_page.errors == []
 
 
@@ -241,7 +674,7 @@ def related_dialog(page):
 
 def test_a_category_added_in_the_dialog_is_chosen_and_saved(admin_page, live_server, kitchen):
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/add/")
-    field = admin_page.locator('[data-related="admin_app.category"]')
+    field = admin_page.locator("#id_category_field")
 
     field.get_by_role("link", name="Add another category").click()
     dialog = related_dialog(admin_page)
@@ -252,7 +685,7 @@ def test_a_category_added_in_the_dialog_is_chosen_and_saved(admin_page, live_ser
     expect(admin_page.locator("dialog")).to_have_count(0)
     garden = Category.objects.get(name="Garden")
     expect(field.locator("summary")).to_match_aria_snapshot("- text: Garden")
-    expect(field.get_by_role("link", name="Change selected category")).to_have_attribute(
+    expect(field.get_by_role("link", name="Edit selected category")).to_have_attribute(
         "href", f"/admin/admin_app/category/{garden.pk}/change/"
     )
     admin_page.locator("[name=name]").fill("Spade")
@@ -266,7 +699,7 @@ def test_a_category_added_in_the_dialog_is_chosen_in_a_radio_list(admin_page, li
     monkeypatch.setattr(site.get_model_admin(Item), "radio_fields", {"category": VERTICAL})
     Category.objects.create(name="Workshop", slug="workshop")
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/add/")
-    field = admin_page.locator('[data-related="admin_app.category"]')
+    field = admin_page.locator("#id_category_field")
     field.get_by_label("Workshop").check()
 
     field.get_by_role("link", name="Add another category").click()
@@ -278,7 +711,7 @@ def test_a_category_added_in_the_dialog_is_chosen_in_a_radio_list(admin_page, li
     expect(field.get_by_label("Garden")).to_be_checked()
     expect(field.get_by_label("Workshop")).not_to_be_checked()
     garden = Category.objects.get(name="Garden")
-    expect(field.get_by_role("link", name="Change selected category")).to_have_attribute(
+    expect(field.get_by_role("link", name="Edit selected category")).to_have_attribute(
         "href", f"/admin/admin_app/category/{garden.pk}/change/"
     )
     admin_page.locator("[name=name]").fill("Spade")
@@ -293,7 +726,7 @@ def test_a_category_added_in_the_dialog_is_chosen_in_a_native_select(admin_page,
     monkeypatch.setattr(site.get_model_admin(Item), "formfield_overrides", overrides)
     item = Item.objects.create(name="Spade", category=Category.objects.create(name="Workshop", slug="workshop"))
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
-    select = admin_page.locator('[data-related="admin_app.category"] select')
+    select = admin_page.locator("#id_category_field select")
     select.select_option(label="Kitchen")
 
     admin_page.get_by_role("link", name="Add another category").click()
@@ -311,9 +744,32 @@ def test_a_category_added_in_the_dialog_is_chosen_in_a_native_select(admin_page,
     assert admin_page.errors == []
 
 
+def test_a_category_looked_up_in_the_dialog_is_chosen_and_saved(admin_page, live_server, kitchen, monkeypatch):
+    """The dialog's list still picks after its search morphed the rows."""
+    monkeypatch.setattr(site.get_model_admin(Item), "raw_id_fields", ["category"])
+    garden = Category.objects.create(name="Garden", slug="garden")
+    item = Item.objects.create(name="Spade", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
+    field = admin_page.locator("#id_category_field")
+
+    field.get_by_role("link", name="Look up category").click()
+    dialog = related_dialog(admin_page)
+    dialog.locator("[data-search] input:not([type=hidden])").fill("gard")
+    expect(dialog.locator("#changelist tbody tr")).to_have_count(1)
+    dialog.get_by_role("link", name="Garden").click()
+
+    expect(admin_page.locator("dialog")).to_have_count(0)
+    expect(field.locator("summary")).to_match_aria_snapshot("- text: Garden")
+    admin_page.get_by_role("button", name="Save", exact=True).click()
+    expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
+    item.refresh_from_db()
+    assert item.category == garden
+    assert admin_page.errors == []
+
+
 def test_a_row_added_in_the_dialog_replaces_the_empty_list(admin_page, live_server):
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/add/")
-    field = admin_page.locator('[data-related="admin_app.category"]')
+    field = admin_page.locator("#id_category_field")
 
     field.get_by_role("link", name="Add another category").click()
     dialog = related_dialog(admin_page)
@@ -333,7 +789,7 @@ def test_a_tag_added_in_the_dialog_joins_the_picked_tags(admin_page, live_server
     item = Item.objects.create(name="Kettle", category=kitchen)
     item.tags.add(Tag.objects.get(name="sale"))
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
-    field = admin_page.locator('[data-related="admin_app.tag"]')
+    field = admin_page.locator("#id_tags_field")
 
     def hold_the_refresh(route):
         if route.request.headers.get("hx-request") != "true":
@@ -384,6 +840,33 @@ def test_a_tag_added_in_the_dialog_shows_in_inline_rows_added_after(admin_page, 
     assert admin_page.errors == []
 
 
+class SlugInline(TabularInline):
+    model = Item
+    fields = ["name", "slug"]
+    prepopulated_fields = {"slug": ["name"]}
+    extra = 0
+
+
+def test_inline_rows_fill_their_own_slug_and_a_saved_row_keeps_its_slug(admin_page, live_server, kitchen, monkeypatch):
+    """The third row moves up after the second leaves, and still fills its slug."""
+    monkeypatch.setattr(site.get_model_admin(Category), "inlines", [SlugInline])
+    Item.objects.create(name="Kettle", slug="kettle-classic", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/category/{kitchen.pk}/change/")
+    group = admin_page.locator("#items-group")
+    add = group.get_by_role("button", name=re.compile("Add another item"))
+
+    group.locator("[name=items-0-name]").fill("Kettle Pro")
+    add.click()
+    add.click()
+    group.locator("[name=items-1-name]").fill("Tea Pot")
+    group.locator("#items-1").get_by_role("button", name="Remove").click()
+    group.locator("[name=items-1-name]").fill("Mug Set")
+
+    expect(group.locator("[name=items-0-slug]")).to_have_value("kettle-classic")
+    expect(group.locator("[name=items-1-slug]")).to_have_value("mug-set")
+    assert admin_page.errors == []
+
+
 def test_escape_in_the_dialog_closes_it_unless_the_form_has_changes(admin_page, live_server):
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/add/")
     add = admin_page.get_by_role("link", name="Add another category")
@@ -408,14 +891,14 @@ def test_escape_in_the_dialog_closes_it_unless_the_form_has_changes(admin_page, 
 def test_leaving_the_form_asks_first_after_a_pick_in_a_dropdown(admin_page, live_server, kitchen):
     url = f"{live_server.url}/admin/admin_app/item/add/"
     admin_page.goto(url)
-    field = admin_page.locator('[data-related="admin_app.category"]')
+    field = admin_page.locator("#id_category_field")
     field.locator("summary").click()
     field.get_by_role("option", name="Kitchen").click()
 
     admin_page.once("dialog", lambda prompt: prompt.dismiss())
     with admin_page.expect_event("dialog") as prompt:
         admin_page.get_by_label("Breadcrumbs").get_by_role("link", name="Items").click()
-    assert prompt.value.type == "beforeunload"
+    assert prompt.value.type == "confirm"
     expect(admin_page).to_have_url(url)
     assert admin_page.errors == []
 
@@ -424,13 +907,116 @@ def test_leaving_the_form_without_a_change_asks_nothing(admin_page, live_server,
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/add/")
     prompts = []
     admin_page.on("dialog", lambda prompt: (prompts.append(prompt.type), prompt.dismiss()))
-    field = admin_page.locator('[data-related="admin_app.category"]')
+    field = admin_page.locator("#id_category_field")
     field.locator("summary").click()
     admin_page.keyboard.press("Escape")
 
     admin_page.get_by_label("Breadcrumbs").get_by_role("link", name="Items").click()
     expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
     assert prompts == []
+    assert admin_page.errors == []
+
+
+@pytest.mark.parametrize("featured", [True, False])
+def test_a_changed_switch_takes_the_color_of_a_changed_text_field(admin_page, live_server, kitchen, featured):
+    """A switch turned off is marked as well as one turned on."""
+    item = Item.objects.create(name="Kettle", category=kitchen, is_featured=featured)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
+    name = admin_page.locator("[name=name]")
+    switch = admin_page.locator("[name=is_featured]")
+    rest = switch.evaluate("el => getComputedStyle(el).borderColor")
+
+    name.fill("Kettle 2")
+    switch.click()
+
+    expect(switch.locator("xpath=ancestor::fieldset[1]")).to_have_class(re.compile(r"\bformwork-dirty\b"))
+    admin_page.wait_for_function(
+        "([a, b]) => getComputedStyle(a).borderColor === getComputedStyle(b).borderColor",
+        arg=[switch.element_handle(), name.element_handle()],
+    )
+    assert switch.evaluate("el => getComputedStyle(el).borderColor") != rest
+    assert admin_page.errors == []
+
+
+def test_a_switch_put_back_after_a_failed_save_loses_its_mark(admin_page, live_server, kitchen):
+    """The server sends what the switch held at first, so the page sees the change undone."""
+    item = Item.objects.create(name="Kettle", category=kitchen, is_featured=False)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
+    switch = admin_page.locator("[name=is_featured]")
+    field = switch.locator("xpath=ancestor::fieldset[1]")
+    marked = re.compile(r"\bformwork-dirty-option\b")
+    switch.click()
+    admin_page.locator("[name=quantity]").fill("-1")
+    admin_page.get_by_role("button", name="Save", exact=True).click()
+    expect(admin_page.locator("[name=quantity]")).to_have_attribute("aria-invalid", "true")
+    expect(switch).to_have_class(marked)
+
+    switch.click()
+
+    expect(switch).not_to_have_class(marked)
+    expect(field).not_to_have_class(re.compile(r"\bformwork-dirty\b"))
+    assert admin_page.errors == []
+
+
+def test_the_save_bar_stays_in_view_while_the_form_has_changes(admin_page, live_server, kitchen):
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.set_viewport_size({"width": 1280, "height": 480})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
+    bar = admin_page.locator("[data-save-bar]")
+    name = admin_page.locator("[name=name]")
+    expect(bar).not_to_be_in_viewport()
+
+    name.fill("Kettle 2")
+    expect(bar).to_be_in_viewport()
+    expect(bar.locator("[data-change-count]")).to_have_text("1")
+
+    name.fill("Kettle")
+    expect(bar).not_to_be_in_viewport()
+
+    name.fill("Kettle 2")
+    bar.get_by_role("button", name="Discard").click()
+    expect(name).to_have_value("Kettle")
+    expect(bar).not_to_be_in_viewport()
+    prompts = []
+    admin_page.on("dialog", lambda prompt: (prompts.append(prompt.type), prompt.dismiss()))
+    admin_page.get_by_label("Breadcrumbs").get_by_role("link", name="Items").click()
+    expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
+    assert prompts == []
+    assert admin_page.errors == []
+
+
+def test_a_way_to_save_from_the_menu_comes_first_next_time_but_not_from_the_shortcut(admin_page, live_server, kitchen):
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
+    main = admin_page.locator("[data-save]")
+    name = admin_page.locator("[name=name]")
+
+    name.fill("Kettle 2")
+    with admin_page.expect_navigation():
+        admin_page.keyboard.press("ControlOrMeta+s")
+    expect(name).to_have_value("Kettle 2")
+    expect(main).to_have_attribute("name", "_save")
+
+    name.fill("Kettle 3")
+    admin_page.get_by_role("button", name="More ways to save").click()
+    with admin_page.expect_navigation():
+        admin_page.get_by_role("menuitem", name="Save and continue editing").click()
+    expect(main).to_have_attribute("name", "_continue")
+    expect(main).to_have_text("Save and continue editing")
+    item.refresh_from_db()
+    assert item.name == "Kettle 3"
+    assert admin_page.errors == []
+
+
+def test_an_inline_row_marked_for_deletion_counts_as_a_change(admin_page, live_server, kitchen):
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    Part.objects.create(item=item, name="Lid")
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
+    count = admin_page.locator("[data-save-bar] [data-change-count]")
+
+    admin_page.locator("[name=parts-0-DELETE]").check(force=True)
+
+    expect(count).to_have_text("1")
     assert admin_page.errors == []
 
 
@@ -449,13 +1035,14 @@ def test_change_form_actions_wait_until_the_changes_are_saved(admin_page, live_s
 
     admin_page.locator("[name=name]").fill("Kettle 2")
     expect(menu).to_have_attribute("aria-disabled", "true")
-    expect(menu.locator("xpath=..")).to_have_attribute("data-tip", "Save your changes first")
-    expect(menu.locator("xpath=..")).to_have_class(re.compile(r"\btooltip\b"))
+    tip = menu.locator("xpath=ancestor::*[@data-tip][1]")
+    expect(tip).to_have_attribute("data-tip", "Save your changes first")
+    expect(tip).to_have_class(re.compile(r"\btooltip\b"))
 
-    admin_page.get_by_role("button", name="Save and continue editing").click()
+    admin_page.keyboard.press("ControlOrMeta+s")
     expect(admin_page.get_by_role("status").filter(has_text="was changed successfully")).to_be_visible()
     menu.click()
-    admin_page.get_by_role("button", name="Archive this item").click()
+    admin_page.get_by_role("menuitem", name="Archive this item").click()
 
     expect(admin_page.get_by_role("status").filter(has_text="Archived.")).to_be_visible()
     expect(admin_page).to_have_url(url)

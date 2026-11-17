@@ -3,7 +3,7 @@
 {% set can_delete = formset.can_delete and inline.has_delete_permission %}
 
 {% macro row(admin_form, can_delete, columns) %}
-<tbody id="{{ admin_form.form.prefix }}" class="not-first-of-type:border-t not-first-of-type:border-base-content/5" data-inline-row>
+<tbody id="{{ admin_form.form.prefix }}" class="not-first-of-type:border-t not-first-of-type:border-base-content/5" data-inline-row{% if admin_form.original is none %}="new"{% endif %}>
   {% if admin_form.form.non_field_errors() %}
   <tr>
     <td colspan="{{ columns }}" class="pb-0">
@@ -13,10 +13,17 @@
   {% endif %}
   <tr class="align-top">
     {% for cell in admin_form.cells %}
-    <td class="min-w-36" data-field="{{ cell.name }}">
+    {% set f = cell.field %}
+    <td class="min-w-36" data-field="{{ cell.name }}"{% if f is not none %} data-formwork-field{% if f.form.is_bound and f.name in f.form.changed_data %} data-formwork-changed{% if f.initial_checked %} data-formwork-initial="{{ f.initial_checked }}"{% endif %}{% endif %}{% if f.errors %} data-invalid{% endif %}{% endif %}>
       {% if cell.field is not none %}
+      {% set links = cell.field.label_links %}
+      {% if links %}
+      {# A cell has no label row, so the links follow the widget. #}
+      <div class="flex items-center gap-3"><div class="min-w-0 flex-1">{{ cell.field.as_widget(attrs={"aria-label": cell.field.label}) }}</div><span class="formwork-label-links">{{ links }}</span></div>
+      {% else %}
       {{ cell.field.as_widget(attrs={"aria-label": cell.field.label}) }}
-      {% if cell.field.errors %}<p class="mt-1 text-xs text-error">{{ cell.field.errors|join(" ") }}</p>{% endif %}
+      {% endif %}
+      {{ m.cell_notes(cell.field) }}
       {% else %}
       <div class="min-h-10 py-2.5 text-sm">{{ cell.readonly.contents }}</div>
       {% endif %}
@@ -31,7 +38,7 @@
         {% if admin_form.original is not none %}
         {% if can_delete and admin_form.deletion_field is not none %}
         {% set df = admin_form.deletion_field %}
-        <label class="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error has-checked:bg-error/10 has-checked:text-error" title="{{ _("Delete") }}">
+        <label class="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error has-checked:bg-error/10 has-checked:text-error" title="{{ _("Delete") }}" data-formwork-field{% if df.value() %} data-formwork-changed data-formwork-initial="[]"{% endif %}>
           <input type="checkbox" name="{{ df.html_name }}" id="{{ df.auto_id }}" class="sr-only"{% if df.value() %} checked{% endif %} aria-label="{{ _("Delete") }}">
           {{ icon("trash") }}
         </label>

@@ -24,8 +24,11 @@ __all__ = ["delete_selected"]
 @action(
     permissions=["delete"],
     description=gettext_lazy("Delete selected %(verbose_name_plural)s"),
+    # The list shows it as a button next to the selection, where "selected" goes without saying.
+    description_plural=gettext_lazy("Delete"),
     icon="trash",
     danger=True,
+    button=True,
 )
 def delete_selected(modeladmin: Any, request: HttpRequest, queryset: QuerySet[Any]) -> HttpResponse | None:
     """Show what the deletion takes with it; delete after the page posts back ``post=yes``."""
@@ -57,6 +60,7 @@ def delete_selected(modeladmin: Any, request: HttpRequest, queryset: QuerySet[An
         "title": title,
         "subtitle": None,
         "objects_name": str(objects_name),
+        "count": queryset.count(),
         "deletable_objects": deletable_objects,
         "delete_confirmation_max_display": modeladmin.delete_confirmation_max_display,
         "model_count": list(dict(model_count).items()),

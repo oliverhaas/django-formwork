@@ -10,7 +10,7 @@ import hashlib
 from functools import cached_property
 from typing import TYPE_CHECKING, Any
 
-from django.contrib.admin.exceptions import DisallowedModelAdminLookup
+from django.contrib.admin.exceptions import DisallowedModelAdminLookup, DisallowedModelAdminToField
 from django.contrib.admin.options import IS_FACETS_VAR, IncorrectLookupParameters, ShowFacets
 from django.contrib.admin.utils import (
     build_q_object_from_lookup_parameters,
@@ -28,13 +28,17 @@ from django.db.models.constants import LOOKUP_SEP
 from django.db.models.expressions import Combinable, F, OrderBy
 from django.http import QueryDict
 from django.urls import reverse
+from django.utils.formats import number_format
 from django.utils.html import strip_tags
 from django.utils.http import urlencode
 from django.utils.text import capfirst
+from django.utils.translation import gettext as _
 
 from django_formwork.admin.cells import list_cell, list_field
 from django_formwork.admin.filters import SEARCH_VAR
 from django_formwork.admin.paginator import EstimatedCountPaginator
+from django_formwork.admin.widgets import IS_POPUP_VAR, TO_FIELD_VAR
+from django_formwork.widgets import Select
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -51,6 +55,7 @@ __all__ = [
     "IS_FACETS_VAR",
     "ORDER_VAR",
     "PAGE_VAR",
+    "PER_PAGE_VAR",
     "PRESERVED_FILTERS_VAR",
     "SEARCH_VAR",
     "ChangeList",
@@ -59,6 +64,7 @@ __all__ = [
 ALL_VAR = "all"
 ORDER_VAR = "o"
 PAGE_VAR = "p"
+PER_PAGE_VAR = "per_page"
 PRESERVED_FILTERS_VAR = "_changelist_filters"
 
 # Characters of text after which a changelist column can wrap.
@@ -78,9 +84,22 @@ class ChangeList:
         self.list_filter = model_admin.get_list_filter(request)
         self.search_fields = model_admin.get_search_fields(request)
         self.sortable_by = model_admin.get_sortable_by(request)
-        self.list_per_page = model_admin.list_per_page
         self.list_max_show_all = model_admin.list_max_show_all
-        self.list_editable = model_admin.list_editable
+        # The page sizes a viewer can pick; the admin's own size is always one of them.
+        options = model_admin.list_per_page_options
+        self.list_per_page_options = sorted({*options, model_admin.list_per_page}) if options else []
+        per_page = request.GET.get(PER_PAGE_VAR, "")
+        picked = per_page.isdigit() and int(per_page) in self.list_per_page_options
+        self.list_per_page = int(per_page) if picked else model_admin.list_per_page
+        # A size the admin does not offer is dropped, so the list's links don't carry it on.
+        self.per_page_param = per_page if picked or (per_page == ALL_VAR and self.list_per_page_options) else None
+        # A list in the related-object dialog picks a row for the relation that opened it, and edits none.
+        self.is_popup = IS_POPUP_VAR in request.GET
+        self.to_field = request.GET.get(TO_FIELD_VAR) or None
+        if self.to_field and not model_admin.to_field_allowed(request, self.to_field):
+            msg = f"The field {self.to_field} cannot be referenced."
+            raise DisallowedModelAdminToField(msg)
+        self.list_editable = () if self.is_popup else model_admin.list_editable
         self.search_help_text = model_admin.search_help_text
         self.root_queryset = model_admin.get_queryset(request)
         self.formset = formset
@@ -98,7 +117,7 @@ class ChangeList:
         params = {
             key: values
             for key, values in self.request.GET.lists()
-            if key not in IGNORED_PARAMS and key not in {PAGE_VAR, ERROR_FLAG}
+            if key not in IGNORED_PARAMS and key not in {PAGE_VAR, PER_PAGE_VAR, ERROR_FLAG}
         }
         for key, values in params.items():
             for value in values:
@@ -148,7 +167,18 @@ class ChangeList:
         for key in own:
             if key in self.request.GET:
                 params.setlist(key, self.request.GET.getlist(key))
+        if self.per_page_param:
+            params[PER_PAGE_VAR] = self.per_page_param
+        for key, value in self.popup_params.items():
+            params[key] = value
         return params
+
+    @cached_property
+    def popup_params(self) -> dict[str, str]:
+        """``_popup`` and ``_to_field`` of a list in the related-object dialog; its links and its add page keep them."""
+        if not self.is_popup:
+            return {}
+        return {IS_POPUP_VAR: "1", **({TO_FIELD_VAR: self.to_field} if self.to_field else {})}
 
     @staticmethod
     def encode(params: QueryDict) -> str:
@@ -274,6 +304,11 @@ class ChangeList:
         """The list without the bar's filters; the other lookups, the search and the sort stay, as in Django."""
         written = [key for key, _value in self.filterset.written_params()] if self.filterset is not None else []
         return self.get_query_string(remove=[*written, PAGE_VAR])
+
+    @cached_property
+    def clear_search_qs(self) -> str:
+        """The list without the search; the filters, the other lookups and the sort stay."""
+        return self.get_query_string(remove=[SEARCH_VAR, PAGE_VAR])
 
     @cached_property
     def queryset(self) -> models.QuerySet[Any]:
@@ -458,7 +493,8 @@ class ChangeList:
 
     @cached_property
     def show_all(self) -> bool:
-        return ALL_VAR in self.request.GET and self.can_show_all
+        """``all`` as Django's admin writes it, or All from the page size menu."""
+        return (ALL_VAR in self.request.GET or self.per_page_param == ALL_VAR) and self.can_show_all
 
     @cached_property
     def can_show_all(self) -> bool:
@@ -488,6 +524,29 @@ class ChangeList:
 
     def page_url(self, number: int) -> str:
         return self.get_query_string({PAGE_VAR: number if number > 1 else None, ALL_VAR: None})
+
+    @cached_property
+    def per_page_select(self) -> str | None:
+        """The page size menu, with All while every row fits on one page; None where no size changes the page."""
+        if not self.list_per_page_options or self.result_count <= self.list_per_page_options[0]:
+            return None
+        choices = [(str(size), number_format(size, force_grouping=True)) for size in self.list_per_page_options]
+        if self.can_show_all:
+            choices.append((ALL_VAR, _("All")))
+        widget = Select(
+            choices=choices, show_search=False, attrs={"aria-label": _("Rows per page"), "class": "select-sm min-w-20"}
+        )
+        return widget.render(PER_PAGE_VAR, ALL_VAR if self.show_all else str(self.list_per_page))
+
+    @cached_property
+    def per_page_inputs(self) -> list[tuple[str, str]]:
+        """The list's state that a new page size keeps: all but the page."""
+        return [
+            (key, value)
+            for key, values in self.params.lists()
+            if key not in {PAGE_VAR, PER_PAGE_VAR, ALL_VAR}
+            for value in values
+        ]
 
     @cached_property
     def page_links(self) -> list[int | None]:
@@ -527,6 +586,7 @@ class ChangeList:
                 "priority": None,
                 "numeric": self.is_numeric(entry),
                 "linked": entry in self.links,
+                "indent": key in self.boxed_fields,
             }
             index = position + self.column_offset
             if self.order_field(entry) is not None:
@@ -568,6 +628,18 @@ class ChangeList:
         return f"{url}?{self.preserved_filters}" if self.preserved_filters else url
 
     @cached_property
+    def boxed_fields(self) -> set[str]:
+        """The editable columns whose field draws a box, which sets the value in from the cell's edge."""
+        if self.formset is None:
+            return set()
+        fields = self.formset.form.base_fields
+        return {
+            key
+            for key in self.list_editable
+            if key in fields and getattr(fields[key].widget, "input_type", None) not in {"checkbox", "radio"}
+        }
+
+    @cached_property
     def editable_forms(self) -> dict[Any, Any]:
         if self.formset is None:
             return {}
@@ -587,13 +659,19 @@ class ChangeList:
                 cell: dict[str, Any] = {"name": key, "link": url if linked else "", "field": None}
                 if form is not None and key in self.list_editable and not linked:
                     cell["field"] = form[key]
-                    # After a failed save, a valid value the user changed still shows as changed.
-                    cell["changed"] = form.is_bound and key in form.changed_data and not form[key].errors
+                    # After a failed save, a value the user changed still counts as changed, valid or not.
+                    cell["changed"] = form.is_bound and key in form.changed_data
                 else:
                     cell.update(list_cell(entry, obj, self.model_admin))
                 cell["numeric"] = self.is_numeric(entry)
+                cell["indent"] = cell["field"] is not None and key in self.boxed_fields
                 cells.append(cell)
-            rows.append({"pk": obj.pk, "value": str(obj.pk), "index": index, "cells": cells, "form": form})
+            row = {"pk": obj.pk, "value": str(obj.pk), "index": index, "cells": cells, "form": form, "pick": None}
+            if self.is_popup:
+                # What a click on the row's link hands to the relation: the value it posts and the row's name.
+                value = obj.serializable_value(self.to_field or self.pk_attname)
+                row["pick"] = {"value": str(value), "obj": str(obj)}
+            rows.append(row)
         # Only a column with long text on this page wraps; names, dates and badges keep one line.
         wrapping = {
             cell["name"]

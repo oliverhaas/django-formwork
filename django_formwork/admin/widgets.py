@@ -7,6 +7,7 @@ so the related admin's queryset, permissions and ``search_fields`` decide the ro
 from __future__ import annotations
 
 import copy
+import datetime as dt
 import re
 from collections.abc import Callable
 from functools import partial
@@ -22,12 +23,15 @@ from django.forms.utils import to_current_timezone
 from django.http import Http404
 from django.urls import reverse
 from django.utils.formats import get_format
+from django.utils.http import urlencode
+from django.utils.safestring import SafeString
 from django.utils.translation import gettext_lazy as _
 
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import (
     ClearableFileInput,
     DatePicker,
+    DateTimePicker,
     Select,
     SelectMultiple,
     Textarea,
@@ -40,7 +44,6 @@ if TYPE_CHECKING:
     from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
     from django.forms.renderers import BaseRenderer
     from django.http import HttpRequest
-    from django.utils.safestring import SafeString
 
 __all__ = [
     "FORMFIELD_FOR_DBFIELD_DEFAULTS",
@@ -48,8 +51,10 @@ __all__ = [
     "AdminDateTimeWidget",
     "AdminDateWidget",
     "AdminSplitDateTime",
+    "AdminTimeWidget",
     "RelatedWidgetWrapper",
     "date_input_format",
+    "datetime_input_format",
     "formwork_widget",
     "relation_queryset",
     "relation_widget",
@@ -85,8 +90,10 @@ def relation_queryset(request: HttpRequest, *, site: str, model: str, field: str
     if may_have_duplicates:
         queryset = queryset.distinct()
     if not queryset.ordered:
-        # Paging an unordered list repeats and skips rows.
-        queryset = queryset.order_by(*(model_admin.get_ordering(request) or ("-pk",)))
+        # Paging an unordered list repeats and skips rows. An annotation's GROUP BY drops the model's
+        # ordering, which the field's own rows keep, so the pages follow it as they do.
+        ordering = model_admin.get_ordering(request) or queryset.model._meta.ordering or ("-pk",)
+        queryset = queryset.order_by(*ordering)
     return queryset
 
 
@@ -134,11 +141,15 @@ TO_FIELD_VAR = "_to_field"
 
 
 class RelatedWidgetWrapper(forms.Widget):
-    """A relation's widget, with buttons that add a row or change the chosen one in a dialog.
+    """A relation's widget, with links that add a row or edit the chosen one in a dialog.
 
-    The same role as Django's ``RelatedFieldWidgetWrapper``. The related admin opens with ``_popup=1``."""
+    The same role as Django's ``RelatedFieldWidgetWrapper``. The related admin opens with ``_popup=1``.
+    The Edit and Add links go to the end of the field's label row through ``label_links()``. A field
+    in ``raw_id_fields`` also gets a button next to the widget that picks the row from the related
+    list, as Django's ``ForeignKeyRawIdWidget`` does."""
 
     template_name = "formwork_admin/widgets/related_widget_wrapper.html"
+    label_links_template_name = "formwork_admin/widgets/related_label_links.html"
 
     def __init__(
         self,
@@ -149,6 +160,7 @@ class RelatedWidgetWrapper(forms.Widget):
         can_add_related: bool = False,
         can_change_related: bool = False,
         can_view_related: bool = False,
+        can_lookup_related: bool = False,
     ) -> None:
         self.needs_multipart_form = widget.needs_multipart_form
         self.attrs = widget.attrs
@@ -160,6 +172,7 @@ class RelatedWidgetWrapper(forms.Widget):
         single = not getattr(widget, "allow_multiple_selected", False)
         self.can_change_related = single and can_change_related
         self.can_view_related = single and can_view_related
+        self.can_lookup_related = can_lookup_related
         self.use_fieldset = widget.use_fieldset
 
     def __deepcopy__(self, memo: dict[int, Any]) -> RelatedWidgetWrapper:
@@ -203,6 +216,13 @@ class RelatedWidgetWrapper(forms.Widget):
         wrapper_context = self.get_wrapper_context(name, rendered, context["widget"].get("value"))
         return self._render(self.template_name, wrapper_context, renderer)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 
+    def label_links(self, name: str, value: Any, renderer: BaseRenderer | None = None) -> SafeString:
+        """The Edit (or View) and Add links, for the field template's label row."""
+        context = self.get_wrapper_context(name, "", value)
+        if "change_related_template_url" not in context and "add_related_url" not in context:
+            return SafeString()
+        return self._render(self.label_links_template_name, context, renderer)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+
     def get_wrapper_context(self, name: str, rendered_widget: str, value: Any = None) -> dict[str, Any]:
         opts = self.rel.model._meta
         context: dict[str, Any] = {
@@ -217,6 +237,14 @@ class RelatedWidgetWrapper(forms.Widget):
             # The links open the full page; a plain click adds these and opens it in the dialog.
             "popup_query": f"{TO_FIELD_VAR}={self.rel.get_related_field().name}&{IS_POPUP_VAR}=1",
         }
+        if self.can_lookup_related:
+            # The rows the relation offers, as Django's raw ID lookup narrows the list to them.
+            limit_choices_to: Any = self.rel.limit_choices_to
+            if callable(limit_choices_to):
+                limit_choices_to = limit_choices_to()
+            params = django_widgets.url_params_from_lookup_dict(limit_choices_to)
+            url = self._related_url("changelist")
+            context["lookup_url"] = f"{url}?{urlencode(params)}" if params else url
         if self.can_add_related:
             context["add_related_url"] = self._related_url("add")
         if self.can_change_related or self.can_view_related:
@@ -238,15 +266,32 @@ class RelatedWidgetWrapper(forms.Widget):
         return self.widget.id_for_label(id_)
 
 
+# The strftime codes the admin's formats keep, as the codes of Django's ``date`` filter.
+_DATE_FILTER_CODES = {"Y": "Y", "y": "y", "m": "m", "d": "d", "H": "H", "M": "i"}
+
+
+def _input_format(strftime: str, codes: str, fallback: str) -> tuple[str, str]:
+    if not set(re.findall(r"%(.)", strftime)) <= set(codes):
+        strftime = fallback
+    # Other letters are text.
+    return strftime, re.sub(
+        r"%(.)|([A-Za-z\\])", lambda match: _DATE_FILTER_CODES[match[1]] if match[1] else f"\\{match[2]}", strftime
+    )
+
+
 def date_input_format() -> tuple[str, str]:
     """How the admin writes a date to type: the language's first ``DATE_INPUT_FORMATS``, as Django's admin does.
 
     Returns the strftime format and the same format in the syntax of Django's ``date`` filter."""
-    strftime = str(get_format("DATE_INPUT_FORMATS")[0])
-    if not set(re.findall(r"%(.)", strftime)) <= {"Y", "y", "m", "d"}:
-        strftime = "%Y-%m-%d"
-    # Y, y, m and d are the same codes in both syntaxes; other letters are text.
-    return strftime, re.sub(r"%(.)|([A-Za-z\\])", lambda match: match[1] or f"\\{match[2]}", strftime)
+    return _input_format(str(get_format("DATE_INPUT_FORMATS")[0]), "Yymd", "%Y-%m-%d")
+
+
+def datetime_input_format() -> tuple[str, str]:
+    """How the admin writes a date and a time to type: the language's first ``DATETIME_INPUT_FORMATS``, to the minute.
+
+    Returns the strftime format and the same format in the syntax of Django's ``date`` filter."""
+    strftime = re.sub(r"[:.]%S(\.%f)?", "", str(get_format("DATETIME_INPUT_FORMATS")[0]))
+    return _input_format(strftime, "YymdHM", "%Y-%m-%d %H:%M")
 
 
 class AdminDateWidget(DatePicker):
@@ -267,42 +312,43 @@ class NullBooleanSelect(Select):
         super().__init__(attrs, choices=choices, show_search=False)
 
 
-# The native control, to the second, so a value nobody touched saves unchanged.
-_TIME_ATTRS = {"type": "time", "step": 1}
+def _has_seconds(value: Any) -> bool:
+    if isinstance(value, dt.time):
+        return bool(value.second)
+    seconds = str(value or "").split(":")[2:3]
+    return bool(seconds) and seconds[0].strip("0.") != ""
 
 
-class AdminDateTimeWidget(forms.MultiWidget):
-    """The calendar dropdown for the day and a time input next to it.
+class AdminTimeWidget(forms.TimeInput):
+    """The browser's time input, to the minute, and to the second for a time with seconds.
 
-    The two post one value, so the field stays a ``DateTimeField``, which an import also fills."""
+    A time that nobody touched posts back the same value, so it saves unchanged."""
 
-    template_name = "formwork_admin/widgets/split_datetime.html"
-    supports_microseconds = False
+    input_type = "time"
+
+    def format_value(self, value: Any) -> str | None:
+        if isinstance(value, dt.time):
+            return value.strftime("%H:%M:%S" if _has_seconds(value) else "%H:%M")
+        return super().format_value(value)
+
+    def get_context(self, name: str, value: Any, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = super().get_context(name, value, attrs)
+        if _has_seconds(value):
+            context["widget"]["attrs"]["step"] = 1
+        return context
+
+
+class AdminDateTimeWidget(DateTimePicker):
+    """The calendar dropdown with a time, showing the value in the format of ``datetime_input_format()``."""
 
     def __init__(self, attrs: dict[str, Any] | None = None) -> None:
-        date = AdminDateWidget({"aria-label": _("Date")})
-        time = forms.TimeInput({**_TIME_ATTRS, "aria-label": _("Time")}, format="%H:%M:%S")
-        super().__init__((date, time), attrs)
-
-    def decompress(self, value: Any) -> list[Any]:
-        if isinstance(value, str):
-            # Posted text: the day and the time that value_from_datadict joined.
-            date, _space, time = value.partition(" ")
-            return [date, time]
-        if value:
-            value = to_current_timezone(value)
-            return [value.date(), value.time()]
-        return [None, None]
-
-    def value_from_datadict(self, data: Any, files: Any, name: str) -> Any:
-        date, time = super().value_from_datadict(data, files, name)
-        return f"{date or ''} {time or ''}" if date or time else ""
+        super().__init__(attrs, format=datetime_input_format()[1])
 
 
 FORMFIELD_FOR_DBFIELD_DEFAULTS: dict[type[models.Field[Any, Any]], dict[str, Any]] = {
     models.DateTimeField: {"widget": AdminDateTimeWidget},
     models.DateField: {"widget": AdminDateWidget},
-    models.TimeField: {"widget": forms.TimeInput(attrs=_TIME_ATTRS, format="%H:%M:%S")},
+    models.TimeField: {"widget": AdminTimeWidget},
     models.TextField: {"widget": Textarea(attrs={"rows": 4})},
     models.JSONField: {"widget": Textarea(attrs={"rows": 6, "class": "font-mono text-sm"})},
     models.URLField: {"widget": TextInput(input_type="url")},
@@ -318,9 +364,25 @@ FORMFIELD_FOR_DBFIELD_DEFAULTS: dict[type[models.Field[Any, Any]], dict[str, Any
 
 
 class AdminSplitDateTime(AdminDateTimeWidget):
-    """The calendar dropdown and the time input, posting the day and the time apart for a ``SplitDateTimeField``."""
+    """The date and time picker for a ``SplitDateTimeField``, which takes the day and the time apart."""
 
-    value_from_datadict = forms.MultiWidget.value_from_datadict
+    def decompress(self, value: Any) -> list[Any]:
+        # The field compares its initial value with the posted one in parts.
+        if value:
+            value = to_current_timezone(value)
+            return [value.date(), value.time()]
+        return [None, None]
+
+    def value_from_datadict(self, data: Any, files: Any, name: str) -> list[str]:
+        value = str(super().value_from_datadict(data, files, name) or "")
+        match = re.fullmatch(r"(\d{4}-\d{2}-\d{2})T(.+)", value)
+        # Text that names no day goes to the date field, which reports it.
+        return [match[1], match[2]] if match else [value, ""]
+
+    def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        if isinstance(value, (list, tuple)):
+            value = "T".join(str(part) for part in value if part)
+        return super().get_context(name, value, attrs)
 
 
 # The classes Django's admin widgets add for its own CSS and JavaScript.
@@ -357,10 +419,6 @@ def _with_class(attrs: dict[str, Any], css_class: str) -> dict[str, Any]:
     return {**attrs, "class": f"{attrs['class']} {css_class}" if attrs.get("class") else css_class}
 
 
-def _time_input(attrs: dict[str, Any]) -> forms.Widget:
-    return forms.TimeInput({**_TIME_ATTRS, **attrs}, format="%H:%M:%S")
-
-
 def _textarea(attrs: dict[str, Any]) -> forms.Widget:
     # Django's Textarea defaults of 40 columns and 10 rows are strings; numbers come from the project.
     attrs = {key: value for key, value in attrs.items() if (key, value) not in {("cols", "40"), ("rows", "10")}}
@@ -393,8 +451,8 @@ def _relation(attrs: dict[str, Any], widget: Any, field: forms.Field, admin_site
 _FORMWORK_WIDGETS: dict[type[forms.Widget], _Builder] = {
     django_widgets.BaseAdminDateWidget: _attrs_only(AdminDateWidget),
     django_widgets.AdminDateWidget: _attrs_only(AdminDateWidget),
-    django_widgets.BaseAdminTimeWidget: _attrs_only(_time_input),
-    django_widgets.AdminTimeWidget: _attrs_only(_time_input),
+    django_widgets.BaseAdminTimeWidget: _attrs_only(AdminTimeWidget),
+    django_widgets.AdminTimeWidget: _attrs_only(AdminTimeWidget),
     django_widgets.AdminSplitDateTime: _split_datetime,
     django_widgets.AdminRadioSelect: _radio_select,
     django_widgets.AdminTextareaWidget: _attrs_only(_textarea),

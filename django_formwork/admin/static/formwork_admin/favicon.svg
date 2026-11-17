@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- The sidebar's mark: Lucide's layout-dashboard on the primary color of DaisyUI's light
+       and dark themes. The tiles are filled and sit on whole pixels, so they stay sharp at 16px. -->
+  <style>
+    .mark { fill: #422ad5 }
+    .tile { fill: #e0e7ff }
+    @media (prefers-color-scheme: dark) {
+      .mark { fill: #605dff }
+      .tile { fill: #edf1fe }
+    }
+  </style>
+  <rect class="mark" width="16" height="16" rx="3.5"/>
+  <g class="tile">
+    <rect x="2" y="2" width="5" height="6" rx="1"/>
+    <rect x="2" y="10" width="5" height="4" rx="1"/>
+    <rect x="9" y="2" width="5" height="4" rx="1"/>
+    <rect x="9" y="8" width="5" height="6" rx="1"/>
+  </g>
+</svg>

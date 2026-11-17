@@ -16,7 +16,7 @@
   <span class="text-sm font-medium">{{ _("These related objects are protected:") }}</span>
 </div>
 {% if listed %}
-<div class="rounded-box border border-base-300 px-4 py-3">{{ m.nested(protected, delete_confirmation_max_display) }}</div>
+<div class="rounded-box border border-base-300 px-4 py-3">{{ m.deleted(deleted_groups(protected, delete_confirmation_max_display)) }}</div>
 {% endif %}
 {% else %}
 {% if model_count %}
@@ -29,12 +29,12 @@
 </div>
 {% endif %}
 {% if listed %}
-<details class="group/del rounded-box border border-base-300"{% if to_delete|length < 12 %} open{% endif %}>
+<details class="group/del rounded-box border border-base-300" open>
   <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
     {{ icon("chevron-right", "size-4 text-base-content/50 transition-transform group-open/del:rotate-90") }}
     {{ _("Objects that will be deleted") }}
   </summary>
-  <div class="max-h-96 overflow-y-auto border-t border-base-300 px-4 py-3">{{ m.nested(to_delete, delete_confirmation_max_display) }}</div>
+  <div class="max-h-96 overflow-y-auto border-t border-base-300 px-4 py-3">{{ m.deleted(deleted_groups(to_delete, delete_confirmation_max_display)) }}</div>
 </details>
 {% endif %}
 {% endif %}

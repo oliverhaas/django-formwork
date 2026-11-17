@@ -17,9 +17,12 @@
 (() => {
   const KEY = "formwork-admin-columns";
   const SHADOW = "light-dark(rgb(0 0 0 / 0.14), rgb(0 0 0 / 0.55))";
+  const UNDER = "light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.3))";
   const TABLE = "#changelist-table";
   const ROWS = `${TABLE} > :is(thead, tbody) > tr:not([data-empty])`;
   const HEAD = `${TABLE} > thead > tr:not([data-empty])`;
+  // A rule ends in tag names, so a change to the rules restyles the cells, not the page.
+  const CELL = ":is(th, td)";
   // The least height worth scrolling the rows in; below it the page scrolls as a whole.
   const FIT_MIN = 288;
 
@@ -124,6 +127,7 @@
     if (error) reveal(error);
     edges();
     label(cells);
+    height();
   };
 
   const open = () => state.expanded || Boolean(state.forced);
@@ -141,31 +145,27 @@
 
   const paint = () => {
     const dir = getComputedStyle(state.scroller).direction === "rtl" ? -1 : 1;
+    // A pinned cell sits as high as the header's other cells, so their shadow ends at the pinned
+    // column instead of darkening it under the pinned header cell's own shadow.
     const rules = state.pins.map(
       ({ position, inset }) =>
-        `${ROWS} > :nth-child(${position}) { position: sticky; inset-inline-start: ${inset}px; z-index: 1; background-color: inherit }`,
+        `${ROWS} > ${CELL}:nth-child(${position}) { position: sticky; inset-inline-start: ${inset}px; z-index: 2; background-color: inherit }`,
     );
     const edge = state.pins.at(-1).position;
-    const under = state.below ? `, 0 6px 8px -8px ${SHADOW}` : "";
-    if (state.start) rules.push(`${ROWS} > :nth-child(${edge}) { box-shadow: ${8 * dir}px 0 8px -8px ${SHADOW} }`);
+    if (state.start) rules.push(`${ROWS} > ${CELL}:nth-child(${edge}) { box-shadow: ${8 * dir}px 0 8px -8px ${SHADOW} }`);
     if (state.hidden.length) {
       rules.push(
-        `${ROWS} > [data-col-toggle] { display: table-cell; position: sticky; inset-inline-end: 0; z-index: 1; background-color: inherit }`,
+        `${ROWS} > [data-col-toggle] { display: table-cell; position: sticky; inset-inline-end: 0; z-index: 2; background-color: inherit }`,
         `${TABLE} [data-col-count]::after { content: "${state.hidden.length}" }`,
         `${TABLE} ${open() ? "[data-col-more]" : "[data-col-less]"} { display: none }`,
       );
       if (state.end) rules.push(`${ROWS} > [data-col-toggle] { box-shadow: ${-8 * dir}px 0 8px -8px ${SHADOW} }`);
-      if (!open()) rules.push(`${ROWS} > :is(${state.hidden.map((i) => `:nth-child(${i + 1})`).join(", ")}) { display: none }`);
-    }
-    // A header cell with an edge shadow keeps the one toward the rows as well.
-    if (state.start) rules.push(`${HEAD} > :nth-child(${edge}) { box-shadow: ${8 * dir}px 0 8px -8px ${SHADOW}${under} }`);
-    if (state.hidden.length && state.end) {
-      rules.push(`${HEAD} > [data-col-toggle] { box-shadow: ${-8 * dir}px 0 8px -8px ${SHADOW}${under} }`);
+      if (!open()) rules.push(`${ROWS} > ${CELL}:is(${state.hidden.map((i) => `:nth-child(${i + 1})`).join(", ")}) { display: none }`);
     }
     // The header's pinned cells cover the header cells and the rows that scroll under them.
     const corners = state.pins.map(({ position }) => `:nth-child(${position})`);
     if (state.hidden.length) corners.push("[data-col-toggle]");
-    rules.push(`${HEAD} > :is(${corners.join(", ")}) { z-index: 3 }`);
+    rules.push(`${HEAD} > ${CELL}:is(${corners.join(", ")}) { z-index: 3 }`);
     const text = rules.join("\n");
     if (text !== state.rules) {
       sheet.replaceSync(text);
@@ -186,22 +186,29 @@
   };
 
   // The rows take the window's height that the page leaves them: the space under the
-  // scroller's top, less the card's footer and the page's bottom padding, which holds the
-  // floating bars. The header cells stick to the scroller's top in either case, and show
-  // a shadow while rows are scrolled under them.
+  // scroller's top, less the card's footer and the page's bottom padding. The header cells
+  // stick to the scroller's top in either case, and show a shadow while rows are scrolled
+  // under them.
   const height = () => {
     const el = document.getElementById("changelist-scroll");
     const card = el?.closest(".card");
     const main = document.getElementById("content");
     if (!el || !card || !main) return;
-    const rules = [`${HEAD} > * { position: sticky; top: 0; z-index: 2; background-color: inherit }`];
+    const head = el.querySelector(":scope > table > thead")?.getBoundingClientRect().height ?? 0;
+    const rules = [
+      `${HEAD} > ${CELL} { position: sticky; top: 0; z-index: 2; background-color: inherit }`,
+      `#changelist-scroll { --changelist-head: ${head}px }`,
+    ];
     if (!window.frameElement && window.matchMedia("(min-width: 40rem)").matches) {
       const box = el.getBoundingClientRect();
       const after = card.getBoundingClientRect().bottom - box.bottom + parseFloat(getComputedStyle(main).paddingBottom);
       const room = Math.floor(window.innerHeight - (box.top + window.scrollY) - after);
       if (room >= FIT_MIN) rules.push(`#changelist-scroll { max-height: ${room}px }`);
     }
-    if (state.below) rules.push(`${HEAD} > * { box-shadow: 0 6px 8px -8px ${SHADOW} }`);
+    // Each cell draws its part of the shadow, edge to edge, so the shadow has no gaps.
+    if (state.below) {
+      rules.push(`${HEAD} > ${CELL}::after { content: ""; position: absolute; inset-inline: 0; top: 100%; height: 8px; background: linear-gradient(${UNDER}, #0000); pointer-events: none }`);
+    }
     const text = rules.join("\n");
     if (text !== state.height) {
       heights.replaceSync(text);
@@ -216,11 +223,11 @@
     if (below === state.below) return;
     state.below = below;
     height();
-    if (el === state.scroller) paint();
   };
 
   // The rows of a new list start at the top; a morph of the same list keeps their place.
-  // Whatever moves the table's top, a message or the filters, resizes the page content.
+  // Whatever moves the table's top, a message or the filters, resizes an element above it.
+  // The page content alone misses a shrink: it is at least as tall as the window.
   const watch = () => {
     const el = document.getElementById("changelist-scroll");
     const key = el?.closest("[data-total]")?.id ?? "";
@@ -231,6 +238,9 @@
     layout.disconnect();
     const main = document.getElementById("content");
     if (main) layout.observe(main);
+    for (let node = el; node && node !== main; node = node.parentElement) {
+      for (let above = node.previousElementSibling; above; above = above.previousElementSibling) layout.observe(above);
+    }
     height();
   };
 
@@ -258,22 +268,59 @@
     fit();
   };
 
-  // Fits the table as the parser adds its cells, before the browser paints them.
-  const parsing = new MutationObserver(() => {
+  // Fits the table that the parser has added before each frame, so no frame shows it
+  // unfitted. Each fit lays out the whole table, so it runs once per frame, not once per
+  // parsed chunk. The first frame waits for the footer, which ends the card, so the fit
+  // runs as soon as the footer is parsed and sees every row before that frame starts.
+  let frame = 0;
+  let ended = false;
+  // A script that changes the fitted table before the page has loaded, such as one that fills a
+  // cell, gets it measured again then; a table that nothing changed keeps its fit.
+  let changed = true;
+  // The attributes that can change a cell's width; htmx marks links and forms with others.
+  const SHAPE = ["class", "style", "hidden", "x-cloak"];
+  const changes = new MutationObserver(() => {
+    changed = true;
+    changes.disconnect();
+  });
+  const parsed = () => {
+    cancelAnimationFrame(frame);
+    frame = 0;
     const table = document.querySelector(TABLE);
-    if (table && table.querySelectorAll("th, td").length !== state.cells) measure();
+    if (table && table.querySelectorAll("th, td").length !== state.cells) {
+      measure();
+      if (ended) {
+        changed = false;
+        changes.observe(table, { subtree: true, childList: true, characterData: true, attributeFilter: SHAPE });
+      }
+    }
+    if (ended) height();
+  };
+  const parsing = new MutationObserver(() => {
+    if (!ended && document.getElementById("changelist-footer")) {
+      ended = true;
+      parsed();
+    } else {
+      frame ||= requestAnimationFrame(parsed);
+    }
   });
   parsing.observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener("DOMContentLoaded", () => {
     parsing.disconnect();
-    measure();
+    if (changes.takeRecords().length) changed = true;
+    changes.disconnect();
+    cancelAnimationFrame(frame);
+    frame = 0;
+    const table = document.querySelector(TABLE);
+    if (changed || table?.querySelectorAll("th, td").length !== state.cells) measure();
+    else fit();
     watch();
   });
 
   // A swap that brings in new results fits them afresh; one that fills a dialog leaves the table as it is.
-  document.addEventListener("htmx:after:swap", (event) => {
-    const target = event.detail?.ctx?.target;
-    if (!target?.contains || target.contains(document.getElementById("changelist-scroll"))) {
+  // It fits as the swap puts the results in, so a page's crossfade (a view transition) shows the fitted table.
+  document.addEventListener("htmx:before:settle", (event) => {
+    if (event.target.contains?.(document.getElementById("changelist-scroll"))) {
       measure();
       watch();
     }

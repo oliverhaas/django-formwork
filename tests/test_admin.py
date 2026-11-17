@@ -1,7 +1,7 @@
 """Tests for django_formwork.admin, driven through the demo app's admin pages."""
 
 import json
-from datetime import date, datetime
+from datetime import date, datetime, time
 from types import ModuleType, SimpleNamespace
 
 import django
@@ -22,7 +22,7 @@ from django.http import HttpResponse
 from django.urls import path, reverse
 from django.utils import timezone, translation
 
-from django_formwork import admin
+from django_formwork import __version__, admin
 from django_formwork.admin import ActionLocation, site
 from django_formwork.admin.checks import check_model_admin
 from django_formwork.admin.contenttypes import GenericStackedInline
@@ -159,6 +159,22 @@ def test_second_site_links_to_its_own_pages(support_client, catalog, name):
     assert not [link for link in links if link.startswith("/admin/")]
 
 
+@pytest.mark.parametrize(
+    ("view", "status"),
+    [("support:index", 200), ("support:admin_app_item_changelist", 200), ("support:admin_app_item_add", 403)],
+)
+def test_second_site_grants_its_models_without_model_permissions(client, django_user_model, view, status):
+    user = django_user_model.objects.create_user("helper", is_staff=True)
+    user.groups.add(Group.objects.create(name="Support"))
+    client.force_login(user)
+
+    response = client.get(reverse(view))
+
+    assert response.status_code == status
+    assert (b'href="/support/admin_app/item/"' in response.content) is (status == 200)
+    assert client.get(reverse("admin:admin_app_item_changelist")).status_code == 403
+
+
 @pytest.mark.parametrize(("site_name", "status"), [("support", 200), ("admin", 403)])
 def test_relation_search_follows_the_access_rule_of_its_site(support_client, catalog, site_name, status):
     params = {"widget": "select", "site": site_name, "model": "admin_app.item", "field": "category", "q": "kit"}
@@ -225,6 +241,23 @@ def test_login_admits_staff_only(client, django_user_model, is_staff, admitted):
 def test_logout_ends_the_session(admin_client):
     assert admin_client.post(reverse("admin:logout")).status_code == 200
     assert admin_client.get(reverse("admin:index")).status_code == 302
+
+
+@pytest.mark.parametrize(
+    ("favicon", "href"),
+    [
+        ("formwork_admin/favicon.svg", "/static/formwork_admin/favicon.svg"),
+        ("https://cdn.example.com/icon.png", "https://cdn.example.com/icon.png"),
+        (None, None),
+    ],
+)
+def test_pages_link_the_site_favicon(client, monkeypatch, favicon, href):
+    monkeypatch.setattr(site, "favicon", favicon)
+
+    soup = BeautifulSoup(client.get(reverse("admin:login")).content, "html.parser")
+
+    icon = soup.find("link", rel="icon")
+    assert (icon and icon["href"]) == href
 
 
 def test_login_page_redirects_a_signed_in_user(admin_client):
@@ -331,6 +364,24 @@ def test_clear_all_filters_keeps_the_search(admin_client, catalog):
 
     assert soup.find(id="changelist-filter-count").get_text(strip=True) == "1"
     assert soup.select_one("#changelist-filter-row [data-clear-filters]")["href"] == "?q=kettle"
+
+
+@pytest.mark.parametrize(
+    ("params", "links"),
+    [
+        ({"q": "nothing"}, {"search": None}),
+        ({"status__exact": "draft", "is_featured__exact": "1"}, {"filters": None}),
+        ({"status__exact": "archived", "q": "nothing"}, {"search": "?status__exact=archived", "filters": "?q=nothing"}),
+    ],
+    ids=["search", "filters", "both"],
+)
+def test_empty_list_offers_to_clear_what_narrows_it(admin_client, catalog, params, links):
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist"), params).content, "html.parser")
+
+    empty = soup.select_one("#changelist-table tr[data-empty]")
+    found = {name: empty.select_one(f"[data-clear-{name}]") for name in ("search", "filters")}
+    expected = {name: href or url(Item, "changelist") for name, href in links.items()}
+    assert {name: link["href"] for name, link in found.items() if link is not None} == expected
 
 
 def test_clear_all_filters_keeps_other_lookups(admin_client, catalog):
@@ -631,6 +682,42 @@ def test_changelist_pages_rows(admin_client, catalog, monkeypatch):
     assert b"Beta lamp" not in content
 
 
+@pytest.mark.parametrize(("per_page", "offered"), [("2", True), ("all", True), ("3", False), ("x", False)])
+def test_changelist_shows_an_offered_page_size_and_keeps_it_in_its_links(
+    admin_client, catalog, monkeypatch, per_page, offered
+):
+    """A size the admin does not offer shows the admin's own size, and the links drop it."""
+    item_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(item_admin, "list_per_page", 1)
+    monkeypatch.setattr(item_admin, "list_per_page_options", (2,))
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist"), {"per_page": per_page}).content, "html.parser")
+
+    assert len(soup.select("#changelist-table tbody tr[data-pk]")) == (2 if offered else 1)
+    sort_link = soup.select_one("#changelist-table thead th[data-col] a[href*='o=']")["href"]
+    assert (f"per_page={per_page}" in sort_link) is offered
+
+
+@pytest.mark.parametrize(("options", "sizes"), [((2,), ["1", "2", "all"]), ((), [])])
+def test_changelist_offers_the_page_sizes_next_to_the_pages(admin_client, catalog, monkeypatch, options, sizes):
+    """Without sizes, the list keeps Django's Show all link."""
+    item_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(item_admin, "list_per_page", 1)
+    monkeypatch.setattr(item_admin, "list_per_page_options", options)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    footer = soup.find(id="changelist-footer")
+    assert [option["data-value"] for option in footer.select("[role=option] [data-value]")] == sizes
+    assert (footer.find("a", string="Show all") is None) is bool(sizes)
+
+
+def test_changelist_offers_no_page_size_while_every_size_shows_all_rows(admin_client, catalog):
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    assert soup.select("#changelist-footer [role=option]") == []
+
+
 def test_changelist_wraps_only_columns_with_long_text(admin_client, catalog):
     catalog.beta.name = "Beta lamp with a shade long enough for a second line"
     catalog.beta.save()
@@ -847,6 +934,76 @@ def test_get_actions_override_from_before_django_6_1_keeps_its_actions_in_the_li
     assert Item.objects.get(pk=catalog.beta.pk).status == Item.Status.ACTIVE
 
 
+def test_button_action_shows_next_to_the_menu_and_the_menu_shows_help_text(admin_client, catalog, monkeypatch):
+    @admin.action(help_text="Sets the status.")
+    def describe(modeladmin, request, queryset):
+        pass
+
+    monkeypatch.setattr(ItemAdmin, "actions", [status_action(button=True), describe])
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    assert soup.select_one('[role="menu"] button[value="set_status"]') is None
+    assert "Sets the status." in soup.select_one('[role="menu"] button[value="describe"]').get_text()
+
+
+@pytest.mark.parametrize("across", [False, True], ids=["selected", "across"])
+def test_confirm_action_asks_on_a_page_before_it_runs(admin_client, catalog, monkeypatch, across):
+    monkeypatch.setattr(ItemAdmin, "actions", [status_action(confirm="Activate %(count)s %(name)s?")])
+    selection = {"select_across": "1"} if across else {"_selected_action": [catalog.beta.pk]}
+    data = {"action": "set_status", **selection}
+
+    asked = admin_client.post(url(Item, "changelist"), data)
+
+    assert asked.status_code == 200
+    assert ("Activate 2 items?" if across else "Activate 1 item?") in asked.content.decode()
+    assert not Item.objects.filter(status=Item.Status.ACTIVE).exists()
+
+    admin_client.post(url(Item, "changelist"), {**data, "post": "yes"})
+
+    assert Item.objects.filter(status=Item.Status.ACTIVE).count() == (2 if across else 1)
+
+
+def test_form_action_runs_with_the_valid_form_only(admin_client, catalog, monkeypatch):
+    class RestockForm(forms.Form):
+        quantity = forms.IntegerField(min_value=1)
+
+    @admin.action(form=RestockForm)
+    def restock(modeladmin, request, queryset, form):
+        queryset.update(quantity=form.cleaned_data["quantity"])
+
+    monkeypatch.setattr(ItemAdmin, "actions", [restock])
+    data = {"action": "restock", "_selected_action": [catalog.beta.pk], "post": "yes"}
+
+    invalid = admin_client.post(url(Item, "changelist"), {**data, "action-quantity": "0"})
+    assert invalid.status_code == 200
+    assert b"greater than or equal to 1" in invalid.content
+    assert Item.objects.get(pk=catalog.beta.pk).quantity != 7
+
+    admin_client.post(url(Item, "changelist"), {**data, "action-quantity": "7"})
+    assert Item.objects.get(pk=catalog.beta.pk).quantity == 7
+    assert Item.objects.get(pk=catalog.alpha.pk).quantity != 7
+
+
+def test_change_form_confirm_action_runs_after_the_page_and_returns_to_the_row(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "actions", [status_action(confirm=True, location=ActionLocation.CHANGE_FORM)])
+
+    asked = run_on_change_form(admin_client, catalog.alpha, "set_status")
+    soup = BeautifulSoup(asked.content, "html.parser")
+
+    assert asked.status_code == 200
+    assert soup.select_one('input[name="CHANGE_FORM-action"]')["value"] == "set_status"
+    assert not Item.objects.filter(status=Item.Status.ACTIVE).exists()
+
+    response = admin_client.post(
+        url(Item, "change", catalog.alpha.pk),
+        {"CHANGE_FORM-action": "set_status", "_selected_action": [catalog.alpha.pk], "post": "yes"},
+    )
+
+    assert response["Location"] == url(Item, "change", catalog.alpha.pk)
+    assert Item.objects.get(pk=catalog.alpha.pk).status == Item.Status.ACTIVE
+
+
 def test_delete_selected_confirms_before_deleting(admin_client, catalog):
     data = {"action": "delete_selected", "_selected_action": [catalog.beta.pk]}
 
@@ -897,7 +1054,56 @@ def test_list_editable_error_marks_its_cell(admin_client, catalog):
     ]
 
 
-def test_list_editable_failed_save_keeps_the_valid_changes_marked(admin_client, catalog):
+def test_list_editable_cell_control_is_described_by_its_help_and_its_error(admin_client, catalog, monkeypatch):
+    class HelpForm(forms.ModelForm):
+        class Meta:
+            model = Item
+            fields = ["quantity"]
+            help_texts = {"quantity": "Units in stock."}
+
+    monkeypatch.setattr(site.get_model_admin(Item), "form", HelpForm)
+    data = {**management("form", 1, 1), "form-0-id": catalog.alpha.pk, "form-0-quantity": "-1", "_save": "1"}
+
+    soup = BeautifulSoup(admin_client.post(url(Item, "changelist"), data).content, "html.parser")
+
+    control = soup.select_one('input[name="form-0-quantity"]')
+    help_text, error = (soup.find(id=ref) for ref in control["aria-describedby"].split())
+    assert "stock" in help_text.get_text()
+    assert "greater than" in error.get_text()
+
+
+def test_list_editable_failed_save_counts_the_errors_above_the_list(admin_client, catalog):
+    page = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+    first, second = (page.find("input", attrs={"name": f"form-{i}-id"})["value"] for i in range(2))
+    data = {
+        **management("form", 2, 2),
+        "form-0-id": first,
+        "form-0-quantity": "-1",
+        "form-1-id": second,
+        "form-1-quantity": "-2",
+        "_save": "1",
+    }
+
+    soup = BeautifulSoup(admin_client.post(url(Item, "changelist"), data).content, "html.parser")
+
+    assert "2 errors" in soup.select_one("#changelist [role=alert]").get_text()
+
+
+def test_list_editable_row_error_shows_above_its_row(admin_client, catalog, monkeypatch):
+    class ClashForm(forms.ModelForm):
+        def clean(self):
+            raise forms.ValidationError("This quantity clashes with the category.")
+
+    monkeypatch.setattr(site.get_model_admin(Item), "form", ClashForm)
+    data = {**management("form", 1, 1), "form-0-id": catalog.alpha.pk, "form-0-quantity": "7", "_save": "1"}
+
+    soup = BeautifulSoup(admin_client.post(url(Item, "changelist"), data).content, "html.parser")
+
+    row = soup.select_one(f'#changelist-table tr[data-pk="{catalog.alpha.pk}"]')
+    assert "clashes" in row.find_previous_sibling("tr").get_text()
+
+
+def test_list_editable_failed_save_keeps_every_change_marked(admin_client, catalog):
     page = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
     first, second = (page.find("input", attrs={"name": f"form-{i}-id"})["value"] for i in range(2))
     data = {
@@ -912,7 +1118,7 @@ def test_list_editable_failed_save_keeps_the_valid_changes_marked(admin_client, 
     soup = BeautifulSoup(admin_client.post(url(Item, "changelist"), data).content, "html.parser")
 
     marked = soup.select("#changelist-table td[data-formwork-changed]")
-    assert [cell.find("input")["name"] for cell in marked] == ["form-0-quantity"]
+    assert [cell.find("input")["name"] for cell in marked] == ["form-0-quantity", "form-1-quantity"]
 
 
 @pytest.mark.parametrize(
@@ -1110,17 +1316,58 @@ def test_a_form_that_sets_its_error_display_keeps_it(admin_client, catalog, monk
     assert "required" in tooltip.get_text()
 
 
-def test_datetime_field_saves_the_day_and_the_time_typed_apart(admin_client, catalog, monkeypatch):
+def test_datetime_field_saves_the_day_and_the_time_it_posts(admin_client, catalog, monkeypatch):
     fields = ["name", "slug", "category", "status", "price", "quantity", "available_from"]
     monkeypatch.setattr(site.get_model_admin(Item), "fieldsets", [(None, {"fields": fields})])
 
-    admin_client.post(
-        url(Item, "add"), item_data(catalog.office, available_from_0="2026-03-01", available_from_1="09:30")
-    )
+    admin_client.post(url(Item, "add"), item_data(catalog.office, available_from="2026-03-01T09:30"))
 
     assert Item.objects.get(name="Gamma desk").available_from == datetime(
         2026, 3, 1, 9, 30, tzinfo=timezone.get_current_timezone()
     )
+
+
+def datetime_inputs(content):
+    soup = BeautifulSoup(content, "html.parser")
+    return soup.select_one("#id_available_from")["value"], soup.select_one('input[name="available_from"]')["value"]
+
+
+@pytest.mark.parametrize(
+    ("saved", "posted"),
+    [(time(9, 30), "2026-03-01T09:30"), (time(9, 30, 15), "2026-03-01T09:30:15")],
+    ids=["minute", "second"],
+)
+def test_datetime_field_posts_seconds_only_for_a_time_with_seconds(admin_client, catalog, monkeypatch, saved, posted):
+    monkeypatch.setattr(site.get_model_admin(Item), "fieldsets", [(None, {"fields": ["name", "available_from"]})])
+    catalog.beta.available_from = datetime.combine(date(2026, 3, 1), saved, tzinfo=timezone.get_current_timezone())
+    catalog.beta.save()
+
+    shown = datetime_inputs(admin_client.get(url(Item, "change", catalog.beta.pk)).content)
+
+    assert shown == ("2026-03-01 09:30", posted)
+
+
+def test_datetime_field_keeps_the_seconds_of_a_form_with_errors(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "fieldsets", [(None, {"fields": ["name", "available_from"]})])
+
+    data = {"name": "", "available_from": "2026-03-01T09:30:15"}
+    shown = datetime_inputs(admin_client.post(url(Item, "change", catalog.beta.pk), data).content)
+
+    assert shown == ("2026-03-01 09:30", "2026-03-01T09:30:15")
+
+
+@pytest.mark.parametrize(
+    ("language", "text"), [("en", "2026-03-01 09:30"), ("de", "01.03.2026 09:30"), ("fr", "01/03/2026 09:30")]
+)
+def test_datetime_field_shows_the_languages_input_format(admin_client, catalog, monkeypatch, language, text):
+    monkeypatch.setattr(site.get_model_admin(Item), "fieldsets", [(None, {"fields": ["name", "available_from"]})])
+    catalog.beta.available_from = datetime(2026, 3, 1, 9, 30, tzinfo=timezone.get_current_timezone())
+    catalog.beta.save()
+
+    with translation.override(language):
+        shown = datetime_inputs(admin_client.get(url(Item, "change", catalog.beta.pk)).content)
+
+    assert shown == (text, "2026-03-01T09:30")
 
 
 @pytest.fixture
@@ -1170,7 +1417,7 @@ def test_list_and_inline_forms_put_formwork_widgets_in_place_of_djangos(
     assert type(form_of(admin_request).base_fields[name].widget) is Textarea
 
 
-def test_split_datetime_field_saves_the_day_and_the_time_posted_apart(admin_client, catalog, monkeypatch):
+def test_split_datetime_field_saves_the_day_and_the_time_it_posts(admin_client, catalog, monkeypatch):
     class SplitForm(FormworkModelForm):
         available_from = forms.SplitDateTimeField(widget=django_widgets.AdminSplitDateTime, required=False)
 
@@ -1178,9 +1425,7 @@ def test_split_datetime_field_saves_the_day_and_the_time_posted_apart(admin_clie
     monkeypatch.setattr(site.get_model_admin(Item), "fieldsets", [(None, {"fields": fields})])
     monkeypatch.setattr(site.get_model_admin(Item), "form", SplitForm)
 
-    admin_client.post(
-        url(Item, "add"), item_data(catalog.office, available_from_0="2026-03-01", available_from_1="09:30")
-    )
+    admin_client.post(url(Item, "add"), item_data(catalog.office, available_from="2026-03-01T09:30"))
 
     saved = Item.objects.filter(name="Gamma desk").values_list("available_from", flat=True)
     assert list(saved) == [datetime(2026, 3, 1, 9, 30, tzinfo=timezone.get_current_timezone())]
@@ -1217,16 +1462,17 @@ def test_toggle_next_to_labelled_fields_moves_to_their_input_line(admin_client, 
     assert "sm:pt-9" not in soup.select_one("[data-field='released']")["class"]
 
 
-def test_submit_row_follows_djangos_order(admin_client, catalog):
+def save_ways(soup):
+    return [soup.select_one("[data-save]")["name"]] + [
+        button["name"] for button in soup.select("[data-save-bar] [role=menu] button")
+    ]
+
+
+def test_save_button_holds_the_other_ways_to_save_in_a_menu(admin_client, catalog):
     soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
 
-    row = soup.select_one("[data-save]").parent
-    assert [button["name"] for button in row.find_all("button", recursive=False)] == [
-        "_save",
-        "_addanother",
-        "_continue",
-    ]
-    assert row.find_all("a", recursive=False)[-1]["href"] == url(Item, "delete", catalog.alpha.pk)
+    assert save_ways(soup) == ["_save", "_continue", "_addanother"]
+    assert soup.select("[data-save-bar] a")[-1]["href"] == url(Item, "delete", catalog.alpha.pk)
 
 
 def test_save_as_replaces_save_and_add_another(admin_client, catalog, monkeypatch):
@@ -1234,12 +1480,40 @@ def test_save_as_replaces_save_and_add_another(admin_client, catalog, monkeypatc
 
     soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
 
-    row = soup.select_one("[data-save]").parent
-    assert [button["name"] for button in row.find_all("button", recursive=False)] == [
-        "_save",
-        "_saveasnew",
-        "_continue",
-    ]
+    assert save_ways(soup) == ["_save", "_continue", "_saveasnew"]
+
+
+@pytest.mark.parametrize(
+    ("posts", "view", "expected"),
+    [
+        ([{"_continue": "1"}], "change", ["_continue", "_save", "_addanother"]),
+        ([{"_addanother": "1"}], "change", ["_addanother", "_save", "_continue"]),
+        ([{"_continue": "1"}], "add", ["_save", "_continue", "_addanother"]),
+        ([{"_continue": "1", "_shortcut": "1"}], "change", ["_save", "_continue", "_addanother"]),
+        ([{"_continue": "1"}, {"_save": "1"}], "change", ["_save", "_continue", "_addanother"]),
+        (
+            [{"_continue": "1"}, {"_save": "1", "_popup": "1", "_to_field": "id"}],
+            "change",
+            ["_continue", "_save", "_addanother"],
+        ),
+    ],
+    ids=["continue", "add another", "add form", "shortcut", "save", "dialog"],
+)
+def test_save_button_offers_the_way_the_form_was_last_saved(admin_client, catalog, posts, view, expected):
+    for extra in posts:
+        admin_client.post(url(Item, "change", catalog.alpha.pk), {**item_data(catalog.office), **extra})
+
+    target = url(Item, "add") if view == "add" else url(Item, "change", catalog.alpha.pk)
+    assert save_ways(BeautifulSoup(admin_client.get(target).content, "html.parser")) == expected
+
+
+def test_save_as_new_is_never_offered_first(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "save_as", True)
+
+    admin_client.post(url(Item, "change", catalog.alpha.pk), {**item_data(catalog.office), "_saveasnew": "1"})
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "add")).content, "html.parser")
+    assert soup.select_one("[data-save]")["name"] == "_save"
 
 
 def test_view_only_change_form_offers_close_instead_of_save(staff_client, catalog):
@@ -1252,13 +1526,13 @@ def test_view_only_change_form_offers_close_instead_of_save(staff_client, catalo
 def test_add_without_change_permission_offers_save_and_view(staff_client, catalog):
     soup = BeautifulSoup(staff_client("add_item", "view_item").get(url(Item, "add")).content, "html.parser")
 
-    assert soup.select_one("[data-continue]").get_text(strip=True) == "Save and view"
+    assert "Save and view" in soup.select_one("[data-continue]").get_text()
 
 
 def test_delete_confirmation_puts_the_confirm_button_first(admin_client, catalog):
     soup = BeautifulSoup(admin_client.get(url(Item, "delete", catalog.beta.pk)).content, "html.parser")
 
-    controls = soup.find("input", {"name": "post"}).parent.find_all(["button", "a"], recursive=False)
+    controls = soup.select("[data-confirm-buttons] > *")
     assert controls[0]["type"] == "submit"
     assert controls[1]["href"] == url(Item, "change", catalog.beta.pk)
 
@@ -1284,9 +1558,19 @@ def test_delete_confirmation_lists_objects_up_to_the_max_display(admin_client, c
     monkeypatch.setattr(site.get_model_admin(Item), "delete_confirmation_max_display", limit)
     soup = BeautifulSoup(admin_client.get(url(Item, "delete", catalog.alpha.pk)).content, "html.parser")
 
-    listed = [li.get_text(" ", strip=True) for li in soup.select("details li:not(:has(li))")]
-    assert len(listed) == len(rows)
-    assert all(word in row for word, row in zip(rows, listed, strict=True))
+    listed = soup.select_one("details").get_text(" ", strip=True) if soup.select_one("details") else ""
+    assert [word for word in ("kettle", "sale", "Lid", "1 more") if word in listed] == rows
+
+
+def test_delete_confirmation_groups_the_objects_of_a_model(admin_client, catalog):
+    Part.objects.bulk_create(Part(item=catalog.alpha, name=f"Leg {number}") for number in range(10))
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "delete", catalog.alpha.pk)).content, "html.parser")
+
+    listed = soup.select_one("details").get_text(" ", strip=True)
+    assert "Parts 11" in listed
+    assert "and 3 more" in listed
+    assert "Part:" not in listed
 
 
 def test_filter_count_shows_zero_without_filters(admin_client, catalog):
@@ -1332,6 +1616,19 @@ def test_history_and_index_show_admin_changes(admin_client, catalog):
 
     assert b"Quantity" in admin_client.get(url(Item, "history", catalog.beta.pk)).content
     assert b"Beta lamp" in admin_client.get(reverse("admin:index")).content
+
+
+def test_index_lists_a_recent_object_once_with_what_its_saves_changed(admin_client, catalog):
+    for name in ("Beta lamp", "Beta light"):
+        admin_client.post(url(Item, "change", catalog.beta.pk), item_data(catalog.office, name=name, quantity="9"))
+    admin_client.post(url(Item, "add"), item_data(catalog.kitchen, slug="gamma"))
+
+    rows = history_rows(admin_client.get(reverse("admin:index")), "[aria-labelledby=recent-actions] li")
+
+    assert [row.split(".")[0] for row in rows][:1] == ["Gamma desk Added"]
+    assert len(rows) == 2
+    assert rows[1].startswith("Beta light Changed")
+    assert {"Quantity", "Name"} <= set(rows[1].replace(",", " ").replace(".", " ").split())
 
 
 def history_rows(response, selector="#history li"):
@@ -1470,6 +1767,18 @@ def test_relation_search_returns_matching_rows(admin_client, catalog):
     assert b"Office" not in response.content
 
 
+def test_relation_search_keeps_the_model_ordering_under_an_annotated_admin(admin_client):
+    """A related admin that annotates its rows still lists them in the model's ordering."""
+    for name in ["Bravo", "Alpha", "Charlie"]:
+        Category.objects.create(name=name, slug=name.lower())
+    params = {"widget": "select", "site": "admin", "model": "admin_app.item", "field": "category"}
+
+    response = admin_client.get(reverse("formwork:search", args=[RELATION_SEARCH_KEY]), params)
+
+    rows = BeautifulSoup(response.content, "html.parser").select("button[data-value]")
+    assert [row["data-label"] for row in rows] == ["Alpha", "Bravo", "Charlie"]
+
+
 def test_relation_search_denies_non_staff(client, django_user_model, catalog):
     client.force_login(django_user_model.objects.create_user("guest"))
     params = {"widget": "select", "site": "admin", "model": "admin_app.item", "field": "category", "q": "kit"}
@@ -1517,10 +1826,63 @@ def test_popup_page_shows_the_form_alone_with_save_only(admin_client):
     assert soup.find("input", {"name": "_popup"})["value"] == "1"
 
 
-def test_popup_refuses_a_to_field_that_no_relation_uses(admin_client, catalog):
-    response = admin_client.get(url(Category, "change", catalog.kitchen.pk), {"_popup": "1", "_to_field": "name"})
+@pytest.mark.parametrize("view", ["change", "changelist"])
+def test_popup_refuses_a_to_field_that_no_relation_uses(admin_client, catalog, view):
+    args = (catalog.kitchen.pk,) if view == "change" else ()
+
+    response = admin_client.get(url(Category, view, *args), {"_popup": "1", "_to_field": "name"})
 
     assert response.status_code == 400
+
+
+@pytest.mark.parametrize("raw_id_fields", [(), ("category",)])
+def test_raw_id_field_gets_a_lookup_button_to_the_related_list(admin_client, catalog, monkeypatch, raw_id_fields):
+    monkeypatch.setattr(site.get_model_admin(Item), "raw_id_fields", raw_id_fields)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "add")).content, "html.parser")
+
+    links = soup.select('[data-related="admin_app.category"] [data-related-popup="lookup"]')
+    assert [link["href"] for link in links] == [url(Category, "changelist")] * len(raw_id_fields)
+
+
+def test_lookup_lists_only_the_rows_the_relation_offers(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "raw_id_fields", ["category"])
+    monkeypatch.setattr(Item._meta.get_field("category").remote_field, "limit_choices_to", {"slug": "office"})
+    soup = BeautifulSoup(admin_client.get(url(Item, "add")).content, "html.parser")
+    lookup = soup.select_one('[data-related-popup="lookup"]')["href"]
+
+    response = admin_client.get(f"{lookup}&_popup=1&_to_field=id")
+
+    picks = BeautifulSoup(response.content, "html.parser").select("[data-popup-pick]")
+    assert [json.loads(link["data-popup-pick"]) for link in picks] == [
+        {"value": str(catalog.office.pk), "obj": "Office"}
+    ]
+
+
+def test_dialog_list_keeps_the_dialog_in_its_search_sort_and_add(admin_client, catalog):
+    response = admin_client.get(url(Category, "changelist"), {"_popup": "1", "_to_field": "id"})
+
+    soup = BeautifulSoup(response.content, "html.parser")
+    assert soup.select_one("#changelist-filters [name=_popup]")["value"] == "1"
+    assert soup.select_one("#changelist-filters [name=_to_field]")["value"] == "id"
+    sort_links = [link["href"] for link in soup.select("#changelist thead a[href]")]
+    assert sort_links
+    assert all("_popup=1" in href and "_to_field=id" in href for href in sort_links)
+    add = soup.select_one(f'a[href^="{url(Category, "add")}"]')["href"]
+    assert "_popup=1" in add
+    assert "_to_field=id" in add
+
+
+@pytest.mark.parametrize("popup", [True, False], ids=["dialog", "page"])
+def test_only_the_dialog_list_picks_rows_and_it_edits_and_exports_nothing(admin_client, catalog, popup):
+    params = {"_popup": "1", "_to_field": "id"} if popup else {}
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist"), params).content, "html.parser")
+
+    assert bool(soup.select("[data-popup-pick]")) is popup
+    assert bool(soup.select("[name=form-0-quantity]")) is not popup
+    assert bool(soup.select(f'form[action="{url(Item, "export")}"]')) is not popup
+    assert bool(soup.select(f'a[href^="{url(Item, "import")}"]')) is not popup
 
 
 @pytest.mark.parametrize(
@@ -1529,14 +1891,14 @@ def test_popup_refuses_a_to_field_that_no_relation_uses(admin_client, catalog):
         (("add_item", "view_category", "view_tag"), ["View selected category"]),
         (
             ("add_item", "add_category", "change_category", "view_tag"),
-            ["Change selected category", "Add another category"],
+            ["Edit selected category", "Add another category"],
         ),
     ],
 )
 def test_relation_buttons_follow_the_related_admins_permissions(staff_client, catalog, codenames, buttons):
     soup = BeautifulSoup(staff_client(*codenames).get(url(Item, "add")).content, "html.parser")
 
-    field = soup.select_one('[data-related="admin_app.category"]')
+    field = soup.select_one("#id_category_field")
     assert [link["aria-label"] for link in field.select("[data-related-popup]")] == buttons
 
 
@@ -1555,7 +1917,7 @@ def test_change_button_links_to_the_chosen_row(admin_client, catalog, monkeypatc
 
     soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
 
-    links = soup.select('[data-related="admin_app.category"] [data-related-popup="change"]')
+    links = soup.select('#id_category_field [data-related-popup="change"]')
     assert [link.get("href") for link in links] == [url(Category, "change", catalog.kitchen.pk)]
 
 
@@ -1567,13 +1929,13 @@ def test_relation_buttons_show_next_to_any_visible_widget(admin_client, catalog,
     soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
 
     assert soup.select_one("[name=tags]") is not None
-    assert len(soup.select('[data-related="admin_app.tag"] [data-related-popup="add"]')) == buttons
+    assert len(soup.select('#id_tags_field [data-related-popup="add"]')) == buttons
 
 
 def test_change_button_is_dimmed_without_a_chosen_row(admin_client, catalog):
     soup = BeautifulSoup(admin_client.get(url(Item, "add")).content, "html.parser")
 
-    link = soup.select_one('[data-related="admin_app.category"] [data-related-popup="change"]')
+    link = soup.select_one('#id_category_field [data-related-popup="change"]')
     assert not link.has_attr("href")
     assert link["aria-disabled"] == "true"
 
@@ -1600,6 +1962,37 @@ def test_view_on_site_redirects_to_the_object(admin_client, catalog):
 
 def test_registered_admins_pass_the_checks():
     assert checks.run_checks(tags=[checks.Tags.admin]) == []
+
+
+@pytest.mark.parametrize(
+    ("css", "warnings"),
+    [
+        (f':root{{--formwork-admin-css:"{__version__}"}}', []),
+        (':root{--formwork-admin-css:"0.0.1"}', ["formwork_admin.W501"]),
+        ("body{color:red}", ["formwork_admin.W501"]),
+    ],
+)
+def test_check_warns_while_a_site_css_comes_from_another_version(tmp_path, settings, monkeypatch, css, warnings):
+    (tmp_path / "site.css").write_text(css)
+    settings.STATICFILES_DIRS = [str(tmp_path)]
+    monkeypatch.setattr("django_formwork.admin.sites._sites", {})
+    monkeypatch.setattr("django_formwork.admin.sites._all_sites", set())
+    styled = admin.AdminSite(name="styled")
+    styled.stylesheets = ("site.css", "https://cdn.example.com/extra.css")
+
+    assert [message.id for message in checks.run_checks(tags=[checks.Tags.admin])] == warnings
+
+
+def test_check_reports_two_sites_with_the_same_name(monkeypatch):
+    monkeypatch.setattr("django_formwork.admin.sites._sites", {})
+    monkeypatch.setattr("django_formwork.admin.sites._all_sites", set())
+    for name in ("shared", "shared", "other"):
+        admin.AdminSite(name=name)
+
+    messages = checks.run_checks(tags=[checks.Tags.admin])
+
+    assert [message.id for message in messages] == ["formwork_admin.E502"]
+    assert "'shared'" in messages[0].msg
 
 
 @pytest.mark.parametrize(
@@ -1644,3 +2037,32 @@ def test_inline_check_names_the_formwork_class_to_import(django_inline, module):
 
 def test_string_action_resolves_to_the_admin_method():
     assert site.get_model_admin(Item).get_action("mark_active").func is ItemAdmin.mark_active
+
+
+@pytest.mark.parametrize(("view", "marks"), [("change", True), ("add", False)])
+def test_change_form_marks_the_changed_fields_of_a_saved_object_only(admin_client, catalog, view, marks):
+    args = (catalog.alpha.pk,) if view == "change" else ()
+    soup = BeautifulSoup(admin_client.get(url(Item, view, *args)).content, "html.parser")
+
+    assert soup.find("form", id="item_form").has_attr("data-formwork-dirty") is marks
+
+
+def test_change_form_failed_save_keeps_every_change_marked(admin_client, catalog):
+    alpha = catalog.alpha
+    data = item_data(
+        catalog.kitchen,
+        name="Alpha kettle XL",
+        quantity="-1",
+        **management("parts", total=1, initial=1),
+        **{
+            "parts-0-id": catalog.lid.pk,
+            "parts-0-item": alpha.pk,
+            "parts-0-name": "Glass lid",
+            "parts-0-quantity": "-1",
+        },
+    )
+
+    soup = BeautifulSoup(admin_client.post(url(Item, "change", alpha.pk), data).content, "html.parser")
+
+    marked = {el.find(["input", "select", "textarea"])["name"] for el in soup.select("[data-formwork-changed]")}
+    assert {"name", "parts-0-name", "quantity", "parts-0-quantity"} <= marked

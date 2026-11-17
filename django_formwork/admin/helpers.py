@@ -31,7 +31,20 @@ if TYPE_CHECKING:
     from django.forms import BaseForm, BoundField, Media, ModelForm
     from django_stubs_ext import StrPromise
 
-__all__ = ["AdminField", "AdminForm", "Fieldset", "InlineAdminForm", "InlineAdminFormSet", "ReadonlyField"]
+__all__ = [
+    "AdminField",
+    "AdminForm",
+    "DeletedGroup",
+    "DeletedObject",
+    "Fieldset",
+    "InlineAdminForm",
+    "InlineAdminFormSet",
+    "ReadonlyField",
+    "deleted_groups",
+]
+
+# The action and delete pages name this many objects of a kind and count the rest.
+FIRST_OBJECTS = 8
 
 
 def _show_errors_inline(form: BaseForm) -> None:
@@ -268,6 +281,7 @@ class InlineAdminFormSet:
         fieldsets: Sequence[tuple[str | StrPromise | None, dict[str, Any]]],
         readonly_fields: Sequence[Any] = (),
         *,
+        prepopulated_fields: dict[str, Sequence[str]] | None = None,
         has_add_permission: bool = True,
         has_change_permission: bool = True,
         has_delete_permission: bool = True,
@@ -277,6 +291,11 @@ class InlineAdminFormSet:
         self.formset = formset
         self.fieldsets_spec = fieldsets
         self.readonly_fields = readonly_fields
+        self.prepopulated_fields = [
+            {"field": name, "dependencies": list(dependencies)}
+            for name, dependencies in (prepopulated_fields or {}).items()
+            if name in formset.form.base_fields
+        ]
         self.has_add_permission = has_add_permission
         self.has_change_permission = has_change_permission
         self.has_delete_permission = has_delete_permission
@@ -385,3 +404,66 @@ class InlineAdminFormSet:
 
     def error_count(self) -> int:
         return sum(1 for form in self.formset.forms if form.errors) + bool(self.formset.non_form_errors())
+
+
+class DeletedObject(SafeString):
+    """A line of the delete pages in Django's words, "Item: Kettle", with the object as a link where it has one.
+
+    The pages group the lines of a ``model`` under its name, and there show the ``link`` alone.
+    """
+
+    model: type[models.Model]
+    link: SafeString
+
+    @classmethod
+    def of(cls, obj: models.Model, link: SafeString) -> DeletedObject:
+        line = cls(format_html("{}: {}", capfirst(obj._meta.verbose_name), link))
+        line.model, line.link = type(obj), link
+        return line
+
+
+@dataclass
+class DeletedGroup:
+    """The objects of one model at one level of a delete page: the first few, each with its own groups."""
+
+    name: str
+    count: int = 0
+    objects: list[tuple[SafeString, SafeString, list[DeletedGroup]]] = field(default_factory=list)
+
+    @property
+    def more(self) -> int:
+        return self.count - len(self.objects)
+
+
+def deleted_groups(items: Sequence[Any], limit: int | None) -> list[DeletedGroup]:
+    """Django's nested list of the objects a deletion takes with it, as groups per model at each level.
+
+    A group lists its first ``FIRST_OBJECTS``, and the page at most ``limit`` objects over all levels, as
+    ``delete_confirmation_max_display`` counts them. A line without a model, which an overridden
+    ``get_deleted_objects()`` can return, makes a group of its own.
+    """
+    shown = 0
+
+    def group(level: Sequence[Any]) -> list[DeletedGroup]:
+        nonlocal shown
+        # Django's list puts an object's own list right after it.
+        pairs: list[tuple[Any, Sequence[Any]]] = []
+        for item in level:
+            if isinstance(item, list):
+                pairs[-1] = (pairs[-1][0], item)
+            else:
+                pairs.append((item, []))
+        groups: dict[object, DeletedGroup] = {}
+        for line, children in pairs:
+            model = getattr(line, "model", None)
+            key = model or object()
+            if key not in groups:
+                groups[key] = DeletedGroup(capfirst(model._meta.verbose_name_plural) if model else "")
+            found = groups[key]
+            found.count += 1
+            if len(found.objects) < FIRST_OBJECTS and (limit is None or shown < limit):
+                shown += 1
+                found.objects.append((line, getattr(line, "link", line), group(children)))
+        return list(groups.values())
+
+    return group(items)

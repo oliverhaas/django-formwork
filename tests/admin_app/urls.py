@@ -12,6 +12,9 @@ class SupportSite(AdminSite):
     def has_permission(self, request):
         return request.user.is_active and request.user.groups.filter(name="Support").exists()
 
+    def has_model_permission(self, request, model, action, obj=None):
+        return action in {"view", "change"}
+
 
 support_site = SupportSite(name="support")
 support_site.register(Item, ItemAdmin)

@@ -10,8 +10,8 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-<li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>
-<li><a href="{{ url(site.name ~ ":app_list", app_label=opts.app_label) }}" class="text-base-content/60">{{ opts.app_config.verbose_name }}</a></li>
+<li><a {{ m.page_link(url(site.name ~ ":index"), "index", site.index_title) }} class="text-base-content/60">{{ _("Home") }}</a></li>
+<li><a {{ m.page_link(url(site.name ~ ":app_list", app_label=opts.app_label), "app") }} class="text-base-content/60">{{ opts.app_config.verbose_name }}</a></li>
 <li class="font-medium">{{ cl.title }}</li>
 {% endblock %}
 
@@ -19,7 +19,7 @@
 <div class="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
   <div class="flex min-w-0 items-center gap-3" x-data>
     <span class="hidden size-11 shrink-0 place-items-center rounded-box bg-primary/10 text-primary sm:grid">{{ icon(model_admin.get_icon(), "size-5") }}</span>
-    <h1 class="truncate text-2xl font-semibold tracking-tight">{{ cl.title }}</h1>
+    <h1 class="text-2xl font-semibold tracking-tight text-balance wrap-break-word">{{ cl.title }}</h1>
     {% block info %}
     {% set info_label = _("About %(name)s", name=opts.verbose_name_plural) %}
     <button type="button" class="btn btn-ghost btn-sm btn-circle -ml-1 shrink-0 text-base-content/50 hover:text-base-content" aria-label="{{ info_label }}" title="{{ info_label }}"
@@ -50,9 +50,11 @@
     {% endif %}
     {{ m.export_menu(cl, export_formats, export_url, csrf_input) }}
     {% if has_add_permission %}
-    {% set add_url = url(model_admin.url_name("add")) %}
+    {#- In the dialog the add page answers the relation that opened it, as a picked row does. #}
+    {% set add_query = [preserved_filters, cl.popup_params|urlencode]|select|join("&") %}
     {#- "Add" alone keeps the button the same width on every list; the screen reader still hears the model. #}
-    <a href="{{ add_url }}{% if preserved_filters %}?{{ preserved_filters }}{% endif %}" class="btn btn-primary"
+    {% set add_url = url(model_admin.url_name("add")) ~ ("?" ~ add_query if add_query else "") %}
+    <a {% if cl.is_popup %}href="{{ add_url }}"{% else %}{{ m.page_link(add_url, "add") }}{% endif %} class="btn btn-primary"
        aria-label="{{ _("Add %(name)s", name=opts.verbose_name) }}">
       {{ icon("plus") }} {{ _("Add") }}
     </a>
@@ -71,6 +73,7 @@
   {% for key, values in cl.remaining_lookups.items() %}{% for value in values %}
   <input type="hidden" name="{{ key }}" value="{{ value }}">
   {% endfor %}{% endfor %}
+  {{ m.popup_inputs(cl.is_popup, cl.to_field) }}
   <div class="flex items-center gap-2">
     {% if cl.search_field is not none %}
     <div class="min-w-0 flex-1" data-search>{{ cl.search_field }}</div>

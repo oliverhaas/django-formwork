@@ -6,26 +6,29 @@
 {% set filtered = cl.is_filtered %}
 {# A neutral box; admin.css turns it primary when checked, like the rest of the selection. #}
 {% set checkbox = "checkbox checkbox-sm" %}
-{# Opaque row colors, so a pinned column takes its row's color over the columns that scroll under it. #}
+{# Opaque row colors, so a pinned column takes its row's color over the columns that scroll under it.
+   The server renders them, so the rows keep their markup when Alpine starts. #}
 {% set head_bg = "bg-[color-mix(in_srgb,var(--color-base-200)_50%,var(--color-base-100))]" %}
 {% set row_bg = "bg-base-100 hover:bg-[color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100))]" %}
-{% set selected_bg = "bg-[color-mix(in_srgb,var(--color-primary)_7%,var(--color-base-100))] hover:bg-[color-mix(in_oklab,var(--color-primary)_7%,color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100)))]" %}
+{% set selected_bg = "data-selected:bg-[color-mix(in_srgb,var(--color-primary)_7%,var(--color-base-100))] data-selected:hover:bg-[color-mix(in_oklab,var(--color-primary)_7%,color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100)))]" %}
 <div id="changelist">
 <div id="changelist-{{ cl.state_key }}" x-init="reset($el)" data-total="{{ cl.result_count }}">
   {% if cl.current_order is not none %}<input type="hidden" name="o" value="{{ cl.current_order }}" form="changelist-filters">{% endif %}
+  {% if cl.per_page_param %}<input type="hidden" name="per_page" value="{{ cl.per_page_param }}" form="changelist-filters">{% endif %}
 
-  <div class="card overflow-hidden border border-base-300 bg-base-100">
+  {#- The card does not clip, so the Actions menu at its bottom can open past its top on a short list.
+      The rows' box rounds its own top corners instead. #}
+  <div class="card border border-base-300 bg-base-100">
     {% if editable %}
     {#- formwork marks each cell whose value differs from the saved one, and the save bar counts them. #}
     <form id="changelist-form" method="post"{% if formset.is_multipart() %} enctype="multipart/form-data"{% endif %} novalidate data-formwork-dirty>
       {{ csrf_input }}
       {{ formset.management_form }}
-      {% if formset.non_form_errors() %}
-      <div role="alert" class="alert alert-error alert-soft m-3">{{ icon("circle-exclamation-point", "size-5") }}<span>{{ formset.non_form_errors()|join(" ") }}</span></div>
-      {% endif %}
+      {#- The cells keep their errors in tooltips, so the list says first how many there are. #}
+      {{ m.errors_alert(formset.total_error_count(), formset.non_form_errors(), class_="m-3") }}
     {% endif %}
     {# columns.js fits the columns to this box. #}
-    <div id="changelist-scroll" class="overflow-x-auto"{% if collapsible %} data-columns="{{ opts.label_lower }}"{% endif %}>
+    <div id="changelist-scroll" class="overflow-x-auto rounded-t-[calc(var(--radius-box)-1px)]"{% if collapsible %} data-columns="{{ opts.label_lower }}"{% endif %}>
       <table id="changelist-table" class="table table-sm">
         <thead class="text-xs">
           <tr class="{{ head_bg }}">
@@ -37,7 +40,7 @@
             </th>
             {% endif %}
             {% for column in cl.columns %}
-            <th class="group/th{% if column.numeric %} text-right{% endif %}" data-col{% if loop.first or column.linked %} data-pin{% endif %}{% if column.direction %} aria-sort="{{ "ascending" if column.direction == "asc" else "descending" }}"{% endif %}>
+            <th class="group/th{% if column.numeric %} text-right{% endif %}" data-col{% if loop.first or column.linked %} data-pin{% endif %}{% if column.indent %} data-indent{% endif %}{% if column.direction %} aria-sort="{{ "ascending" if column.direction == "asc" else "descending" }}"{% endif %}>
               {% if column.sort_url %}
               <span class="inline-flex items-center gap-1.5 whitespace-nowrap align-middle{% if column.numeric %} flex-row-reverse{% endif %}">
                 <a {{ m.list_link(column.sort_url) }} class="group inline-flex items-center gap-1 transition-colors hover:text-base-content{% if column.numeric %} flex-row-reverse{% endif %}{% if column.direction %} text-base-content{% endif %}">
@@ -72,7 +75,16 @@
         </thead>
         <tbody>
           {% for row in cl.rows %}
-          <tr data-pk="{{ row.value }}" class="transition-colors" :class="selected.includes($el.dataset.pk) ? '{{ selected_bg }}' : '{{ row_bg }}'">
+          {% set row_errors = row.form.non_field_errors() if row.form is not none else () %}
+          {% if row_errors %}
+          {#- An error of the whole row, as Django shows it: on a line of its own, right above the row. #}
+          <tr data-row-errors class="border-b-0">
+            <td colspan="{{ columns }}" class="pb-0">
+              <p class="flex items-center gap-1.5 text-xs text-error">{{ icon("circle-exclamation-point", "size-3.5") }} {{ row_errors|join(" ") }}</p>
+            </td>
+          </tr>
+          {% endif %}
+          <tr data-pk="{{ row.value }}" class="transition-colors {{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)">
             {% if actions %}
             <td>
               <input type="checkbox" class="{{ checkbox }}" name="{{ action_checkbox_name }}" value="{{ row.value }}"
@@ -81,12 +93,11 @@
             </td>
             {% endif %}
             {% for c in row.cells %}
-            <td class="{{ "min-w-48" if c.wrap else "whitespace-nowrap" }}{{ " text-right" if c.numeric }}"{% if c.field is not none %} data-editable data-formwork-field{% if c.changed %} data-formwork-changed{% endif %}{% endif %}{% if c.field is not none and c.field.errors %} data-invalid{% endif %}>
+            <td class="{{ "min-w-48" if c.wrap else "whitespace-nowrap" }}{{ " text-right" if c.numeric }}"{% if c.field is not none %} data-editable data-formwork-field{% if c.indent %} data-indent{% endif %}{% if c.changed %} data-formwork-changed{% if c.field.initial_checked %} data-formwork-initial="{{ c.field.initial_checked }}"{% endif %}{% endif %}{% endif %}{% if c.field is not none and c.field.errors %} data-invalid{% endif %}>
               {% if c.field is not none %}
-              {{ c.field.as_widget(attrs={"aria-label": c.field.label}) }}
-              {% if c.field.errors %}<p class="mt-1 text-xs text-error">{{ c.field.errors|join(" ") }}</p>{% endif %}
+              {{ c.field.as_widget(attrs={"aria-label": c.field.label}) }}{{ m.cell_notes(c.field) }}
               {% elif c.link %}
-              <a href="{{ c.link }}" class="link link-primary font-medium">{{ m.cell(c) }}</a>
+              <a {% if cl.is_popup %}href="{{ c.link }}"{% else %}{{ m.page_link(c.link, "change") }}{% endif %} class="link link-primary font-medium"{% if row.pick %} data-popup-pick="{{ row.pick|tojson_attr }}"{% endif %}>{{ m.cell(c) }}</a>
               {% else %}
               {{ m.cell(c) }}
               {% endif %}
@@ -105,13 +116,20 @@
                 <div>
                   <p class="text-base font-medium">{{ _("No %(name)s found", name=opts.verbose_name_plural) if filtered else _("No %(name)s yet", name=opts.verbose_name_plural) }}</p>
                   <p class="mt-1 text-sm text-base-content/60">
-                    {{ _("Nothing matches the search and filters.") if filtered else _("Once added, they appear here.") }}
+                    {%- if not filtered %}{{ _("Once added, they appear here.") }}
+                    {%- elif not cl.query %}{{ _("Nothing matches the filters.") }}
+                    {%- elif cl.has_active_filters or cl.remaining_lookups %}{{ _("Nothing matches the search and filters.") }}
+                    {%- else %}{{ _("Nothing matches the search.") }}{% endif %}
                   </p>
                 </div>
-                {% if cl.has_active_filters %}
-                <a {{ m.list_link(cl.clear_all_filters_qs) }} data-clear-filters class="btn btn-sm">{{ _("Clear all filters") }}</a>
+                {% if cl.query or cl.has_active_filters %}
+                <div class="flex flex-wrap justify-center gap-2">
+                  {% if cl.query %}<a {{ m.list_link(cl.clear_search_qs) }} data-clear-search class="btn btn-sm">{{ _("Clear search") }}</a>{% endif %}
+                  {% if cl.has_active_filters %}<a {{ m.list_link(cl.clear_all_filters_qs) }} data-clear-filters class="btn btn-sm">{{ _("Clear all filters") }}</a>{% endif %}
+                </div>
                 {% elif has_add_permission and not filtered %}
-                <a href="{{ url(model_admin.url_name("add")) }}" class="btn btn-primary btn-sm"
+                {% set add_url = url(model_admin.url_name("add")) %}
+                <a {% if cl.is_popup %}href="{{ add_url }}"{% else %}{{ m.page_link(add_url, "add") }}{% endif %} class="btn btn-primary btn-sm"
                    aria-label="{{ _("Add %(name)s", name=opts.verbose_name) }}">{{ icon("plus") }} {{ _("Add") }}</a>
                 {% endif %}
               </div>
@@ -123,100 +141,105 @@
     </div>
     {% if editable %}</form>{% endif %}
 
-    {# Kept without rows, as change_list.html waits for it before the first render. #}
-    <div id="changelist-footer" class="{{ "flex" if cl.result_count else "hidden" }} flex-wrap items-center justify-between gap-3 border-t border-base-300 px-4 py-3">
-      <p class="text-sm text-base-content/60">
-        {% if cl.result_count %}
-        {% if cl.show_all or not cl.multi_page %}
-        {% trans trimmed count=cl.result_count, total=number(cl.result_count) %}{{ total }} result{% pluralize %}{{ total }} results{% endtrans %}
-        {% elif cl.is_estimate %}
-        {% trans trimmed start=number(cl.page.start_index()), end=number(cl.page.end_index()), total=number(cl.result_count) %}{{ start }}&#8211;{{ end }} of about {{ total }}{% endtrans %}
-        {% else %}
-        {% trans trimmed start=number(cl.page.start_index()), end=number(cl.page.end_index()), total=number(cl.result_count) %}{{ start }}&#8211;{{ end }} of {{ total }}{% endtrans %}
-        {% endif %}
-        {% if cl.full_result_count is not none %}
-        <span class="text-base-content/40">({{ _("%(total)s total", total=number(cl.full_result_count)) }})</span>
-        {% endif %}
-        {% endif %}
-      </p>
-      <div class="flex items-center gap-2">
-        {% if cl.multi_page and cl.can_show_all and not cl.show_all %}
-        <a {{ m.list_link(cl.get_query_string({"all": "", "p": none}), top=true) }} class="btn btn-ghost btn-sm">{{ _("Show all") }}</a>
-        {% endif %}
-        {{ m.pagination(cl) }}
+    {#- Kept without rows, as change_list.html waits for it before the first render. It ends the card,
+        so the first frame has the whole footer. It draws no box, so the line of pending work below
+        can stick to the window's bottom while the rest of the card scrolls. #}
+    <div id="changelist-footer" class="{{ "contents" if cl.result_count else "hidden" }}">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-4 py-3">
+        <p class="text-sm text-base-content/60">
+          {% if cl.result_count %}
+          {% if cl.show_all or not cl.multi_page %}
+          {% trans trimmed count=cl.result_count, total=number(cl.result_count) %}{{ total }} result{% pluralize %}{{ total }} results{% endtrans %}
+          {% elif cl.is_estimate %}
+          {% trans trimmed start=number(cl.page.start_index()), end=number(cl.page.end_index()), total=number(cl.result_count) %}{{ start }}&#8211;{{ end }} of about {{ total }}{% endtrans %}
+          {% else %}
+          {% trans trimmed start=number(cl.page.start_index()), end=number(cl.page.end_index()), total=number(cl.result_count) %}{{ start }}&#8211;{{ end }} of {{ total }}{% endtrans %}
+          {% endif %}
+          {% if cl.full_result_count is not none %}
+          <span class="text-base-content/40">({{ _("%(total)s total", total=number(cl.full_result_count)) }})</span>
+          {% endif %}
+          {% endif %}
+        </p>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {% if cl.per_page_select %}
+          {#- A new size starts again at the first page, with the filters, the search and the sort it had. #}
+          <form method="get" action="{{ request.path }}" class="flex items-center gap-2"
+                hx-get="{{ request.path }}" hx-trigger="change" hx-target="#content" hx-swap="innerMorph scroll:top scrollTarget:window" hx-push-url="true">
+            {% for key, value in cl.per_page_inputs %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+            <span class="whitespace-nowrap text-sm text-base-content/60 max-sm:hidden" aria-hidden="true">{{ _("Rows per page") }}</span>
+            <div class="w-fit">{{ cl.per_page_select }}</div>
+            <noscript><button class="btn btn-sm">{{ _("Show") }}</button></noscript>
+          </form>
+          {% elif cl.multi_page and cl.can_show_all and not cl.show_all %}
+          <a {{ m.list_link(cl.get_query_string({"all": "", "p": none}), top=true) }} class="btn btn-ghost btn-sm">{{ _("Show all") }}</a>
+          {% endif %}
+          {{ m.pagination(cl) }}
+        </div>
       </div>
-    </div>
-  </div>
-
-  {% set saving = editable and cl.result_list %}
-  {% if actions or saving %}
-  {#- The bar floats at the bottom of the window over a long list and sits under a short one. The dock
-      takes no height, and the page's bottom padding holds the bar, so a bar that comes or goes moves nothing.
-      It holds the selected rows' actions and the unsaved changes, each while it has something to show. #}
-  <div class="pointer-events-none sticky bottom-4 z-10 mt-15 -mb-15 h-0">
-    <div class="absolute inset-x-0 bottom-0 flex justify-center">
-      {#- The bar fades in through CSS. With x-transition over the groups' own x-show, Alpine 3.15 logged an
-          unhandled promise rejection after a morph replaced the changes. #}
-      <div class="pointer-events-auto w-fit max-w-full rounded-box border border-base-300 bg-base-100 p-0.5 shadow-xl transition-opacity duration-150 starting:opacity-0"
-           x-show="{{ "count || changes" if actions and saving else ("count" if actions else "changes") }}" x-cloak>
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 p-1" data-dock>
-          {% if actions %}
-          <form id="changelist-actions" method="post" x-show="count" class="flex flex-wrap items-center gap-x-3 gap-y-2">
-            {{ csrf_input }}
-            <input type="hidden" name="select_across" :value="across ? '1' : '0'" value="0">
-            {% set more = cl.result_count > cl.result_list|length %}
-            <div class="flex items-center gap-1">
-            {# Every state shares one grid cell, and the widest ones hold its width, so the buttons after it keep their place. #}
-            <div class="me-1 grid items-center ps-2.5 text-sm font-medium tabular-nums">
-              <span class="invisible col-start-1 row-start-1 flex items-center">
+      {% set saving = editable and cl.result_list %}
+      {% if (actions or saving) and cl.result_list %}
+      {#- The selected rows' actions and the unsaved changes, on a line under the pages. Both groups always
+          show, dimmed while they have nothing to work on, so nothing moves when they get something.
+          While they have something, the line sticks to the window's bottom, for a list that is longer
+          than the window, as on a phone. A list that fits the window shows it in place. #}
+      <div class="-bottom-px z-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-b-[calc(var(--radius-box)-1px)] border-t border-base-300 bg-base-100 px-4 py-2.5"
+           x-data="formworkStuck" :class="{ sticky: pending }" :data-stuck="stuck && pending" data-pending>
+        {% if actions %}
+        <form id="changelist-actions" method="post" class="relative flex flex-wrap items-center gap-x-3 gap-y-2 max-sm:w-full max-sm:justify-between">
+          {{ csrf_input }}
+          <input type="hidden" name="select_across" :value="across ? '1' : '0'" value="0">
+          {% set more = cl.result_count > cl.result_list|length %}
+          <div class="flex items-center gap-1">
+            {#- Every state shares one grid cell, and the widest ones hold its width, so the buttons after it keep their place.
+                A phone has no width to spare: there the clear button comes first and the buttons end the line, so the
+                count can grow between them. #}
+            <div class="me-1 grid items-center text-sm font-medium tabular-nums text-base-content/45" :class="{ 'text-base-content/45': !count }">
+              <span class="invisible col-start-1 row-start-1 flex items-center max-sm:hidden">
                 {{ number(cl.result_list|length) }} {{ _("selected") }}
                 {% if more %}<span class="btn btn-link btn-sm px-1">{{ _("Select all %(count)s", count=number(cl.result_count)) }}</span>{% endif %}
               </span>
-              <span class="invisible col-start-1 row-start-1">{{ _("All %(count)s selected", count=number(cl.result_count)) }}</span>
+              <span class="invisible col-start-1 row-start-1 max-sm:hidden">{{ _("All %(count)s selected", count=number(cl.result_count)) }}</span>
               <span class="col-start-1 row-start-1 flex items-center" x-show="!across">
-                <span><span x-text="count"></span> {{ _("selected") }}</span>
+                <span><span x-text="count">0</span> {{ _("selected") }}</span>
                 {% if more %}
-                <button type="button" class="btn btn-link btn-sm px-1" x-show="allChecked" @click="across = true">
+                <button type="button" class="btn btn-link btn-sm px-1" x-show="allChecked" x-cloak @click="across = true">
                   {{ _("Select all %(count)s", count=number(cl.result_count)) }}
                 </button>
                 {% endif %}
               </span>
               <span class="col-start-1 row-start-1" x-show="across" x-cloak>{{ _("All %(count)s selected", count=number(cl.result_count)) }}</span>
             </div>
-            <button type="button" class="btn btn-ghost btn-sm btn-square" @click="clear()" aria-label="{{ _("Clear selection") }}" title="{{ _("Clear selection") }}">{{ icon("x") }}</button>
-            </div>
-            {#- An action reloads the list, which would drop the unsaved changes; like the change form's, they wait. #}
-            <div data-dock-part>
-              <div class="flex flex-wrap items-center gap-1" :class="changes && 'tooltip'" data-tip="{{ _("Save your changes first") }}">
-                {% for action in actions %}
-                <button type="submit" name="action" value="{{ action.name }}" class="btn btn-sm {{ "btn-error btn-soft" if action.danger else "btn-ghost" }}" :disabled="changes > 0">
-                  {% if action.icon %}{{ icon(action.icon) }}{% endif %}{{ action.label }}
-                </button>
-                {% endfor %}
-              </div>
-            </div>
-          </form>
-          {% endif %}
-          {% if saving %}
-          {#- Shows while a cell differs from its saved value. Save takes the color that marks the changed cells.
-              On a narrow window the label keeps a line of its own, and the two buttons stay together. #}
-          <div class="flex grow flex-wrap items-center justify-end gap-x-3 gap-y-2" x-show="changes" data-dock-part data-save-bar>
-            <span class="flex grow items-center gap-2 ps-2.5 text-sm font-medium">
-              {{ _("Unsaved changes") }}
-              <span class="badge badge-accent badge-sm min-w-6 tabular-nums" x-text="changes" data-change-count></span>
-            </span>
-            <span class="flex items-center gap-1">
-              {#- The saved values come back through the same morph as a filter, which resets every cell. #}
-              <button type="button" class="btn btn-ghost btn-sm" @click="$el.focus()" data-discard
-                      hx-get="{{ request.get_full_path() }}" hx-target="#content" hx-swap="innerMorph">{{ _("Discard") }}</button>
-              <button type="submit" form="changelist-form" name="_save" value="1" class="btn btn-accent btn-sm" data-save>{{ icon("check") }} {{ _("Save changes") }}</button>
-            </span>
+            <button type="button" class="btn btn-ghost btn-sm btn-square max-sm:order-first max-sm:-ms-2" @click="clear()" :disabled="!count" disabled
+                    aria-label="{{ _("Clear selection") }}" title="{{ _("Clear selection") }}">{{ icon("x") }}</button>
           </div>
-          {% endif %}
+          {#- An action reloads the list, which would drop the unsaved changes; like the change form's, they wait. #}
+          <div class="flex flex-wrap items-center gap-2 max-sm:ms-auto" :class="{ tooltip: count && changes }" data-tip="{{ _("Save your changes first") }}">
+            {{ m.action_controls(actions, "changelist-actions", "action", size="btn-sm", up=True, start=True, compact=True, disabled="!count || changes > 0", initially_disabled=True) }}
+          </div>
+        </form>
+        {% endif %}
+        {% if saving %}
+        {#- Counts the cells that differ from their saved value, in the color that marks them. On a phone
+            the count starts the line and the two buttons end it. #}
+        <div class="ms-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2 max-sm:w-full max-sm:justify-between" data-save-bar>
+          <span class="flex items-center gap-2 text-sm font-medium text-base-content/45" :class="{ 'text-base-content/45': !changes }">
+            {{ _("Unsaved changes") }}
+            <span class="badge badge-sm min-w-6 tabular-nums text-base-content/60" :class="{ 'badge-accent': changes, 'text-base-content/60': !changes }"
+                  x-text="changes" data-change-count>0</span>
+          </span>
+          <span class="ms-auto flex items-center gap-1">
+            {#- The saved values come back through the same morph as a filter, which resets every cell. #}
+            <button type="button" class="btn btn-ghost btn-sm" @click="$el.focus()" :disabled="!changes" disabled data-discard
+                    hx-get="{{ request.get_full_path() }}" hx-target="#content" hx-swap="innerMorph">{{ _("Discard") }}</button>
+            <button type="submit" form="changelist-form" name="_save" value="1" class="btn btn-primary btn-sm" :disabled="!changes" disabled data-save>
+              {{- icon("check") }}<span class="sm:hidden">{{ _("Save") }}</span><span class="max-sm:hidden">{{ _("Save changes") }}</span>
+            </button>
+          </span>
         </div>
+        {% endif %}
       </div>
+      {% endif %}
     </div>
   </div>
-  {% endif %}
 </div>
 </div>

@@ -1,0 +1,162 @@
+{#- The skeletons of the admin's pages. A page link (m.page_link) names one, and admin.js puts it in the
+    content while the server answers a slow page. Each one has the boxes and spacing of its page, so the
+    page takes the skeleton's place without a jump. admin.js puts the link's title in [data-skeleton-title]
+    and the model's icon in [data-skeleton-icon]; the rest shimmers. To add a kind for your own pages,
+    override this template and add a <template id="formwork-admin-skeleton-<kind>">. #}
+
+{% macro header(title=true, icon=false, subtitle=false, button=false) %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+  <div class="flex min-w-0 items-center gap-3">
+    {% if icon %}
+    <span class="skeleton hidden size-11 shrink-0 rounded-box sm:block" data-skeleton-tile></span>
+    <span class="hidden size-11 shrink-0 place-items-center rounded-box bg-primary/10 text-primary sm:grid [&>.icon]:size-5 [&>.icon]:opacity-100" data-skeleton-icon hidden></span>
+    {% endif %}
+    <div class="min-w-0">
+      <h1 class="text-2xl font-semibold tracking-tight text-balance wrap-break-word"{% if title %} data-skeleton-title{% endif %}><span class="skeleton my-1 block h-6 w-44"></span></h1>
+      {% if subtitle %}<span class="skeleton mt-1.5 mb-0.5 block h-3.5 w-24"></span>{% endif %}
+    </div>
+  </div>
+  {% if button %}<span class="skeleton h-10 w-24 rounded-field"></span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro field() %}
+<div class="min-w-0 py-2">
+  <span class="skeleton mt-1 mb-2.5 block h-3 w-20"></span>
+  <span class="skeleton block h-10 rounded-field"></span>
+</div>
+{% endmacro %}
+
+{% macro row(widths) %}
+<div class="grid grid-cols-[1.25rem_minmax(0,1.5fr)_minmax(0,1fr)] items-center gap-x-6 px-4 sm:grid-cols-[1.25rem_minmax(0,1.5fr)_repeat(4,minmax(0,1fr))] {{ caller() }}">
+  <span class="skeleton size-5 rounded-full"></span>
+  {% for width in widths %}<span class="{{ "max-sm:hidden " if loop.index > 2 }}skeleton h-3 {{ width }}"></span>{% endfor %}
+</div>
+{% endmacro %}
+
+{% macro cards(apps) %}
+{% for rows in apps %}
+<div class="card h-fit border border-base-300 bg-base-100">
+  <div class="flex items-center justify-between gap-3 border-b border-base-300 px-5 py-3.5">
+    <span class="skeleton h-4 w-40"></span>
+    <span class="skeleton h-5 w-6 rounded-full"></span>
+  </div>
+  <div class="divide-y divide-base-200">
+    {% for width in rows %}
+    <div class="flex items-center gap-3 px-5 py-2.5">
+      <span class="skeleton size-8 shrink-0 rounded-field"></span>
+      <span class="skeleton h-3.5 {{ width }}"></span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% endmacro %}
+
+<template id="formwork-admin-skeleton-list">
+  <div aria-hidden="true">
+    {{ header(icon=true, button=true) }}
+    <div class="mb-4 flex items-center gap-2">
+      <span class="skeleton h-10 min-w-0 flex-1 rounded-field"></span>
+      <span class="skeleton h-10 w-22 rounded-field sm:w-32"></span>
+    </div>
+    <div class="overflow-hidden rounded-box border border-base-300 bg-base-100">
+      {% call row(["w-12", "w-16", "w-12", "w-14", "w-10"]) %}h-9 border-b border-base-300 bg-[color-mix(in_srgb,var(--color-base-200)_50%,var(--color-base-100))]{% endcall %}
+      {#- The rows fit the window as the list's do (columns.js): its height less the boxes above them and
+          the page's bottom padding. A phone shows them at their height. #}
+      <div class="overflow-hidden sm:max-h-[max(15.5rem,calc(100dvh-22.25rem))]">
+        {% for widths in [["w-3/5", "w-1/2", "w-2/5", "w-1/3", "w-1/4"], ["w-2/5", "w-3/5", "w-1/3", "w-1/2", "w-1/3"], ["w-1/2", "w-2/5", "w-1/2", "w-1/4", "w-2/5"], ["w-2/3", "w-1/2", "w-1/4", "w-2/5", "w-1/4"]] * 5 %}
+        {% call row(widths) %}h-10 border-b border-base-200{% endcall %}
+        {% endfor %}
+      </div>
+      <div class="flex h-12 items-center border-t border-base-300 px-4"><span class="skeleton h-3.5 w-20"></span></div>
+    </div>
+  </div>
+</template>
+
+{% for kind, history in [("change", true), ("add", false)] %}
+<template id="formwork-admin-skeleton-{{ kind }}">
+  <div aria-hidden="true" class="mx-auto {{ "@container max-w-[83.5rem]" if history else "max-w-5xl" }}">
+    {{ header(title=false, icon=true, subtitle=history) }}
+    <div class="{{ "grid grid-cols-1 gap-6 @min-[66rem]:grid-cols-[minmax(0,1fr)_18rem] @min-[66rem]:items-start" if history }}">
+      <div class="min-w-0">
+        <div class="grid grid-cols-1 gap-6">
+          <div class="card border border-base-300 bg-base-100">
+            <div class="px-6 pt-2 pb-5">
+              {{ field() }}
+              {{ field() }}
+              <div class="grid gap-x-4 sm:grid-cols-2">{{ field() }}{{ field() }}</div>
+            </div>
+          </div>
+          <div class="card border border-base-300 bg-base-100">
+            <div class="border-b border-base-300 px-6 py-4"><span class="skeleton my-1 block h-4 w-24"></span></div>
+            <div class="px-6 pt-2 pb-5">
+              <div class="grid gap-x-4 sm:grid-cols-2">{{ field() }}{{ field() }}</div>
+              <div class="grid gap-x-4 sm:grid-cols-2">{{ field() }}{{ field() }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="sticky bottom-3 z-10 mt-6 flex gap-2 rounded-box border border-base-300 bg-base-100/90 px-4 py-3 shadow-lg backdrop-blur">
+          <span class="skeleton h-10 w-24 rounded-field"></span>
+          <span class="skeleton h-10 w-40 rounded-field max-sm:hidden"></span>
+        </div>
+      </div>
+      {% if history %}
+      <div class="card border border-base-300 bg-base-100">
+        <div class="flex items-center gap-2 border-b border-base-300 px-4 py-3.5">
+          <span class="skeleton size-4 rounded-full"></span>
+          <span class="skeleton h-4 w-16"></span>
+        </div>
+        <div class="space-y-4 px-4 py-4">
+          {% for width in ["w-3/4", "w-1/2", "w-2/3"] %}
+          <div><span class="skeleton block h-3.5 {{ width }}"></span><span class="skeleton mt-2 block h-3 w-1/3"></span></div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</template>
+{% endfor %}
+
+<template id="formwork-admin-skeleton-index">
+  <div aria-hidden="true">
+    {{ header(subtitle=true) }}
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div class="grid content-start gap-6">{{ cards([["w-24", "w-16"], ["w-28", "w-20", "w-16"]]) }}</div>
+      <div class="card h-fit border border-base-300 bg-base-100">
+        <div class="flex items-center gap-2 border-b border-base-300 px-5 py-3.5">
+          <span class="skeleton size-4 rounded-full"></span>
+          <span class="skeleton h-4 w-28"></span>
+        </div>
+        <div class="space-y-4 px-5 py-4">
+          {% for width in ["w-2/3", "w-1/2", "w-3/5"] %}
+          <div class="flex gap-3">
+            <span class="skeleton size-6 shrink-0 rounded-full"></span>
+            <div class="min-w-0 flex-1"><span class="skeleton block h-3.5 {{ width }}"></span><span class="skeleton mt-2 block h-3 w-1/3"></span></div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="formwork-admin-skeleton-app">
+  <div aria-hidden="true">
+    {{ header() }}
+    <div class="max-w-2xl">{{ cards([["w-24", "w-20", "w-16"]]) }}</div>
+  </div>
+</template>
+
+<template id="formwork-admin-skeleton-page">
+  <div aria-hidden="true">
+    {{ header() }}
+    <div class="card border border-base-300 bg-base-100 p-6">
+      <span class="skeleton block h-4 w-40"></span>
+      {% for width in ["w-full", "w-11/12", "w-4/5", "w-full", "w-2/3"] %}
+      <span class="skeleton mt-4 block h-3.5 {{ width }}"></span>
+      {% endfor %}
+    </div>
+  </div>
+</template>

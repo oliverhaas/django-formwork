@@ -1,7 +1,8 @@
+{% import "formwork_admin/macros.html" as m %}
 <nav class="flex h-full w-64 flex-col border-r border-base-300 bg-base-100" x-data="formworkNav" aria-label="{{ _("Models") }}">
   {# The brand row matches the height and border of the top bar; only the model list scrolls. #}
   <div class="shrink-0 border-b border-base-300">
-    <a href="{{ url(site.name ~ ":index") }}" class="flex h-14 items-center gap-3 px-5">
+    <a {{ m.page_link(url(site.name ~ ":index"), "index", site.index_title) }} class="flex h-14 items-center gap-3 px-5">
       <span class="grid size-8 place-items-center rounded-field bg-primary text-primary-content">{{ icon("layout-dashboard", "size-4.5") }}</span>
       <span class="min-w-0">
         <span class="block truncate text-sm font-semibold leading-tight">{{ site_header }}</span>
@@ -21,13 +22,13 @@
     {% for app in available_apps %}
     <ul data-nav-app class="menu w-full [--menu-active-bg:color-mix(in_oklab,var(--color-primary)_10%,transparent)] [--menu-active-fg:var(--color-primary)]" x-show="appMatches($el)">
       <li class="menu-title">
-        <a href="{{ app.app_url }}" class="text-xs font-semibold tracking-wide text-base-content/60 uppercase transition-colors hover:text-base-content">{{ app.name }}</a>
+        <a {{ m.page_link(app.app_url, "app") }} class="text-xs font-semibold tracking-wide text-base-content/60 uppercase transition-colors hover:text-base-content">{{ app.name }}</a>
       </li>
       {% for model in app.models %}
       {% set active = model.admin_url and request.path.startswith(model.admin_url) %}
       <li data-name="{{ model.name|lower }} {{ app.name|lower }}" x-show="matches($el)">
         {% if model.admin_url %}
-        <a href="{{ model.admin_url }}" class="group gap-3 shadow-none{% if active %} font-medium{% endif %}"{% if active %} aria-current="page"{% endif %}>
+        <a {{ m.page_link(model.admin_url, "list") }} class="group gap-3 shadow-none aria-[current=page]:font-medium"{% if active %} aria-current="page"{% endif %}>
           {{ icon(model.icon, "size-4 opacity-60 group-aria-[current=page]:opacity-100") }}
           <span class="flex-1 truncate">{{ model.name }}</span>
           {% if model.view_only %}<span class="opacity-40" title="{{ _("View only") }}">{{ icon("eye", "size-3.5") }}</span>{% endif %}
@@ -41,4 +42,29 @@
     {% endfor %}
     <p class="px-4 py-6 text-center text-sm text-base-content/50" x-show="query && !anyMatch()" x-cloak>{{ _("No models match.") }}</p>
   </div>
+  {#- A link in the sidebar morphs the page and leaves the list where it is. A page load, a reload or
+      the back button renders the list again: this runs while the page parses, so the first frame
+      shows the list where this tab left it, with the current model in view. #}
+  <script>
+    (function () {
+      var KEY = "formwork-admin-nav-scroll";
+      var list = document.currentScript.previousElementSibling;
+      try {
+        list.scrollTop = Number(sessionStorage.getItem(KEY)) || 0;
+      } catch (e) {}
+      var active = list.querySelector("[aria-current=page]");
+      if (active) {
+        var item = active.getBoundingClientRect();
+        var box = list.getBoundingClientRect();
+        if (item.top < box.top || item.bottom > box.bottom) {
+          list.scrollTop += item.top - box.top - (box.height - item.height) / 2;
+        }
+      }
+      list.addEventListener("scroll", function () {
+        try {
+          sessionStorage.setItem(KEY, String(list.scrollTop));
+        } catch (e) {}
+      }, { passive: true });
+    })();
+  </script>
 </nav>

@@ -12,41 +12,21 @@
 {% block content %}
 {% set blocked = perms_lacking or protected %}
 {% set to_delete = deleted_objects %}
-<div class="mx-auto max-w-3xl">
-  <div class="card border border-base-300 bg-base-100">
-    <div class="card-body gap-5 p-6 sm:p-8">
-      <div class="flex items-start gap-4">
-        <span class="grid size-11 shrink-0 place-items-center rounded-full {{ "bg-warning/15 text-warning" if blocked else "bg-error/10 text-error" }}">{{ icon("lock" if blocked else "trash", "size-5") }}</span>
-        <div class="min-w-0">
-          <h1 class="text-xl font-semibold tracking-tight">
-            {% if blocked %}{{ _("Cannot delete %(name)s", name=object_name) }}{% else %}{{ _("Delete %(name)s?", name=object_name) }}{% endif %}
-          </h1>
-          <p class="mt-1 text-sm text-base-content/70">
-            {% if blocked %}
-            {{ _("Deleting “%(object)s” would remove related objects you cannot delete.", object=object) }}
-            {% else %}
-            {{ _("“%(object)s” and the related objects below will be deleted. This cannot be undone.", object=object) }}
-            {% endif %}
-          </p>
-        </div>
-      </div>
-
-      {% include "formwork_admin/delete_summary.html" %}
-
-      {% if blocked %}
-      <div class="border-t border-base-300 pt-5">
-        <a href="{{ change_url }}" class="btn">{{ icon("arrow-left") }} {{ _("Back") }}</a>
-      </div>
-      {% else %}
-      <form method="post" class="flex flex-wrap items-center gap-2 border-t border-base-300 pt-5">
-        {{ csrf_input }}
-        {{ m.popup_inputs(is_popup, to_field) }}
-        <input type="hidden" name="post" value="yes">
-        <button type="submit" class="btn btn-error">{{ _("Yes, I’m sure") }}</button>
-        <a href="{{ change_url }}" class="btn">{{ _("No, take me back") }}</a>
-      </form>
-      {% endif %}
-    </div>
-  </div>
-</div>
+{% if blocked %}
+{% set title = _("Cannot delete %(name)s", name=object_name) %}
+{% set lead = _("Deleting “%(object)s” would remove related objects you cannot delete.", object=object) %}
+{% else %}
+{% set title = _("Delete %(name)s?", name=object_name) %}
+{% set lead = _("“%(object)s” and the related objects below will be deleted. This cannot be undone.", object=object) %}
+{% endif %}
+<form method="post" class="mx-auto max-w-3xl">
+  {% if not blocked %}
+  {{ csrf_input }}
+  {{ m.popup_inputs(is_popup, to_field) }}
+  <input type="hidden" name="post" value="yes">
+  {% endif %}
+  {% call m.confirm_card(title, lead, "lock" if blocked else "trash", "warning" if blocked else "error", change_url, none if blocked else _("Delete %(name)s", name=object_name), "trash") %}
+  {% include "formwork_admin/delete_summary.html" %}
+  {% endcall %}
+</form>
 {% endblock %}

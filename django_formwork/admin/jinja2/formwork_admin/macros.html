@@ -7,7 +7,7 @@
     <span class="hidden size-11 shrink-0 place-items-center rounded-box bg-primary/10 text-primary sm:grid">{{ icon(icon_name, "size-5") }}</span>
     {% endif %}
     <div class="min-w-0">
-      <h1 class="truncate text-2xl font-semibold tracking-tight">{{ title }}</h1>
+      <h1 class="text-2xl font-semibold tracking-tight text-balance wrap-break-word">{{ title }}</h1>
       {% if subtitle %}<p class="mt-0.5 text-sm text-pretty text-base-content/60">{{ subtitle }}</p>{% endif %}
     </div>
   </div>
@@ -36,6 +36,15 @@
 {% endif %}
 {% endmacro %}
 
+{#- What a table cell keeps beside its field's widget. The help text describes the widget to a screen
+    reader, as the column has no room to show it. The errors open in DaisyUI's tooltip, which admin.js
+    lays over the widget in the top layer, so the row keeps its height and the table's scroll box does
+    not clip the message. #}
+{% macro cell_notes(field) %}
+{%- if field.help_text and field.auto_id %}<span id="{{ field.auto_id }}_helptext" hidden>{{ field.help_text|striptags }}</span>{% endif %}
+{%- if field.errors %}<div popover="manual" class="tooltip tooltip-error tooltip-bottom" data-cell-error><div class="tooltip-content formwork-errors" role="tooltip"{% if field.auto_id %} id="{{ field.auto_id }}_error"{% endif %}>{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}</div></div>{% endif %}
+{%- endmacro %}
+
 {% macro readonly(ro) %}
 <fieldset class="fieldset">
   <span class="fieldset-legend">{{ ro.label }}</span>
@@ -44,9 +53,9 @@
 </fieldset>
 {% endmacro %}
 
-{% macro errors_alert(count, non_field_errors=()) %}
+{% macro errors_alert(count, non_field_errors=(), class_="mb-6") %}
 {% if count or non_field_errors %}
-<div role="alert" class="alert alert-error alert-soft mb-6 items-start">
+<div role="alert" class="alert alert-error alert-soft items-start {{ class_ }}">
   {{ icon("circle-exclamation-point", "size-5") }}
   <div>
     <p class="font-medium">{% trans trimmed count=count %}Please correct the error below.{% pluralize %}Please correct the {{ count }} errors below.{% endtrans %}</p>
@@ -109,6 +118,15 @@
    With top, the page goes back to its top, as after a page load: for a link to other rows. #}
 {% macro list_link(href, top=false) %}href="{{ href }}" hx-get="{{ href }}" hx-target="#content" hx-swap="innerMorph{{ " scroll:top scrollTarget:window" if top }}" hx-push-url="true"{% endmacro %}
 
+{# A link to another page of the site. htmx morphs the page around the content, so the sidebar
+   keeps its place, and admin.js puts the new content in fresh. A page that needs files this
+   page has not loaded, or an error page, loads as a whole.
+   The page loads early when the pointer rests on the link or presses it (hx-preload). A slow
+   page shows the skeleton of its kind first: "list", "change", "add", "index", "app" or "page"
+   (skeletons.html). A list, index, app or page skeleton shows title, or else the link's text,
+   as its heading. #}
+{% macro page_link(href, skeleton="page", title=none) %}href="{{ href }}" hx-get="{{ href }}" hx-target="body" hx-swap="outerMorph scroll:top scrollTarget:window" hx-push-url="true" hx-sync="body:replace" hx-preload="formwork-admin:intent, mousedown, touchstart" data-page-link="{{ skeleton }}"{% if title %} data-page-title="{{ title }}"{% endif %}{% endmacro %}
+
 {# The export formats for the rows on screen. #}
 {% macro export_menu(cl, formats, export_url, csrf_input) %}
 {% if formats %}
@@ -127,25 +145,26 @@
 {% endif %}
 {% endmacro %}
 
-{#- Django's nested deletion list. Like Django's ``truncated_unordered_list`` it counts the objects of
-    every level together and stops after ``limit`` of them; ``limit=None`` lists them all. #}
-{% macro nested(items, limit=100, seen=none) %}
-{% set top = seen is none %}
-{% set seen = namespace(count=0) if top else seen %}
+{#- The objects a deletion takes with it, from ``deleted_groups()``. A model with one object at a level shows
+    Django's line, "Item: Kettle"; one with more shows its name and count over the first few. #}
+{% macro deleted(groups, top=True) %}
 <ul class="{{ "space-y-1" if top else "mt-1 ml-1.5 space-y-1 border-l border-base-300 pl-4" }}">
-  {% for item in items %}
-  {% if item is string or item.__html__ is defined %}
-  {% set seen.count = seen.count + 1 %}
-  {% if limit is none or seen.count <= limit %}<li class="text-sm [&_a]:link">{{ item }}</li>{% endif %}
-  {% elif limit is none or seen.count < limit %}
-  <li>{{ nested(item, limit, seen) }}</li>
+  {% for group in groups %}
+  {% if group.count == 1 and group.objects %}
+  {% set line, link, children = group.objects[0] %}
+  <li class="text-sm text-base-content/60 [&_a]:text-base-content">{{ line }}{% if children %}{{ deleted(children, False) }}{% endif %}</li>
   {% else %}
-  {% set uncounted = nested(item, limit, seen) %}
+  <li class="text-sm">
+    <span class="flex items-center gap-2 text-base-content/60">{{ group.name }}<span class="badge badge-sm border-base-300 bg-base-200/60 font-semibold tabular-nums">{{ number(group.count) }}</span></span>
+    <ul class="mt-1 ml-1.5 space-y-1 border-l border-base-300 pl-4">
+      {% for line, link, children in group.objects %}
+      <li class="[&_a]:text-base-content">{{ link }}{% if children %}{{ deleted(children, False) }}{% endif %}</li>
+      {% endfor %}
+      {% if group.more %}<li class="text-base-content/50">{{ _("and %(count)s more", count=number(group.more)) }}</li>{% endif %}
+    </ul>
+  </li>
   {% endif %}
   {% endfor %}
-  {% if top and limit is not none and seen.count > limit %}
-  <li class="text-sm text-base-content/50">{{ _("and %(count)s more", count=number(seen.count - limit)) }}</li>
-  {% endif %}
 </ul>
 {% endmacro %}
 
@@ -158,6 +177,91 @@
 {% else %}
 <li class="text-base-content/60">{{ opts.verbose_name_plural|capfirst }}</li>
 {% endif %}
+{% endmacro %}
+
+{#- The card of the pages that ask before something runs: the delete pages and the action page. The caller
+    fills the body. Without ``submit`` the footer only leads back, for a deletion that cannot go ahead. #}
+{% macro confirm_card(title, lead, icon_name, tone, back_url, submit=none, submit_icon=none) %}
+{% set tones = {"error": "bg-error/10 text-error", "warning": "bg-warning/15 text-warning", "primary": "bg-primary/10 text-primary"} %}
+<div class="card border border-base-300 bg-base-100 shadow-xs">
+  <div class="card-body gap-6 p-6 sm:p-8">
+    <div class="flex items-start gap-4">
+      <span class="grid size-12 shrink-0 place-items-center rounded-full {{ tones[tone] }}">{{ icon(icon_name, "size-5") }}</span>
+      <div class="min-w-0 self-center">
+        <h1 class="text-xl font-semibold tracking-tight text-balance">{{ title }}</h1>
+        {% if lead %}<p class="mt-1 text-sm text-pretty text-base-content/70">{{ lead }}</p>{% endif %}
+      </div>
+    </div>
+    {{ caller() }}
+  </div>
+  {#- The confirming button comes first, as Save does on the change form. #}
+  <div class="flex flex-wrap items-center gap-2 rounded-b-box border-t border-base-300 bg-base-200/50 px-6 py-4 sm:px-8" data-confirm-buttons>
+    {% if submit %}
+    <button type="submit" class="btn {{ "btn-error" if tone == "error" else "btn-primary" }}">{% if submit_icon %}{{ icon(submit_icon) }}{% endif %}{{ submit }}</button>
+    <a href="{{ back_url }}" class="btn btn-ghost">{{ _("Cancel") }}</a>
+    {% else %}
+    <a href="{{ back_url }}" class="btn">{{ icon("arrow-left") }} {{ _("Back") }}</a>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{#- The actions marked ``button`` as buttons, then a menu with the others, each with its help text. A click
+    posts the form ``form_id`` with ``field`` set to the action's name. ``disabled`` is an Alpine expression,
+    and with ``initially_disabled`` the controls render disabled until Alpine has evaluated it. The menu ends
+    at the trigger's end. With ``start`` it begins at the trigger's start, and on a phone it takes the width of
+    the nearest positioned ancestor, as it would not fit next to the trigger. With ``compact`` the trigger
+    shows an ellipsis on a phone, and keeps its name for a screen reader. #}
+{% macro action_controls(actions, form_id, field, size="", up=False, start=False, compact=False, disabled=none, initially_disabled=False) %}
+{% set menu = actions|rejectattr("button")|list %}
+{% for action in actions|selectattr("button") %}
+<button type="submit" form="{{ form_id }}" name="{{ field }}" value="{{ action.name }}" class="btn {{ size }}{{ " btn-soft btn-error" if action.danger }}"{% if action.help_text %} title="{{ action.help_text }}"{% endif %}{% if disabled %} :disabled="{{ disabled }}"{% endif %}{% if initially_disabled %} disabled{% endif %}>
+  {%- if action.icon %}{{ icon(action.icon) }}{% endif %}{{ action.label -}}
+</button>
+{% endfor %}
+{% if menu %}
+<div class="dropdown {{ "dropdown-start max-sm:static" if start else "dropdown-end" }}{{ " dropdown-top" if up }}">
+  <div role="button" class="btn {{ size }} gap-1.5{{ " max-sm:btn-square" if compact }}{{ " btn-disabled" if initially_disabled }}" aria-haspopup="menu"
+       {%- if initially_disabled %} tabindex="-1" aria-disabled="true"{% else %} tabindex="0"{% endif %}
+       {%- if disabled %} :class="{ 'btn-disabled': {{ disabled }} }" :tabindex="({{ disabled }}) ? -1 : 0" :aria-disabled="({{ disabled }}).toString()"{% endif %}>
+    {%- set chevron = "chevron-up" if up else "chevron-down" %}
+    {%- if compact %}
+    <span class="max-sm:sr-only">{{ _("Actions") }}</span>{{ icon("ellipsis", "size-4 sm:hidden") }}{{ icon(chevron, "size-3.5 opacity-60 max-sm:hidden") -}}
+    {%- else %}
+    {{- _("Actions") }} {{ icon(chevron, "size-3.5 opacity-60") -}}
+    {%- endif %}
+  </div>
+  <ul tabindex="-1" role="menu" class="dropdown-content menu z-30 {{ "mb-2" if up else "mt-2" }} w-88 max-w-[calc(100vw-2rem)]{{ " max-sm:inset-x-0 max-sm:w-auto" if start }} rounded-box border border-base-300 bg-base-100 p-1 shadow-lg">
+    {% for action in menu %}
+    <li role="none">
+      <button type="submit" form="{{ form_id }}" name="{{ field }}" value="{{ action.name }}" role="menuitem" class="flex items-start gap-3 px-3 py-2{{ " text-error hover:bg-error/10" if action.danger }}">
+        <span class="mt-0.5 flex shrink-0 {{ "text-error" if action.danger else "text-base-content/60" }}">{{ icon(action.icon or "circle-dot") }}</span>
+        <span class="flex min-w-0 flex-col items-start gap-0.5 text-start">
+          <span class="font-medium">{{ action.label }}</span>
+          {% if action.help_text %}<span class="text-xs text-pretty {{ "text-error/80" if action.danger else "text-base-content/60" }}">{{ action.help_text }}</span>{% endif %}
+        </span>
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endmacro %}
+
+{#- The rows an action runs on, as links to their change pages: the first few, then how many more. #}
+{% macro selected_objects(caption, objects, more, icon_name) %}
+<div>
+  {% if caption %}<p class="mb-2 text-sm font-medium">{{ caption }}</p>{% endif %}
+  <ul class="divide-y divide-base-300 rounded-box border border-base-300">
+    {% for obj, href in objects %}
+    <li class="flex min-w-0 items-center gap-3 px-4 py-2.5 text-sm">
+      <span class="flex shrink-0 text-base-content/40">{{ icon(icon_name) }}</span>
+      <a href="{{ href }}" class="link-hover truncate" title="{{ obj }}">{{ obj }}</a>
+    </li>
+    {% endfor %}
+    {% if more %}<li class="px-4 py-2.5 text-sm text-base-content/60">{{ _("and %(count)s more", count=number(more)) }}</li>{% endif %}
+  </ul>
+</div>
 {% endmacro %}
 
 {# The centered card of the login and logout pages. #}
@@ -271,7 +375,7 @@
 {% endset %}
 {% if inline.collapsible %}
 <details id="{{ inline.prefix }}-group" class="card group/inline border border-base-300 bg-base-100"{% if errors %} open{% endif %}
-         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}">
+         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}">
   <summary class="flex cursor-pointer list-none items-center gap-2 px-6 py-4 select-none [&::-webkit-details-marker]:hidden">
     {{ title }}
     {{ icon("chevron-down", "size-4 text-base-content/50 transition-transform group-open/inline:rotate-180" ~ ("" if errors else " ml-auto")) }}
@@ -280,7 +384,7 @@
 </details>
 {% else %}
 <section id="{{ inline.prefix }}-group" class="card border border-base-300 bg-base-100"
-         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}">
+         x-data="formworkInline" data-prefix="{{ inline.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}">
   <header class="flex items-center gap-2 border-b border-base-300 px-6 py-4">{{ title }}</header>
   {{ caller() }}
 </section>

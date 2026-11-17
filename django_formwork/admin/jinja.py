@@ -24,6 +24,8 @@ from django.utils.text import capfirst
 from django.utils.timesince import timesince
 from django.utils.translation import gettext, ngettext, npgettext, pgettext
 
+from django_formwork.admin.helpers import deleted_groups
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from decimal import Decimal
@@ -130,6 +132,7 @@ def environment(**options: Any) -> jinja2.Environment:
             "static": static,
             "icon": icon,
             "number": number,
+            "deleted_groups": deleted_groups,
         },
     )
     env.filters.update(

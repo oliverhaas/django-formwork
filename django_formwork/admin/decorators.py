@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from django_formwork.admin.options import ActionLocation, ModelAdmin
 
 if TYPE_CHECKING:
+    from django import forms
     from django.db import models
     from django_stubs_ext import StrPromise
 
@@ -71,11 +72,14 @@ def action[F: Callable[..., Any]](
     location: ActionLocation | Sequence[ActionLocation] = ActionLocation.CHANGE_LIST,
     icon: str | None = None,
     danger: bool = False,
+    help_text: str | StrPromise | None = None,
+    button: bool = False,
+    confirm: bool | str | StrPromise = False,
+    form: type[forms.Form] | None = None,
 ) -> Any:
-    """``django.contrib.admin.action`` of Django 6.1, plus the ``icon`` and ``danger`` the page draws.
+    """``django.contrib.admin.action`` of Django 6.1, plus what the formwork admin draws and asks.
 
-    ``location`` puts the action in the list, on the change form or both. The list labels it with
-    ``description_plural`` when given.
+    The admin reference describes the arguments under Actions.
     """
 
     def decorator(func: F) -> F:
@@ -92,6 +96,14 @@ def action[F: Callable[..., Any]](
             func.icon = icon  # type: ignore[attr-defined]
         if danger:
             func.danger = True  # type: ignore[attr-defined]
+        if help_text is not None:
+            func.help_text = help_text  # type: ignore[attr-defined]
+        if button:
+            func.button = True  # type: ignore[attr-defined]
+        if confirm:
+            func.confirm = confirm  # type: ignore[attr-defined]
+        if form is not None:
+            func.form = form  # type: ignore[attr-defined]
         return func
 
     return decorator if function is None else decorator(function)

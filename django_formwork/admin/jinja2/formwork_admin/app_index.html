@@ -2,7 +2,7 @@
 {% import "formwork_admin/macros.html" as m %}
 
 {% block breadcrumbs %}
-<li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>
+<li><a {{ m.page_link(url(site.name ~ ":index"), "index", site.index_title) }} class="text-base-content/60">{{ _("Home") }}</a></li>
 <li class="font-medium">{{ app_list[0].name }}</li>
 {% endblock %}
 

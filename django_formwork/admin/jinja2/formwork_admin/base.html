@@ -12,6 +12,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}{% if title is defined and title %}{{ title }} | {% endif %}{{ site_title }}{% endblock %}</title>
+  {% if favicon %}
+  <link rel="icon" href="{{ favicon if "//" in favicon else static(favicon) }}">
+  {% endif %}
   <script>
     (function () {
       try {
@@ -66,7 +69,7 @@
               ring inside the crumb's clip. A phone keeps the last two crumbs: the parent to go back to and the page. #}
           <ul class="[&>li]:-mx-1 [&>li]:block [&>li]:min-w-0 [&>li]:truncate [&>li]:p-1 [&>li>*]:inline [&>li+li]:before:inline-block [&>li+li]:before:align-middle [&>li:last-child]:max-w-[70%] [&>li:last-child]:shrink-0 max-sm:[&>li:nth-last-child(2)]:before:hidden max-sm:[&>li:nth-last-child(n+3)]:hidden">
             {% block breadcrumbs %}
-            <li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>
+            <li><a {{ m.page_link(url(site.name ~ ":index"), "index", site.index_title) }} class="text-base-content/60">{{ _("Home") }}</a></li>
             {% if title is defined and title %}<li class="font-medium">{{ title }}</li>{% endif %}
             {% endblock %}
           </ul>
@@ -78,11 +81,14 @@
         {% endblock %}
       </div>
     </header>
-    <main id="content" class="mx-auto w-full max-w-[100rem] flex-1 px-4 pt-6 pb-16 lg:px-8">
+    <main id="content" tabindex="-1" class="mx-auto w-full max-w-[100rem] flex-1 px-4 pt-6 pb-6 outline-none lg:px-8">
       {% block content %}{% endblock %}
     </main>
   </div>
 </div>
+{#- A page that a link morphs in says its title here, as a page load would. #}
+<div id="formwork-admin-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+{% include "formwork_admin/skeletons.html" %}
 {% endif %}
 {% endblock %}
 {{ m.related_dialog() }}

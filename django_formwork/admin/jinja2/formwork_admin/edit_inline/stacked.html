@@ -3,7 +3,7 @@
 {% set can_delete = formset.can_delete and inline.has_delete_permission %}
 
 {% macro item(admin_form, inline, can_delete) %}
-<div id="{{ admin_form.form.prefix }}" class="px-6 pt-4 pb-5" data-inline-row>
+<div id="{{ admin_form.form.prefix }}" class="px-6 pt-4 pb-5" data-inline-row{% if admin_form.original is none %}="new"{% endif %}>
   <div class="flex items-center gap-2">
     {% if admin_form.original is not none %}
     <h3 class="min-w-0 flex-1 truncate text-sm font-medium">{{ admin_form.original }}</h3>
@@ -17,7 +17,7 @@
     {% if admin_form.original is not none %}
     {% if can_delete and admin_form.deletion_field is not none %}
     {% set df = admin_form.deletion_field %}
-    <label class="btn btn-ghost btn-xs text-base-content/60 hover:text-error has-checked:bg-error/10 has-checked:text-error">
+    <label class="btn btn-ghost btn-xs text-base-content/60 hover:text-error has-checked:bg-error/10 has-checked:text-error" data-formwork-field{% if df.value() %} data-formwork-changed data-formwork-initial="[]"{% endif %}>
       <input type="checkbox" name="{{ df.html_name }}" id="{{ df.auto_id }}" class="sr-only"{% if df.value() %} checked{% endif %}>
       {{ icon("trash", "size-3.5") }} {{ _("Delete") }}
     </label>

@@ -8,14 +8,14 @@ from contextlib import suppress
 from functools import update_wrapper
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, cast
-from weakref import WeakValueDictionary
+from weakref import WeakSet, WeakValueDictionary
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.exceptions import AlreadyRegistered, NotRegistered
 from django.contrib.admin.utils import quote
-from django.contrib.auth import REDIRECT_FIELD_NAME
+from django.contrib.auth import REDIRECT_FIELD_NAME, get_permission_codename
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db.models.base import ModelBase
@@ -31,7 +31,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import NoReverseMatch, Resolver404, include, path, re_path, resolve, reverse
 from django.utils.functional import LazyObject, empty
 from django.utils.module_loading import import_string
-from django.utils.text import capfirst
+from django.utils.text import capfirst, get_text_list
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 from django.views.decorators.cache import never_cache
@@ -39,7 +39,7 @@ from django.views.decorators.common import no_append_slash
 from django.views.decorators.csrf import csrf_protect
 
 from django_formwork.admin.actions import delete_selected
-from django_formwork.admin.history import DELETE, History, ModelHistory
+from django_formwork.admin.history import ADD, CHANGE, DELETE, Entry, History, ModelHistory
 from django_formwork.admin.jinja import AdminTemplateResponse
 from django_formwork.admin.options import ModelAdmin
 from django_formwork.renderers import FormworkRenderer
@@ -65,6 +65,8 @@ __all__ = [
 ]
 
 _sites: WeakValueDictionary[str, AdminSite] = WeakValueDictionary()
+# Every site, also one that a later site of the same name replaced in _sites.
+_all_sites: WeakSet[AdminSite] = WeakSet()
 
 
 def get_site(name: str) -> AdminSite | None:
@@ -105,6 +107,28 @@ class AdminPasswordChangeForm(PasswordChangeForm):
 #: Lucide outlines for models without an icon, told apart at the size of the navigation.
 PLACEHOLDER_ICONS = ("circle", "triangle", "square", "diamond", "pentagon", "hexagon", "star")
 
+# The index lists this many objects under Recent actions.
+RECENT_OBJECTS = 10
+
+
+def _summary(entries: list[Entry]) -> str:
+    """What the entries of one object did, oldest first, with the fields of the object in one sentence."""
+    if entries[0].action == DELETE:
+        return _("Deleted.")
+    fields: list[str] = []
+    # None marks the place of the sentence with the object's own fields.
+    lines: list[str | None] = []
+    for entry in reversed(entries):
+        for change in entry.changes:
+            if change.fields and not change.target:
+                fields.extend(field.label for field in change.fields if field.label not in fields)
+                if None not in lines:
+                    lines.append(None)
+            elif change.text not in lines:
+                lines.append(change.text)
+    changed = _("Changed {fields}.").format(fields=get_text_list(fields, _("and")))
+    return " ".join(changed if line is None else line for line in lines) or _("No fields changed.")
+
 
 class AdminSite:
     """A set of model admins under one URL prefix, with its own login and dashboard."""
@@ -128,12 +152,15 @@ class AdminSite:
 
     #: Static paths of the compiled CSS: formwork.css and formwork_admin/admin.css built by your Tailwind step.
     stylesheets: Sequence[str] = ("formwork/formwork-dist.css",)
-    #: Scripts loaded before formwork's own; htmx, its Alpine bridge and Alpine itself.
+    #: Scripts loaded before formwork's own: htmx, its Alpine bridge and its preload extension.
     scripts: Sequence[str] = (
         "https://unpkg.com/htmx.org@4.0.1/dist/htmx.min.js",
         "https://unpkg.com/htmx.org@4.0.1/dist/ext/hx-alpine-compat.min.js",
+        "https://unpkg.com/htmx.org@4.0.1/dist/ext/hx-preload.min.js",
     )
     alpine_script = "https://cdn.jsdelivr.net/npm/alpinejs@3.15.0/dist/cdn.min.js"
+    #: Static path or URL of the icon in the browser tab; ``None`` links none.
+    favicon: str | None = "formwork_admin/favicon.svg"
     #: DaisyUI themes the theme switch offers; the first is the default.
     themes: Sequence[str] = ("light", "dark")
     #: Where the history of changes goes: the admin's own table, or ``PghistoryHistory()`` for pghistory.
@@ -145,6 +172,7 @@ class AdminSite:
         self._actions: dict[str, Callable[..., Any]] = {"delete_selected": delete_selected}
         self._global_actions = self._actions.copy()
         _sites[name] = self
+        _all_sites.add(self)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name={self.name!r})"
@@ -254,6 +282,16 @@ class AdminSite:
     def has_permission(self, request: HttpRequest) -> bool:
         return request.user.is_active and request.user.is_staff  # ty: ignore[unresolved-attribute]
 
+    def has_model_permission(
+        self, request: HttpRequest, model: type[models.Model], action: str, obj: models.Model | None = None
+    ) -> bool:
+        """Whether the user can ``action`` ("view", "add", "change" or "delete") the model, or ``obj`` of it.
+
+        Every ``ModelAdmin`` and inline of the site asks it. The default checks the model permission, as Django does.
+        """
+        opts = model._meta
+        return request.user.has_perm(f"{opts.app_label}.{get_permission_codename(action, opts)}")  # ty: ignore[unresolved-attribute]
+
     def admin_view(
         self, view: Callable[..., HttpResponseBase], cacheable: bool = False
     ) -> Callable[..., HttpResponseBase]:
@@ -337,6 +375,7 @@ class AdminSite:
             "stylesheets": self.stylesheets,
             "scripts": self.scripts,
             "alpine_script": self.alpine_script,
+            "favicon": self.favicon,
             "themes": self.themes,
             "messages": messages.get_messages(request),
             # htmx morphs the page content as one piece; htmx 4 names the target as ``tag#id``.
@@ -412,10 +451,15 @@ class AdminSite:
         return self.render(request, self.index_template or "formwork_admin/index.html", context)
 
     def _recent_actions(self, request: HttpRequest) -> list[dict[str, Any]]:
-        """The user's last ten changes, each linked to its object on this site while it exists."""
+        """The objects the user changed last, each once with what changed, and a link while it exists."""
+        groups: dict[tuple[Any, str], list[Entry]] = {}
+        for entry in self.history.recent(request, RECENT_OBJECTS * 5):
+            key = (entry.content_type.pk if entry.content_type else None, entry.object_id or entry.object_repr)
+            if key in groups or len(groups) < RECENT_OBJECTS:
+                groups.setdefault(key, []).append(entry)
         actions = []
-        for entry in self.history.recent(request, 10):
-            link = ""
+        for entries in groups.values():
+            entry, link = entries[0], ""
             content_type = entry.content_type
             if entry.action != DELETE and content_type is not None:
                 with suppress(NoReverseMatch):
@@ -424,7 +468,8 @@ class AdminSite:
                         args=(quote(entry.object_id),),
                         current_app=self.name,
                     )
-            actions.append({"entry": entry, "kind": entry.action, "url": link})
+            kind = DELETE if entry.action == DELETE else ADD if any(e.action == ADD for e in entries) else CHANGE
+            actions.append({"entry": entry, "kind": kind, "url": link, "summary": _summary(entries)})
         return actions
 
     def app_index(

@@ -1,0 +1,31 @@
+{% extends "formwork_admin/base.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block bodyclass %}formwork-admin-action app-{{ opts.app_label }} model-{{ opts.model_name }}{% endblock %}
+
+{% block breadcrumbs %}
+{{ m.model_crumbs(site, opts, changelist_url if has_view_permission or has_change_permission else None) }}
+{% if object is not none %}
+<li class="max-w-48"><a href="{{ back_url }}" class="text-base-content/60" title="{{ object }}">{{ object }}</a></li>
+{% endif %}
+<li class="font-medium">{{ action.label }}</li>
+{% endblock %}
+
+{% block content %}
+{%- if object is not none %}{% set caption = "" %}
+{%- elif select_across %}{% set caption = _("All %(count)s %(name)s", count=number(count), name=objects_name) %}
+{%- else %}{% set caption = _("%(count)s selected %(name)s", count=number(count), name=objects_name) %}{% endif %}
+<form method="post" action="{{ back_url }}" novalidate class="mx-auto max-w-2xl">
+  {{ csrf_input }}
+  {% for pk in selected %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk }}">{% endfor %}
+  <input type="hidden" name="{{ action_field }}" value="{{ action.name }}">
+  <input type="hidden" name="select_across" value="{{ "1" if select_across else "0" }}">
+  <input type="hidden" name="post" value="yes">
+  {% call m.confirm_card(action.question or action.label, action.help_text, action.icon or "circle-check", "error" if action.danger else "primary", back_url, action.label, action.icon) %}
+  {{ m.selected_objects(caption, objects, more, model_admin.get_icon()) }}
+  {% if form is not none %}
+  <div class="border-t border-base-300 pt-6">{{ form }}</div>
+  {% endif %}
+  {% endcall %}
+</form>
+{% endblock %}

@@ -117,14 +117,18 @@ class MyAdminSite(AdminSite):
 FORMWORK_ADMIN_SITE = "myproject.admin_site.MyAdminSite"
 ```
 
+Rebuild the CSS after each upgrade of django-formwork, as newer templates can use classes
+the old build lacks. `admin.css` marks the build with its version, and the system check
+`formwork_admin.W501` warns while a site's stylesheets carry another one.
+
 The navigation and the actions use Lucide icons, so run `manage.py formwork install`
 once, as for the widgets.
 
 ### 5. Scripts
 
-The site loads htmx 4, its Alpine bridge and Alpine.js from a CDN. To serve them
-yourself, override `scripts` (htmx and the bridge) and `alpine_script` on your site
-class.
+The site loads htmx 4, its Alpine bridge, its preload extension and Alpine.js from a
+CDN. To serve them yourself, override `scripts` (htmx and its extensions) and
+`alpine_script` on your site class.
 
 ## The site
 
@@ -135,8 +139,9 @@ changes the module name). Attributes of `AdminSite` that Django's site does not 
 | Attribute | Default | Description |
 |---|---|---|
 | `stylesheets` | `("formwork/formwork-dist.css",)` | Static paths of the built CSS. |
-| `scripts` | htmx 4 and `hx-alpine-compat` | Scripts loaded before the admin's own. |
+| `scripts` | htmx 4, `hx-alpine-compat` and `hx-preload` | Scripts loaded before the admin's own. |
 | `alpine_script` | Alpine.js 3.15 | Loaded last, with `defer`. |
+| `favicon` | `"formwork_admin/favicon.svg"` | Static path or URL of the icon in the browser tab. `None` links no icon. |
 | `themes` | `("light", "dark")` | The DaisyUI themes the theme menu offers. The first is the default. |
 | `history` | `ModelHistory()` | Where the history goes; see [History](#history). |
 
@@ -197,15 +202,29 @@ urlpatterns = [
 ```
 
 - The `name` of a site is its URL namespace, as in
-  `reverse("support:helpdesk_ticket_changelist")`. Give every site its own name.
+  `reverse("support:helpdesk_ticket_changelist")`. Give every site its own name; the
+  system check `formwork_admin.E502` reports two sites with the same one.
 - A site shows only the models registered on it. A relation field gets its add and
   change buttons only when the related model is registered on the same site.
 - The relation dropdowns search through the site of the page, so they follow that
   site's `has_permission()`.
-- The model permissions apply on every site: a user sees a model only with its view or
-  change permission, as on the default site.
 - All sites write to one history. The recent actions on a dashboard link to an object
   only when its model is registered on that site.
+
+By default a user sees a model only with its view or change permission, on every site.
+A site can decide that itself in `has_model_permission()`. The default
+`has_*_permission()` methods of every `ModelAdmin` and inline on the site ask it, and a
+`ModelAdmin` that overrides one of them still decides for itself:
+
+```python
+class SupportSite(AdminSite):
+    def has_model_permission(self, request, model, action, obj=None):
+        # action is "view", "add", "change" or "delete"
+        return action in {"view", "change"}
+```
+
+A site that grants access this way grants it for every model registered on it. Register
+`User` and `Group` only on a site whose members can edit accounts and permissions.
 
 ## ModelAdmin
 
@@ -219,22 +238,45 @@ admin: `list_display`, `list_display_links`, `list_filter`, `list_select_related
 `has_*_permission()` methods, and the `get_*()`, `save_model()`, `save_formset()`,
 `delete_model()` and `response_*()` hooks.
 
-`save_on_top` is accepted and does nothing: the save buttons stay in the bar at the bottom
-of the page, which stays in view while the form scrolls.
+`save_on_top` is accepted and does nothing: the save buttons stay in the bar at the end of
+the form, which stays in view while the form has changes.
 
-The delete pages list at most `delete_confirmation_max_display` objects, counted over
-all levels as Django counts them. The default is 100, where Django's is `None`. `None`
-lists every object, and `0` lists none and keeps only the count per model.
+The delete pages group the objects that a deletion takes with it per model at each
+level. A model with more than one object there shows its name and count, its first 8
+objects and how many more. The pages list at most `delete_confirmation_max_display`
+objects, counted over all levels as Django counts them. The default is 100, where
+Django's is `None`. `None` drops that limit, and `0` lists no objects and keeps only the
+count per model. An overridden `get_deleted_objects()` can return Django's plain
+strings, which the pages list one by one.
 
 The forms are formwork forms, so every field renders with formwork's widgets and
 templates. A relation gets a `Select` or `SelectMultiple`, a date field a `DatePicker`,
-and a datetime field a `DatePicker` with a time input next to it. As in Django's admin,
-a date is typed in the first format of the language's `DATE_INPUT_FORMATS`, for example
-`10.01.2026` in German, and the date filter writes its dates the same way. Lists and
-read-only fields show `DATE_FORMAT` and `DATETIME_FORMAT`.
+and a datetime field a `DateTimePicker`, which picks the day and the time in one
+calendar. A time field keeps a time input, which works to the minute, and to the second
+for a time that has seconds. As in Django's admin, a date is typed in the first format
+of the language's `DATE_INPUT_FORMATS`, for example `10.01.2026` in German, and the date
+filter writes its dates the same way. A datetime is typed in the first format of
+`DATETIME_INPUT_FORMATS` without the seconds, for example `10.01.2026 09:30`. A stored
+time with seconds keeps them while its minute stays the same. Lists and read-only fields
+show `DATE_FORMAT` and `DATETIME_FORMAT`.
 
 After a failed save, each field error shows under its field, as in Django's admin. A
 `form` whose `Meta.error_display` is set keeps that display.
+
+On the change page, a field whose value differs from the saved object gets the accent
+color, in the inlines as well, so the changes are plain to see before the save. After a
+failed save, every changed field stays marked, the ones with an error in the error
+color. The add page marks nothing, as
+there is no saved object to differ from. The save buttons end the form: Save, with
+Django's other ways to save in a menu next to it. After a save with Save and continue
+editing or Save and add another, that way becomes the main button for the model's next
+form, kept in the session for the add form and the change form apart. Save brings Save
+back. Save as new, a save in a dialog and <kbd>Ctrl</kbd>+<kbd>S</kbd> leave the main
+button as it was. While the form
+has changes, their bar stays at the bottom of the window, counts the changed fields and
+offers Discard, which loads the saved values again. The marks come from formwork's
+[changed-field highlight](forms.md#changed-field-highlight), where
+`--formwork-dirty-color` sets their color.
 
 A `form` must subclass `FormworkModelForm`, where Django's admin takes any `ModelForm`.
 A system check reports a `form` or an `add_form` that does not. To build on another of
@@ -244,7 +286,8 @@ Django's forms, list `FormworkModelForm` after it, so the clean steps of that fo
 A form or `formfield_overrides` that names one of Django's admin widgets, such as `AdminDateWidget`, `AutocompleteSelect` or
 `FilteredSelectMultiple`, gets the formwork widget for the same field. The widget keeps
 its attrs, without the classes that only Django's admin CSS reads. `AdminSplitDateTime`
-still posts the day and the time apart, so a `SplitDateTimeField` cleans as before. A
+becomes a `DateTimePicker` that hands the day and the time to a `SplitDateTimeField`
+apart, so the field cleans as before. A
 subclass of a Django admin widget is kept, with its own markup and scripts. Those scripts
 need Django's admin CSS and its `jsi18n/` translations, which this site does not load,
 and a subclass of `AutocompleteSelect` raises `NoReverseMatch`, as this site has no
@@ -265,9 +308,17 @@ Options this admin adds:
 | `list_badges` | Badge colors per value, by column: `{"status": {"active": "success", "archived": "warning"}}`. |
 | `list_only_fields` | Load only these columns on the list page. |
 | `list_defer_fields` | Skip these columns on the list page, for a large JSON or text column that no column shows. |
+| `list_per_page_options` | The page sizes the list offers next to its pages. Default `(25, 50, 100, 250)`. `list_per_page` is always one of them. |
 
 `list_only_fields` is opt-in. A `__str__` that reads a deferred field runs one query per
 row.
+
+The page size menu shows while the list has more rows than the smallest size. It offers
+All while the rows fit `list_max_show_all`. The size picked goes into the URL as
+`per_page` and stays through the sort, the filters, the search and the pages, and in the
+filters that the change page keeps. A size the admin does not offer shows
+`list_per_page` instead. An empty `list_per_page_options` hides the menu and keeps
+Django's Show all link.
 
 A model without an `icon` gets a plain shape instead: a circle, triangle, square, diamond,
 pentagon, hexagon or star. The shape comes from a hash of the model's label, so it stays
@@ -277,22 +328,28 @@ glance and leave the rest to the shapes.
 
 ### Related objects
 
-Next to a relation, the change form has buttons that open the related model's admin in
-a dialog. Django's admin opens a popup window for the same buttons. They show next to
-any widget of the relation: the dropdown, the radio buttons of `radio_fields`, or a
-widget from `formfield_overrides`, such as checkboxes or a native select. A hidden
-widget gets no buttons, as in Django's admin.
+A relation's label row has links that open the related model's admin in a dialog. Django's
+admin opens a popup window for the same buttons. The links show for any widget of the
+relation: the dropdown, the radio buttons of `radio_fields`, or a widget from
+`formfield_overrides`, such as checkboxes or a native select. In an inline table they
+follow the widget in its cell. A hidden widget gets no links, as in Django's admin.
 
-- **Add another** (plus) adds a row. After the save, the dialog closes and the field
-  chooses the new row. Every other field that can choose the row lists it too, also in
-  inline rows added later.
-- **Change selected** (pencil) edits the chosen row, and the field shows its new name.
-  With only the view permission, the button is an eye and shows the row. Without a
-  chosen row, the button stays in place, dimmed. A many-to-many field has no such
-  button.
+- **Add** adds a row. After the save, the dialog closes and the field chooses the new
+  row. Every other field that can choose the row lists it too, also in inline rows added
+  later.
+- **Edit** edits the chosen row, and the field shows its new name. With only the view
+  permission, the link reads **View** and shows the row. Without a chosen row, the link
+  stays in place, dimmed. A many-to-many field has no such link.
 
-Each button shows only with the matching permission on the related model's admin. There
-is no delete button: delete a row in its own admin.
+A relation in `raw_id_fields` also gets a **Look up** button (magnifier) next to the
+widget. It shows the related model's list, and a click on a row's link chooses that row
+and closes the dialog. The list keeps its search, filters and sort, and offers only the
+rows of the relation's `limit_choices_to`, as Django's raw ID lookup does. It has no
+actions, edits no cells, and its add button adds a row and chooses it. The field keeps
+its searchable dropdown.
+
+Each link shows only with the matching permission on the related model's admin. There
+is no delete link: delete a row in its own admin.
 
 A relation in the dialog opens the next dialog on top. <kbd>Esc</kbd> or the close
 button closes a dialog, and the browser asks first when its form has unsaved changes.
@@ -342,7 +399,9 @@ prefixes in `search_fields` work as in Django. A filter on a many-to-many relati
 one row, as Django's related filter does.
 
 The list updates as the user types or picks, and the URL keeps every filter, the
-search, the sort and the page.
+search, the sort and the page. A list that the search or the filters leave empty says
+which of them matched nothing and offers Clear search and Clear all filters, each of
+which keeps the other.
 
 The URL uses the parameters of Django's list filters, so a link filters the same rows in
 both admins:
@@ -406,15 +465,28 @@ into view. Without JavaScript, the table scrolls sideways as in Django's admin.
 In a window at least 40rem wide, a long list fits the window: the rows scroll under the
 header, and the footer with the page links stays in view. A short list keeps its height.
 In a narrow window, in a dialog, or when less than 288 pixels are left for the rows, the
-page scrolls as usual.
+page scrolls as usual. While rows are selected or cells changed, the line with the
+actions and the save then sticks to the bottom of the window. On a phone that line
+is shorter: the actions menu shows as an ellipsis, and Save changes as Save.
 
 ### Editable columns
 
-The columns in `list_editable` show their fields in each row, as in Django's admin. A cell
-whose value differs from the saved one gets the accent color, and a bar at the bottom of
-the window counts the changed cells. Save changes saves the rows, and Discard loads the
-saved values again. After a failed save, each error shows under its cell, and the cells
-with valid changes stay marked.
+The columns in `list_editable` show their fields in each row, as in Django's admin. So that
+a list with many editable columns still reads as a table, a field shows its box only in the
+row under the pointer or with the focus. In the other rows its value shows as text, lined
+up with the column header, and the icons of a select or a date hide. A date and its time
+share one line, so a row stays one field high.
+
+A cell whose value differs from the saved one gets the accent color, and a line under the pages
+counts the changed cells. Save changes saves the rows, and Discard loads the saved values
+again. Both stay disabled while no cell has a change. After a failed save, every changed
+cell stays marked and counted, so Save changes stays enabled.
+
+A failed save counts the errors above the rows. A cell's error shows in a tooltip under
+the cell while the pointer is over the cell or the focus is in it, so the rows keep their
+height. The first cell with an error takes the focus, and Escape closes the tooltip. An
+error of a whole row, from the form's `clean()`, shows on a line above the row, as in
+Django's admin. A screen reader reads a cell's help text and error with its control.
 
 While cells have unsaved changes:
 
@@ -444,17 +516,52 @@ table. The dialog loads from the
 
 ### Actions
 
-`@admin.action` takes two more arguments:
+Actions run as in Django: a function gets `(modeladmin, request, queryset)` and a name
+resolves to a method of the admin. The selected count, the Delete button and the Actions
+menu sit on a line under the pages and stay disabled until a row is selected.
+Shift-click selects a range. `@admin.action` takes these arguments on top of Django's:
+
+| Argument | Description |
+|---|---|
+| `icon` | A Lucide icon name, shown in the Actions menu and on the button. |
+| `danger` | Draws the action in the error color. |
+| `help_text` | A line under the label in the Actions menu, and the lead on the action's page. |
+| `button` | Shows the action as a button next to the Actions menu instead of in it. |
+| `confirm` | Asks on a page before the action runs. `True` asks with the label, a string asks that question. |
+| `form` | A form the action's page shows. The action runs with the valid form. |
 
 ```python
-@admin.action(description="Archive selected tickets", icon="archive", danger=True)
+@admin.action(
+    description="Archive selected tickets",
+    icon="archive",
+    danger=True,
+    confirm="Archive %(count)s %(name)s?",
+)
 def archive(self, request, queryset): ...
 ```
 
-`icon` names a Lucide icon for the action bar, and `danger` draws the button in the
-error color. Actions run as in Django: a function gets `(modeladmin, request, queryset)`
-and a name resolves to a method of the admin. The bar appears when a row is selected,
-and shift-click selects a range.
+The page of an action with `confirm` or `form` names the selected rows and offers the
+action and Cancel. A question can use the model's names as Django's descriptions do
+(`%(verbose_name_plural)s`), plus `%(count)s` and `%(name)s`, the name that agrees with
+the count. With `form`, the action gets the bound, valid form as `form`. An invalid form
+renders the page again with its errors. The form's fields post with the prefix
+`action-`, so they never clash with the list's own fields.
+
+```python
+class PostponeForm(FormworkForm):
+    days = forms.IntegerField(min_value=1, max_value=365, initial=7)
+
+
+@admin.action(description="Postpone selected events", icon="calendar-clock", form=PostponeForm)
+def postpone(self, request, queryset, form):
+    delta = timedelta(days=form.cleaned_data["days"])
+    queryset.update(starts_at=F("starts_at") + delta)
+```
+
+Override `action_confirmation_template` on the admin, or
+`formwork_admin/action_confirmation.html` per app or model, to change the page. The
+built-in `delete_selected` shows as a Delete button next to the Actions menu and keeps
+its own page, which lists the related objects that the delete removes.
 
 The other arguments are Django 6.1's, and they also work on Django 6.0. `location`
 puts an action in the list, on the change form or both, and the list labels it with
@@ -486,9 +593,12 @@ them.
 ### Inlines
 
 `TabularInline` and `StackedInline` take Django's options (`extra`, `min_num`,
-`max_num`, `fk_name`, `can_delete`, `show_change_link`, `classes`, `form`, `formset`).
-Rows are added and removed in the browser, and the formset indexes stay contiguous. An
-inline's `form` subclasses `FormworkModelForm`, as the `ModelAdmin`'s does.
+`max_num`, `fk_name`, `can_delete`, `show_change_link`, `classes`, `form`, `formset`,
+`prepopulated_fields`). Rows are added and removed in the browser, and the formset
+indexes stay contiguous. A new row fills its prepopulated fields from its own fields; a
+saved row keeps its value. An inline's `form` subclasses `FormworkModelForm`, as the
+`ModelAdmin`'s does. A `TabularInline` shows its cell errors in tooltips, as
+[editable columns](#editable-columns) do.
 
 With `"collapse"` in `classes`, the inline folds behind its title and row count, as a
 fieldset with `"collapse"` does. It starts open when one of its rows has an error.
@@ -589,7 +699,7 @@ class ContactAdmin(admin.ModelAdmin):
 The import page checks a file before it saves anything. Pick a file and click Check
 file. The preview counts the new, changed, unchanged and invalid rows, and a click on a
 count shows only those rows. A changed cell shows the old and the new value, and an
-invalid cell shows its error as in `list_editable`. Import saves the rows in one
+invalid cell shows its error under its value. Import saves the rows in one
 transaction and goes back to the list with a summary. While a row has an error, the
 Import button stays off: fix the file and check it again.
 
@@ -709,7 +819,9 @@ same entries without the form.
 
 The admin writes the entries to its own table, `formwork_admin.HistoryEntry`, through
 `log_addition()`, `log_change()` and `log_deletions()`, as Django's admin writes
-`LogEntry`. The dashboard lists the last ten entries of the user as recent actions.
+`LogEntry`. The dashboard lists the last ten objects the user changed as recent actions.
+Each object shows once, with the fields its recent saves changed and the inline rows
+they added, changed or deleted.
 `construct_change_message()` returns Django's list with a `values` key added to each
 `changed` item, and `log_change()` still takes a plain text instead of the list.
 
@@ -799,10 +911,28 @@ class AuthorAdmin(admin.ModelAdmin):
 
 `page_context()` returns the site's `each_context()`, the model's `opts`,
 `changelist_url` and permissions, and the keyword arguments. `render()` renders with
-the admin's Jinja2 engine. Put the page's markup in the `content` block: a link inside
-the admin swaps only that block. The URL reverses under the site's name, for example
+the admin's Jinja2 engine. The URL reverses under the site's name, for example
 `reverse("admin:myapp_author_stats")`. A page that belongs to no model goes in
 `AdminSite.get_urls()`, rendered with `site.render()` and `site.each_context(request)`.
+
+Put the page's markup in the `content` block. The links of the sidebar, the breadcrumbs,
+the list rows and the Add buttons replace that block and update the rest in place. To link
+to your page the same way, write the link with `m.page_link()`:
+
+```jinja
+<a {{ m.page_link(url("admin:myapp_author_stats")) }}>Author stats</a>
+```
+
+When the page loads a script or a stylesheet that the page before it did not, for
+example from a `Media` class, the browser loads it as a whole instead.
+
+A page link loads its page when the pointer rests on it for 100 ms or presses it. A page
+that has not arrived 100 ms after the click shows a skeleton first. The second argument
+of `page_link()` picks it: `list`, `change`, `add`, `index`, `app`, or `page`, the
+default, a heading over a card. The heading of a `list`, `index`, `app` or `page`
+skeleton is the link's text, or the `title` argument. To add a skeleton for your own
+pages, override `formwork_admin/skeletons.html` and add a
+`<template id="formwork-admin-skeleton-<kind>">`.
 
 ## Performance
 
@@ -817,7 +947,9 @@ the admin swaps only that block. The URL reverses under the site's name, for exa
 - A search or filter that can return a row twice keeps the rows unique with a primary
   key subquery instead of `DISTINCT` over every column.
 - The filter bar, the search and the paging swap only the list, without a full page
-  load.
+  load. A link in the sidebar, the breadcrumbs or a list row swaps the content, and the
+  sidebar keeps its scroll position. The link loads its page when the pointer rests on
+  it, and a slow page shows the skeleton of its layout until it arrives.
 
 ## Keyboard
 
@@ -826,9 +958,3 @@ the admin swaps only that block. The URL reverses under the site's name, for exa
 | <kbd>Ctrl</kbd>+<kbd>K</kbd> | Filter the navigation |
 | <kbd>/</kbd> | Focus the list search |
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | Save and continue editing |
-
-## Not supported yet
-
-- The raw ID lookup popup. A relation in `raw_id_fields` gets the searchable dropdown,
-  with the add and change buttons.
-- Prepopulated fields in inline rows.

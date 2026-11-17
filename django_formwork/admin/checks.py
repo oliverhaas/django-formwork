@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
@@ -72,6 +74,61 @@ def check_model_admins(app_configs: Sequence[AppConfig] | None, **kwargs: Any) -
         for model_admin in admin_site._registry.values():
             errors.extend(check_model_admin(model_admin))
     return errors
+
+
+@checks.register(checks.Tags.admin)
+def check_site_names(app_configs: Sequence[AppConfig] | None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """Each site has a name of its own: its URL namespace, and the key its relation search and exports find it by."""
+    from django_formwork.admin.sites import _all_sites, get_site
+
+    get_site("admin")
+    by_name: dict[str, list[str]] = {}
+    for admin_site in list(_all_sites):
+        by_name.setdefault(admin_site.name, []).append(f"{type(admin_site).__module__}.{type(admin_site).__qualname__}")
+    return [
+        checks.Error(
+            f"{len(classes)} admin sites share the name '{name}': {', '.join(sorted(classes))}.",
+            hint="Give each site its own name.",
+            id="formwork_admin.E502",
+        )
+        for name, classes in by_name.items()
+        if len(classes) > 1
+    ]
+
+
+@checks.register(checks.Tags.admin)
+def check_stylesheets(app_configs: Sequence[AppConfig] | None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """Each site's compiled CSS comes from the installed templates, so it has their classes."""
+    from django.contrib.staticfiles import finders
+
+    from django_formwork import __version__
+    from django_formwork.admin.sites import _sites
+
+    warnings: list[checks.CheckMessage] = []
+    seen = set()
+    for admin_site in list(_sites.values()):
+        local = [href for href in admin_site.stylesheets if "//" not in href]
+        paths = [path for href in local if isinstance(path := finders.find(href), str)]
+        if not paths or tuple(local) in seen:
+            continue
+        seen.add(tuple(local))
+        built = {match[2] for path in paths for match in _CSS_VERSION.finditer(Path(path).read_text(errors="replace"))}
+        if __version__ not in built:
+            warnings.append(
+                checks.Warning(
+                    f"The CSS of the admin site '{admin_site.name}' was built for "
+                    f"{'django-formwork ' + ', '.join(sorted(built)) if built else 'an older django-formwork'}, "
+                    f"not for the installed {__version__}.",
+                    hint="Rebuild it with your Tailwind step, so it has the classes of the installed templates.",
+                    obj=type(admin_site),
+                    id="formwork_admin.W501",
+                ),
+            )
+    return warnings
+
+
+# The version admin.css marks the compiled CSS with.
+_CSS_VERSION = re.compile(r"--formwork-admin-css:\s*([\"'])(.*?)\1")
 
 
 # Django's inline classes, by dotted path: the module to import them from and formwork's module for the same name.
