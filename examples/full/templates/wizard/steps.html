@@ -1,7 +1,8 @@
 {% partialdef wizard-steps %}
+{# On a phone the titles do not fit side by side; the top bar names the current step there. #}
 <ul class="steps w-full">
   {% for title in step_titles %}
-    <li class="step {% if forloop.counter0 <= step %}step-primary{% endif %}">{{ title }}</li>
+    <li class="step {% if forloop.counter0 <= step %}step-primary{% endif %}"{% if forloop.counter0 == step %} aria-current="step"{% endif %}><span class="max-sm:sr-only">{{ title }}</span></li>
   {% endfor %}
 </ul>
 {% endpartialdef %}

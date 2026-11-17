@@ -3,16 +3,47 @@
 
 {% block title %}Settings{% endblock %}
 {% block page_title %}Settings{% endblock %}
-{% block page_subtitle %}
-  <p class="text-xs text-base-content/50">Showcase page for the widgets the task domain doesn't exercise. Saves to a single local profile row.</p>
-{% endblock %}
 
 {% block content %}
-<form method="post" enctype="multipart/form-data" class="card bg-base-100 border border-base-300 max-w-2xl mx-auto">
+{# One form in sections, placed with as_field_group as on the task form. #}
+<form method="post" enctype="multipart/form-data" novalidate class="max-w-3xl mx-auto" data-formwork-dirty>
   {% csrf_token %}
-  <div class="card-body p-6 lg:p-8 space-y-2">
-    {{ form }}
-    <div class="pt-4">
+
+  {% if form.non_field_errors %}
+    <div role="alert" class="alert alert-soft alert-error mb-6">
+      <i class="icon icon-circle-x size-5"></i>
+      <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+    </div>
+  {% endif %}
+
+  <div class="card bg-base-100 border border-base-300">
+    <section aria-labelledby="profile-heading" class="px-6 py-5 sm:px-8">
+      <h2 id="profile-heading" class="font-semibold mb-1">Profile</h2>
+      <div class="grid items-start gap-x-6 gap-y-2 sm:grid-cols-2 *:mt-0">
+        {{ form.full_name.as_field_group }}
+        {{ form.email.as_field_group }}
+        <div class="sm:col-span-2">{{ form.member.as_field_group }}</div>
+        {{ form.phone.as_field_group }}
+        {{ form.country.as_field_group }}
+        <div class="sm:col-span-2">{{ form.avatar.as_field_group }}</div>
+      </div>
+    </section>
+
+    <section aria-labelledby="security-heading" class="border-t border-base-300 px-6 py-5 sm:px-8">
+      <h2 id="security-heading" class="font-semibold mb-1">Sign-in</h2>
+      {{ form.new_password.as_field_group }}
+      {{ form.two_factor_code.as_field_group }}
+    </section>
+
+    <section aria-labelledby="preferences-heading" class="border-t border-base-300 px-6 py-5 sm:px-8">
+      <h2 id="preferences-heading" class="font-semibold mb-1">Preferences</h2>
+      <div class="grid items-start gap-x-6 gap-y-2 sm:grid-cols-2 *:mt-0">
+        {{ form.favourite_food.as_field_group }}
+        {{ form.satisfaction.as_field_group }}
+      </div>
+    </section>
+
+    <div class="flex flex-wrap items-center gap-2 rounded-b-box border-t border-base-300 bg-base-200/50 px-6 py-4 sm:px-8">
       <button type="submit" class="btn btn-primary gap-2">
         <i class="icon icon-check size-4"></i> Save changes
       </button>

@@ -24,6 +24,7 @@ from .forms import (
     QuickAddForm,
     SettingsForm,
     TaskDetailsForm,
+    TaskDoneForm,
     TaskEditForm,
     WizardConfigForm,
     WizardFirstTaskForm,
@@ -71,7 +72,13 @@ def dashboard(request):
         ("week", "Due this week", [t for t in open_tasks if t.due_date and today <= t.due_date < week_end]),
         ("later", "Later", [t for t in open_tasks if not t.due_date or t.due_date >= week_end]),
     ]
-    done = mine.filter(status=Task.Status.DONE, updated_at__gte=timezone.now() - timedelta(days=7))
+    done = list(
+        mine.filter(status=Task.Status.DONE, updated_at__gte=timezone.now() - timedelta(days=7))
+        .prefetch_related("tags")
+        .order_by("-updated_at")
+    )
+    for task in [*open_tasks, *done]:
+        task.done_form = TaskDoneForm(task=task)
     return render(
         request,
         "dashboard.html",
@@ -79,7 +86,7 @@ def dashboard(request):
             "me": me,
             "form": form,
             "groups": groups,
-            "done": done.prefetch_related("tags").order_by("-updated_at"),
+            "done": done,
             "open_count": len(open_tasks),
             "feed": Activity.objects.select_related("author", "task").order_by("-created_at")[:6],
             "today": today,
@@ -91,7 +98,10 @@ def dashboard(request):
 def task_done(request, pk):
     """Tick a task off on My work, or untick it to reopen it."""
     task = get_object_or_404(Task, pk=pk)
-    set_status(task, Task.Status.DONE if "done" in request.POST else Task.Status.TODO, Profile.load().member)
+    form = TaskDoneForm(request.POST, task=task)
+    if form.is_valid():
+        status = Task.Status.DONE if form.cleaned_data["done"] else Task.Status.TODO
+        set_status(task, status, Profile.load().member)
     return redirect("dashboard")
 
 
@@ -118,12 +128,13 @@ def board(request):
                 "mine": [t for t in shown if me and t.assignee_id == me.pk],
                 "others": [t for t in shown if not me or t.assignee_id != me.pk],
                 "hidden": len(cards) - len(shown),
+                "add_form": BoardAddForm(initial={"status": status}),
             }
         )
     return render(
         request,
         "tasks/board.html",
-        {"filter": task_filter, "columns": columns, "me": me},
+        {"filter": task_filter, "columns": columns, "me": me, "move_form": BoardMoveForm()},
     )
 
 
@@ -224,7 +235,7 @@ def task_create(request):
             return redirect(task)
     else:
         form = TaskEditForm(initial={"assignee": Profile.load().member})
-    return render(request, "tasks/form.html", {"form": form, "title": "New task", "task": None})
+    return render(request, "tasks/form.html", {"form": form, "task": None})
 
 
 def task_edit(request, pk):
@@ -237,16 +248,16 @@ def task_edit(request, pk):
             return redirect(task)
     else:
         form = TaskEditForm(instance=task)
-    return render(request, "tasks/form.html", {"form": form, "title": task.title, "task": task})
+    return render(request, "tasks/form.html", {"form": form, "task": task})
 
 
 def task_delete(request, pk):
     task = get_object_or_404(Task, pk=pk)
     if request.method == "POST":
         task.delete()
-        messages.success(request, f"Deleted {task.title}.")
+        messages.success(request, f"Task deleted: {task.title}")
         return redirect("board")
-    return render(request, "tasks/confirm_delete.html", {"task": task})
+    return render(request, "tasks/confirm_delete.html", {"task": task, "activity_count": task.activity.count()})
 
 
 # ─── Wizard ─────────────────────────────────────────────────────────────
@@ -334,20 +345,21 @@ def _wizard_summary(data):
     config = _wizard_cleaned(1, data)
     first_task_data = _wizard_cleaned(2, data)
     tags_list = list(first_task_data.get("first_task_tags") or [])
+    due = first_task_data.get("first_task_due")
     return [
         (
             "Project",
             [
                 ("Name", project.get("project_name", "")),
-                ("Description", project.get("project_description", "") or "—"),
+                ("Description", project.get("project_description") or "None"),
             ],
         ),
         (
             "Configuration",
             [
                 ("Notifications", "On" if config.get("enable_notifications") else "Off"),
-                ("Max tasks", config.get("max_tasks", "—")),
-                ("Visibility", (config.get("visibility") or "").title() or "—"),
+                ("Max tasks", config.get("max_tasks", "None")),
+                ("Visibility", (config.get("visibility") or "").title() or "None"),
             ],
         ),
         (
@@ -355,8 +367,8 @@ def _wizard_summary(data):
             [
                 ("Title", first_task_data.get("first_task", "")),
                 ("Priority", (first_task_data.get("first_task_priority") or "").title()),
-                ("Due", first_task_data.get("first_task_due") or "—"),
-                ("Tags", ", ".join(t.name for t in tags_list) or "—"),
+                ("Due date", date_format(due, "M j, Y") if due else "None"),
+                ("Tags", ", ".join(t.name for t in tags_list) or "None"),
             ],
         ),
     ]

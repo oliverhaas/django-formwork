@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from taskmanager.models import Profile
+from taskmanager.models import Member, Profile
 
 
 def _form_data(**overrides):
@@ -81,6 +81,13 @@ def test_settings_post_persists_the_profile(client, db):
     assert profile.country == Profile.Country.DE
     assert profile.favourite_food == "Ramen"
     assert profile.satisfaction == 4
+
+
+def test_settings_post_picks_the_member(client, db):
+    member = Member.objects.create(name="Mira Chen", email="mira@example.com")
+    response = client.post(reverse("settings"), _form_data(member=member.pk))
+    assert response.status_code == 302
+    assert Profile.load().member == member
 
 
 def test_settings_post_with_invalid_phone_shows_error_and_saves_nothing(client, db):

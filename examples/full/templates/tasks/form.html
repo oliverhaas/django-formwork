@@ -1,65 +1,74 @@
 {% extends "base.html" %}
-{% load formwork taskwork %}
+{% load formwork %}
 
-{% block title %}{{ title }}{% endblock %}
-{% block page_title %}{{ title }}{% endblock %}
-{% block page_subtitle %}
-  <p class="text-xs text-base-content/50">
-    {% if task %}Editing task #{{ task.pk }}{% else %}Fill in the fields and save{% endif %}
-  </p>
-{% endblock %}
-{% block topbar_actions %}
-  <a href="{% if task %}{{ task.get_absolute_url }}{% else %}{% url 'board' %}{% endif %}" class="btn btn-ghost btn-sm gap-2">
-    <i class="icon icon-arrow-left size-4"></i> Back
-  </a>
+{% block title %}{% if task %}Edit {{ task.title }}{% else %}New task{% endif %}{% endblock %}
+{% block header %}
+  <nav aria-label="Breadcrumb" class="breadcrumbs text-sm py-0">
+    <ul>
+      {# On a phone an edit trail starts at the task, so it fits beside the top bar's buttons. #}
+      <li{% if task %} class="max-sm:hidden"{% endif %}><a href="{% url 'board' %}">Board</a></li>
+      {% if task %}<li class="max-sm:before:hidden"><a href="{{ task.get_absolute_url }}">Task #{{ task.pk }}</a></li>{% endif %}
+      <li><span aria-current="page" class="text-base-content/60">{% if task %}Edit{% else %}New task{% endif %}</span></li>
+    </ul>
+  </nav>
 {% endblock %}
 
 {% block content %}
-<form method="post" enctype="multipart/form-data" class="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6">
+{# Each field renders through as_field_group: formwork adds the label, help text and errors. In a grid the gap spaces the fields, so *:mt-0 drops the margin formwork puts between stacked fields. #}
+<form method="post" enctype="multipart/form-data" novalidate class="max-w-3xl mx-auto"{% if task %} data-formwork-dirty{% endif %}>
   {% csrf_token %}
+  <h1 class="text-2xl font-semibold tracking-tight mb-6">{% if task %}Edit task{% else %}New task{% endif %}</h1>
+
+  {% if form.non_field_errors %}
+    <div role="alert" class="alert alert-soft alert-error mb-6">
+      <i class="icon icon-circle-x size-5"></i>
+      <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+    </div>
+  {% endif %}
 
   <div class="card bg-base-100 border border-base-300">
-    <div class="card-body p-6 space-y-1">
-      {{ form }}
-    </div>
-  </div>
-
-  <div class="space-y-6">
-    <div class="card bg-base-100 border border-base-300">
-      <div class="card-body p-6">
-        <h3 class="card-title text-sm">Actions</h3>
-        <button type="submit" class="btn btn-primary btn-block gap-2">
-          <i class="icon icon-check size-4"></i> Save
-        </button>
-        {% if task %}
-          <a href="{% url 'task_delete' task.pk %}" class="btn btn-ghost btn-block btn-sm text-error gap-2">
-            <i class="icon icon-trash size-4"></i> Delete task
-          </a>
-        {% endif %}
-      </div>
+    <div class="px-6 py-5 sm:px-8">
+      {{ form.title.as_field_group }}
+      {{ form.description.as_field_group }}
     </div>
 
-    {% if task %}
-      <div class="card bg-base-100 border border-base-300">
-        <div class="card-body p-6">
-          <h3 class="card-title text-sm">Metadata</h3>
-          <dl class="text-sm space-y-2 mt-2">
-            <div class="flex justify-between gap-2">
-              <dt class="text-base-content/50">Created</dt>
-              <dd>{{ task.created_at|date:"M j, Y H:i" }}</dd>
-            </div>
-            <div class="flex justify-between gap-2">
-              <dt class="text-base-content/50">Updated</dt>
-              <dd>{{ task.updated_at|ago }}</dd>
-            </div>
-            <div class="flex justify-between gap-2">
-              <dt class="text-base-content/50">ID</dt>
-              <dd class="font-mono text-xs">#{{ task.pk }}</dd>
-            </div>
-          </dl>
-        </div>
+    <section aria-labelledby="details-heading" class="border-t border-base-300 px-6 py-5 sm:px-8">
+      <h2 id="details-heading" class="font-semibold mb-1">Details</h2>
+      <div class="grid items-start gap-x-6 gap-y-2 sm:grid-cols-2 *:mt-0">
+        {{ form.status.as_field_group }}
+        {{ form.priority.as_field_group }}
+        {{ form.assignee.as_field_group }}
+        {{ form.due_date.as_field_group }}
+        {{ form.tags.as_field_group }}
+        {{ form.remind_at.as_field_group }}
       </div>
-    {% endif %}
+    </section>
+
+    <section aria-labelledby="files-heading" class="border-t border-base-300 px-6 py-5 sm:px-8">
+      <h2 id="files-heading" class="font-semibold mb-1">Files</h2>
+      <div class="grid items-start gap-x-6 gap-y-2 sm:grid-cols-2 *:mt-0">
+        {{ form.cover_image.as_field_group }}
+        {{ form.attachment.as_field_group }}
+      </div>
+    </section>
+
+    <section aria-labelledby="review-heading" class="border-t border-base-300 px-6 py-5 sm:px-8">
+      <h2 id="review-heading" class="font-semibold mb-1">Review</h2>
+      {{ form.rating.as_field_group }}
+    </section>
+
+    {# The saving button comes first, as on the admin's change form. #}
+    <div class="flex flex-wrap items-center gap-2 rounded-b-box border-t border-base-300 bg-base-200/50 px-6 py-4 sm:px-8">
+      <button type="submit" class="btn btn-primary gap-2">
+        <i class="icon icon-check size-4"></i> {% if task %}Save changes{% else %}Create task{% endif %}
+      </button>
+      <a href="{% if task %}{{ task.get_absolute_url }}{% else %}{% url 'board' %}{% endif %}" class="btn btn-ghost">Cancel</a>
+      {% if task %}
+        <a href="{% url 'task_delete' task.pk %}" class="btn btn-ghost ms-auto gap-2 text-error hover:bg-error/10">
+          <i class="icon icon-trash size-4"></i><span class="max-sm:sr-only">Delete task</span>
+        </a>
+      {% endif %}
+    </div>
   </div>
 </form>
 {% endblock %}

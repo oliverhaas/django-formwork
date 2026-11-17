@@ -74,36 +74,23 @@ class MemberChoiceField(forms.ModelChoiceField):
 
 
 class TaskEditForm(FormworkModelForm):
-    """Full create/edit page: every task field, solid select-{color} status
-    border. Showcases Select + SelectMultiple + DatePicker + DateTimePicker +
-    drop zones + Rating.
+    """The new and edit pages: every field of a task.
+
+    The template lays the fields out in sections with ``as_field_group``.
     """
 
-    priority = forms.ChoiceField(
-        choices=PRIORITY_CHOICES,
-        initial=Task.Priority.MEDIUM,
-        widget=Select,
-        help_text="Select whose closed trigger adopts each option's selected_toggle_class: "
-        "select-soft tinted by severity, recoloring on pick without a round-trip.",
-    )
-    status = forms.ChoiceField(
-        choices=STATUS_CHOICES,
-        initial=Task.Status.TODO,
-        widget=Select,
-        help_text="Same trick as priority, but a select-{color} border instead of a soft fill.",
-    )
+    status = forms.ChoiceField(choices=STATUS_CHOICES, initial=Task.Status.TODO, widget=Select)
+    priority = forms.ChoiceField(choices=PRIORITY_CHOICES, initial=Task.Priority.MEDIUM, widget=Select)
     assignee = MemberChoiceField(
         queryset=Member.objects.all(),
         required=False,
         empty_label="Unassigned",
         widget=Select(search_fields=["name", "email"], search_queryset=search_members, search_decorator=None),
-        help_text="Select over the Member model: server-side search, initials badge, email line.",
     )
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
         widget=SelectMultiple(search_fields=["name"], search_queryset=search_tags, search_decorator=None),
-        help_text="SelectMultiple with server-side search over tag names.",
     )
     rating = forms.TypedChoiceField(
         choices=Rating.make_choices(5),
@@ -111,7 +98,7 @@ class TaskEditForm(FormworkModelForm):
         empty_value=None,
         widget=Rating(allow_clear=True),
         required=False,
-        help_text="Quality rating after completion (clearable Rating stars).",
+        help_text="How well the result turned out. Rate it after the task is done.",
     )
 
     class Meta:
@@ -119,8 +106,8 @@ class TaskEditForm(FormworkModelForm):
         fields = [
             "title",
             "description",
-            "priority",
             "status",
+            "priority",
             "assignee",
             "tags",
             "due_date",
@@ -137,10 +124,9 @@ class TaskEditForm(FormworkModelForm):
             "attachment": FileDropzoneInput(max_size=10 * 1024 * 1024),
         }
         help_texts = {
-            "due_date": "DatePicker with a calendar dropdown.",
-            "remind_at": "DateTimePicker: the day and the time in one calendar.",
-            "cover_image": "Shown as a thumbnail in the task list (ImageDropzoneInput, ≤5 MB).",
-            "attachment": "Any single file (FileDropzoneInput, ≤10 MB).",
+            "remind_at": "Shown on the task page.",
+            "cover_image": "Shown at the top of the task page.",
+            "attachment": "One file of any type, linked under the description.",
         }
 
 
@@ -181,6 +167,20 @@ class CommentForm(FormworkModelForm):
         return comment
 
 
+class TaskDoneForm(forms.Form):
+    """My work's tick box. Ticked marks the task done, unticked opens it again."""
+
+    done = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "checkbox-sm checkbox-primary"}),
+    )
+
+    def __init__(self, *args, task: Task, **kwargs):
+        kwargs.setdefault("initial", {"done": task.status == Task.Status.DONE})
+        super().__init__(*args, auto_id=f"done-{task.pk}-%s", **kwargs)
+        self.fields["done"].label = f"Done: {task.title}"
+
+
 class QuickAddForm(FormworkForm):
     """My work's quick add: a title and an optional due date, for a task of your own."""
 
@@ -194,7 +194,15 @@ class BoardAddForm(forms.ModelForm):
     class Meta:
         model = Task
         fields = ["title", "status"]
-        widgets = {"status": forms.HiddenInput}
+        widgets = {
+            "title": forms.TextInput(attrs={"enterkeyhint": "done", "autocomplete": "off"}),
+            "status": forms.HiddenInput,
+        }
+
+    def __init__(self, *args, **kwargs):
+        # Each column has its own form, so the ids carry the column's status.
+        status = kwargs.get("initial", {}).get("status", "")
+        super().__init__(*args, auto_id=f"add-{status}-%s", **kwargs)
 
 
 class BoardMoveForm(forms.Form):
@@ -210,11 +218,11 @@ class BoardMoveForm(forms.Form):
 class WizardProjectForm(FormworkForm):
     """Step 1: project basics."""
 
-    project_name = forms.CharField(max_length=100, help_text="Pick something memorable.")
+    project_name = forms.CharField(max_length=100, help_text="Short and easy to find on the board.")
     project_description = forms.CharField(
         widget=ValidatedTextarea(attrs={"rows": 3}),
         required=False,
-        help_text="Optional summary.",
+        help_text="A sentence or two about what the project is for.",
     )
 
 
@@ -225,12 +233,12 @@ class WizardConfigForm(FormworkForm):
         widget=ToggleInput,
         required=False,
         initial=True,
-        help_text="Email updates when tasks change.",
+        help_text="An email when a task in the project changes.",
     )
     max_tasks = forms.IntegerField(
         widget=Range(attrs={"min": "1", "max": "100", "step": "1"}),
         initial=20,
-        help_text="Cap on total open tasks.",
+        help_text="The most open tasks the project can have at a time.",
     )
     visibility = forms.ChoiceField(
         choices=[("private", "Private"), ("team", "Team"), ("public", "Public")],
@@ -268,56 +276,49 @@ class WizardFirstTaskForm(FormworkForm):
 class SettingsForm(FormworkModelForm):
     """Account settings, persisted on the demo's single Profile row.
 
-    Exercises the widgets the task domain doesn't. The password and 2FA
-    fields are widget showcases only and are never stored.
+    The template lays the fields out in sections with ``as_field_group``.
+    The password and 2FA fields show their widgets only and are never stored.
     """
 
     country = forms.ChoiceField(
         choices=[("", ""), *Profile.Country.choices],
         widget=Select(),
         required=False,
-        help_text="Where you're based.",
     )
     new_password = forms.CharField(
         widget=PasswordInput,
         required=False,
         help_text=(
-            "Leave blank to keep your current password. The eye button (PasswordInput) "
-            "shows what you typed. If you do change it, use at "
-            "least 12 characters and avoid reusing a password from another site. A "
-            "passphrase of a few unrelated words is easy to remember and hard to guess."
+            "Leave it empty to keep your current password. Use at least 12 characters, and not a "
+            "password from another site: a few unrelated words are easy to remember and hard to guess."
         ),
     )
     two_factor_code = forms.CharField(
+        label="Authenticator code",
         widget=OTPInput(length=6),
         required=False,
-        help_text="Six-digit code from your authenticator (OTPInput).",
+        help_text="The six digits your authenticator app shows for Taskwork.",
     )
     satisfaction = forms.TypedChoiceField(
+        label="How do you like Taskwork?",
         choices=Rating.make_choices(5),
         coerce=int,
         empty_value=None,
         widget=Rating(allow_clear=True),
         required=False,
-        help_text="How are we doing? (five-star Rating widget)",
     )
-
-    field_order = [
-        "full_name",
-        "email",
-        "phone",
-        "country",
-        "avatar",
-        "new_password",
-        "two_factor_code",
-        "favourite_food",
-        "satisfaction",
-    ]
 
     class Meta:
         model = Profile
-        fields = ["full_name", "email", "phone", "country", "avatar", "favourite_food", "satisfaction"]
+        fields = ["full_name", "email", "member", "phone", "country", "avatar", "favourite_food", "satisfaction"]
+        field_classes = {"member": MemberChoiceField}
         widgets = {
+            "member": Select(
+                search_fields=["name", "email"],
+                search_queryset=search_members,
+                search_decorator=None,
+                attrs={"placeholder": "Pick yourself"},
+            ),
             "phone": PhoneInput,
             "avatar": ImageDropzoneInput(max_size=2 * 1024 * 1024),
             "favourite_food": ComboBox(
@@ -325,11 +326,9 @@ class SettingsForm(FormworkModelForm):
             ),
         }
         help_texts = {
-            "phone": "Country code + number (custom PhoneInput multi-widget).",
             "avatar": (
-                "Square-ish PNG or JPG, ≤2 MB (ImageDropzoneInput). The picture is shown at small sizes "
-                "throughout the app, so pick something that stays recognizable as a "
-                "tiny thumbnail. A close-up works better than a wide shot."
+                "Shown next to your name in the top bar. It is small there, so a close-up of a face "
+                "works better than a wide shot."
             ),
-            "favourite_food": "Autocompletes as you type (ComboBox with static suggestions).",
+            "favourite_food": "For the team lunch. Type to see suggestions.",
         }

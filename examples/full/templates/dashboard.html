@@ -104,8 +104,7 @@
   <form method="post" action="{% url 'task_done' task.pk %}" class="pt-0.5"
         hx-post="{% url 'task_done' task.pk %}" hx-trigger="change" hx-select="#my-work" hx-target="#my-work" hx-swap="outerMorph">
     {% csrf_token %}
-    <input type="checkbox" name="done" class="checkbox checkbox-sm checkbox-primary" aria-label="Done: {{ task.title }}"
-           {% if task.status == 'done' %}checked{% endif %}>
+    {% with field=task.done_form.done %}<label for="{{ field.id_for_label }}" class="sr-only">{{ field.label }}</label>{{ field }}{% endwith %}
   </form>
   <div class="min-w-0 flex-1">
     <a href="{{ task.get_absolute_url }}" class="font-medium hover:underline {% if task.status == 'done' %}line-through text-base-content/50{% endif %}">{{ task.title }}</a>

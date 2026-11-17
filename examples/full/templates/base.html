@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Task Manager{% endblock %} · django-formwork</title>
+  <title>{% block title %}My work{% endblock %} · Taskwork</title>
 
   <link rel="stylesheet" href="{% static 'dist.css' %}">
 
@@ -29,7 +29,7 @@
     {# the sidebar paints before the (potentially large) page content streams in. #}
     <aside class="drawer-side z-30">
       <label for="nav-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-      <nav class="bg-base-100 w-68 min-h-full px-4 py-6 flex flex-col gap-1 border-r border-base-300">
+      <nav aria-label="Main" class="bg-base-100 w-68 min-h-full px-4 py-6 flex flex-col gap-1 border-r border-base-300">
         <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-3 py-3 mb-4">
           <span class="grid place-items-center size-10 rounded-xl bg-primary text-primary-content">
             <i class="icon icon-square-check-big size-6"></i>
@@ -45,21 +45,26 @@
           <i class="icon icon-wand-sparkles size-5"></i> New project
         </a>
 
-        <p class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 px-3 mt-2">Workspace</p>
-        <a href="{% url 'dashboard' %}" {% if nav_section == 'dashboard' %}aria-current="page"{% endif %}
-           class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'dashboard' %}bg-primary/10 text-primary font-semibold{% endif %}">
-          <i class="icon icon-inbox size-5"></i> My work
-        </a>
-        <a href="{% url 'board' %}" {% if nav_section == 'board' %}aria-current="page"{% endif %}
-           class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'board' %}bg-primary/10 text-primary font-semibold{% endif %}">
-          <i class="icon icon-square-kanban size-5"></i> Board
-        </a>
-
-        <p class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 px-3 mt-6">Account</p>
-        <a href="{% url 'settings' %}" {% if nav_section == 'settings' %}aria-current="page"{% endif %}
-           class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-200 {% if nav_section == 'settings' %}bg-primary/10 text-primary font-semibold{% endif %}">
-          <i class="icon icon-settings size-5"></i> Settings
-        </a>
+        {# The admin's sidebar colors: DaisyUI styles the aria-current link as the active one. #}
+        <ul class="menu w-full p-0 gap-0.5 text-base [--menu-active-bg:color-mix(in_oklab,var(--color-primary)_10%,transparent)] [--menu-active-fg:var(--color-primary)]">
+          <li class="menu-title text-xs uppercase tracking-wider text-base-content/50">Workspace</li>
+          <li>
+            <a href="{% url 'dashboard' %}" class="gap-3 py-2 shadow-none aria-[current=page]:font-semibold"{% if nav_section == 'dashboard' %} aria-current="page"{% endif %}>
+              <i class="icon icon-inbox size-5"></i> My work
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'board' %}" class="gap-3 py-2 shadow-none aria-[current=page]:font-semibold"{% if nav_section == 'board' %} aria-current="page"{% endif %}>
+              <i class="icon icon-square-kanban size-5"></i> Board
+            </a>
+          </li>
+          <li class="menu-title text-xs uppercase tracking-wider text-base-content/50 mt-4">Account</li>
+          <li>
+            <a href="{% url 'settings' %}" class="gap-3 py-2 shadow-none aria-[current=page]:font-semibold"{% if nav_section == 'settings' %} aria-current="page"{% endif %}>
+              <i class="icon icon-settings size-5"></i> Settings
+            </a>
+          </li>
+        </ul>
 
         <div class="mt-auto pt-6 px-3 flex flex-col gap-3 text-xs text-base-content/50">
           <a href="{% url 'admin:index' %}" class="link link-hover flex items-center gap-2 hover:text-base-content">
@@ -122,7 +127,8 @@
         {% if messages %}
           <div class="space-y-2 mb-6">
             {% for m in messages %}
-              <div role="alert" class="alert alert-{{ m.tags|default:'info' }} alert-soft">
+              <div role="status" class="alert alert-{{ m.level_tag|default:'info' }} alert-soft">
+                <i class="icon icon-{% if m.level_tag == 'success' %}circle-check{% elif m.level_tag == 'error' %}circle-x{% elif m.level_tag == 'warning' %}triangle-exclamation-point{% else %}info{% endif %} size-5"></i>
                 <span>{{ m }}</span>
               </div>
             {% endfor %}

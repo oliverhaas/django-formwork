@@ -1,20 +1,40 @@
 {% extends "base.html" %}
 
-{% block title %}Delete task{% endblock %}
-{% block page_title %}Delete task{% endblock %}
+{% block title %}Delete {{ task.title }}{% endblock %}
+{% block header %}
+  <nav aria-label="Breadcrumb" class="breadcrumbs text-sm py-0">
+    <ul>
+      {# On a phone the trail starts at the task, so it fits beside the top bar's buttons. #}
+      <li class="max-sm:hidden"><a href="{% url 'board' %}">Board</a></li>
+      <li class="max-sm:before:hidden"><a href="{{ task.get_absolute_url }}">Task #{{ task.pk }}</a></li>
+      <li><span aria-current="page" class="text-base-content/60">Delete</span></li>
+    </ul>
+  </nav>
+{% endblock %}
 
 {% block content %}
-<div class="card bg-base-100 border border-base-300 max-w-md mx-auto">
-  <div class="card-body p-6">
-    <div role="alert" class="alert alert-error alert-soft">
-      <i class="icon icon-trash size-5"></i>
-      <span>Delete <strong>{{ task.title }}</strong>? This can't be undone.</span>
+{# The admin's confirmation card: the question, what goes with the task, then the deleting button first. #}
+<form method="post" class="max-w-xl mx-auto">
+  {% csrf_token %}
+  <div class="card bg-base-100 border border-base-300">
+    <div class="card-body p-6 sm:p-8">
+      <div class="flex items-start gap-4">
+        <span class="grid size-12 shrink-0 place-items-center rounded-full bg-error/10 text-error">
+          <i class="icon icon-trash size-5"></i>
+        </span>
+        <div class="min-w-0 self-center">
+          <h1 class="text-xl font-semibold tracking-tight text-balance">Delete this task?</h1>
+          <p class="mt-1 text-sm text-pretty text-base-content/70 break-words">
+            “{{ task.title }}”{% if activity_count %} and its activity ({{ activity_count }} entr{{ activity_count|pluralize:"y,ies" }}){% endif %}
+            will be deleted. This cannot be undone.
+          </p>
+        </div>
+      </div>
     </div>
-    <form method="post" class="flex justify-end gap-2 mt-4">
-      {% csrf_token %}
-      <a href="{{ task.get_absolute_url }}" class="btn btn-ghost btn-sm">Cancel</a>
-      <button type="submit" class="btn btn-error btn-sm">Delete task</button>
-    </form>
+    <div class="flex flex-wrap items-center gap-2 rounded-b-box border-t border-base-300 bg-base-200/50 px-6 py-4 sm:px-8">
+      <button type="submit" class="btn btn-error gap-2"><i class="icon icon-trash size-4"></i> Delete task</button>
+      <a href="{{ task.get_absolute_url }}" class="btn btn-ghost">Cancel</a>
+    </div>
   </div>
-</div>
+</form>
 {% endblock %}

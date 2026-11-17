@@ -49,12 +49,13 @@
             hx-select="#board" hx-target="#board" hx-swap="outerMorph"
             hx-on::after:request="if (ctx.response.raw.redirected) this.reset()">
         {% csrf_token %}
-        <input type="hidden" name="status" value="{{ column.status.value }}">
-        <label class="input input-sm w-full bg-base-100/60 focus-within:bg-base-100">
-          <span class="label">Add task</span>
-          <input type="text" name="title" maxlength="200" required enterkeyhint="done" autocomplete="off"
-                 aria-label="Add task to {{ column.status.label }}">
-        </label>
+        {% with form=column.add_form %}
+          {{ form.status }}
+          <label for="{{ form.title.id_for_label }}" class="input input-sm w-full bg-base-100/60 focus-within:bg-base-100">
+            <span class="label">Add task<span class="sr-only"> to {{ column.status.label }}</span></span>
+            {{ form.title }}
+          </label>
+        {% endwith %}
       </form>
     </section>
   {% endfor %}
@@ -64,9 +65,7 @@
         action="{% url 'board_move' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
         hx-post="{% url 'board_move' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
         hx-select="#board" hx-target="#board" hx-swap="outerMorph">
-    {% csrf_token %}
-    <input type="hidden" name="task">
-    <input type="hidden" name="status">
+    {% csrf_token %}{{ move_form }}
   </form>
 </div>
 
