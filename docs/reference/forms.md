@@ -102,6 +102,26 @@ email = forms.EmailField(
 )
 ```
 
+## Label links
+
+A widget with a `label_links()` method puts links at the end of its field's label row.
+The method gets the field's HTML name, its value and the form's renderer, and returns
+HTML. The field template renders the links after the label, not inside it, so they stay
+out of the field's accessible name and come before the widget in the tab order.
+
+```python
+from django.utils.html import format_html
+
+from django_formwork import widgets
+
+
+class SlugInput(widgets.TextInput):
+    def label_links(self, name, value, renderer=None):
+        return format_html('<a href="#" class="link link-hover" data-generate="{}">Generate</a>', name)
+```
+
+The admin's relation widget uses it for its Edit and Add links.
+
 ## error_display
 
 `error_display` picks where field errors render:

@@ -105,6 +105,55 @@
     display: none;
 }
 
+/* Links at the end of the label row, from a widget's label_links() (field.html). The
+   label and the links share the first row and sit on the label's baseline; the rest of
+   the field spans both columns. The links follow the label in the source, so the tab
+   order matches what the eye reads. Unlayered to beat DaisyUI's .fieldset grid in
+   @layer utilities. */
+.fieldset:has(> .formwork-label-links) {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    > * {
+        grid-column: 1 / -1;
+    }
+
+    > .fieldset-legend,
+    > .formwork-label-links {
+        grid-row: 1;
+        align-self: baseline;
+    }
+
+    > .fieldset-legend {
+        grid-column: 1;
+    }
+
+    > .formwork-label-links {
+        grid-column: 2;
+    }
+
+    /* A floated legend lays out as a grid item, and the fieldset still takes its name
+       from it. The margins keep the legend and the control where a rendered legend
+       puts them: above the fieldset's top padding, and without a grid gap below. */
+    > legend.fieldset-legend {
+        float: inline-start;
+        margin-top: -0.25rem;
+        margin-bottom: -0.375rem;
+    }
+}
+
+.formwork-label-links {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+
+    a:hover {
+        color: var(--color-base-content);
+    }
+}
+
 /* Select / SelectMultiple (floating=True): the trigger always shows a value
    or "Select...", so the label always floats.  DaisyUI floats it only when no
    input in the wrapper shows its placeholder, and the panel's search input

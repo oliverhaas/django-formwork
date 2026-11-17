@@ -1,6 +1,7 @@
 {% load i18n %}
 {% partialdef label_row %}{{ field.label }}{% if field.is_mandatory and not field.field.disabled %} <span class="text-error" aria-hidden="true">*</span>{% endif %}{% endpartialdef %}
 {% partialdef label %}{% if field.label %}<label class="fieldset-legend"{% if field.auto_id %} id="{{ field.auto_id }}_label"{% endif %}{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}><span>{% partial label_row %}</span></label>{% endif %}{% endpartialdef %}
+{% partialdef label_links %}{% with links=field.label_links %}{% if links %}<span class="formwork-label-links">{{ links }}</span>{% endif %}{% endwith %}{% endpartialdef %}
 {% partialdef control %}{% if field.widget_type == "checkbox" and field.subwidgets.0.data.text %}<label class="checkbox-single flex cursor-pointer items-center gap-2">{{ field }}<span>{{ field.subwidgets.0.data.text }}</span></label>{% elif field.widget_type == "clearablefile" %}<div class="clearable-file">{{ field }}</div>{% else %}{{ field }}{% endif %}{% endpartialdef %}
 {% partialdef toggle %}<label class="flex min-h-10 w-fit cursor-pointer items-center gap-x-2 text-sm text-balance text-base-content/60 has-checked:font-medium has-checked:text-base-content"{% if field.auto_id %} id="{{ field.auto_id }}_label"{% endif %}{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}>{{ field }}{% if field.label %}<span>{% partial label_row %}</span>{% endif %}</label>{% endpartialdef %}
 {% partialdef changed %}{% if field.form.is_bound and not field.field.widget.needs_multipart_form and field.name in field.form.changed_data %} data-formwork-changed{% if field.initial_checked %} data-formwork-initial="{{ field.initial_checked }}"{% endif %}{% endif %}{% endpartialdef %}
@@ -12,7 +13,7 @@
 {% endif %}{% endpartialdef %}
 {% if field.is_hidden %}{{ field }}{% else %}{% with edisplay=field.form.error_display|default:"auto" %}{% if field.use_fieldset %}
 <fieldset class="fieldset{% if field.widget_type == "checkboxselectmultiple" or field.widget_type == "radioselect" %} choice-group{% endif %}"{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}{% partial changed %}{% if field.aria_describedby %} aria-describedby="{{ field.aria_describedby }}"{% endif %}>
-  {% if field.label %}<legend class="fieldset-legend"><span>{% partial label_row %}</span></legend>{% endif %}
+  {% if field.label %}<legend class="fieldset-legend"><span>{% partial label_row %}</span></legend>{% endif %}{% partial label_links %}
   {% if field.errors and edisplay == "tooltip" or field.errors and edisplay == "auto" and not field.help_text %}<div class="tooltip tooltip-error tooltip-bottom">{{ field }}{% partial tooltip_content %}</div>{% else %}{{ field }}{% endif %}
   {% partial error_help_row %}
 </fieldset>
@@ -28,7 +29,7 @@
 </fieldset>
 {% else %}
 <fieldset class="fieldset"{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}{% partial changed %}>
-  {% partial label %}
+  {% partial label %}{% partial label_links %}
   {% if field.errors and edisplay == "tooltip" or field.errors and edisplay == "auto" and not field.help_text %}<div class="tooltip tooltip-error tooltip-bottom">{% partial control %}{% partial tooltip_content %}</div>{% else %}{% partial control %}{% endif %}
   {% partial error_help_row %}
 </fieldset>

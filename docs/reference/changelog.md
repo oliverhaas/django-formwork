@@ -84,6 +84,10 @@
   to its fields, with the values before and after each change. The admin keeps that
   history in its own table, so it does not need `django.contrib.admin`, and with
   `history = PghistoryHistory()` on the site it reads the events of django-pghistory.
+- A widget can put links at the end of its field's label row, for example a Generate link
+  next to a slug, with a `label_links(name, value, renderer=None)` method that returns
+  HTML. The field template renders them after the label, not inside it, so they stay out
+  of the field's accessible name. The admin puts a relation's Edit and Add links there.
 
 ### Changed
 

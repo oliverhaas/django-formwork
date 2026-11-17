@@ -49,6 +49,17 @@ class FormworkBoundField(forms.BoundField):
         """Required by this save, or by a later step through the form's ``mandatory``."""
         return self.field.required or self.name in getattr(self.form, "mandatory", ())
 
+    @property
+    def label_links(self) -> str:
+        """Links for the end of the label row, from a widget with a ``label_links(name, value, renderer)`` method.
+
+        The admin's relation widget puts its Edit and Add links there.
+        """
+        links = getattr(self.field.widget, "label_links", None)
+        if links is None or self.is_hidden:
+            return ""
+        return links(self.html_name, self.value(), renderer=self.form.renderer)
+
     def value(self) -> object:
         """The posted value, or the initial one for a field a dirty-only post left out.
 

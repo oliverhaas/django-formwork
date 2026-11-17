@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from django import forms
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template import Context, Template
+from django.utils.html import format_html
 
 from django_formwork.forms import FormworkForm
 
@@ -576,3 +577,23 @@ def test_a_failed_save_sends_the_options_a_changed_field_had_checked(field, data
     fieldset = BeautifulSoup(str(form[field].as_field_group()), "html.parser").find("fieldset")
 
     assert json.loads(fieldset["data-formwork-initial"]) == initial
+
+
+class _LabelLinks:
+    def label_links(self, name, value, renderer=None):
+        return format_html('<a href="/{}/{}/">Edit</a>', name, value)
+
+
+@pytest.mark.parametrize("widget", [forms.TextInput, forms.RadioSelect])
+def test_a_widget_puts_its_label_links_in_the_label_row_outside_the_label(widget):
+    """Outside the label or legend, so the links stay out of the field's name."""
+
+    class F(FormworkForm):
+        venue = forms.ChoiceField(choices=[("hall", "Hall")], widget=type("Linked", (_LabelLinks, widget), {}))
+
+    fieldset = BeautifulSoup(str(F(initial={"venue": "hall"})["venue"].as_field_group()), "html.parser").find(
+        "fieldset"
+    )
+
+    assert [a["href"] for a in fieldset.select(":scope > .formwork-label-links a")] == ["/venue/hall/"]
+    assert fieldset.select("label a, legend a") == []
