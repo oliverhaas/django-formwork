@@ -43,7 +43,9 @@
     defaults.font.family = getComputedStyle(document.body).fontFamily;
     defaults.font.size = 12;
     defaults.maintainAspectRatio = false;
-    defaults.animation = matchMedia("(prefers-reduced-motion: reduce)").matches ? false : { duration: 400 };
+    // Chart.js reads the keys of this object, so it keeps the object and sets the duration in it.
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) defaults.animation = false;
+    else defaults.animation.duration = 400;
     defaults.interaction.mode = "index";
     defaults.interaction.intersect = false;
     // The template has the legend, as text.
