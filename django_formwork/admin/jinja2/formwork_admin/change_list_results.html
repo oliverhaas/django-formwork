@@ -64,7 +64,7 @@
             {% if collapsible %}
             <th class="w-px px-1 text-center" data-col-toggle>
               {% set more, less = _("Show all columns"), _("Show fewer columns") %}
-              <button type="button" class="btn btn-ghost btn-sm w-14 gap-0.5 px-0 font-medium tabular-nums text-base-content/70"
+              <button type="button" class="btn btn-ghost btn-xs w-14 gap-0.5 px-0 font-medium tabular-nums text-base-content/70"
                       aria-controls="changelist-table" aria-expanded="false" aria-label="{{ more }}" title="{{ more }}" data-more="{{ more }}" data-less="{{ less }}">
                 <span data-col-more class="inline-flex items-center gap-0.5">+<span data-col-count></span>{{ icon("chevrons-right", "size-3.5") }}</span>
                 <span data-col-less class="inline-flex">{{ icon("chevrons-left", "size-3.5") }}</span>
