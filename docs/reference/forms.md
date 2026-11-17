@@ -184,8 +184,10 @@ walks through a legacy-data example.
 
 `data-formwork-dirty` on a `<form>` marks each field whose value differs from
 the value the page loaded with. The field's border and focus ring take the
-accent color, and typing the old value back removes the mark. It works on any
-form, bound to a formwork form or not:
+accent color, and typing the old value back removes the mark. In a group of
+checkboxes or radio buttons, only the options whose checked state changed take
+the color, through the `formwork-dirty-option` class. It works on any form,
+bound to a formwork form or not:
 
 ```html
 <form method="post" data-formwork-dirty>
@@ -202,12 +204,38 @@ and an event adapt it to markup that is not a field group:
 |---|---|---|
 | `data-formwork-field` | any element around a control | Gets the mark, as a field group's `fieldset` does. A table cell with an input is the usual case |
 | `data-formwork-changed` | a `fieldset` or a `data-formwork-field` element | Keeps the mark from the server. Set it when a failed save renders a value the user changed, since that value is the page's value now |
+| `data-formwork-initial` | an element with `data-formwork-changed` | A JSON list of the option values a checkbox, radio or switch field had checked at first. The page then marks each changed option, and drops the mark when the user checks the first options again |
 | `formwork:dirty` | dispatched on the form, bubbles | `event.detail.count` is the number of marked fields, sent after each change. A save bar can show it |
 
 A morph of the form, or of an element around it, makes the new values the ones
 to compare against, and keeps only the marks that the server set. The
 [admin](admin.md#editable-columns) marks the changed cells of a list with
 `list_editable` this way.
+
+After a failed save, the page shows the posted values and keeps the user's
+changes marked. Formwork's field template sets `data-formwork-changed` on
+each field of a bound form that is in `changed_data`, and
+`data-formwork-initial` on such a field with checkboxes or radio buttons. A field
+with an error keeps its mark too, as its value is still a change to save, and the
+error color covers the accent. A file field is left out, as its input renders
+empty again.
+
+Two CSS variables set the color of the marks. A theme or a page can set them:
+
+| Variable | Default | Colors |
+|---|---|---|
+| `--formwork-dirty-color` | `var(--color-accent)` | The border and focus ring of a changed field, a changed radio button, switch or range, and the box of a changed checkbox |
+| `--formwork-dirty-content` | `var(--color-accent-content)` | The check in a changed checkbox and the thumb of a changed range |
+
+```css
+:root {
+  --formwork-dirty-color: var(--color-info);
+  --formwork-dirty-content: var(--color-info-content);
+}
+```
+
+The error colors win over the changed colors, so an invalid field shows its
+error first.
 
 ## Async validation and saving
 

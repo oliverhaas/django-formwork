@@ -170,3 +170,27 @@ class TestFileInput:
     def test_has_file_type(self, basic_page):
         inp = basic_page.locator('input[name="attachment"]')
         assert inp.get_attribute("type") == "file"
+
+
+def test_a_changed_radio_marks_the_old_and_the_new_option_only(basic_page):
+    """Picking the first option again drops both marks."""
+    import re
+
+    from playwright.sync_api import expect
+
+    basic_page.evaluate("""() => {
+        document.querySelector('input[name="notify"]').form.setAttribute('data-formwork-dirty', '');
+        document.dispatchEvent(new Event('htmx:after:swap'));
+    }""")
+    marked = re.compile(r"\bformwork-dirty-option\b")
+    radios = basic_page.locator('input[name="notify"]')
+    email = basic_page.locator('input[name="notify"][value="email"]')
+    sms = basic_page.locator('input[name="notify"][value="sms"]')
+
+    sms.click(force=True)
+    expect(sms).to_have_class(marked)
+    expect(email).to_have_class(marked)
+    expect(basic_page.locator('input[name="notify"].formwork-dirty-option')).to_have_count(2)
+
+    email.click(force=True)
+    expect(radios.and_(basic_page.locator(".formwork-dirty-option"))).to_have_count(0)

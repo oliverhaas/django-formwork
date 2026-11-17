@@ -55,6 +55,8 @@ TEMPLATES = sorted((PACKAGE / "templates").rglob("*.html"))
 _LOAD_I18N = re.compile(r"\{% load [^%]*\bi18n\b[^%]*%\}")
 _TRANSLATED_BLOCK = re.compile(r"\{%\s*(blocktranslate|blocktrans|comment)\b.*?%\}.*?\{%\s*end\1\s*%\}", re.DOTALL)
 _TEMPLATE_TAG = re.compile(r"\{%.*?%\}|\{\{.*?\}\}|\{#.*?#\}", re.DOTALL)
+_PARTIALDEF = re.compile(r"\{%\s*partialdef\s+([\w-]+)(\s+inline)?\s*%\}(.*?)\{%\s*endpartialdef\b[^%]*%\}", re.DOTALL)
+_PARTIAL = re.compile(r"\{%\s*partial\s+([\w-]+)\s*%\}")
 _PSEUDO = re.compile(r"⟦[^⟧]*⟧")
 _WORD = re.compile(r"[A-Za-z]{2,}")
 _NAME = re.compile(r"[^\W\d_]+\.?")
@@ -123,10 +125,19 @@ class _VisibleText(HTMLParser):
             self.texts.append(data)
 
 
+def _expand_partials(html: str) -> str:
+    """The template with each partial where it renders, so a partial of attributes lands inside its tag."""
+    partials = {m[1]: m[3] for m in _PARTIALDEF.finditer(html)}
+    html = _PARTIALDEF.sub(lambda m: m[3] if m[2] else "", html)
+    for _ in range(len(partials)):
+        html = _PARTIAL.sub(lambda m: partials[m[1]], html)
+    return html
+
+
 def _english(html: str, allowed: frozenset[str] = frozenset()) -> list[str]:
     """The texts ``html`` shows with a word that is not ``allowed`` and neither a template tag nor a pseudo-translation."""
     parser = _VisibleText()
-    parser.feed(_PSEUDO.sub("", _TEMPLATE_TAG.sub("", _TRANSLATED_BLOCK.sub("", html))))
+    parser.feed(_PSEUDO.sub("", _TEMPLATE_TAG.sub("", _TRANSLATED_BLOCK.sub("", _expand_partials(html)))))
     parser.close()
     texts = (text.strip() for text in parser.texts)
     return [text for text in texts if _WORD.search(_NAME.sub(lambda m: "" if m[0] in allowed else m[0], text))]

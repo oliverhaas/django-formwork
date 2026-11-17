@@ -1282,62 +1282,6 @@ details.formwork-disclosure[open] > summary > .formwork-disclosure-row > .icon {
     @apply textarea-error;
 }
 
-/* ================================================================
-   Dirty-field indicator (opt-in via data-formwork-dirty on <form>)
-   When a field's value changes from its initial server-rendered state,
-   formwork.js adds .formwork-dirty to the containing fieldset, or to
-   the element marked data-formwork-field (a table cell).
-   DaisyUI's -accent variants highlight the modified input.
-   ================================================================ */
-
-/* The focus ring and the floating label of a changed field stay accent. */
-.formwork-dirty {
-    --formwork-focus-color: var(--color-accent);
-}
-
-.formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.input *):not(.otp > input):not(.date-picker-label *):not(.date-range-field *) {
-    @apply input-accent;
-}
-
-.formwork-dirty .otp {
-    @apply otp-accent;
-}
-
-.formwork-dirty .date-picker-label,
-.formwork-dirty .date-range-field,
-.formwork-dirty .clearable-file-input-row {
-    @apply input-accent;
-}
-
-.formwork-dirty textarea {
-    @apply textarea-accent;
-}
-
-.formwork-dirty select {
-    @apply select-accent;
-}
-
-.formwork-dirty input[type="checkbox"]:not(.hidden) {
-    @apply checkbox-accent;
-}
-
-.formwork-dirty input[type="radio"]:not(.mask):not(.rating-hidden) {
-    @apply radio-accent;
-}
-
-.formwork-dirty input[type="range"] {
-    @apply range-accent;
-}
-
-.formwork-dirty input.toggle {
-    @apply toggle-accent;
-}
-
-.formwork-dirty details.formwork-select > summary,
-.formwork-dirty details.formwork-select-multiple > summary {
-    @apply border-accent;
-}
-
 
 /* ================================================================
    Alert icon (alert-icon / alert-col)
@@ -1371,6 +1315,57 @@ details.formwork-disclosure[open] > summary > .formwork-disclosure-row > .icon {
 }
 
 } /* @layer components */
+
+/* ================================================================
+   Dirty-field indicator (opt-in via data-formwork-dirty on <form>)
+   When a field's value changes from its initial server-rendered state,
+   formwork.js adds .formwork-dirty to the containing fieldset, or to
+   the element marked data-formwork-field (a table cell).
+   The modified control takes --formwork-dirty-color, accent unless a
+   theme or a page sets it, e.g. to var(--color-primary). A checkbox, radio
+   or switch takes it only while its own checked state changed
+   (.formwork-dirty-option), so a group marks the options that changed.
+   A checked box draws its check in --formwork-dirty-content. A switch takes
+   the color on and off; DaisyUI's toggle-accent colors only a checked one.
+
+   In DaisyUI's base sub-layer, outside @layer components: the color beats
+   DaisyUI's classes in markup (class="toggle") in @layer utilities, and the
+   error colors below, in the variant sub-layer above it, still win.
+   ================================================================ */
+
+@layer daisyui.l1.l2.l3 {
+    /* The focus ring and the floating label of a changed field keep the color. */
+    .formwork-dirty {
+        --formwork-focus-color: var(--formwork-dirty-color, var(--color-accent));
+    }
+
+    .formwork-dirty input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not(.combobox-input):not(.dropdown-content *):not(.input *):not(.otp > input):not(.date-picker-label *):not(.date-range-field *),
+    .formwork-dirty .otp,
+    .formwork-dirty .date-picker-label,
+    .formwork-dirty .date-range-field,
+    .formwork-dirty .clearable-file-input-row,
+    .formwork-dirty textarea,
+    .formwork-dirty select,
+    input[type="radio"].formwork-dirty-option:not(.mask):not(.rating-hidden),
+    input.toggle.formwork-dirty-option {
+        --input-color: var(--formwork-dirty-color, var(--color-accent));
+    }
+
+    input[type="checkbox"].formwork-dirty-option:not(.toggle):not(.hidden) {
+        --input-color: var(--formwork-dirty-color, var(--color-accent));
+        color: var(--formwork-dirty-content, var(--color-accent-content));
+    }
+
+    .formwork-dirty input[type="range"] {
+        color: var(--formwork-dirty-color, var(--color-accent));
+        --range-thumb: var(--formwork-dirty-content, var(--color-accent-content));
+    }
+
+    .formwork-dirty details.formwork-select > summary,
+    .formwork-dirty details.formwork-select-multiple > summary {
+        border-color: var(--formwork-dirty-color, var(--color-accent));
+    }
+}
 
 
 /* Dropdown triggers: pin DaisyUI's select focus ring while open so it doesn't

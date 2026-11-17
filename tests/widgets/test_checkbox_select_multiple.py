@@ -308,3 +308,26 @@ def test_checkbox_select_multiple_screenshot_checked(builtin_page, assert_screen
     builtin_page.locator('input[name="toppings"][value="mushrooms"]').check()
     wrapper = builtin_page.locator("#id_toppings_field")
     assert_screenshot(wrapper, "checkbox-select-multiple-checked.png")
+
+
+@pytest.mark.e2e
+def test_a_changed_box_is_marked_and_the_rest_of_the_group_is_not(builtin_page):
+    """Checking a box marks that box, and unchecking it again drops the mark."""
+    import re
+
+    from playwright.sync_api import expect
+
+    builtin_page.evaluate("""() => {
+        document.querySelector('input[name="toppings"]').form.setAttribute('data-formwork-dirty', '');
+        document.dispatchEvent(new Event('htmx:after:swap'));
+    }""")
+    marked = re.compile(r"\bformwork-dirty-option\b")
+    cheese = builtin_page.locator('input[name="toppings"][value="cheese"]')
+    olives = builtin_page.locator('input[name="toppings"][value="olives"]')
+
+    cheese.check()
+    expect(cheese).to_have_class(marked)
+    expect(olives).not_to_have_class(marked)
+
+    cheese.uncheck()
+    expect(cheese).not_to_have_class(marked)

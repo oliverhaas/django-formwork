@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import re
 from typing import TYPE_CHECKING
 
 from django import forms
+from django.forms.widgets import ChoiceWidget
 
 if TYPE_CHECKING:
     from django.forms import Widget
@@ -17,13 +19,30 @@ class FormworkBoundField(forms.BoundField):
     """Adds the ARIA attributes only the bound field can decide on."""
 
     @property
-    def widget_type(self) -> str:
-        """The type of the widget, also when a wrapper such as an admin's relation buttons holds it in ``widget``."""
+    def _inner_widget(self) -> Widget:
         widget = self.field.widget
         inner = getattr(widget, "widget", None)
-        if isinstance(inner, forms.Widget):
-            widget = inner
-        return re.sub(r"widget$|input$", "", type(widget).__name__.lower())
+        return inner if isinstance(inner, forms.Widget) else widget
+
+    @property
+    def widget_type(self) -> str:
+        """The type of the widget, also when a wrapper such as an admin's relation buttons holds it in ``widget``."""
+        return re.sub(r"widget$|input$", "", type(self._inner_widget).__name__.lower())
+
+    @property
+    def initial_checked(self) -> str:
+        """The option values a checkbox or radio field had checked at first, as JSON, or ``""`` for other fields.
+
+        After a failed save the page marks each changed option, and drops
+        the mark when the user checks the first options again.
+        """
+        widget = self._inner_widget
+        value = self.field.prepare_value(self.initial)
+        if isinstance(widget, forms.CheckboxInput):
+            return json.dumps(["on"] if widget.check_test(value) else [])
+        if isinstance(widget, ChoiceWidget) and widget.input_type in {"checkbox", "radio"}:
+            return json.dumps(widget.format_value(value))
+        return ""
 
     @property
     def is_mandatory(self) -> bool:

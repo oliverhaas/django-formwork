@@ -51,9 +51,26 @@ document.addEventListener("htmx:after:swap", disableNativeValidation);
 // when the posted value already differs from the initial one: after a failed
 // save, the page starts from the posted values.  After each check the form
 // sends formwork:dirty with the number of changed fields.
+//
+// A checkbox, radio or switch also carries .formwork-dirty-option while its
+// own checked state differs from the start, so a group marks the options
+// that changed, not every option.  For a field the server marked changed,
+// data-formwork-initial lists the option values checked at first.
 
 const DIRTY_CLS = "formwork-dirty";
+const OPTION_CLS = "formwork-dirty-option";
 const FIELD = "fieldset.fieldset, [data-formwork-field]";
+const isCheckable = (el) => el.type === "checkbox" || el.type === "radio";
+
+const getInitialOptions = (field) => {
+  const json = field?.dataset.formworkInitial;
+  if (json === undefined) return null;
+  try {
+    return JSON.parse(json).map(String);
+  } catch {
+    return null;
+  }
+};
 
 const getFieldValue = (el) => {
   if (el.type === "checkbox" || el.type === "radio") return el.checked ? el.value : "";
@@ -89,18 +106,27 @@ const getSelectMultipleBaseline = (details) => {
 
 const initDirtyTracking = (form) => {
   const baseline = new Map();
+  const checkedAtStart = new Map();
 
   const snapshot = () => {
     baseline.clear();
+    checkedAtStart.clear();
     for (const el of form.elements) {
       // Hidden inputs stay tracked: widgets (Select, InputMask)
       // hold their real value in a hidden input and dispatch events on it.
       // SelectMultiple internals are tracked as one unit below.
       if (!el.name || el.closest("details.formwork-select-multiple")) continue;
-      // Radio groups: track the checked value under the group name.
-      if (el.type === "radio") {
-        if (el.checked) baseline.set(el.name, el.value);
-        if (!baseline.has(el.name)) baseline.set(el.name, "");
+      if (isCheckable(el)) {
+        const initial = getInitialOptions(el.closest(FIELD));
+        const checked = initial ? initial.includes(el.value) : el.checked;
+        checkedAtStart.set(el, checked);
+        // Radio groups: track the checked value under the group name.
+        if (el.type === "radio") {
+          if (checked) baseline.set(el.name, el.value);
+          if (!baseline.has(el.name)) baseline.set(el.name, "");
+        } else {
+          baseline.set(el.id || el.name, checked ? el.value : "");
+        }
       } else {
         baseline.set(el.id || el.name, getFieldValue(el));
       }
@@ -121,7 +147,7 @@ const initDirtyTracking = (form) => {
   // A field with several inputs (a date range) is dirty while any of them
   // differs, whichever one the event came from.
   const dirty = (field) => {
-    if (field.hasAttribute("data-formwork-changed")) return true;
+    if (field.hasAttribute("data-formwork-changed") && !("formworkInitial" in field.dataset)) return true;
     const selectMultiple = field.querySelector("details.formwork-select-multiple");
     if (selectMultiple) return getSelectMultipleValue(selectMultiple) !== (baseline.get(selectMultiple) ?? "");
     const controls = [...field.querySelectorAll("input[name], select[name], textarea[name]")];
@@ -133,17 +159,25 @@ const initDirtyTracking = (form) => {
     form.dispatchEvent(new CustomEvent("formwork:dirty", { bubbles: true, detail: { count } }));
   };
 
+  const mark = (field) => {
+    field.classList.toggle(DIRTY_CLS, dirty(field));
+    for (const el of field.querySelectorAll("input[type=checkbox][name], input[type=radio][name]")) {
+      if (!checkedAtStart.has(el)) continue;
+      el.classList.toggle(OPTION_CLS, el.checked !== checkedAtStart.get(el));
+    }
+  };
+
   const check = (el) => {
     const field = (el.closest?.("details.formwork-select-multiple") || el).closest?.(FIELD);
     if (!field || !form.contains(field)) return;
-    field.classList.toggle(DIRTY_CLS, dirty(field));
+    mark(field);
     report();
   };
 
   // Every field again: a new baseline leaves only the ones the server marked.
   const refresh = () => {
     snapshot();
-    for (const field of form.querySelectorAll(FIELD)) field.classList.toggle(DIRTY_CLS, dirty(field));
+    for (const field of form.querySelectorAll(FIELD)) mark(field);
     report();
   };
 

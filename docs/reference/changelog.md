@@ -49,6 +49,14 @@
   server renders with `data-formwork-changed` stays marked, so the page can start from
   posted values after a failed save. The form sends a `formwork:dirty` event with the
   number of changed fields. See [Forms](forms.md#changed-field-highlight).
+- After a failed save, a form with `data-formwork-dirty` keeps the marks on the fields
+  the user changed, also on a field with an error, so the count includes them and
+  leaving the page still asks first. The error color covers the accent. Formwork's
+  field template sets `data-formwork-changed` on each changed field, except a file
+  field. If you override `formwork/forms/field.html`, copy it again.
+- `--formwork-dirty-color` and `--formwork-dirty-content` set the color of the
+  changed-field marks, accent by default. See
+  [Forms](forms.md#changed-field-highlight).
 - `django_formwork.admin` (experimental): a Django admin on formwork forms, django-filter,
   htmx and Jinja2, styled with DaisyUI. It keeps the options, hooks, URL names and
   permissions of `django.contrib.admin`, so an `admin.py` ports by importing
@@ -109,6 +117,11 @@
   accent of a changed field still wins.
 - A link in a field's help text or error message is underlined. Tailwind's preflight
   showed it as plain text.
+- With `data-formwork-dirty`, a changed group of checkboxes or radio buttons marks only
+  the options whose checked state changed. Every option of the group took the accent
+  color. A radio change marks the old and the new option. After a failed save, the
+  field template sends the first checked options in `data-formwork-initial`, so checking
+  them again drops the marks. If you override `formwork/forms/field.html`, copy it again.
 
 ### Fixed
 
@@ -174,6 +187,9 @@
   element around the form, such as the page content, even when the server sent the
   saved value back. The marks compared against the values from before the morph. They
   now start again from the values the server sent.
+- With `data-formwork-dirty`, a changed `ToggleInput` showed no mark, most visibly
+  when it was turned off: DaisyUI's `toggle` class in its markup won over the changed
+  color. The switch now takes the changed color, on or off.
 - In a dark theme, the dropdown of a `Select`, `SelectMultiple` or `ComboBox` showed no
   hover on an option and no mark on the option the arrow keys reached. The option took
   `base-200`, which DaisyUI's dark theme draws almost like the panel. It now mixes 10%

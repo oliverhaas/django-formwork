@@ -1,6 +1,9 @@
+import json
+
 import pytest
 from bs4 import BeautifulSoup
 from django import forms
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template import Context, Template
 
 from django_formwork.forms import FormworkForm
@@ -523,3 +526,53 @@ class TestTemplateTags:
     def test_formwork_section_tag_escapes_the_name(self):
         html = Template("{% load formwork %}{% formwork_section name %}").render(Context({"name": '"x'}))
         assert 'value="&quot;x"' in html
+
+
+class _ChangedForm(FormworkForm):
+    name = forms.CharField(initial="Ada")
+    city = forms.CharField(initial="Oslo")
+    age = forms.IntegerField(initial=30, min_value=0)
+    upload = forms.FileField(required=False)
+
+
+@pytest.mark.parametrize(("field", "marked"), [("name", True), ("city", False), ("age", True), ("upload", False)])
+def test_a_failed_save_keeps_the_mark_on_each_changed_field(field, marked):
+    """A file input renders empty again, so it keeps no mark."""
+    form = _ChangedForm(
+        data={"name": "Grace", "city": "Oslo", "age": "-1"},
+        files={"upload": SimpleUploadedFile("notes.txt", b"x")},
+    )
+    form.is_valid()
+
+    fieldset = BeautifulSoup(str(form[field].as_field_group()), "html.parser").find("fieldset")
+
+    assert fieldset.has_attr("data-formwork-changed") is marked
+
+
+class _ChoicesChangedForm(FormworkForm):
+    notify = forms.ChoiceField(choices=[("email", "Email"), ("sms", "SMS")], widget=forms.RadioSelect, initial="email")
+    toppings = forms.MultipleChoiceField(
+        choices=[("cheese", "Cheese"), ("olives", "Olives")],
+        widget=forms.CheckboxSelectMultiple,
+        initial=["cheese"],
+        required=False,
+    )
+    agree = forms.BooleanField(initial=True, required=False)
+    age = forms.IntegerField(min_value=0)
+
+
+@pytest.mark.parametrize(
+    ("field", "data", "initial"),
+    [
+        ("notify", {"notify": "sms"}, ["email"]),
+        ("toppings", {"notify": "email", "toppings": ["olives"]}, ["cheese"]),
+        ("agree", {"notify": "email"}, ["on"]),
+    ],
+)
+def test_a_failed_save_sends_the_options_a_changed_field_had_checked(field, data, initial):
+    form = _ChoicesChangedForm(data={"age": "-1", **data})
+    form.is_valid()
+
+    fieldset = BeautifulSoup(str(form[field].as_field_group()), "html.parser").find("fieldset")
+
+    assert json.loads(fieldset["data-formwork-initial"]) == initial
