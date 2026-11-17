@@ -270,6 +270,9 @@ const calendarData = () => ({
   inputFormats: [],
   // Which month of the panel the month view was opened from.
   viewOffset: 0,
+  // The views are built when the panel first opens. A list of rows with a
+  // picker each would otherwise build hundreds of hidden calendars on load.
+  built: false,
 
   // The calendar is as tall as it is: no cap, and it flips up whenever the
   // room below is short and above holds more.
@@ -297,6 +300,7 @@ const calendarData = () => ({
   // Opens the panel on the month of `iso`, or of today.
   resetView(iso) {
     const date = parseIso(iso) || new Date();
+    this.built = true;
     this.view = "days";
     this.focusIso = isoDate(date);
     this.showMonth(date);

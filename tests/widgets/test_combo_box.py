@@ -560,7 +560,6 @@ def test_combo_box_group_header_precedes_its_rows():
     widget = ComboBox(suggestions=[("Italian", ["Pizza", "Pasta"])])
     soup = render_widget(widget, name="food")
     header = soup.find("li", class_="menu-title")
-    assert header["x-show"] == "matches($el)"
     assert header.has_attr("data-group")
     assert [li["data-label"] for li in header.find_next_siblings("li")] == ["Pizza", "Pasta"]
 

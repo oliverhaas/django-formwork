@@ -149,7 +149,8 @@ class FormworkSearchView(View):
             template,
             {
                 "options": options,
-                "truncated": truncated,
+                # The first page that a widget loads on open sits above the widget's own hint.
+                "truncated": truncated and "page_only" not in request.GET,
                 "more_url": f"{request.path}?{more.urlencode()}",
             },
             request=request,

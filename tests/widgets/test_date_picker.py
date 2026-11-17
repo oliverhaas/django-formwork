@@ -110,7 +110,7 @@ def test_date_picker_weekdays_follow_the_language(language, first_days):
     """The weekday header has the language's names and starts on its FIRST_DAY_OF_WEEK."""
     with translation.override(language):
         soup = render_widget(DatePicker(), attrs={"id": "id_due_date"})
-    header = [cell.get_text() for cell in soup.select("[role=columnheader]")]
+    header = [str(cell.abbr.string) for cell in soup.find_all(role="columnheader")]
     assert header[:2] == first_days
     assert len(header) == 7
 

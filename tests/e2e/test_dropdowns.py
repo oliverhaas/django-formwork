@@ -118,3 +118,36 @@ def test_project_details_dropdown_gets_no_click_overlay(dropdowns_page):
         "el => getComputedStyle(el, '::before').position",
     )
     assert position != "fixed"
+
+
+_LAZY_PARTS = """() => [...document.querySelectorAll('[data-formwork-lazy]')].map((root) => ({
+    started: root._x_dataStack !== undefined,
+    text: root.innerText,
+    parts: [root, ...root.querySelectorAll('*')].filter((el) => el.getClientRects().length).map((el) => {
+        const box = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        const edges = [box.x, box.y, box.width, box.height].map((n) => Math.round(n * 2) / 2);
+        return [el.tagName, ...edges, style.color, style.backgroundColor, style.borderColor].join(' ');
+    }),
+}))"""
+
+
+@pytest.mark.usefixtures("live_server")
+@pytest.mark.parametrize(
+    "gallery", ["select_page", "select_multiple_page", "dropdowns_page", "new_widgets_page", "complex_page"]
+)
+def test_widgets_start_on_first_use_without_a_shift(request, gallery):
+    """A dropdown or date picker starts on first use and looks the same before as after."""
+    gallery_page = request.getfixturevalue(gallery)
+    before = gallery_page.evaluate(_LAZY_PARTS)
+    gallery_page.evaluate("""() => {
+        for (const root of document.querySelectorAll('[data-formwork-lazy]')) {
+            root.dispatchEvent(new Event('formwork:start'));
+        }
+        return new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+    }""")
+    after = gallery_page.evaluate(_LAZY_PARTS)
+    assert before
+    assert not any(widget["started"] for widget in before)
+    assert all(widget["started"] for widget in after)
+    assert [{**widget, "started": True} for widget in before] == after

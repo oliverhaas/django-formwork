@@ -174,6 +174,7 @@ class SearchableSelectMixin(_SelectBase):
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
+        pending = self._search_context(widget)
 
         # One pass: annotate each option from its ChoiceLabel and collect the
         # options to render and the selected ones for the closed toggle.
@@ -199,7 +200,10 @@ class SearchableSelectMixin(_SelectBase):
                     if self.allow_clear:
                         options.append(self.clear_row(option, widget["attrs"]))
                     continue
-                options.append(option)
+                # The rows of the first page give way to one row that loads them.
+                row = pending if pending is not None and option.get("page_row") else option
+                if not options or options[-1] is not row:
+                    options.append(row)
                 total += 1
                 if option["selected"]:
                     selected.append({**option, "label": str(option["label"])})
@@ -221,18 +225,6 @@ class SearchableSelectMixin(_SelectBase):
             rest.pop("tabindex", None)
         widget["input_attrs"] = {key: val for key, val in rest.items() if key.startswith(("data-", "hx-"))}
         widget["trigger_attrs"] = {key: val for key, val in rest.items() if key not in widget["input_attrs"]}
-        # A list that fits one page filters in the browser.
-        widget["search_url"] = None
-        widget["more_url"] = None
-        if self.truncated and self.search_key is not None:
-            widget["search_url"] = search_url(
-                self.search_key,
-                self.search_params,
-                widget=self.search_variant,
-                allow_clear=self.allow_clear,
-            )
-            more = {"offset": SEARCH_PAGE_SIZE, "exclude": self.selected_past_page}
-            widget["more_url"] = f"{widget['search_url']}&{urlencode(more, doseq=True)}"
         widget["truncated"] = self.truncated
         widget["show_spinner"] = self.show_spinner
         widget["show_search"] = (
@@ -243,13 +235,32 @@ class SearchableSelectMixin(_SelectBase):
 
     def clear_row(self, option: dict[str, Any], attrs: Mapping[str, Any]) -> dict[str, Any]:
         """The row that clears the value. Django's default blank label gives way to the placeholder, muted."""
-        # Django 6.0 writes "---------". 6.1 writes BLANK_CHOICE_LABEL, which a project may rename in ready().
+        # Django 6.0 writes "---------". 6.1 writes BLANK_CHOICE_LABEL, which a project can rename in ready().
         defaults = (model_fields.BLANK_CHOICE_DASH[0][1], getattr(model_fields, "BLANK_CHOICE_LABEL", None))
         if str(option["label"]) not in {str(label) for label in defaults if label is not None}:
             return option
         # The text of the empty trigger: a floating label's placeholder is its label, not the empty text.
         placeholder = "" if self.floating else attrs.get("placeholder", "")
         return {**option, "label": placeholder or gettext("Select…"), "placeholder": True}
+
+    def _search_context(self, widget: dict[str, Any]) -> dict[str, Any] | None:
+        """Set the server search of a list longer than one page; return the row that loads its first page."""
+        # A list that fits one page filters in the browser.
+        widget["search_url"] = None
+        widget["more_url"] = None
+        key = self.search_key
+        if not self.truncated or key is None:
+            return None
+        widget["search_url"] = search_url(
+            key, self.search_params, widget=self.search_variant, allow_clear=self.allow_clear
+        )
+        more = {"offset": SEARCH_PAGE_SIZE, "exclude": self.selected_past_page}
+        widget["more_url"] = f"{widget['search_url']}&{urlencode(more, doseq=True)}"
+        # The first page loads when the list opens. The widget renders the blank row and the
+        # selected rows past the page. The endpoint leaves them out, as it does on the next pages.
+        page = search_url(key, self.search_params, widget=self.search_variant)
+        first = {"page_only": 1, "exclude": self.selected_past_page}
+        return {"pending_url": f"{page}&{urlencode(first, doseq=True)}", "group": ""}
 
     def optgroups(
         self, name: str, value: list[str], attrs: dict[str, Any] | None = None
@@ -284,6 +295,7 @@ class SearchableSelectMixin(_SelectBase):
             rest = list(choices.queryset.filter(**{f"{key}__in": wanted}))
             self.selected_past_page = [str(getattr(obj, key)) for obj in rest]
             pairs = [*blank, *(choices.choice(obj) for obj in [*page[:limit], *rest])]
+            rows = len(page[:limit])
         else:
             flat: Iterator[tuple[Any, Any]] = flatten_choices(choices)
             every: list[tuple[Any, Any]] = []
@@ -293,12 +305,16 @@ class SearchableSelectMixin(_SelectBase):
             beyond = [pair for pair in every[limit:] if str(pair[0]) in chosen]
             self.selected_past_page = [str(pair[0]) for pair in beyond]
             pairs = [*blank, *every[:limit], *beyond]
+            rows = len(every[:limit])
         # The endpoint caps its rows the same way, so the hint reads the same.
         self.truncated = len(page) > limit
         options = [
             self.create_option(name, choice, label, str(choice) in chosen, index, attrs=attrs)
             for index, (choice, label) in enumerate(pairs)
         ]
+        # The endpoint's first page, which get_context() can leave to the browser.
+        for option in options[len(blank) : len(blank) + rows]:
+            option["page_row"] = True
         return [(None, options, 0)] if options else []
 
     def _floating_context(self, widget: dict[str, Any]) -> None:

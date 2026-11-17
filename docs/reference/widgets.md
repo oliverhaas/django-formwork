@@ -806,3 +806,20 @@ Every widget with a `Media` class needs Alpine.js on the page: `Select`,
 `ValidatedTextarea`.
 A server search and `ValidatedTextarea` need htmx as well. The [installation guide](../getting-started/installation.md#5-htmx-and-alpinejs)
 shows the script order.
+
+`Select`, `SelectMultiple`, `DatePicker`, `DateRangePicker` and
+`DateTimeRangePicker` start their Alpine component on first use: a press, focus, a
+key, or the list opening. Until then the server's markup shows the widget as it is,
+so a form with a hundred of them loads without starting a hundred components. The
+root of such a widget has `data-formwork-lazy`; for a `Select` it is the element
+with the id `id_<name>_wrapper`. A script that calls into the widget, or writes its
+`data-*` attributes, starts it first:
+
+```js
+const root = document.getElementById("id_city_wrapper");
+root.dispatchEvent(new Event("formwork:start"));
+const select = Alpine.$data(root);
+```
+
+A started widget ignores the event. An overridden widget template without
+`data-formwork-lazy` starts its widget on load.

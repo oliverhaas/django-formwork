@@ -55,13 +55,11 @@ def _navigate(page, live_server, path):
     """Navigate to a page and wait for Alpine + htmx init."""
     page.goto(f"{live_server.url}{path}")
     page.wait_for_load_state("domcontentloaded")
-    # Alpine 3 stamps _x_dataStack on every x-data root during start(),
-    # so its presence on the first root means the whole tree is initialized.
     page.wait_for_function(
         """() => {
             if (!window.htmx || !window.Alpine) return false;
             const root = document.querySelector('[x-data]');
-            return root === null || root._x_dataStack !== undefined;
+            return root === null || root._x_dataStack !== undefined || root._x_ignore === true;
         }""",
     )
     return page

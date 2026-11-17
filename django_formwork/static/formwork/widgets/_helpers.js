@@ -118,6 +118,24 @@ const matchesQuery = (el, query) => {
   return false;
 };
 
+// What syncRows() writes on a row, and what a morph sets back to the server's.
+const ROW_ATTRIBUTES = ["aria-selected", "class", "id", "style"];
+
+const setAttribute = (el, name, value) => {
+  if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+};
+
+// As x-show does it.
+const setShown = (el, shown) => {
+  if (shown === (el.style.display !== "none")) return;
+  if (!shown) {
+    el.style.display = "none";
+    return;
+  }
+  el.style.removeProperty("display");
+  if (!el.style.length) el.removeAttribute("style");
+};
+
 // --- Top-layer dropdown panels -----------------------------------------
 // popover="manual" (not "auto"): the details open attribute (the combobox's
 // `open`) stays the source of truth, so light dismiss must not close the
@@ -159,6 +177,35 @@ if (typeof document !== "undefined") {
   });
 }
 
+// --- Widgets that start on first use -----------------------------------
+// A page with many widgets, such as a formset or an editable list, spent most
+// of its load starting them, while the server's markup already shows each one
+// as it is. Alpine skips a root with data-formwork-lazy and its content, as
+// x-ignore does, until the first event that reaches it: a press, focus, a key,
+// its opening, or a formwork:start from a script that is about to call into it.
+// The started mark is a property, so a morph keeps it on a started root, and a
+// root that a swap brings in waits again.
+const START_EVENTS = ["pointerdown", "focus", "keydown", "click", "toggle", "input", "change", "formwork:start"];
+
+if (typeof document !== "undefined") {
+  document.addEventListener("alpine:init", () => {
+    Alpine.interceptInit((el) => {
+      if (el.hasAttribute("data-formwork-lazy") && !el._formworkStarted) el._x_ignore = true;
+    });
+  });
+  // On the way down to the widget, so the listeners it adds run for this event.
+  const start = (event) => {
+    const root = event.target.closest?.("[data-formwork-lazy]");
+    if (!root || root._formworkStarted) return;
+    root._formworkStarted = true;
+    // Before Alpine walks the page, the mark alone lets the root through.
+    if (!root._x_ignore) return;
+    delete root._x_ignore;
+    Alpine.initTree(root);
+  };
+  for (const type of START_EVENTS) document.addEventListener(type, start, true);
+}
+
 // Numbers each htmx request when it has collected its values. A swap stamps
 // the formwork roots it brings in with the number of the request they answer,
 // so a widget can tell the answer to a request sent before its latest pick
@@ -173,6 +220,12 @@ if (typeof document !== "undefined") {
     for (const task of e.detail.tasks ?? []) {
       for (const root of task.fragment?.querySelectorAll('[x-data^="formwork"]') ?? []) {
         root._formworkRequest = e.detail.ctx?.formworkRequest;
+      }
+      // A widget that replaces a started one starts with it, so a morph that
+      // clones Alpine state onto the new markup finds it bound. Without an id
+      // the old widget is unknown, and the new one starts as before.
+      for (const root of task.fragment?.querySelectorAll("[data-formwork-lazy]") ?? []) {
+        if (!root.id || document.getElementById(root.id)?._formworkStarted) root._formworkStarted = true;
       }
     }
   });
@@ -358,7 +411,7 @@ const baseData = () => ({
   // but not the <summary> trigger.
   watchOpen() {
     const el = this.$root;
-    new MutationObserver(() => {
+    const sync = () => {
       if (!el.open) {
         this.hidePanel();
         return;
@@ -368,7 +421,10 @@ const baseData = () => ({
         return;
       }
       this.showPanel();
-    }).observe(el, { attributeFilter: ["open"] });
+    };
+    new MutationObserver(sync).observe(el, { attributeFilter: ["open"] });
+    // A widget that a script opened starts on the toggle event, after the change.
+    if (el.open) sync();
   },
 
   onToggle() {
@@ -391,11 +447,6 @@ const baseData = () => ({
     this.confirm();
   },
 
-  // The server filters a searched list itself, on more fields than the label.
-  matches(el) {
-    return matchesQuery(el, this.hasSearchUrl ? "" : this.query);
-  },
-
   // Client-side filtering only: a swapped-in list brings its own empty row.
   // Reads the rows, not their layout, so it does not wait on their x-show.
   get noResults() {
@@ -412,19 +463,40 @@ const baseData = () => ({
     this.highlighted = null;
   },
 
-  // A row's class and id bindings read the highlight. A morph then pairs the
-  // highlighted row with the server's copy of it, and htmx's alpine-compat
-  // extension gives the copy the same class and id.
-  isHighlighted(row) {
-    return this.highlighted !== null && row.querySelector("[data-value]")?.dataset.value === this.highlighted;
-  },
-
-  optionClass(row) {
-    return this.isHighlighted(row) ? "highlighted" : "";
-  },
-
-  optionId(row) {
-    return this.isHighlighted(row) && this.highlightId;
+  // Shows the rows that match the search and marks the selected and the
+  // highlighted one, from one effect on the list. Bindings on each row cost
+  // far more: a list of rows with a few dropdowns each sets up thousands of
+  // them on load. Rows that a search, "Load more" or a morph brings in are
+  // marked through the list's observer.
+  syncRows() {
+    // Read up front, so the effect follows them while the list is empty. The
+    // server filters a searched list itself, on more fields than the label.
+    const query = this.hasSearchUrl ? "" : this.query;
+    const highlighted = this.highlighted;
+    const highlightId = this.highlightId;
+    this._v;
+    const list = this.$refs.options;
+    if (!list) return;
+    const selectable = typeof this.isSelected === "function";
+    for (const row of list.children) {
+      const option = "label" in row.dataset;
+      if (!option && !("group" in row.dataset)) continue;
+      setShown(row, matchesQuery(row, query));
+      if (!option) continue;
+      const lit = highlighted !== null && row.querySelector("[data-value]")?.dataset.value === highlighted;
+      if (selectable) setAttribute(row, "aria-selected", String(this.isSelected(row)));
+      row.classList.toggle("highlighted", lit);
+      if (lit && highlightId) {
+        setAttribute(row, "id", highlightId);
+        row._formworkOwnId = highlightId;
+      } else if (row.id) row.removeAttribute("id");
+    }
+    if (!list._formworkRows) {
+      list._formworkRows = new MutationObserver(() => this.syncRows());
+      list._formworkRows.observe(list, { childList: true, subtree: true, attributeFilter: ROW_ATTRIBUTES });
+    }
+    // These writes need no second pass.
+    list._formworkRows.takeRecords();
   },
 
   // The text box keeps focus while the arrows move the highlight, so it
@@ -452,10 +524,11 @@ const baseData = () => ({
   },
 
   // The rows a typed search brought in are the answer to that search; the
-  // form's own render lists other rows, so a morph leaves them.
+  // form's own render lists other rows, so a morph leaves them. It also
+  // leaves an open list, whose first page the render does not hold.
   keepSearchedList() {
     const list = this.$refs.options;
-    if (list) list._formworkAcceptMorph = () => !(this.hasSearchUrl && this.query);
+    if (list) list._formworkAcceptMorph = () => !(this.hasSearchUrl && (this.query || this.isOpen));
   },
 
   // htmx 4 builds the GET query from the request body. The search box has no

@@ -22,7 +22,7 @@ FRUITS = [("a", "Apples"), ("b", "Bananas"), ("c", "Cherries"), ("d", "Dates")]
 ICON_FRUITS = [("a", ChoiceLabel("Apples", icon=mark_safe('<i class="icon icon-apple"></i>'))), *FRUITS[1:]]
 MANY = [(str(i), f"Option {i}") for i in range(200)]
 SELECTED = "150"
-FIRST_PAGE = [str(i) for i in range(20)]
+PAGE = "page"
 WIDGET_TEMPLATES = Path(django_formwork.__file__).parent / "templates" / "formwork" / "widgets"
 
 
@@ -107,24 +107,36 @@ def test_toggle_counts_selections_past_the_summary_threshold(field: str) -> None
     assert _toggle_html(field, ["a", "b", "c", "d"]) == "4 selected"
 
 
-def _values(form: forms.Form, field: str) -> list[str]:
+def _values(form: forms.Form, field: str, client: Client | None = None) -> list[str]:
+    """The rows of the field's listbox; ``client`` fetches the page the listbox loads when it shows."""
     listbox = BeautifulSoup(str(form[field]), "html.parser").select_one("ul[role=listbox]")
     assert listbox is not None
-    rows = (row.select_one("[data-value]") for row in listbox.select("li"))
-    return [str(holder["data-value"]) for holder in rows if holder is not None]
+    values = []
+    for row in listbox.select("li"):
+        if row.has_attr("hx-get"):
+            if client is None:
+                values.append(PAGE)
+                continue
+            page = BeautifulSoup(client.get(str(row["hx-get"])).content.decode(), "html.parser")
+            values += [str(holder["data-value"]) for holder in page.select("li > [data-value]")]
+            continue
+        holder = row.select_one("[data-value]")
+        if holder is not None:
+            values.append(str(holder["data-value"]))
+    return values
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
     ("field", "initial", "expected"),
     [
-        ("one", None, ["", *FIRST_PAGE]),
-        ("one", SELECTED, ["", *FIRST_PAGE, SELECTED]),
-        ("many", None, FIRST_PAGE),
-        ("many", [SELECTED], [*FIRST_PAGE, SELECTED]),
+        ("one", None, ["", PAGE]),
+        ("one", SELECTED, ["", PAGE, SELECTED]),
+        ("many", None, [PAGE]),
+        ("many", [SELECTED], [PAGE, SELECTED]),
     ],
 )
-def test_server_search_renders_one_page_and_leaves_filtering_to_the_endpoint(
+def test_server_search_leaves_the_first_page_and_filtering_to_the_endpoint(
     field: str, initial: Any, expected: list[str]
 ) -> None:
     form = _SearchForm(initial={field: initial})
@@ -136,18 +148,19 @@ def test_server_search_renders_one_page_and_leaves_filtering_to_the_endpoint(
 
 
 @pytest.mark.django_db
-def test_a_model_search_renders_one_page_and_a_selection_past_it() -> None:
+@pytest.mark.parametrize("field", ["one", "many"])
+def test_a_model_search_shows_one_page_and_a_selection_past_it(field: str) -> None:
     User.objects.bulk_create(User(username=f"user{i}", email=f"user{i}@example.com") for i in range(22))
     ids = [str(pk) for pk in User.objects.order_by("pk").values_list("pk", flat=True)]
 
-    form = _ModelSearchForm(initial={"one": ids[-1]})
+    form = _ModelSearchForm(initial={field: ids[-1] if field == "one" else [ids[-1]]})
 
-    assert _values(form, "one") == [*ids[:20], ids[-1]]
-    more = BeautifulSoup(str(form["one"]), "html.parser").select_one("button[hx-get]")
+    assert _values(form, field, Client()) == [*ids[:20], ids[-1]]
+    more = BeautifulSoup(str(form[field]), "html.parser").select_one("button[hx-get]")
     assert more is not None
     response = Client().get(str(more["hx-get"]))
     soup = BeautifulSoup(response.content.decode(), "html.parser")
-    assert [str(el["data-value"]) for el in soup.select("[data-value]")] == ids[20:-1]
+    assert [str(el["data-value"]) for el in soup.select("li > [data-value]")] == ids[20:-1]
 
 
 @pytest.mark.django_db
@@ -156,7 +169,7 @@ def test_a_bound_value_the_key_cannot_hold_renders_no_selection() -> None:
 
     form = _ModelSearchForm(data={"one": "not-a-pk"})
 
-    assert len(_values(form, "one")) == 20
+    assert len(_values(form, "one", Client())) == 20
 
 
 @pytest.mark.django_db

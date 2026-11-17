@@ -91,9 +91,8 @@ const getSelectMultipleValue = (details) => {
   return [...values].sort().join(",");
 };
 
-// Baseline for an htmx-mode SelectMultiple comes from data-selected:
-// Alpine renders the hidden inputs only after its own init, which may run
-// after the snapshot.
+// Baseline for an htmx-mode SelectMultiple comes from data-selected, the
+// selection the server rendered, whether or not the widget has started.
 const getSelectMultipleBaseline = (details) => {
   const json = details.dataset.selected;
   if (json === undefined) return getSelectMultipleValue(details);
@@ -410,6 +409,17 @@ if (typeof htmx !== "undefined") {
   // pre-seed values that the subsequent attribute/child copy will then
   // pick up.
   htmx.registerExtension("formwork-morph", {
+    // A dropdown gives its highlighted row an id, which the server's copy of
+    // the row lacks. htmx pairs a node that has an id only with a node of the
+    // same id, so it would replace the row; this pairs it with the server's
+    // row of the same label.
+    init: (api) => {
+      const isSoftMatch = api.isSoftMatch;
+      api.isSoftMatch = (oldNode, newNode) =>
+        oldNode._formworkOwnId && oldNode.id === oldNode._formworkOwnId && !newNode.id
+          ? oldNode.tagName === newNode.tagName && oldNode.dataset.label === newNode.dataset?.label
+          : isSoftMatch(oldNode, newNode);
+    },
     htmx_before_settle: (target) => {
       if (!morphed.length) return;
       if (target.isConnected) morphedControls(target).forEach(syncToAttributes);

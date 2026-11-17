@@ -527,13 +527,13 @@ def test_select_no_alpine_no_results_when_search_url():
 
 
 @pytest.mark.unit
-def test_select_server_mode_renders_one_page_and_a_load_more_button():
-    """Past one page the listbox holds the first page; "Load more" fetches the next."""
+def test_select_server_mode_loads_the_first_page_on_open_and_has_a_load_more_button():
+    """Past one page the listbox fetches the first page when it shows; "Load more" fetches the next."""
     widget = server_widget(Select)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
-    options = listbox.find_all("li", attrs={"role": "option"})
-    assert [li.find("button")["data-value"] for li in options] == [str(i) for i in range(SEARCH_PAGE_SIZE)]
+    assert not listbox.find_all("li", attrs={"role": "option"})
+    assert listbox.select_one("li[hx-get]")["hx-trigger"] == "revealed"
     more = listbox.select_one("button[hx-get]")
     assert f"offset={SEARCH_PAGE_SIZE}" in more["hx-get"]
 
@@ -542,21 +542,21 @@ def test_select_server_mode_renders_one_page_and_a_load_more_button():
 def test_select_server_mode_options_include_icons():
     """Server-mode rows keep the icon of their ChoiceLabel."""
     widget = server_widget(Select, icons=True)
-    soup = render_widget(widget, attrs={"id": "id_x"})
+    soup = render_widget(widget, value=str(SEARCH_PAGE_SIZE), attrs={"id": "id_x"})
     first = soup.find("li", attrs={"role": "option"}).find("button")
     assert first.has_attr("data-icon")
-    assert "📍0" in first.get_text()
+    assert f"📍{SEARCH_PAGE_SIZE}" in first.get_text()
 
 
 @pytest.mark.unit
 def test_select_server_mode_options_include_descriptions():
     """Server-mode rows keep the description of their ChoiceLabel."""
     widget = server_widget(Select, descriptions=True)
-    soup = render_widget(widget, attrs={"id": "id_x"})
+    soup = render_widget(widget, value=str(SEARCH_PAGE_SIZE), attrs={"id": "id_x"})
     first = soup.find("li", attrs={"role": "option"})
     desc = first.find("span", class_="text-xs")
     assert desc is not None
-    assert "desc 0" in desc.get_text()
+    assert f"desc {SEARCH_PAGE_SIZE}" in desc.get_text()
 
 
 @pytest.mark.unit
@@ -837,7 +837,7 @@ def test_select_option_data_selected_toggle_class_escaped():
 def test_select_server_mode_options_include_selected_toggle_class():
     """Server-mode rows keep the selected_toggle_class of their ChoiceLabel."""
     widget = server_widget(Select, selected_toggle_classes=True)
-    soup = render_widget(widget, attrs={"id": "id_x"})
+    soup = render_widget(widget, value=str(SEARCH_PAGE_SIZE), attrs={"id": "id_x"})
     first = soup.find("li", attrs={"role": "option"}).find("button")
     assert first["data-selected-toggle-class"] == "select-error"
 
@@ -883,7 +883,6 @@ def test_select_group_header_precedes_its_rows():
     assert len(titles) == 2
 
     europe = next(t for t in titles if "Europe" in t.get_text())
-    assert europe["x-show"] == "matches($el)"
     assert europe.has_attr("data-group")
     rows = []
     for row in europe.find_next_siblings("li"):
@@ -1057,9 +1056,8 @@ def test_listbox_aria_selected_sits_on_the_option(widget):
     soup = render_widget(widget, name="language")
     options = soup.select("[role=option]")
     assert len(options) == 2
-    assert all(li[":aria-selected"] == "isSelected($el)" for li in options)
     assert all("group/option" in li["class"] for li in options)
-    assert not soup.select("button[\\:aria-selected]")
+    assert not soup.select("button[aria-selected], button[\\:aria-selected]")
 
 
 @pytest.mark.integration
@@ -1424,8 +1422,9 @@ def test_select_htmx_many_filters_via_htmx(select_page):
     sel = select_page.locator("details.dropdown.formwork-select").nth(4)
     _open_dropdown(select_page, 4)
     _type_search(select_page, 4, "Ber")
-    expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
-    assert "Berlin" in sel.locator("ul button").first.text_content()
+    rows = sel.locator("ul li[role=option]")
+    expect(rows).to_have_count(1, timeout=10000)
+    expect(rows).to_contain_text("Berlin")
 
 
 @pytest.mark.e2e
@@ -1490,8 +1489,9 @@ def test_select_htmx_icons_filters(select_page):
     sel = select_page.locator("details.dropdown.formwork-select").nth(5)
     _open_dropdown(select_page, 5)
     _type_search(select_page, 5, "Jap")
-    expect(sel.locator("ul button")).to_have_count(1, timeout=10000)
-    assert "Japan" in sel.locator("ul button").first.text_content()
+    rows = sel.locator("ul li[role=option]")
+    expect(rows).to_have_count(1, timeout=10000)
+    expect(rows).to_contain_text("Japan")
 
 
 @pytest.mark.e2e

@@ -47,6 +47,7 @@ def _toggle_select_multiple_option(page, value):
     page.evaluate(
         f"""(() => {{
             const ms = document.querySelector('details.formwork-select-multiple');
+            ms.dispatchEvent(new Event('formwork:start'));
             ms.querySelector('input[type=checkbox][data-value="{value}"]').click();
         }})()""",
     )

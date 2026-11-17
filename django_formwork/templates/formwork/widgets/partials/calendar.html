@@ -1,4 +1,5 @@
 {% load i18n %}<div class="calendar grid" @keydown="onGridKey($event)">
+  <template x-if="built">
   <div class="calendar-days col-start-1 row-start-1 flex justify-center gap-6" :class="viewClass('days')" @mouseleave="hover(null)">{% for offset in calendar.offsets %}
     <div class="calendar-month{% if not forloop.first %} hidden sm:block{% endif %}">
       <div class="calendar-caption">
@@ -22,6 +23,8 @@
       </div>
     </div>{% endfor %}
   </div>
+  </template>
+  <template x-if="built">
   <div class="calendar-months col-start-1 row-start-1 flex flex-col" :class="viewClass('months')">
     <div class="calendar-caption">
       <button type="button" class="btn btn-ghost btn-sm btn-square" @click="page(-1)" aria-label="{% translate 'Previous year' %}"><i class="icon icon-chevron-left rtl:rotate-180" aria-hidden="true"></i></button>
@@ -34,6 +37,8 @@
       </template>
     </div>
   </div>
+  </template>
+  <template x-if="built">
   <div class="calendar-years col-start-1 row-start-1 flex flex-col" :class="viewClass('years')">
     <div class="calendar-caption">
       <button type="button" class="btn btn-ghost btn-sm btn-square" @click="page(-1)" aria-label="{% translate 'Earlier years' %}"><i class="icon icon-chevron-left rtl:rotate-180" aria-hidden="true"></i></button>
@@ -46,4 +51,5 @@
       </template>
     </div>
   </div>
+  </template>
 </div>

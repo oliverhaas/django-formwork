@@ -20,6 +20,15 @@
   )
   ```
 
+- A `Select`, `SelectMultiple`, `DatePicker`, `DateRangePicker` or
+  `DateTimeRangePicker` starts its Alpine component on first use: a press, focus, a
+  key, or its list opening. A script that calls `Alpine.$data()` on such a widget
+  before then gets no component, and a write to its `data-value` or `data-selected`
+  does not show until the widget starts. Dispatch `formwork:start` on the widget's
+  root first, as the [widget reference](widgets.md#requirements) shows. If you
+  override one of the widget templates, copy it again for the `data-formwork-lazy`
+  attribute. Without it, the widget starts on load as before.
+
 ### Added
 
 - `MultipleFileField` for several uploads in one field. A plain `FileField` with a
@@ -126,6 +135,15 @@
   color. A radio change marks the old and the new option. After a failed save, the
   field template sends the first checked options in `data-formwork-initial`, so checking
   them again drops the marks. If you override `formwork/forms/field.html`, copy it again.
+- A `Select` or `SelectMultiple` with a server search loads its first page when its list
+  opens, and shows a spinner until the rows arrive. The page held those rows from the
+  start, so a form with many such selects was large and slow to start: on an admin list
+  with 100 editable rows the HTML went from 3.9 MB to 2.9 MB. A list that fits one page
+  keeps its rows in the page and filters them in the browser, and a selected option past
+  the first page still comes with the page. The search endpoint takes `page_only=1` for
+  this request, which leaves out the "more results" hint. The spinner row is
+  `formwork/widgets/partials/pending_rows.html`. Tests that read the rows of a long list
+  from the rendered page open the list first, or request the endpoint.
 - The row that clears a `Select` or `SelectMultiple` with `allow_clear` shows the
   widget's placeholder in muted text, the way the empty control shows it. It showed
   Django's blank label, which Django 6.1 changed from "---------" to "- Select an
@@ -211,6 +229,19 @@
   hover on an option and no mark on the option the arrow keys reached. The option took
   `base-200`, which DaisyUI's dark theme draws almost like the panel. It now mixes 10%
   of `base-content` into the panel, as DaisyUI's menu does.
+- A form with many selects or date pickers, such as a formset with a hundred rows, froze
+  the page for seconds while it loaded. Each option row of a `Select`, `SelectMultiple`
+  or `ComboBox` had four Alpine bindings, and each date picker built its calendar on
+  load. Each binding cost more the more controls the form held, because the browser
+  drops its index of the form's controls after every change to the form. The rows
+  of a list now share one effect, and a date picker builds its calendar when it first
+  opens. With the lazy first page under Changed and the start on first use under
+  Breaking changes, an admin list with 100 editable rows went from 7.9 s of script on
+  load to 0.06 s. If you override
+  `formwork/widgets/select.html`, `formwork/widgets/select_multiple.html`,
+  `formwork/widgets/combo_box.html` or `formwork/widgets/partials/calendar.html`, copy
+  it again: the row helpers `matches()`, `isHighlighted()`, `optionClass()` and
+  `optionId()` are gone.
 
 ## 0.1.0a3 (2026-11-06)
 

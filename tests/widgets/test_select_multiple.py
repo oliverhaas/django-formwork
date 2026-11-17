@@ -228,7 +228,6 @@ def test_select_multiple_group_header_precedes_its_rows():
     widget = SelectMultiple(choices=choices, show_search=True)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     header = soup.find("li", class_="menu-title")
-    assert header["x-show"] == "matches($el)"
     assert header.has_attr("data-group")
     assert [li["data-label"] for li in header.find_next_siblings("li")] == ["Alpha", "Beta"]
 
@@ -648,13 +647,13 @@ def test_select_multiple_htmx_wrapper_has_id():
 
 
 @pytest.mark.unit
-def test_select_multiple_server_mode_renders_one_page_and_a_load_more_button():
-    """Past one page the listbox holds the first page; "Load more" fetches the next."""
+def test_select_multiple_server_mode_loads_the_first_page_on_open_and_has_a_load_more_button():
+    """Past one page the listbox fetches the first page when it shows; "Load more" fetches the next."""
     widget = server_widget(SelectMultiple)
     soup = render_widget(widget, name="test", attrs={"id": "id_test"})
     listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
-    values = [label["data-value"] for label in listbox.find_all("label", attrs={"data-value": True})]
-    assert values == [str(i) for i in range(SEARCH_PAGE_SIZE)]
+    assert not listbox.find_all("label", attrs={"data-value": True})
+    assert listbox.select_one("li[hx-get]")["hx-trigger"] == "revealed"
     more = listbox.select_one("button[hx-get]")
     assert f"offset={SEARCH_PAGE_SIZE}" in more["hx-get"]
 
@@ -663,9 +662,9 @@ def test_select_multiple_server_mode_renders_one_page_and_a_load_more_button():
 def test_select_multiple_server_mode_options_include_icons():
     """Server-mode rows keep the icon of their ChoiceLabel."""
     widget = server_widget(SelectMultiple, icons=True)
-    soup = render_widget(widget, attrs={"id": "id_x"})
-    first = soup.find("li").find("label")
-    assert "📍0" in first.get_text()
+    soup = render_widget(widget, value=[str(SEARCH_PAGE_SIZE)], attrs={"id": "id_x"})
+    first = soup.find("li", attrs={"role": "option"}).find("label")
+    assert f"📍{SEARCH_PAGE_SIZE}" in first.get_text()
 
 
 @pytest.mark.unit
@@ -996,9 +995,11 @@ def test_select_multiple_htmx_selection_stays_checked_when_load_more_brings_it_b
 @pytest.mark.e2e
 def test_select_multiple_htmx_select_creates_hidden_inputs(select_multiple_page):
     """Selecting items in htmx mode creates hidden inputs for form submission."""
+    from playwright.sync_api import expect
+
     multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(2)
     multi.locator("summary").click()
-    select_multiple_page.wait_for_timeout(200)
+    expect(multi.locator('input[type="checkbox"]')).to_have_count(20)
     select_multiple_page.evaluate("""() => {
         const dds = document.querySelectorAll('details.dropdown.formwork-select-multiple');
         const cbs = dds[2].querySelectorAll('input[type="checkbox"]');
@@ -1347,6 +1348,7 @@ def _toggle_checkbox(page, dropdown_index, value_selector):
     page.evaluate(
         """([index, selector]) => {
             const dd = document.querySelectorAll('details.dropdown.formwork-select-multiple')[index];
+            dd.dispatchEvent(new Event('formwork:start'));
             const cb = dd.querySelector(selector);
             cb.checked = !cb.checked;
             cb.dispatchEvent(new Event('change', {bubbles: true}));
@@ -1364,6 +1366,9 @@ def test_select_multiple_htmx_dirty_clears_on_revert(select_multiple_page):
 
     _enable_dirty_tracking(select_multiple_page)
     fieldset = select_multiple_page.locator("#id_languages_htmx_field")
+    multi = select_multiple_page.locator("details.dropdown.formwork-select-multiple").nth(2)
+    multi.locator("summary").click()
+    expect(multi.locator('input[type="checkbox"]')).to_have_count(20)
     _toggle_checkbox(select_multiple_page, 2, 'input[type="checkbox"]')
     expect(fieldset).to_have_class(re.compile(r"\bformwork-dirty\b"))
     _toggle_checkbox(select_multiple_page, 2, 'input[type="checkbox"]')

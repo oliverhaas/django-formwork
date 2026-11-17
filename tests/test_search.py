@@ -26,7 +26,7 @@ from e2e.models import City, Region
 
 from django_formwork import views
 from django_formwork.forms import FormworkForm, FormworkModelForm
-from django_formwork.search import search_url
+from django_formwork.search import SEARCH_PAGE_SIZE, search_url
 from django_formwork.widgets import ComboBox, Select, SelectMultiple
 from django_formwork.widgets.select import ChoiceLabel
 
@@ -102,6 +102,15 @@ class _PlaceholderClearUserForm(FormworkForm):
         widget=Select(
             search_fields=["email"], search_queryset=_users, search_decorator=None, attrs={"placeholder": "Anyone"}
         ),
+    )
+
+
+class _NewestFirstUserForm(FormworkForm):
+    """Lists its users newest first, while its search pages them oldest first."""
+
+    user = forms.ModelChoiceField(
+        queryset=User.objects.order_by("-pk"),
+        widget=Select(search_fields=["email"], search_queryset=_users, search_decorator=None),
     )
 
 
@@ -547,6 +556,17 @@ def test_clear_row_shows_the_placeholder_in_place_of_djangos_blank_label() -> No
 
 
 @pytest.mark.django_db
+def test_a_selected_row_past_the_widgets_page_is_listed_once() -> None:
+    oldest, *_ = _make_users(SEARCH_PAGE_SIZE + 5)
+    rendered = BeautifulSoup(str(_NewestFirstUserForm(initial={"user": oldest.pk})["user"]), "html.parser")
+
+    response = Client().get(rendered.select_one("li[hx-trigger=revealed]")["hx-get"])
+
+    shown = [str(row["data-value"]) for row in rendered.select("li[role=option] button[data-value]")]
+    assert [*shown, *_rows(response, "button[data-value]")].count(str(oldest.pk)) == 1
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("allow_clear", [True, False])
 def test_clear_row_follows_the_allow_clear_flag(allow_clear: bool) -> None:  # noqa: FBT001
     User.objects.create(username="ada", email="ada@example.com")
@@ -621,10 +641,10 @@ def test_ranked_search_puts_the_best_match_first(names: list[str], query: str, b
 @pytest.mark.django_db
 @pytest.mark.parametrize(("users", "shown"), [(3, True), (21, False)], ids=["one_page", "paged"])
 def test_option_counts_show_only_while_the_list_fits_one_page(users: int, shown: bool) -> None:  # noqa: FBT001
-    first = _make_users(users)[0]
-    form = _UserSearchForm()
-    form.fields["user"].widget.counts = {first.pk: 7}
+    last = _make_users(users)[-1]
+    form = _UserSearchForm(initial={"user": last.pk})
+    form.fields["user"].widget.counts = {last.pk: 7}
 
     soup = BeautifulSoup(str(form["user"]), "html.parser")
 
-    assert ("7" in soup.select_one(f'[role=option] > [data-value="{first.pk}"]').get_text(" ").split()) is shown
+    assert ("7" in soup.select_one(f'[role=option] > [data-value="{last.pk}"]').get_text(" ").split()) is shown
