@@ -133,6 +133,12 @@
   "Unassigned", still shows as is. The admin's optional choice fields and relations get
   the placeholder. If you override `formwork/widgets/select.html` or
   `formwork/widgets/select_multiple.html`, copy it again for the muted row.
+- The end of a long `Select`, `SelectMultiple` or `ComboBox` list shows a "Load more"
+  row in the style of the option rows. The info alert with "Showing the first 20
+  matches. Keep typing to narrow them down." and its button made a narrow dropdown
+  wrap over three lines and widened it. The `shown` count is gone from the context of
+  `formwork/widgets/partials/more_results_hint.html`; if you override that template,
+  copy it again.
 
 ### Fixed
 

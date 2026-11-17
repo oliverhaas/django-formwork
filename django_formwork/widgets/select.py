@@ -223,7 +223,6 @@ class SearchableSelectMixin(_SelectBase):
         widget["trigger_attrs"] = {key: val for key, val in rest.items() if key not in widget["input_attrs"]}
         # A list that fits one page filters in the browser.
         widget["search_url"] = None
-        widget["shown"] = None
         widget["more_url"] = None
         if self.truncated and self.search_key is not None:
             widget["search_url"] = search_url(
@@ -232,7 +231,6 @@ class SearchableSelectMixin(_SelectBase):
                 widget=self.search_variant,
                 allow_clear=self.allow_clear,
             )
-            widget["shown"] = SEARCH_PAGE_SIZE
             more = {"offset": SEARCH_PAGE_SIZE, "exclude": self.selected_past_page}
             widget["more_url"] = f"{widget['search_url']}&{urlencode(more, doseq=True)}"
         widget["truncated"] = self.truncated

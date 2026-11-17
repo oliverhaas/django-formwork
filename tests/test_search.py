@@ -480,9 +480,8 @@ def test_capped_page_loads_the_next_one_until_none_is_left() -> None:
     while url:
         soup = BeautifulSoup(Client().get(url).content.decode(), "html.parser")
         pages.append([str(el["data-value"]) for el in soup.select("[data-value]")])
-        hint = soup.select_one('[role="status"]')
-        assert (hint is not None) is (len(pages) < 3)
-        more = hint.select_one("button[hx-get]") if hint else None
+        more = soup.select_one("button[hx-get]")
+        assert (more is not None) is (len(pages) < 3)
         url = str(more["hx-get"]) if more else None
 
     assert [len(page) for page in pages] == [21, 20, 1]

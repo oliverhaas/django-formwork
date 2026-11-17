@@ -143,7 +143,7 @@ def test_a_model_search_renders_one_page_and_a_selection_past_it() -> None:
     form = _ModelSearchForm(initial={"one": ids[-1]})
 
     assert _values(form, "one") == [*ids[:20], ids[-1]]
-    more = BeautifulSoup(str(form["one"]), "html.parser").select_one('[role="status"] button[hx-get]')
+    more = BeautifulSoup(str(form["one"]), "html.parser").select_one("button[hx-get]")
     assert more is not None
     response = Client().get(str(more["hx-get"]))
     soup = BeautifulSoup(response.content.decode(), "html.parser")

@@ -87,7 +87,7 @@ trigger class to the results. A `ComboBox` over a `CharField` takes its own
 
 The widget renders the first 20 rows itself, plus the selected rows that lie
 past them. A search returns the next 20 matches at most. When more exist, the
-list ends with a hint and a "Load more" button that fetches the next page. The
+list ends with a "Load more" button that fetches the next page. The
 endpoint fetches one row past the page to tell whether more exist, so it never
 runs a `COUNT`. The first "Load more" request excludes the selected rows that
 the widget already shows past the first page.

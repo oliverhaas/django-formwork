@@ -150,7 +150,6 @@ class FormworkSearchView(View):
             {
                 "options": options,
                 "truncated": truncated,
-                "shown": offset + len(rows),
                 "more_url": f"{request.path}?{more.urlencode()}",
             },
             request=request,

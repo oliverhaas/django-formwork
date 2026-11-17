@@ -96,7 +96,6 @@ class ComboBox(forms.TextInput):
             else None
         )
         widget["truncated"] = False
-        widget["shown"] = None
         widget["more_url"] = None
         # The closed input shows a picked suggestion's icon beside its text.
         icons = {option["label"]: str(option["icon"]) for option in widget["options"] if option["icon"]}

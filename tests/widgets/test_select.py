@@ -534,7 +534,7 @@ def test_select_server_mode_renders_one_page_and_a_load_more_button():
     listbox = soup.find("ul", attrs={"id": "id_test_listbox"})
     options = listbox.find_all("li", attrs={"role": "option"})
     assert [li.find("button")["data-value"] for li in options] == [str(i) for i in range(SEARCH_PAGE_SIZE)]
-    more = listbox.select_one('[role="status"] button[hx-get]')
+    more = listbox.select_one("button[hx-get]")
     assert f"offset={SEARCH_PAGE_SIZE}" in more["hx-get"]
 
 
