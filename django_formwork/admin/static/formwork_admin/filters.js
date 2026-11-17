@@ -1,11 +1,11 @@
 /**
  * filters.js: fits the changelist's filters to the search row.
  *
- * The filters follow the search box in list_filter order. Those the row has no room for
- * wait in the More menu, which puts one in the row and opens it. A filter with a value
- * always shows: it takes the room of the last filter without one, so the row keeps its
- * height and the other filters keep their place. A list too narrow for two filters next
- * to the search gives them a row of their own.
+ * The first three filters follow the search box in list_filter order, fewer when the row
+ * has less room. The others wait in the More menu, which puts one in the row and opens it.
+ * A filter with a value always shows: it takes the place of the last filter without one,
+ * so the row keeps its height and the other filters keep their place. A list too narrow
+ * for two filters next to the search gives them a row of their own.
  *
  * Load it as a classic script in <head>, like columns.js: it fits the row before each
  * frame while the page parses, so no frame shows every filter.
@@ -14,6 +14,8 @@
   const BAR = "changelist-filter-bar";
   const FILTER = `#${BAR} [data-filter]`;
   const CONTROLS = "input[name], select[name], textarea[name]";
+  // More filters than this crowd the row and squeeze the search box, however wide the window.
+  const LIMIT = 3;
 
   // The filter that the More menu puts in the row. Like the filter that holds the focus, it
   // shows while it is empty, so a filter does not leave the row under the user's hands.
@@ -53,15 +55,17 @@
     const must = filters.map(
       (filter) => filter.dataset.filter === picked || filter.contains(focused) || isSet(filter),
     );
-    // The filters with a value, then the others in order for as long as they fit.
+    // The filters with a value, then the others in order, up to the limit and the room.
     const pick = (room, forced = must) => {
       const shown = [...forced];
       let used = sizes.reduce((sum, size, index) => sum + (forced[index] ? size : 0), 0);
+      let total = forced.filter(Boolean).length;
       for (const [index, size] of sizes.entries()) {
         if (shown[index]) continue;
-        if (used + size > room) break;
+        if (total >= LIMIT || used + size > room) break;
         shown[index] = true;
         used += size;
+        total += 1;
       }
       return shown;
     };

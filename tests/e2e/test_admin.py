@@ -179,20 +179,40 @@ def test_an_empty_filter_picked_from_more_stays_in_the_row_while_it_has_the_focu
     assert admin_page.errors == []
 
 
-def test_the_row_shows_as_many_filters_as_the_window_has_room_for(admin_page, live_server, kitchen):
+def test_a_wide_list_shows_three_filters_and_a_narrower_one_shows_those_that_fit(admin_page, live_server, kitchen):
     Item.objects.create(name="Kettle", category=kitchen)
-    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
-    more = admin_page.get_by_role("button", name="More filters")
-    expect_filters(admin_page, "Status", "Category", "Is featured")
-
     admin_page.set_viewport_size({"width": 1920, "height": 720})
-    expect_filters(admin_page, "Status", "Category", "Is featured", "Released", "Stock", "Tags")
-    expect(more).to_have_count(0)
-    expect(admin_page.get_by_role("button", name="Filter options")).to_be_visible()
-
-    admin_page.set_viewport_size({"width": 1280, "height": 720})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    bar = admin_page.locator("#changelist-filter-bar")
+    waiting = admin_page.get_by_role("button", name="More filters").locator("[data-more-count]")
     expect_filters(admin_page, "Status", "Category", "Is featured")
-    expect(more.locator("[data-more-count]")).to_have_text("3")
+    expect(waiting).to_have_text("3")
+
+    admin_page.set_viewport_size({"width": 1160, "height": 720})
+    expect_filters(admin_page, "Status", "Category")
+    expect(waiting).to_have_text("4")
+    expect(bar).not_to_have_attribute("data-stacked", "")
+    assert admin_page.errors == []
+
+
+@pytest.mark.parametrize(
+    ("query", "labels"),
+    [
+        ("?stock=low", ["Status", "Category", "Stock"]),
+        (
+            "?status__exact=active&is_featured__exact=1&released__gte=2026-01-01&stock=low",
+            ["Status", "Is featured", "Released", "Stock"],
+        ),
+    ],
+)
+def test_a_wide_list_shows_every_filter_with_a_value_and_fills_the_row_up_to_three(
+    admin_page, live_server, kitchen, query, labels
+):
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.set_viewport_size({"width": 1920, "height": 720})
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{query}")
+
+    expect_filters(admin_page, *labels)
     assert admin_page.errors == []
 
 

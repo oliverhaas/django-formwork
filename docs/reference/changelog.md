@@ -98,8 +98,8 @@
   counts the changes and saves or discards them. A cell's error shows in a tooltip, here
   and in a `TabularInline`, so a failed save keeps the height of the rows. With
   `django.contrib.auth` installed, the admin has pages for users and groups, with the
-  password page of Django's user admin. A list's filters follow its search box in one
-  row, as many as fit the window, and a More menu holds the others. A Show counts switch
+  password page of Django's user admin. A list's first three filters follow its search
+  box in one row, and a More menu holds the others. A Show counts switch
   in that menu shows the number of rows for each filter option, as `show_facets` does in
   Django. Dates are
   typed in the language's first `DATE_INPUT_FORMATS`, in a calendar dropdown, and a
