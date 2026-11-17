@@ -305,7 +305,7 @@ Options this admin adds:
 | Option | Description |
 |---|---|
 | `icon` | The Lucide icon next to the model in the navigation and the page title. Unset, the model gets a placeholder shape, see below. |
-| `list_badges` | Badge colors per value, by column: `{"status": {"active": "success", "archived": "warning"}}`. The select of the field on a form shows the same badges. |
+| `list_badges` | Badge colors per value, by column: `{"status": {"active": "success", "archived": "warning"}}`. The select of the field on a form and its list filter show the same badges. |
 | `choice_description` | What a row shows under its name in the dropdown of a relation to this model: entries as in `list_display`. See [Related objects](#related-objects). |
 | `list_only_fields` | Load only these columns on the list page. |
 | `list_defer_fields` | Skip these columns on the list page, for a large JSON or text column that no column shows. |

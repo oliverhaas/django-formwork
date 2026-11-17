@@ -768,10 +768,16 @@ def test_changelist_toolbar_holds_the_actions_and_the_save_the_list_has(
     assert toolbar is None or toolbar.find_next("table")["id"] == "changelist-table"
 
 
-def test_change_form_select_of_a_choice_field_shows_the_badges_of_the_list(admin_client, catalog):
-    soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
+@pytest.mark.parametrize(
+    ("view", "select"),
+    [("change", "#id_status_wrapper"), ("changelist", "#id_status__exact_wrapper")],
+    ids=["form", "filter"],
+)
+def test_select_of_a_choice_field_shows_the_badges_of_the_list(admin_client, catalog, view, select):
+    args = [catalog.alpha.pk] if view == "change" else []
+    soup = BeautifulSoup(admin_client.get(url(Item, view, *args)).content, "html.parser")
 
-    rows = soup.select("#id_status_wrapper [role=option] > [data-value]")
+    rows = soup.select(f"{select} [role=option] > [data-value]:has(.badge)")
     assert {row["data-value"]: row.select_one(".badge")["class"][2:] for row in rows} == {
         "draft": ["badge-ghost"],
         "active": ["badge-soft", "badge-success"],

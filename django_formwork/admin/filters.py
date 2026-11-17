@@ -33,14 +33,17 @@ from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy as _
 from django_filters.widgets import RangeWidget, SuffixedMultiWidget
 
+from django_formwork.admin.cells import badge_color
 from django_formwork.admin.widgets import date_input_format, relation_widget
 from django_formwork.forms import FormworkForm
-from django_formwork.widgets import DateRangePicker, SearchInput, Select
+from django_formwork.widgets import ChoiceLabel, DateRangePicker, SearchInput, Select
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
     from django.http import HttpRequest, QueryDict
     from django.utils.safestring import SafeString
+
+    from django_formwork.widgets.select import BadgeColor
 
 __all__ = ["NULL_VALUE", "SEARCH_VAR", "AdminFilterSet", "build_filterset", "list_filter_path"]
 
@@ -191,14 +194,20 @@ class BooleanFilter(_FieldFilterMixin, django_filters.ChoiceFilter):
 
 
 class ChoiceFilter(_FieldFilterMixin, django_filters.ChoiceFilter):
-    """The field's choices; a choice for None, as Django's filter does, comes last."""
+    """The field's choices as the badges the list shows; a choice for None, as Django's filter does, comes last."""
 
     def field_defaults(self, model_field: Any) -> dict[str, Any]:
-        choices = [(value, title) for value, title in model_field.flatchoices if value is not None]
+        values = [value for value, _title in model_field.flatchoices]
+        colors = self.parent.model_admin.list_badges.get(self.field_name)
+        choices: list[tuple[Any, Any]] = [
+            (value, ChoiceLabel(str(title), color=cast("BadgeColor", badge_color(value, values, colors))))
+            for value, title in model_field.flatchoices
+            if value is not None
+        ]
         none_title = dict(model_field.flatchoices).get(None)
         if none_title and self.null_param:
             choices.append((NULL_VALUE, none_title))
-        return {"choices": choices, "empty_label": _("All"), "widget": Select(**_floating(self.label))}
+        return {"choices": choices, "empty_label": _("All"), "widget": Select(badges=True, **_floating(self.label))}
 
     def facet_counts(self, qs: QuerySet[Any]) -> dict[str, int]:
         rows = qs.order_by().values_list(self.field_name).annotate(count=_count())

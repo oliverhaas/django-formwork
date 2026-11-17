@@ -69,8 +69,8 @@
   is the only change a form needs.
 - `Select` and `SelectMultiple` take `badges=True`, which shows each option as a badge in
   the `color` of its `ChoiceLabel`, in the list and in the closed trigger. The admin
-  sets it for a field with `choices`, so a form's select shows a value as the list's
-  column does, in the colors of `list_badges`.
+  sets it for a field with `choices`, so a form's select and a list filter show a
+  value as the list's column does, in the colors of `list_badges`.
 - `Select` and `SelectMultiple` take `search_label`, a `callable(obj, **params)` that
   labels the rows of a server search, so a search that several fields reuse can label
   its rows by the params of each field.
