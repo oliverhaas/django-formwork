@@ -1976,7 +1976,7 @@ importable from <code>django_formwork</code> and from <code>django_formwork.widg
 <td><code>color</code></td>
 <td><code>BadgeColor</code></td>
 <td><code>"neutral"</code></td>
-<td>Badge color in <code>Display(badges=True)</code>: one of the eight DaisyUI colors</td>
+<td>Badge color in a widget with <code>badges=True</code> (<code>Select</code>, <code>SelectMultiple</code>, <code>Display</code>): one of the eight DaisyUI colors</td>
 </tr>
 <tr>
 <td><code>selected_toggle_class</code></td>
@@ -2106,6 +2106,18 @@ instead; see <a href="../views/#server-side-search">Server-side search</a>.</p>
 <td></td>
 <td><code>None</code></td>
 <td>Reuse a registered search with its own params</td>
+</tr>
+<tr>
+<td><code>search_label</code></td>
+<td><code>callable \| None</code></td>
+<td><code>None</code></td>
+<td><code>callable(obj, **params)</code> that labels a row of the search in place of the field's <code>label_from_instance</code>, for a search that several fields reuse</td>
+</tr>
+<tr>
+<td><code>badges</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Show each option as a badge in the <code>color</code> of its <a href="#choicelabel"><code>ChoiceLabel</code></a>, in the list and in the closed trigger. A plain label gets a neutral badge. The empty choice and a label with <code>label_html</code> stay as they are</td>
 </tr>
 <tr>
 <td><code>counts</code></td>

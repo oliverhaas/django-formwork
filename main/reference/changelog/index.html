@@ -1317,6 +1317,13 @@
   button that clears the stored file, with a second button to keep it before the save.
   It posts the same fields as Django's widget, so <code>widget=widgets.ClearableFileInput</code>
   is the only change a form needs.</li>
+<li><code>Select</code> and <code>SelectMultiple</code> take <code>badges=True</code>, which shows each option as a badge in
+  the <code>color</code> of its <code>ChoiceLabel</code>, in the list and in the closed trigger. The admin
+  sets it for a field with <code>choices</code>, so a form's select and a list filter show a
+  value as the list's column does, in the colors of <code>list_badges</code>.</li>
+<li><code>Select</code> and <code>SelectMultiple</code> take <code>search_label</code>, a <code>callable(obj, **params)</code> that
+  labels the rows of a server search, so a search that several fields reuse can label
+  its rows by the params of each field.</li>
 <li><code>Select</code> and <code>SelectMultiple</code> take <code>counts</code>, a mapping of option values to numbers.
   Each option shows its number in a badge at the end of the row, as a faceted filter
   does, and an option with 0 is dimmed.</li>
@@ -1342,9 +1349,9 @@
   <code>import_formats</code> set, a list also imports CSV, Excel or JSON files: a preview shows
   the new, changed and invalid rows before anything is saved. Columns that do not fit
   the width of a list hide behind a button that shows them all. A long list scrolls with
-  the page, and its header sticks under the top bar. In a list with <code>list_editable</code>, a field
+  the page, and its toolbar and header stick under the top bar. In a list with <code>list_editable</code>, a field
   shows its box only in the row under the pointer or with the focus, so the list reads
-  as a table, and a changed cell shows in the accent color. A line under the pages
+  as a table, and a changed cell shows in the accent color. The toolbar above the table
   counts the changes and saves or discards them. A cell's error shows in a tooltip, here
   and in a <code>TabularInline</code>, so a failed save keeps the height of the rows. With
   <code>django.contrib.auth</code> installed, the admin has pages for users and groups, with the
@@ -1371,10 +1378,16 @@
   keeps that history in its own table, so it does not need <code>django.contrib.admin</code>, and
   with <code>history = PghistoryHistory()</code> on the site it reads the events of
   django-pghistory. The recent actions on the dashboard list each object once, with what
-  its saves changed. The line with a list's actions and save sticks to the bottom of the
-  window while rows are selected or cells changed. <code>list_top</code> and <code>list_bottom</code> methods
+  its saves changed. The toolbar above a list's table holds the selected count, the
+  actions and the save, and stays in view while the list scrolls. <code>list_top</code> and <code>list_bottom</code> methods
   show HTML of their own above and under a list, such as counts or a chart, and
-  <code>@admin.slot(lazy=True)</code> loads it after the list, with a skeleton until then.</li>
+  <code>change_top</code> and <code>change_bottom</code> do the same on a change page.
+  <code>@admin.slot(lazy=True)</code> loads a slot after its page, with a skeleton until then.
+  A button next to a list's title hides its top slot and shows it again. The session
+  keeps the choice for each list, and a hidden slot does not run.
+  With <code>choice_description</code> on a model's admin, the dropdown of every relation to that
+  model shows those values under each row's name, such as a job title and a department
+  under an employee.</li>
 <li>A widget can put links at the end of its field's label row, for example a Generate link
   next to a slug, with a <code>label_links(name, value, renderer=None)</code> method that returns
   HTML. The field template renders them after the label, not inside it, so they stay out
@@ -1452,6 +1465,10 @@
   wrap over three lines and widened it. The <code>shown</code> count is gone from the context of
   <code>formwork/widgets/partials/more_results_hint.html</code>; if you override that template,
   copy it again.</li>
+<li>A form with a <code>Select</code> or <code>SelectMultiple</code> that searches on the server renders faster
+  when the list is longer than one page. The widget labels only its selected rows,
+  because the browser loads the first page when the list opens. A
+  <code>label_from_instance()</code> that counts its calls sees fewer of them.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
