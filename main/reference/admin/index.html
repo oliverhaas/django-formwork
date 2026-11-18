@@ -2004,9 +2004,11 @@ into view. Without JavaScript, the table scrolls sideways as in Django's admin.<
 <p>A long list scrolls with the page. The toolbar with the actions and the save sticks under
 the top bar, and the header of the table under the toolbar, so the selection, the save and
 the names of the columns stay in view. While all columns show, the table scrolls sideways
-in its own box, and the header stays at the top of the table. On a phone the toolbar is
-shorter: the count shows as a number, Delete and Discard as icons, the actions menu as an
-ellipsis, and Save changes as Save.</p>
+in its own box, and the header stays at the top of the table. The toolbar keeps to one
+line by the width of the list, not of the screen, as the sidebar takes room from it. On a
+narrower list Clear shows as an icon, the count of changes without its label, and Save
+changes as Save. On a narrow one, such as on a phone, the selected count also shows as a
+number, Delete and Discard as icons, and the actions menu as an ellipsis.</p>
 <h3 id="editable-columns">Editable columns<a class="headerlink" href="#editable-columns" title="Permanent link">&para;</a></h3>
 <p>The columns in <code>list_editable</code> show their fields in each row, as in Django's admin. So that
 a list with many editable columns still reads as a table, a field shows its box only in the
@@ -2103,6 +2105,8 @@ template or <code>format_html()</code>.</p>
 <p>Actions run as in Django: a function gets <code>(modeladmin, request, queryset)</code> and a name
 resolves to a method of the admin. The selected count, the Delete button and the Actions
 menu sit in the toolbar above the table and stay disabled until a row is selected.
+Clear, after the actions, empties the selection. When all rows of a page are selected and
+the list has more pages, a link next to it selects the rows of all pages.
 Shift-click selects a range. <code>@admin.action</code> takes these arguments on top of Django's:</p>
 <table>
 <thead>
