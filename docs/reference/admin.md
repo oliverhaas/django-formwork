@@ -519,9 +519,11 @@ into view. Without JavaScript, the table scrolls sideways as in Django's admin.
 A long list scrolls with the page. The toolbar with the actions and the save sticks under
 the top bar, and the header of the table under the toolbar, so the selection, the save and
 the names of the columns stay in view. While all columns show, the table scrolls sideways
-in its own box, and the header stays at the top of the table. On a phone the toolbar is
-shorter: the count shows as a number, Delete and Discard as icons, the actions menu as an
-ellipsis, and Save changes as Save.
+in its own box, and the header stays at the top of the table. The toolbar keeps to one
+line by the width of the list, not of the screen, as the sidebar takes room from it. On a
+narrower list Clear shows as an icon, the count of changes without its label, and Save
+changes as Save. On a narrow one, such as on a phone, the selected count also shows as a
+number, Delete and Discard as icons, and the actions menu as an ellipsis.
 
 ### Editable columns
 
@@ -641,6 +643,8 @@ template or `format_html()`.
 Actions run as in Django: a function gets `(modeladmin, request, queryset)` and a name
 resolves to a method of the admin. The selected count, the Delete button and the Actions
 menu sit in the toolbar above the table and stay disabled until a row is selected.
+Clear, after the actions, empties the selection. When all rows of a page are selected and
+the list has more pages, a link next to it selects the rows of all pages.
 Shift-click selects a range. `@admin.action` takes these arguments on top of Django's:
 
 | Argument | Description |

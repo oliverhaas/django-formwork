@@ -509,6 +509,38 @@ def test_list_actions_wait_until_the_changes_are_saved(admin_page, live_server, 
     assert admin_page.errors == []
 
 
+def test_selecting_rows_shows_the_controls_after_the_actions_and_moves_no_button(
+    admin_page, live_server, kitchen, monkeypatch
+):
+    """Clear takes its room before a row is selected, and the count keeps the width of its longest text."""
+    monkeypatch.setattr(site.get_model_admin(Item), "list_per_page", 9)
+    Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen, quantity=3) for i in range(12))
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    actions = admin_page.locator("#changelist-actions")
+    delete = actions.get_by_role("button", name="Delete", exact=True)
+    clear = actions.locator("button[aria-label='Clear selection']")
+    select_all = actions.get_by_role("button", name="Select all 12")
+    rows = admin_page.locator("#changelist-table tbody input[type=checkbox]:checked")
+    places = [delete.bounding_box(), clear.bounding_box()]
+    assert None not in places
+    expect(clear).to_be_hidden()
+    expect(select_all).to_be_hidden()
+
+    admin_page.locator("#changelist-table thead input[type=checkbox]").check()
+    expect(clear).to_be_visible()
+    select_all.click()
+    expect(actions.locator("[name=select_across]")).to_have_value("1")
+    expect(actions.get_by_text("12 selected", exact=True).filter(visible=True)).to_have_count(1)
+    expect(select_all).to_be_hidden()
+    assert [delete.bounding_box(), clear.bounding_box()] == places
+
+    clear.click()
+    expect(rows).to_have_count(0)
+    expect(actions.locator("[name=select_across]")).to_have_value("0")
+    expect(clear).to_be_hidden()
+    assert admin_page.errors == []
+
+
 def test_a_list_save_that_failed_saves_after_the_fix(admin_page, live_server, kitchen):
     item = Item.objects.create(name="Kettle", category=kitchen, quantity=3)
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")

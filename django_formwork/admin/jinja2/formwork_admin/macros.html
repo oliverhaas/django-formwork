@@ -243,24 +243,29 @@
     posts the form ``form_id`` with ``field`` set to the action's name. ``disabled`` is an Alpine expression,
     and with ``initially_disabled`` the controls render disabled until Alpine has evaluated it. The menu ends
     at the trigger's end. With ``start`` it begins at the trigger's start, and on a phone it takes the width of
-    the nearest positioned ancestor, as it would not fit next to the trigger. With ``compact`` a phone shows
-    a button with an icon as the icon and the trigger as an ellipsis; both keep their names for a screen reader. #}
-{% macro action_controls(actions, form_id, field, size="", up=False, start=False, compact=False, disabled=none, initially_disabled=False) %}
+    the nearest positioned ancestor, as it would not fit next to the trigger. With ``compact`` a narrow
+    ``@container`` shows a button with an icon as the icon and the trigger as an ellipsis; both keep their names
+    for a screen reader.
+    With ``quiet`` a disabled control has no fill. #}
+{% macro action_controls(actions, form_id, field, size="", up=False, start=False, compact=False, disabled=none, initially_disabled=False, quiet=False) %}
 {% set menu = actions|rejectattr("button")|list %}
+{% set idle = quiet and initially_disabled %}
 {% for action in actions|selectattr("button") %}
 {% set bare = compact and action.icon %}
-<button type="submit" form="{{ form_id }}" name="{{ field }}" value="{{ action.name }}" class="btn {{ size }}{{ " max-sm:btn-square" if bare }}{{ " btn-soft btn-error" if action.danger }}"{% if action.help_text %} title="{{ action.help_text }}"{% endif %}{% if disabled %} :disabled="{{ disabled }}"{% endif %}{% if initially_disabled %} disabled{% endif %}>
-  {%- if action.icon %}{{ icon(action.icon) }}{% endif %}{% if bare %}<span class="max-sm:sr-only">{{ action.label }}</span>{% else %}{{ action.label }}{% endif -%}
+<button type="submit" form="{{ form_id }}" name="{{ field }}" value="{{ action.name }}" class="btn {{ size }}{{ " @max-2xl:btn-square" if bare }}{{ " btn-ghost" if idle else " btn-soft btn-error" if action.danger }}"{% if action.help_text %} title="{{ action.help_text }}"{% endif %}
+        {%- if quiet and disabled %} :class="{ 'btn-ghost': {{ disabled }}{% if action.danger %}, 'btn-soft btn-error': !({{ disabled }}){% endif %} }"{% endif %}
+        {%- if disabled %} :disabled="{{ disabled }}"{% endif %}{% if initially_disabled %} disabled{% endif %}>
+  {%- if action.icon %}{{ icon(action.icon) }}{% endif %}{% if bare %}<span class="@max-2xl:sr-only">{{ action.label }}</span>{% else %}{{ action.label }}{% endif -%}
 </button>
 {% endfor %}
 {% if menu %}
 <div class="dropdown {{ "dropdown-start max-sm:static" if start else "dropdown-end" }}{{ " dropdown-top" if up }}">
-  <div role="button" class="btn {{ size }} gap-1.5{{ " max-sm:btn-square" if compact }}{{ " btn-disabled" if initially_disabled }}" aria-haspopup="menu"
+  <div role="button" class="btn {{ size }} gap-1.5{{ " @max-2xl:btn-square" if compact }}{{ " btn-disabled" if initially_disabled }}{{ " btn-ghost" if idle }}" aria-haspopup="menu"
        {%- if initially_disabled %} tabindex="-1" aria-disabled="true"{% else %} tabindex="0"{% endif %}
-       {%- if disabled %} :class="{ 'btn-disabled': {{ disabled }} }" :tabindex="({{ disabled }}) ? -1 : 0" :aria-disabled="({{ disabled }}).toString()"{% endif %}>
+       {%- if disabled %} :class="{ '{{ "btn-disabled btn-ghost" if quiet else "btn-disabled" }}': {{ disabled }} }" :tabindex="({{ disabled }}) ? -1 : 0" :aria-disabled="({{ disabled }}).toString()"{% endif %}>
     {%- set chevron = "chevron-up" if up else "chevron-down" %}
     {%- if compact %}
-    <span class="max-sm:sr-only">{{ _("Actions") }}</span>{{ icon("ellipsis", "size-4 sm:hidden") }}{{ icon(chevron, "size-3.5 opacity-60 max-sm:hidden") -}}
+    <span class="@max-2xl:sr-only">{{ _("Actions") }}</span>{{ icon("ellipsis", "size-4 @2xl:hidden") }}{{ icon(chevron, "size-3.5 opacity-60 @max-2xl:hidden") -}}
     {%- else %}
     {{- _("Actions") }} {{ icon(chevron, "size-3.5 opacity-60") -}}
     {%- endif %}

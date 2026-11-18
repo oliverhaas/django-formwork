@@ -23,65 +23,61 @@
   <div class="card border border-base-300 bg-base-100">
     {% if toolbar %}
     {#- The selected rows' actions and the unsaved changes, on a line above the column names. It sticks under
-        the top bar with them (columns.js), so both stay in reach on a long list. Both groups always show,
-        dimmed while they have nothing to work on, so nothing moves when they get something. #}
-    <div id="changelist-toolbar" class="sticky top-[var(--formwork-admin-top,0px)] z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 rounded-t-[calc(var(--radius-box)-1px)] border-b border-base-300 bg-base-100 px-3 py-1.5">
+        the top bar with them (columns.js), so both stay in reach on a long list. Every control keeps its
+        place: one with nothing to work on is dim and has no fill, and the two after the actions are invisible
+        until rows are selected. The labels follow the bar's own width, which the sidebar narrows: a narrower
+        bar drops the labels of Clear and the change count first, then shows icons and bare numbers. #}
+    <div id="changelist-toolbar" class="@container sticky top-[var(--formwork-admin-top,0px)] z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 rounded-t-[calc(var(--radius-box)-1px)] border-b border-base-300 bg-base-100 px-3 py-1.5 max-sm:gap-x-2">
       {% if actions %}
-      <form id="changelist-actions" method="post" class="flex items-center gap-x-3">
+      <form id="changelist-actions" method="post" class="flex items-center gap-x-3 @max-2xl:gap-x-1">
         {{ csrf_input }}
         <input type="hidden" name="select_across" :value="across ? '1' : '0'" value="0">
         {% set more = cl.result_count > cl.result_list|length %}
-        <div class="flex items-center gap-1">
-          <button type="button" class="btn btn-ghost btn-sm btn-square" @click="clear()" :disabled="!count" disabled
-                  aria-label="{{ _("Clear selection") }}" title="{{ _("Clear selection") }}">{{ icon("x") }}</button>
-          {#- Every state shares one grid cell, and the widest ones hold its width, so the buttons after it keep their
-              place. A phone has no width to spare: there the count is a number, as wide as its digits. #}
-          <div class="grid items-center text-sm font-medium tabular-nums text-base-content/45" :class="{ 'text-base-content/45': !count }">
-            <span class="invisible col-start-1 row-start-1 flex items-center max-sm:hidden">
-              {{ number(cl.result_list|length) }} {{ _("selected") }}
-              {% if more %}<span class="btn btn-link btn-sm px-1">{{ _("Select all %(count)s", count=number(cl.result_count)) }}</span>{% endif %}
-            </span>
-            <span class="invisible col-start-1 row-start-1 max-sm:hidden">{{ _("All %(count)s selected", count=number(cl.result_count)) }}</span>
-            <span class="col-start-1 row-start-1 flex items-center" x-show="!across">
-              <span{% if more %} :class="{ 'max-sm:hidden': allChecked }"{% endif %}><span x-text="count">0</span> <span class="max-sm:sr-only">{{ _("selected") }}</span></span>
-              {% if more %}
-              {#- On a phone the offer takes the place of the count: the number is the link. #}
-              <button type="button" class="btn btn-link btn-sm px-1 max-sm:px-0" x-show="allChecked" x-cloak @click="across = true"
-                      aria-label="{{ _("Select all %(count)s", count=number(cl.result_count)) }}" title="{{ _("Select all %(count)s", count=number(cl.result_count)) }}">
-                <span class="max-sm:hidden">{{ _("Select all %(count)s", count=number(cl.result_count)) }}</span>
-                <span class="sm:hidden" x-text="count"></span>
-              </button>
-              {% endif %}
-            </span>
-            <span class="col-start-1 row-start-1" x-show="across" x-cloak>
-              <span class="max-sm:sr-only">{{ _("All %(count)s selected", count=number(cl.result_count)) }}</span>
-              <span class="sm:hidden" aria-hidden="true">{{ number(cl.result_count) }}</span>
-            </span>
-          </div>
+        {% set select_all = _("Select all %(count)s", count=number(cl.result_count)) %}
+        {#- Every state shares one grid cell, and the widest one holds its width, so the buttons after it keep
+            their place. A narrow bar has no width to spare: there the count is a number, as wide as its digits. #}
+        <div class="grid items-center text-sm font-medium tabular-nums text-base-content/45" :class="{ 'text-base-content/45': !count }">
+          <span class="invisible col-start-1 row-start-1 @max-2xl:hidden">{{ number(cl.result_count) }} <span>{{ _("selected") }}</span></span>
+          <span class="col-start-1 row-start-1 flex items-center" x-show="!across">
+            <span{% if more %} :class="{ '@max-2xl:hidden': allChecked }"{% endif %}><span x-text="count">0</span> <span class="@max-2xl:sr-only">{{ _("selected") }}</span></span>
+            {% if more %}
+            {#- On a narrow bar the offer takes the place of the count: the number is the link. #}
+            <button type="button" class="btn btn-link btn-sm px-0 @2xl:hidden" x-show="allChecked" x-cloak @click="across = true"
+                    aria-label="{{ select_all }}" title="{{ select_all }}" x-text="count"></button>
+            {% endif %}
+          </span>
+          <span class="col-start-1 row-start-1" x-show="across" x-cloak>{{ number(cl.result_count) }} <span class="@max-2xl:sr-only">{{ _("selected") }}</span></span>
         </div>
         {#- An action reloads the list, which would drop the unsaved changes; like the change form's, they wait. #}
-        <div class="flex items-center gap-2" :class="{ 'tooltip tooltip-bottom': count && changes }" data-tip="{{ _("Save your changes first") }}">
-          {{ m.action_controls(actions, "changelist-actions", "action", size="btn-sm", start=True, compact=True, disabled="!count || changes > 0", initially_disabled=True) }}
+        <div class="flex items-center gap-2 @max-2xl:gap-1" :class="{ 'tooltip tooltip-bottom': count && changes }" data-tip="{{ _("Save your changes first") }}">
+          {{ m.action_controls(actions, "changelist-actions", "action", size="btn-sm", start=True, compact=True, disabled="!count || changes > 0", initially_disabled=True, quiet=True) }}
+        </div>
+        <div class="flex items-center gap-1">
+          <button type="button" class="invisible btn btn-ghost btn-sm gap-1.5 @max-4xl:btn-square" :class="{ invisible: !count }" @click="clear()"
+                  aria-label="{{ _("Clear selection") }}" title="{{ _("Clear selection") }}">{{ icon("x") }}<span class="@max-4xl:sr-only">{{ _("Clear") }}</span></button>
+          {% if more %}
+          <button type="button" class="invisible btn btn-link btn-sm px-2 no-underline hover:underline @max-2xl:hidden" :class="{ invisible: !allChecked || across }" @click="across = true">{{ select_all }}</button>
+          {% endif %}
         </div>
       </form>
       {% endif %}
       {% if saving %}
-      {#- Counts the cells that differ from their saved value, in the color that marks them. On a phone the
-          count stands alone and Discard is an icon, so both groups share the line. #}
-      <div class="ms-auto flex items-center gap-x-3" data-save-bar>
-        <span class="flex items-center gap-2 text-sm font-medium text-base-content/45" :class="{ 'text-base-content/45': !changes }">
-          <span class="max-sm:sr-only">{{ _("Unsaved changes") }}</span>
+      {#- Counts the cells that differ from their saved value, in the color that marks them. On a narrower bar
+          the count stands alone, with its label as the tooltip, and on a narrow one Discard is an icon. #}
+      <div class="ms-auto flex items-center gap-x-3 @max-2xl:gap-x-1" data-save-bar>
+        <span class="flex items-center gap-2 text-sm font-medium text-base-content/45" :class="{ 'text-base-content/45': !changes }" title="{{ _("Unsaved changes") }}">
+          <span class="@max-4xl:sr-only">{{ _("Unsaved changes") }}</span>
           <span class="badge badge-sm min-w-6 tabular-nums text-base-content/60" :class="{ 'badge-accent': changes, 'text-base-content/60': !changes }"
                 x-text="changes" data-change-count>0</span>
         </span>
         <span class="flex items-center gap-1">
           {#- The saved values come back through the same morph as a filter, which resets every cell. #}
-          <button type="button" class="btn btn-ghost btn-sm max-sm:btn-square" @click="$el.focus()" :disabled="!changes" disabled data-discard
+          <button type="button" class="btn btn-ghost btn-sm @max-2xl:btn-square" @click="$el.focus()" :disabled="!changes" disabled data-discard
                   hx-get="{{ request.get_full_path() }}" hx-target="#content" hx-swap="innerMorph">
-            {{- icon("undo-2", "size-4 sm:hidden") }}<span class="max-sm:sr-only">{{ _("Discard") }}</span>
+            {{- icon("undo-2", "size-4 @2xl:hidden") }}<span class="@max-2xl:sr-only">{{ _("Discard") }}</span>
           </button>
-          <button type="submit" form="changelist-form" name="_save" value="1" class="btn btn-primary btn-sm" :disabled="!changes" disabled data-save>
-            {{- icon("check") }}<span class="sm:hidden">{{ _("Save") }}</span><span class="max-sm:hidden">{{ _("Save changes") }}</span>
+          <button type="submit" form="changelist-form" name="_save" value="1" class="btn btn-ghost btn-sm" :class="{ 'btn-ghost': !changes, 'btn-primary': changes > 0 }" :disabled="!changes" disabled data-save>
+            {{- icon("check") }}<span class="@4xl:hidden">{{ _("Save") }}</span><span class="@max-4xl:hidden">{{ _("Save changes") }}</span>
           </button>
         </span>
       </div>
