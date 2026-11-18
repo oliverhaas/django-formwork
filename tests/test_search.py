@@ -28,7 +28,7 @@ from django_formwork import views
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.search import SEARCH_PAGE_SIZE, search_url
 from django_formwork.widgets import ComboBox, Select, SelectMultiple
-from django_formwork.widgets.select import ChoiceLabel
+from django_formwork.widgets.select import ChoiceLabel, shared_pages
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -587,6 +587,40 @@ def test_a_selected_row_past_the_widgets_page_is_listed_once() -> None:
 
     shown = [str(row["data-value"]) for row in rendered.select("li[role=option] button[data-value]")]
     assert [*shown, *_rows(response, "button[data-value]")].count(str(oldest.pk)) == 1
+
+
+@pytest.mark.django_db
+def test_a_list_longer_than_a_page_labels_only_its_selected_row() -> None:
+    """The browser loads the page's rows, and the closed select still shows the selected one."""
+    newest = _make_users(SEARCH_PAGE_SIZE + 5)[-1]
+    form = _NewestFirstUserForm(initial={"user": newest.pk})
+    labelled = []
+    form.fields["user"].label_from_instance = lambda obj: labelled.append(obj.pk) or f"Label of {obj.username}"
+
+    rendered = BeautifulSoup(str(form["user"]), "html.parser")
+
+    assert labelled == [newest.pk]
+    assert f"Label of {newest.username}" in rendered.select_one("summary").get_text()
+    assert rendered.select_one("li[hx-trigger=revealed]")
+
+
+@pytest.mark.django_db
+def test_selects_that_share_their_pages_load_each_queryset_once(django_assert_num_queries: Any) -> None:
+    first, second = _make_users(2)
+    users = User.objects.order_by("pk")
+    one, other = users.filter(pk=first.pk), users.filter(pk=second.pk)
+    querysets = [users, users.none(), one, other, users.exclude(pk=first.pk), users.all()]
+    fields = []
+    for queryset in querysets:
+        form = _NewestFirstUserForm()
+        form.fields["user"].queryset = queryset
+        fields.append(form["user"])
+
+    with shared_pages(), django_assert_num_queries(4):
+        rendered = [BeautifulSoup(str(field), "html.parser") for field in fields]
+
+    rows = [[int(row["data-value"]) for row in soup.select("li[role=option] [data-value]")] for soup in rendered]
+    assert rows == [[first.pk, second.pk], [], [first.pk], [second.pk], [second.pk], [first.pk, second.pk]]
 
 
 @pytest.mark.django_db

@@ -18,8 +18,9 @@ from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.admin import GenericTabularInline as DjangoGenericTabularInline
 from django.core import checks
 from django.core.paginator import Paginator
-from django.db import models
+from django.db import connection, models
 from django.http import HttpResponse
+from django.test.utils import CaptureQueriesContext
 from django.urls import path, reverse
 from django.utils import timezone, translation
 from django.utils.html import format_html
@@ -2155,6 +2156,21 @@ def test_relation_options_load_the_relations_their_description_reads(
     with django_assert_num_queries(1):
         descriptions = [label.description for value, label in field.choices if value]
     assert descriptions == ["Kitchen · Archived", "Office · Draft"]
+
+
+def test_editable_relation_of_a_list_loads_its_options_for_all_rows_at_once(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable", ["category"])
+
+    def load():
+        with CaptureQueriesContext(connection) as queries:
+            soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+        return len(queries), len(soup.select("#changelist-table [name$=-category]"))
+
+    queries, selects = load()
+    Item.objects.create(name="Gamma mug", category=catalog.kitchen)
+
+    assert selects == 2
+    assert load() == (queries, 3)
 
 
 def test_relation_search_keeps_the_model_ordering_under_an_annotated_admin(admin_client):

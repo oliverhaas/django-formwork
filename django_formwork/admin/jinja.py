@@ -25,6 +25,7 @@ from django.utils.timesince import timesince
 from django.utils.translation import gettext, ngettext, npgettext, pgettext
 
 from django_formwork.admin.helpers import deleted_groups
+from django_formwork.widgets.select import shared_pages
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -82,6 +83,12 @@ class AdminTemplateResponse(TemplateResponse):
         if isinstance(template, list | tuple):
             return select_template(template)
         return template
+
+    @property
+    def rendered_content(self) -> str:
+        # A list of editable rows or the rows of an inline have the same relation many times.
+        with shared_pages():
+            return super().rendered_content
 
 
 def url(viewname: str, *args: object, **kwargs: object) -> str:

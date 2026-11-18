@@ -213,6 +213,10 @@
   wrap over three lines and widened it. The `shown` count is gone from the context of
   `formwork/widgets/partials/more_results_hint.html`; if you override that template,
   copy it again.
+- A form with a `Select` or `SelectMultiple` that searches on the server renders faster
+  when the list is longer than one page. The widget labels only its selected rows,
+  because the browser loads the first page when the list opens. A
+  `label_from_instance()` that counts its calls sees fewer of them.
 
 ### Fixed
 

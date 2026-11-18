@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal
 from urllib.parse import urlencode
 
 from django import forms
-from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.exceptions import EmptyResultSet, ImproperlyConfigured, ValidationError
 from django.db.models import fields as model_fields
 from django.forms.models import ModelChoiceIterator
 from django.utils.choices import flatten_choices
@@ -19,7 +21,7 @@ from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search
 from ._base import _ModuleScript
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 
     from django.db.models import QuerySet
     from django.http import HttpRequest
@@ -31,7 +33,55 @@ if TYPE_CHECKING:
 else:
     _SelectBase = object
 
-__all__ = ["BadgeColor", "ChoiceLabel", "SearchableSelectMixin", "Select", "label_extras"]
+__all__ = ["BadgeColor", "ChoiceLabel", "SearchableSelectMixin", "Select", "label_extras", "shared_pages"]
+
+# The first pages that the selects of one render have loaded, by their query.
+_pages: ContextVar[dict[tuple[str, str, str], list[Any]] | None] = ContextVar("formwork_select_pages", default=None)
+
+
+@contextmanager
+def shared_pages() -> Generator[None]:
+    """Selects that render inside load the first page of the same queryset with one query."""
+    token = _pages.set({})
+    try:
+        yield
+    finally:
+        _pages.reset(token)
+
+
+def _first_page(queryset: QuerySet[Any], size: int) -> list[Any]:
+    rows = queryset[:size]
+    pages = _pages.get()
+    if pages is None:
+        return list(rows)
+    try:
+        sql, params = rows.query.sql_with_params()
+    except EmptyResultSet:
+        return []
+    key = (queryset.db, sql, repr(params))
+    if key not in pages:
+        pages[key] = list(rows)
+    return pages[key]
+
+
+def _rows_of(queryset: QuerySet[Any], key: str, values: Iterable[str]) -> list[Any]:
+    """The rows that have one of ``values`` in ``key``. A value the column cannot hold does not drop the others."""
+    wanted = []
+    for value in values:
+        # filter() converts the value without a query, as ModelMultipleChoiceField checks.
+        try:
+            queryset.filter(**{key: value})
+        except ValueError, TypeError, ValidationError:
+            continue
+        wanted.append(value)
+    return list(queryset.filter(**{f"{key}__in": wanted}))
+
+
+def _defer_page(options: list[dict[str, Any]], pending: dict[str, Any]) -> list[dict[str, Any]]:
+    """``options`` with the row that loads the first page in place of the page's rows, after the blank rows."""
+    blank = [option for option in options if option.get("blank_row")]
+    rest = [option for option in options if not option.get("blank_row") and not option.get("page_row")]
+    return [*blank, pending, *rest]
 
 
 class _UnsetDecorator:
@@ -216,13 +266,12 @@ class SearchableSelectMixin(_SelectBase):
                         clear = self.clear_row(option, widget["attrs"])
                         options.append(clear)
                     continue
-                # The rows of the first page give way to one row that loads them.
-                row = pending if pending is not None and option.get("page_row") else option
-                if not options or options[-1] is not row:
-                    options.append(row)
+                options.append(option)
                 total += 1
                 if option["selected"]:
                     selected.append({**option, "label": str(option["label"])})
+        if pending is not None:
+            options = _defer_page(options, pending)
         widget["options"] = options
         widget["badges"] = self.badges
         widget["selected_options"] = selected
@@ -298,21 +347,16 @@ class SearchableSelectMixin(_SelectBase):
                 blank.append((field.null_value, field.null_label))
             key = choices.field.to_field_name or "pk"
             # One extra row tells whether more exist, so no COUNT runs.
-            page = list(choices.queryset[: limit + 1])
-            shown = {str(getattr(obj, key)) for obj in page[:limit]}
-            # One value the key column cannot hold must not drop the others.
-            # filter() converts it without a query, as ModelMultipleChoiceField checks.
-            wanted = []
-            for subvalue in chosen - shown:
-                try:
-                    choices.queryset.filter(**{key: subvalue})
-                except ValueError, TypeError, ValidationError:
-                    continue
-                wanted.append(subvalue)
-            rest = list(choices.queryset.filter(**{f"{key}__in": wanted}))
+            page = _first_page(choices.queryset, limit + 1)
+            first = page[:limit]
+            shown = {str(getattr(obj, key)) for obj in first}
+            rest = _rows_of(choices.queryset, key, chosen - shown)
             self.selected_past_page = [str(getattr(obj, key)) for obj in rest]
-            pairs = [*blank, *(choices.choice(obj) for obj in [*page[:limit], *rest])]
-            rows = len(page[:limit])
+            if len(page) > limit:
+                # The browser loads the page of a longer list, so only its selected rows need a label.
+                first = [obj for obj in first if str(getattr(obj, key)) in chosen]
+            pairs = [*blank, *(choices.choice(obj) for obj in [*first, *rest])]
+            rows = len(first)
         else:
             flat: Iterator[tuple[Any, Any]] = flatten_choices(choices)
             every: list[tuple[Any, Any]] = []
@@ -329,6 +373,8 @@ class SearchableSelectMixin(_SelectBase):
             self.create_option(name, choice, label, str(choice) in chosen, index, attrs=attrs)
             for index, (choice, label) in enumerate(pairs)
         ]
+        for option in options[: len(blank)]:
+            option["blank_row"] = True
         # The endpoint's first page, which get_context() can leave to the browser.
         for option in options[len(blank) : len(blank) + rows]:
             option["page_row"] = True
