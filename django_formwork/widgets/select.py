@@ -35,13 +35,13 @@ else:
 
 __all__ = ["BadgeColor", "ChoiceLabel", "SearchableSelectMixin", "Select", "label_extras", "shared_pages"]
 
-# The first pages that the selects of one render have loaded, by their query.
+# The rows that the selects of one render have loaded, by their query.
 _pages: ContextVar[dict[tuple[str, str, str], list[Any]] | None] = ContextVar("formwork_select_pages", default=None)
 
 
 @contextmanager
 def shared_pages() -> Generator[None]:
-    """Selects that render inside load the first page of the same queryset with one query."""
+    """Selects that render inside load the same rows, a first page or a selected row, with one query."""
     token = _pages.set({})
     try:
         yield
@@ -49,18 +49,18 @@ def shared_pages() -> Generator[None]:
         _pages.reset(token)
 
 
-def _first_page(queryset: QuerySet[Any], size: int) -> list[Any]:
-    rows = queryset[:size]
+def _load(queryset: QuerySet[Any]) -> list[Any]:
+    """The rows of ``queryset``, which ``shared_pages()`` keeps for the next select that asks for them."""
     pages = _pages.get()
     if pages is None:
-        return list(rows)
+        return list(queryset)
     try:
-        sql, params = rows.query.sql_with_params()
+        sql, params = queryset.query.sql_with_params()
     except EmptyResultSet:
         return []
     key = (queryset.db, sql, repr(params))
     if key not in pages:
-        pages[key] = list(rows)
+        pages[key] = list(queryset)
     return pages[key]
 
 
@@ -74,7 +74,8 @@ def _rows_of(queryset: QuerySet[Any], key: str, values: Iterable[str]) -> list[A
         except ValueError, TypeError, ValidationError:
             continue
         wanted.append(value)
-    return list(queryset.filter(**{f"{key}__in": wanted}))
+    # Sorted, so two selects with the same values ask for the same rows.
+    return _load(queryset.filter(**{f"{key}__in": sorted(wanted)})) if wanted else []
 
 
 def _defer_page(options: list[dict[str, Any]], pending: dict[str, Any]) -> list[dict[str, Any]]:
@@ -347,7 +348,7 @@ class SearchableSelectMixin(_SelectBase):
                 blank.append((field.null_value, field.null_label))
             key = choices.field.to_field_name or "pk"
             # One extra row tells whether more exist, so no COUNT runs.
-            page = _first_page(choices.queryset, limit + 1)
+            page = _load(choices.queryset[: limit + 1])
             first = page[:limit]
             shown = {str(getattr(obj, key)) for obj in first}
             rest = _rows_of(choices.queryset, key, chosen - shown)

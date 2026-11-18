@@ -624,6 +624,19 @@ def test_selects_that_share_their_pages_load_each_queryset_once(django_assert_nu
 
 
 @pytest.mark.django_db
+def test_selects_that_share_their_pages_load_a_selected_row_once(django_assert_num_queries: Any) -> None:
+    """Three selects of a long list: one query for the page and one for each selected row past it."""
+    oldest, older = _make_users(SEARCH_PAGE_SIZE + 5)[:2]
+    fields = [_NewestFirstUserForm(initial={"user": user.pk})["user"] for user in (oldest, older, oldest)]
+
+    with shared_pages(), django_assert_num_queries(3):
+        rendered = [BeautifulSoup(str(field), "html.parser") for field in fields]
+
+    picked = [soup.select_one("summary").get_text(strip=True) for soup in rendered]
+    assert picked == [oldest.username, older.username, oldest.username]
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("allow_clear", [True, False])
 def test_clear_row_follows_the_allow_clear_flag(allow_clear: bool) -> None:  # noqa: FBT001
     User.objects.create(username="ada", email="ada@example.com")
