@@ -604,6 +604,12 @@ in, and dims when the load takes more than a moment. A new sort or page does not
 it again. The slot URL needs the view permission, as the list does. The list in a
 dialog that picks a related row shows no slots.
 
+A list with a top slot has a button at the right of its title that hides the slot, so
+the list starts under the title. The same button shows the slot again. The session
+keeps the choice for each list, so the slot stays hidden on the next visit until the
+user logs out. A hidden slot does not run with the list page, with or without
+`lazy=True`. It loads from the slot URL when the user shows it.
+
 The change page has the same two slots: `change_top` between the title and the fields
 and `change_bottom` under the save bar. Each method gets the request and the object.
 

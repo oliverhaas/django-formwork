@@ -698,6 +698,24 @@ for (const [name, busy] of [["htmx:before:request", true], ["htmx:finally:reques
   });
 }
 
+// The button over a list hides its top slot and shows it again; its form tells the server, which keeps
+// the choice. A slot that was closed when the page came loads when it first shows.
+document.addEventListener("click", (event) => {
+  const button = event.target.closest?.("[data-slot-toggle] button");
+  const slot = button && document.getElementById(button.getAttribute("aria-controls"));
+  if (!slot) return;
+  const open = button.getAttribute("aria-expanded") !== "true";
+  button.setAttribute("aria-expanded", String(open));
+  button.title = open ? button.dataset.hide : button.dataset.show;
+  button.setAttribute("aria-label", button.title);
+  button.form.elements.closed.value = open ? "" : "1";
+  slot.hidden = !open;
+  if (open && slot.hasAttribute("data-slot-closed")) {
+    slot.removeAttribute("data-slot-closed");
+    slot.dispatchEvent(new CustomEvent("formwork-admin:open"));
+  }
+});
+
 // A page link (data-page-link) morphs the page into the next one, so the sidebar keeps its place.
 document.addEventListener("htmx:config:request", (event) => {
   const { ctx } = event.detail;

@@ -2011,6 +2011,62 @@ def test_list_slot_that_returns_nothing_is_left_out(admin_client, monkeypatch):
     assert soup.select_one("[data-slot]") is None
 
 
+@pytest.mark.parametrize(
+    ("posts", "shown"), [((), True), (("1",), False), (("1", ""), True)], ids=["untouched", "closed", "reopened"]
+)
+def test_list_top_is_hidden_while_the_user_has_it_closed(admin_client, catalog, monkeypatch, posts, shown):
+    monkeypatch.setattr(ItemAdmin, "list_top", names_slot())
+    for closed in posts:
+        assert admin_client.post(url(Item, "slot", "top"), {"closed": closed}).status_code == 204
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    slot = soup.find(id="changelist-top")
+    assert (slot.select_one("[data-names]") is not None) is shown
+    assert slot.has_attr("hidden") is not shown
+    assert soup.select_one("[data-slot-toggle] button")["aria-expanded"] == str(shown).lower()
+
+
+@pytest.mark.parametrize("options", [{}, {"lazy": True}], ids=["eager", "lazy"])
+def test_closed_list_top_does_not_run_and_loads_the_filtered_rows_when_it_shows(
+    admin_client, catalog, monkeypatch, options
+):
+    runs = []
+
+    def top(self, request, queryset):
+        runs.append(queryset.count())
+        return "<p data-top></p>"
+
+    monkeypatch.setattr(ItemAdmin, "list_top", admin.slot(**options)(top))
+    admin_client.post(url(Item, "slot", "top"), {"closed": "1"})
+
+    page = admin_client.get(url(Item, "changelist") + "?status__exact=draft")
+    slot = BeautifulSoup(page.content, "html.parser").find(id="changelist-top")
+
+    assert runs == []
+    assert slot["hx-trigger"] == "formwork-admin:open"
+    assert b"data-top" in admin_client.get(slot["hx-get"]).content
+    assert runs == [1]
+
+
+def test_closing_the_top_of_a_list_leaves_the_other_lists_open(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "list_top", names_slot())
+    monkeypatch.setattr(type(site.get_model_admin(Category)), "list_top", names_slot(), raising=False)
+
+    admin_client.post(url(Item, "slot", "top"), {"closed": "1"})
+    soup = BeautifulSoup(admin_client.get(url(Category, "changelist")).content, "html.parser")
+
+    assert soup.select_one("#changelist-top [data-names]") is not None
+
+
+def test_only_the_top_slot_of_a_list_closes(admin_client, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "list_bottom", names_slot())
+
+    assert admin_client.post(url(Item, "slot", "bottom"), {"closed": "1"}).status_code == 404
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+    assert soup.select_one("[data-slot-toggle]") is None
+
+
 def object_slot(**options):
     def named(self, request, obj):
         return format_html("<p data-name>{}</p>", obj.name) if obj.name != "Beta lamp" else ""

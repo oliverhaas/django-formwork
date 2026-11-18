@@ -165,10 +165,11 @@
 {#- A slot of a page, which a list_top, list_bottom, change_top or change_bottom method fills. A lazy slot shows
     its skeleton and loads from its own URL: the top one right away, the bottom one as it scrolls into view.
     A new filter or search changes a list slot's URL, and the slot loads again; until the new content is in,
-    the old one stays, dimmed. A lazy slot that loads nothing takes no room (admin.css). #}
+    the old one stays, dimmed. A lazy slot that loads nothing takes no room (admin.css). A closed slot is
+    hidden and loads when the user shows it (admin.js). #}
 {% macro slot(name, slot, page="changelist", class="") %}
 {% if "url" in slot %}
-<div id="{{ page }}-{{ name }}" data-slot="{{ name }}"{% if class %} class="{{ class }}"{% endif %} hx-get="{{ slot.url }}" hx-trigger="{{ "load" if name == "top" else "intersect once" }}"
+<div id="{{ page }}-{{ name }}" data-slot="{{ name }}"{% if slot.closed %} data-slot-closed hidden{% endif %}{% if class %} class="{{ class }}"{% endif %} hx-get="{{ slot.url }}" hx-trigger="{{ "formwork-admin:open" if slot.closed else "load" if name == "top" else "intersect once" }}"
      hx-target="this" hx-swap="innerMorph" hx-sync="this:replace" hx-morph-skip-children>
   <div data-slot-skeleton>{% if slot.skeleton is none %}<div class="skeleton h-32 rounded-box"></div>{% else %}{{ slot.skeleton }}{% endif %}</div>
 </div>

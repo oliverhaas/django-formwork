@@ -133,6 +133,8 @@
   show HTML of their own above and under a list, such as counts or a chart, and
   `change_top` and `change_bottom` do the same on a change page.
   `@admin.slot(lazy=True)` loads a slot after its page, with a skeleton until then.
+  A button next to a list's title hides its top slot and shows it again. The session
+  keeps the choice for each list, and a hidden slot does not run.
   With `choice_description` on a model's admin, the dropdown of every relation to that
   model shows those values under each row's name, such as a job title and a department
   under an employee.

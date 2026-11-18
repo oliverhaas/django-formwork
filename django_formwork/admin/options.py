@@ -1022,20 +1022,23 @@ class ModelAdmin(BaseModelAdmin):
         return getattr(self, f"{page}_{slot}", None) if slot in SLOTS else None
 
     def _slots(
-        self, request: HttpRequest, page: str, subject: Any, url: Callable[[str], str]
+        self, request: HttpRequest, page: str, subject: Any, url: Callable[[str], str], closed: Sequence[str] = ()
     ) -> dict[str, dict[str, Any]]:
-        """A page's filled slots by name: the HTML, or for a lazy slot its skeleton and its URL."""
+        """A page's filled slots by name: the HTML, or for a lazy slot its skeleton and its URL.
+
+        A slot in ``closed`` does not run. It loads from its URL, as a lazy slot does, when the user shows it.
+        """
         slots = {}
         for slot in SLOTS:
             method = self._slot_method(slot, page)
             if method is None:
                 continue
-            if getattr(method, "slot_lazy", False):
+            if slot in closed or getattr(method, "slot_lazy", False):
                 skeleton = getattr(method, "slot_skeleton", None)
                 if skeleton is not None:
                     context = {"model_admin": self, "opts": self.opts}
                     skeleton = mark_safe(render_to_string(skeleton, context, request))  # noqa: S308
-                slots[slot] = {"skeleton": skeleton, "url": url(slot)}
+                slots[slot] = {"skeleton": skeleton, "url": url(slot), "closed": slot in closed}
             elif html := method(request, subject):
                 slots[slot] = {"html": mark_safe(html)}  # noqa: S308
         return slots
@@ -1049,7 +1052,11 @@ class ModelAdmin(BaseModelAdmin):
             url = reverse(self.url_name("slot"), args=(slot,), current_app=self.admin_site.name)
             return f"{url}?{cl.slot_query}" if cl.slot_query else url
 
-        return self._slots(request, "list", cl.queryset.order_by(), url)
+        closed = ("top",) if request.session.get(self._list_top_closed_key()) else ()
+        return self._slots(request, "list", cl.queryset.order_by(), url, closed)
+
+    def _list_top_closed_key(self) -> str:
+        return f"formwork_admin:closed:{self.opts.label_lower}:list_top"
 
     def get_change_slots(self, request: HttpRequest, obj: models.Model) -> dict[str, dict[str, Any]]:
         """The change page's filled slots by name. A slot that returns nothing has no entry."""
@@ -1060,12 +1067,23 @@ class ModelAdmin(BaseModelAdmin):
         return self._slots(request, "change", obj, url)
 
     def slot_view(self, request: HttpRequest, slot: str) -> HttpResponse:
-        """The HTML of a lazy slot, for the rows that the list's filters in ``request.GET`` leave."""
+        """The HTML of a lazy slot, for the rows that the list's filters in ``request.GET`` leave.
+
+        A POST hides the top slot of this list, or shows it again, for the rest of the user's session.
+        """
         if not self.has_view_or_change_permission(request):
             raise PermissionDenied
         method = self._slot_method(slot)
         if method is None:
             raise Http404
+        if request.method == "POST":
+            if slot != "top":
+                raise Http404
+            if request.POST.get("closed"):
+                request.session[self._list_top_closed_key()] = True
+            else:
+                request.session.pop(self._list_top_closed_key(), None)
+            return HttpResponse(status=204)
         try:
             queryset = self.get_changelist_instance(request).queryset.order_by()
         except IncorrectLookupParameters:

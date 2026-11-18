@@ -700,6 +700,33 @@ def test_a_lazy_slot_at_the_bottom_loads_as_it_scrolls_into_view(admin_page, liv
     assert admin_page.errors == []
 
 
+def test_the_top_slot_stays_closed_over_a_reload_and_loads_the_searched_rows_when_it_opens(
+    admin_page, live_server, kitchen, monkeypatch
+):
+    monkeypatch.setattr(ItemAdmin, "list_top", rows_slot())
+    for name in ("Kettle", "Toaster", "Kettle lid"):
+        Item.objects.create(name=name, category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    top = admin_page.locator("#changelist-top")
+    toggle = admin_page.locator("[data-slot-toggle] button")
+    expect(top.locator("[data-rows]")).to_have_text("3 rows")
+
+    with admin_page.expect_response(re.compile(r"/slots/top/")):
+        toggle.click()
+    expect(top).to_be_hidden()
+    admin_page.reload()
+    expect(toggle).to_have_attribute("aria-expanded", "false")
+    expect(top).to_be_hidden()
+    admin_page.locator("[data-search] input:not([type=hidden])").fill("kettle")
+    expect(admin_page.locator("#changelist tbody tr")).to_have_count(2)
+    expect(top).to_be_hidden()
+    toggle.click()
+
+    expect(top.locator("[data-rows]")).to_have_text("2 rows")
+    expect(toggle).to_have_attribute("aria-expanded", "true")
+    assert admin_page.errors == []
+
+
 def test_a_lazy_slot_loads_again_for_a_search_and_keeps_its_content_meanwhile(
     admin_page, live_server, kitchen, monkeypatch
 ):
