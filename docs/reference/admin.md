@@ -535,7 +535,7 @@ share one line, so a row stays one field high.
 
 A cell whose value differs from the saved one gets the accent color, and the toolbar above
 the table counts the changed cells. Save changes saves the rows, and Discard loads the saved values
-again. Both stay disabled while no cell has a change. After a failed save, every changed
+again. Neither loads the page again: the list keeps its scroll position. Both stay disabled while no cell has a change. After a failed save, every changed
 cell stays marked and counted, so Save changes stays enabled.
 
 A failed save counts the errors above the rows. A cell's error shows in a tooltip under
@@ -601,7 +601,7 @@ query in a slot then does not hold up the list.
 `model_admin` and `opts`. Without a skeleton, a gray block shows. Give the skeleton the
 height of the loaded HTML, so the list does not move when the HTML comes in.
 
-A new filter or search loads a lazy slot again. Its HTML stays until the new HTML is
+A new filter or search loads a lazy slot again, and so does a save of the list's rows. Its HTML stays until the new HTML is
 in, and dims when the load takes more than a moment. A new sort or page does not load
 it again. The slot URL needs the view permission, as the list does. The list in a
 dialog that picks a related row shows no slots.

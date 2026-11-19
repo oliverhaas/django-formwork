@@ -85,8 +85,10 @@
     </div>
     {% endif %}
     {% if editable %}
-    {#- formwork marks each cell whose value differs from the saved one, and the save bar counts them. #}
-    <form id="changelist-form" method="post"{% if formset.is_multipart() %} enctype="multipart/form-data"{% endif %} novalidate data-formwork-dirty>
+    {#- formwork marks each cell whose value differs from the saved one, and the save bar counts them. The
+        save morphs the page like a filter, so the slots keep what they show while they load again. #}
+    <form id="changelist-form" method="post"{% if formset.is_multipart() %} enctype="multipart/form-data"{% endif %} novalidate data-formwork-dirty
+          hx-post="{{ request.get_full_path() }}" hx-target="#content" hx-swap="innerMorph" hx-sync="this:drop">
       {{ csrf_input }}
       {{ formset.management_form }}
       {#- The cells keep their errors in tooltips, so the list says first how many there are. #}

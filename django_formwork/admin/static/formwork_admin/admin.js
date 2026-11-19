@@ -270,8 +270,14 @@ document.addEventListener("alpine:init", () => {
 
     init() {
       // After a failed save, the first cell with an error takes the focus, so its message shows.
-      const invalid = this.$root.querySelector("#changelist-form td[data-invalid]");
-      if (invalid) focusable(invalid)?.focus();
+      const focusError = () => {
+        const invalid = this.$root.querySelector("#changelist-form td[data-invalid]");
+        if (invalid) focusable(invalid)?.focus();
+      };
+      focusError();
+      this.$root.addEventListener("htmx:after:swap", (event) => {
+        if (event.target.id === "changelist-form") focusError();
+      });
       // formwork may have counted before Alpine started.
       this.changes = this.$root.querySelectorAll("#changelist-form .formwork-dirty").length;
       this.$root.addEventListener("formwork:dirty", (event) => {
@@ -280,18 +286,14 @@ document.addEventListener("alpine:init", () => {
 
       // Other results replace the changed cells, and so does another page: both ask first.
       // The save and the Discard button replace them on purpose.
-      let saving = false;
-      this.$root.addEventListener("submit", (event) => {
-        if (event.target.id === "changelist-form") saving = true;
-      });
       this.leave = (event) => {
-        if (this.changes && !saving && !leaving) event.preventDefault();
+        if (this.changes && !leaving) event.preventDefault();
       };
       this.guard = (event) => {
         const { ctx } = event.detail;
         const form = this.$root.querySelector("#changelist-form");
         if (!this.changes || !form || !(ctx.target instanceof Element) || !ctx.target.contains(form)) return;
-        if (ctx.sourceElement?.closest?.("[data-discard]")) return;
+        if (ctx.sourceElement?.id === "changelist-form" || ctx.sourceElement?.closest?.("[data-discard]")) return;
         if (!window.confirm(this.$root.dataset.discardQuestion)) event.preventDefault();
       };
       window.addEventListener("beforeunload", this.leave);
@@ -697,6 +699,18 @@ for (const [name, busy] of [["htmx:before:request", true], ["htmx:finally:reques
     else event.target.removeAttribute("aria-busy");
   });
 }
+
+// A list save that worked comes back through a redirect. The slots that show content load it again for the
+// saved values and keep it meanwhile; one that still waits for its first load needs nothing.
+document.addEventListener("htmx:after:swap", (event) => {
+  const { ctx } = event.detail;
+  if (ctx.sourceElement?.id !== "changelist-form" || !ctx.response?.raw?.redirected) return;
+  for (const slot of document.querySelectorAll("#content [data-slot][hx-get]")) {
+    if (!slot.hidden && !slot.querySelector(":scope > [data-slot-skeleton]")) {
+      slot.dispatchEvent(new CustomEvent("formwork-admin:reload"));
+    }
+  }
+});
 
 // The button over a list hides its top slot and shows it again; its form tells the server, which keeps
 // the choice. A slot that was closed when the page came loads when it first shows.

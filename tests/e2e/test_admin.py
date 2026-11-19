@@ -789,6 +789,35 @@ def test_a_lazy_slot_loads_again_for_a_search_and_keeps_its_content_meanwhile(
     assert admin_page.errors == []
 
 
+def test_a_list_save_keeps_the_top_slot_while_it_loads_the_saved_figures(admin_page, live_server, kitchen, monkeypatch):
+    def stock(self, request, queryset):
+        return format_html("<p data-stock>{} in stock</p>", sum(queryset.values_list("quantity", flat=True)))
+
+    monkeypatch.setattr(ItemAdmin, "list_top", slot(lazy=True)(stock))
+    Item.objects.create(name="Kettle", category=kitchen, quantity=3)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    top = admin_page.locator("#changelist-top")
+    expect(top.locator("[data-stock]")).to_have_text("3 in stock")
+    held = []
+
+    def hold(route):
+        held.append(route)
+
+    admin_page.route(re.compile(r"/slots/top/"), hold)
+
+    admin_page.locator("#changelist-table [data-editable] input").fill("4")
+    with admin_page.expect_request(re.compile(r"/slots/top/")):
+        admin_page.get_by_role("button", name="Save changes").click()
+
+    expect(admin_page.get_by_role("status").filter(has_text="was changed successfully")).to_be_visible()
+    expect(top.locator("[data-slot-skeleton]")).not_to_be_attached()
+    expect(top.locator("[data-stock]")).to_have_text("3 in stock")
+    expect(admin_page.locator("[data-change-count]")).to_have_text("0")
+    held[0].continue_()
+    expect(top.locator("[data-stock]")).to_have_text("4 in stock")
+    assert admin_page.errors == []
+
+
 def test_a_long_list_on_a_phone_keeps_the_selection_and_the_save_in_view(admin_page, live_server, kitchen):
     """A phone scrolls the page past the rows, and the toolbar above them stays under the top bar."""
     Item.objects.bulk_create(Item(name=f"Kettle {i}", category=kitchen, quantity=3) for i in range(40))

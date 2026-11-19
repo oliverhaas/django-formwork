@@ -169,7 +169,7 @@
     hidden and loads when the user shows it (admin.js). #}
 {% macro slot(name, slot, page="changelist", class="") %}
 {% if "url" in slot %}
-<div id="{{ page }}-{{ name }}" data-slot="{{ name }}"{% if slot.closed %} data-slot-closed hidden{% endif %}{% if class %} class="{{ class }}"{% endif %} hx-get="{{ slot.url }}" hx-trigger="{{ "formwork-admin:open" if slot.closed else "load" if name == "top" else "intersect once" }}"
+<div id="{{ page }}-{{ name }}" data-slot="{{ name }}"{% if slot.closed %} data-slot-closed hidden{% endif %}{% if class %} class="{{ class }}"{% endif %} hx-get="{{ slot.url }}" hx-trigger="{{ "formwork-admin:open" if slot.closed else ("load" if name == "top" else "intersect once") ~ ", formwork-admin:reload" }}"
      hx-target="this" hx-swap="innerMorph" hx-sync="this:replace" hx-morph-skip-children>
   <div data-slot-skeleton>{% if slot.skeleton is none %}<div class="skeleton h-32 rounded-box"></div>{% else %}{{ slot.skeleton }}{% endif %}</div>
 </div>
