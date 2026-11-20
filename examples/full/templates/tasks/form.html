@@ -64,7 +64,7 @@
       </button>
       <a href="{% if task %}{{ task.get_absolute_url }}{% else %}{% url 'board' %}{% endif %}" class="btn btn-ghost">Cancel</a>
       {% if task %}
-        <a href="{% url 'task_delete' task.pk %}" class="btn btn-ghost ms-auto gap-2 text-error hover:bg-error/10">
+        <a href="{% url 'task_delete' task.pk %}" class="btn btn-ghost btn-error ms-auto gap-2">
           <i class="icon icon-trash size-4"></i><span class="max-sm:sr-only">Delete task</span>
         </a>
       {% endif %}

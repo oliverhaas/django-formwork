@@ -37,7 +37,7 @@
         <button type="button" class="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error" x-show="canRemove" @click="remove($el)" title="{% translate "Remove" %}" aria-label="{% translate "Remove" %}"><i class="icon icon-x size-4" aria-hidden="true"></i></button>
         {% elif row.deletion_field %}
         {% with df=row.deletion_field %}
-        <label class="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error has-checked:bg-error/10 has-checked:text-error" title="{% translate "Delete" %}" data-formwork-field{% if df.value %} data-formwork-changed data-formwork-initial="[]"{% endif %}>
+        <label class="btn btn-ghost btn-error btn-sm btn-square has-checked:btn-active" title="{% translate "Delete" %}" data-formwork-field{% if df.value %} data-formwork-changed data-formwork-initial="[]"{% endif %}>
           <input type="checkbox" name="{{ df.html_name }}" id="{{ df.auto_id }}" class="sr-only"{% if df.value %} checked{% endif %} aria-label="{% translate "Delete" %}">
           <i class="icon icon-trash size-4" aria-hidden="true"></i>
         </label>

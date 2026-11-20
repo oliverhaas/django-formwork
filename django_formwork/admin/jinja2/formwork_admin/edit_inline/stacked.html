@@ -17,7 +17,7 @@
     {% if admin_form.original is not none %}
     {% if can_delete and admin_form.deletion_field is not none %}
     {% set df = admin_form.deletion_field %}
-    <label class="btn btn-ghost btn-xs text-base-content/60 hover:text-error has-checked:bg-error/10 has-checked:text-error" data-formwork-field{% if df.value() %} data-formwork-changed data-formwork-initial="[]"{% endif %}>
+    <label class="btn btn-ghost btn-error btn-xs has-checked:btn-active" data-formwork-field{% if df.value() %} data-formwork-changed data-formwork-initial="[]"{% endif %}>
       <input type="checkbox" name="{{ df.html_name }}" id="{{ df.auto_id }}" class="sr-only"{% if df.value() %} checked{% endif %}>
       {{ icon("trash", "size-3.5") }} {{ _("Delete") }}
     </label>
