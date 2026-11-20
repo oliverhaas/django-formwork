@@ -160,6 +160,10 @@
 
 ### Changed
 
+- Saving a model formset ran one query per row to find the row of its posted primary
+  key, and one per row and many-to-many field for the values the form starts from. A
+  Formwork formset now runs each of them once for all rows. See
+  [Formsets](formsets.md#loading-the-rows).
 - `DateRangeField` shows one control with a range calendar instead of two native date
   inputs. It posts the same `<name>_0` and `<name>_1` ISO dates, so views and tests that
   post the form need no change. Browser tests that fill the two inputs do. To keep the

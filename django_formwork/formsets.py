@@ -43,17 +43,18 @@ different day than stock and its duplicate missed.
 from __future__ import annotations
 
 from collections import defaultdict
-from contextlib import nullcontext
+from contextlib import nullcontext, suppress
 from typing import TYPE_CHECKING, Any, TypeGuard, cast
 
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db import DatabaseError, connection, connections, router, transaction
-from django.db.models import BooleanField, CheckConstraint, Q, UniqueConstraint, Value
+from django.db.models import BooleanField, CheckConstraint, Q, UniqueConstraint, Value, prefetch_related_objects
 from django.db.models.functions import Coalesce
 from django.db.models.sql import Query
 from django.forms.models import (
     BaseInlineFormSet,
     BaseModelFormSet,
+    ModelChoiceField,
     inlineformset_factory,
     modelformset_factory,
 )
@@ -63,6 +64,7 @@ from django_formwork.renderers import FormworkRenderer
 from django_formwork.tables import TableRenderMixin
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from datetime import date as date_type
 
     from django.db.models import Model
@@ -589,11 +591,106 @@ class _BatchedUniquenessMixin:
                 errors.setdefault(field, []).append(instance.date_error_message(lookup_type, field, unique_for))
 
 
-class FormworkBaseModelFormSet(TableRenderMixin, _BatchedUniquenessMixin, BaseModelFormSet):
-    """Model formset with batched uniqueness validation.
+def initial_many_to_many(form_class: type[Any]) -> list[str]:
+    """The many-to-many fields whose values a model form reads from its instance, as ``model_to_dict`` picks them."""
+    meta = form_class._meta  # noqa: SLF001
+    return [
+        field.name
+        for field in meta.model._meta.many_to_many  # noqa: SLF001
+        if field.editable
+        and (meta.fields is None or field.name in meta.fields)
+        and not (meta.exclude and field.name in meta.exclude)
+    ]
 
-    Behaves exactly like Django's ``BaseModelFormSet`` but issues one
-    uniqueness query per distinct check instead of one per form.  Use
+
+class _RowField(ModelChoiceField):
+    """The hidden primary key of a formset's row, found among the rows the formset loads for all its forms."""
+
+    def __init__(
+        self,
+        queryset: Any,  # noqa: ANN401
+        *,
+        rows: Callable[[Any], dict[Any, Model]],
+        key: Callable[[Any], Any],
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(queryset, **kwargs)
+        self.rows = rows
+        self.key = key
+
+    def to_python(self, value: Any) -> Any:  # noqa: ANN401
+        queryset: Any = self.queryset
+        if value not in self.empty_values and not isinstance(value, queryset.model):
+            # A key the forms did not post as the formset reads them gets Django's own lookup.
+            with suppress(KeyError, TypeError, ValidationError):
+                return self.rows(queryset)[self.key(value)]
+        return super().to_python(value)
+
+
+class _LoadedAtOnceMixin:
+    """Load what the forms of a model formset read from the database for all forms at once.
+
+    The many-to-many values the forms start from take one query per field, and the rows of the posted
+    primary keys one query, where Django runs both once per form.
+    """
+
+    if TYPE_CHECKING:
+        _pk_field: Any
+        data: Any
+        form: type[Any]
+        model: Any
+        get_queryset: Callable[[], Any]
+        initial_form_count: Callable[[], int]
+        total_form_count: Callable[[], int]
+        _get_to_python: Callable[[Any], Callable[[Any], Any]]
+
+        def add_prefix(self, index: int | str) -> str: ...
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self._many_to_many_loaded = False
+        self._posted_rows: dict[str, dict[Any, Model]] = {}
+        super().__init__(*args, **kwargs)
+
+    def _construct_form(self, i: int, **kwargs: Any) -> Any:  # noqa: ANN401
+        # The saved rows the first one comes from; Django loads them all at that point too.
+        if i < self.initial_form_count() and not self._many_to_many_loaded:
+            self._many_to_many_loaded = True
+            if names := initial_many_to_many(self.form):
+                prefetch_related_objects(list(self.get_queryset()), *names)
+        return super()._construct_form(i, **kwargs)  # type: ignore[misc]
+
+    def add_fields(self, form: Any, index: int | None) -> None:  # noqa: ANN401
+        name = self.model._meta.pk.name  # noqa: SLF001
+        before = form.fields.get(name)
+        super().add_fields(form, index)  # type: ignore[misc]
+        field = form.fields.get(name)
+        if form.is_bound and field is not before and type(field) is ModelChoiceField:
+            form.fields[name] = _RowField(
+                field.queryset,
+                rows=self._rows,
+                key=self._get_to_python(self._pk_field),
+                initial=field.initial,
+                required=field.required,
+                widget=field.widget,
+            )
+
+    def _rows(self, queryset: Any) -> dict[Any, Model]:  # noqa: ANN401
+        """The rows of the primary keys the forms posted, by key, with one query per database."""
+        if queryset.db not in self._posted_rows:
+            to_python = self._get_to_python(self._pk_field)
+            keys = set()
+            for i in range(self.total_form_count()):
+                with suppress(TypeError, ValidationError):
+                    keys.add(to_python(self.data.get(f"{self.add_prefix(i)}-{self._pk_field.name}")))
+            keys.discard(None)
+            self._posted_rows[queryset.db] = queryset.in_bulk(keys)
+        return self._posted_rows[queryset.db]
+
+
+class FormworkBaseModelFormSet(TableRenderMixin, _BatchedUniquenessMixin, _LoadedAtOnceMixin, BaseModelFormSet):
+    """Django's ``BaseModelFormSet`` with one uniqueness query per distinct check, not one per form.
+
+    It also loads the posted rows and the many-to-many values of all forms at once. Use
     :func:`formwork_modelformset_factory` to build a concrete subclass.
     """
 
@@ -625,7 +722,7 @@ def formwork_modelformset_factory(
     )
 
 
-class FormworkBaseInlineFormSet(TableRenderMixin, _BatchedUniquenessMixin, BaseInlineFormSet):
+class FormworkBaseInlineFormSet(TableRenderMixin, _BatchedUniquenessMixin, _LoadedAtOnceMixin, BaseInlineFormSet):
     """Inline formset with batched uniqueness validation.
 
     The same batching as :class:`FormworkBaseModelFormSet`, including the

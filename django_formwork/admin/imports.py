@@ -27,7 +27,7 @@ from django.utils.translation import gettext_lazy, ngettext
 from django_formwork.admin.cells import Cell, cell_for_field, cell_for_value
 from django_formwork.admin.formats import MISSING, FileError, FileFormat, Table
 from django_formwork.forms import FormworkForm
-from django_formwork.formsets import FormworkBaseModelFormSet, formwork_modelformset_factory
+from django_formwork.formsets import FormworkBaseModelFormSet, formwork_modelformset_factory, initial_many_to_many
 from django_formwork.widgets import ClearableFileInput
 
 if TYPE_CHECKING:
@@ -430,7 +430,9 @@ def _resolve(relation: _Relation, rows: list[Row]) -> None:
             row.data[column.name] = keys if relation.many else (keys[0] if keys else "")
 
 
-def _match_records(model_admin: Any, request: HttpRequest, mapping: Mapping, rows: list[Row]) -> None:
+def _match_records(
+    model_admin: Any, request: HttpRequest, mapping: Mapping, rows: list[Row], form_class: type[Any]
+) -> None:
     """Find the record each row updates by its key columns, in one query per thousand keys."""
     if not mapping.keys or mapping.missing_keys:
         return
@@ -461,11 +463,13 @@ def _match_records(model_admin: Any, request: HttpRequest, mapping: Mapping, row
 
     queryset = model_admin.get_queryset(request)
     related = [column.name for column in mapping.columns if isinstance(column.model_field, models.ForeignKey)]
-    many = [column.name for column in mapping.columns if isinstance(column.model_field, models.ManyToManyField)]
+    # The values the form starts from, and the cells the preview compares.
+    many = {column.name for column in mapping.columns if isinstance(column.model_field, models.ManyToManyField)}
+    many.update(initial_many_to_many(form_class))
     if related:
         queryset = queryset.select_related(*related)
     if many:
-        queryset = queryset.prefetch_related(*many)
+        queryset = queryset.prefetch_related(*sorted(many))
     attnames = [key_field.attname for key_field in fields]
     found: dict[tuple[Any, ...], models.Model] = {}
     wanted = list(first)
@@ -724,7 +728,7 @@ def check_import(model_admin: Any, request: HttpRequest, table: Table, content: 
                 row.data[column.name] = _form_value(cell, form_field, table, aliases[column.name])
     for relation in relations.values():
         _resolve(relation, rows)
-    _match_records(model_admin, request, mapping, rows)
+    _match_records(model_admin, request, mapping, rows, form_class)
     _keep_record_times(rows, mapping, probe)
 
     formset_class = formwork_modelformset_factory(

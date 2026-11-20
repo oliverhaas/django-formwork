@@ -83,6 +83,14 @@ Two cases compare values in Python where Django compares them in SQL:
   other than UTC. The batched check keys rows by the stored UTC date, Django by the
   local date, so a row near midnight can miss its duplicate.
 
+## Loading the rows
+
+Django runs two more queries for each row of a model formset: one that finds the row
+of the posted primary key, and one for each many-to-many field that the form shows.
+A Formwork formset runs each of them once for all rows. A primary key that the formset
+cannot read from the post, for example through a custom widget, gets Django's own
+query.
+
 ## Editable tables
 
 `formset.as_rows()` renders a formset as one editable `<table>`: the management form,

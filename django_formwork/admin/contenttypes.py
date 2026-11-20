@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from django.contrib.contenttypes.forms import BaseGenericInlineFormSet, generic_inlineformset_factory
 
 from django_formwork.admin.options import InlineModelAdmin
-from django_formwork.formsets import _BatchedUniquenessMixin
+from django_formwork.formsets import _BatchedUniquenessMixin, _LoadedAtOnceMixin
 from django_formwork.tables import TableRenderMixin
 
 if TYPE_CHECKING:
@@ -25,8 +25,10 @@ __all__ = [
 ]
 
 
-class FormworkBaseGenericInlineFormSet(TableRenderMixin, _BatchedUniquenessMixin, BaseGenericInlineFormSet):
-    """Django's generic inline formset, with the batched uniqueness checks of formwork's formsets."""
+class FormworkBaseGenericInlineFormSet(
+    TableRenderMixin, _BatchedUniquenessMixin, _LoadedAtOnceMixin, BaseGenericInlineFormSet
+):
+    """Django's generic inline formset, with the batched queries of formwork's formsets."""
 
 
 class GenericInlineModelAdmin(InlineModelAdmin):
