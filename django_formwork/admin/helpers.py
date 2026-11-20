@@ -27,7 +27,7 @@ from django_formwork.admin.paginator import page_links
 from django_formwork.tables import Table, TableCell, TableRow
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
     from django.contrib.admin.options import _FieldsetSpec
     from django.core.paginator import Page, Paginator
@@ -502,20 +502,25 @@ class InlineAdminFormSet:
         return sum(1 for form in self.formset.forms if form.errors) + bool(self.formset.non_form_errors())
 
 
-class DeletedObject(SafeString):
+class DeletedObject:
     """A line of the delete pages in Django's words, "Item: Kettle", with the object as a link where it has one.
 
-    The pages group the lines of a ``model`` under its name, and there show the ``link`` alone.
+    The pages group the lines of a ``model`` under its name and there show the ``link`` alone. Both build when
+    a page shows them, so a page names only the objects it lists out of thousands.
     """
 
-    model: type[models.Model]
-    link: SafeString
+    def __init__(self, obj: models.Model, link: Callable[[], SafeString]) -> None:
+        self.model = type(obj)
+        self._link = link
 
-    @classmethod
-    def of(cls, obj: models.Model, link: SafeString) -> DeletedObject:
-        line = cls(format_html("{}: {}", capfirst(obj._meta.verbose_name), link))
-        line.model, line.link = type(obj), link
-        return line
+    @cached_property
+    def link(self) -> SafeString:
+        return self._link()
+
+    def __html__(self) -> SafeString:
+        return format_html("{}: {}", capfirst(self.model._meta.verbose_name), self.link)
+
+    __str__ = __html__
 
 
 @dataclass

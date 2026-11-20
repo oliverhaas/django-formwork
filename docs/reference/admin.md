@@ -1135,6 +1135,7 @@ pages, override `formwork_admin/skeletons.html` and add a
   for all rows. See [Relations of the rows](#relations-of-the-rows).
 - A column that shows a count or a sum computes it for the rows of the page only. See
   [Computed columns](#computed-columns).
+- A delete page builds the name and the link of an object only when it lists the object.
 - A relation to a model whose admin has `search_fields` pages its rows from the server.
   The change form no longer loads the whole related table into a `<select>`.
 - The rows of [editable columns](#editable-columns) and of an [inline](#inlines) load the

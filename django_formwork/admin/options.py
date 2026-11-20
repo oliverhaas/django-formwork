@@ -91,6 +91,7 @@ if TYPE_CHECKING:
     from django.db.models.fields.related import RelatedField
     from django.http import HttpRequest
     from django.urls import URLPattern
+    from django.utils.safestring import SafeString
     from django_stubs_ext import StrPromise
 
     from django_formwork.admin.filters import AdminFilterSet
@@ -1347,25 +1348,26 @@ class ModelAdmin(BaseModelAdmin):
         }
         perms_needed: set[str] = set()
 
-        def format_callback(obj: models.Model) -> DeletedObject:
+        def change_link(obj: models.Model) -> SafeString:
             opts = obj._meta
-            if type(obj) in links:
-                return DeletedObject.of(
-                    obj, escape(" \u2192 ".join(str(getattr(obj, end)) for end in links[type(obj)]))
-                )
-            if not self.admin_site.is_registered(type(obj)):
-                return DeletedObject.of(obj, escape(obj))
-            if not self.admin_site.get_model_admin(type(obj)).has_delete_permission(request, obj):
-                perms_needed.add(str(opts.verbose_name))
             try:
                 change_url = reverse(
                     f"{self.admin_site.name}:{opts.app_label}_{opts.model_name}_change", args=(quote(obj.pk),)
                 )
             except NoReverseMatch:
-                return DeletedObject.of(obj, escape(obj))
-            return DeletedObject.of(
-                obj, format_html('<a href="{}">{}</a>', change_url, display_for_value(str(obj), EMPTY_VALUE_STRING))
-            )
+                return escape(obj)
+            return format_html('<a href="{}">{}</a>', change_url, display_for_value(str(obj), EMPTY_VALUE_STRING))
+
+        def format_callback(obj: models.Model) -> DeletedObject:
+            if type(obj) in links:
+                return DeletedObject(
+                    obj, lambda: escape(" \u2192 ".join(str(getattr(obj, end)) for end in links[type(obj)]))
+                )
+            if not self.admin_site.is_registered(type(obj)):
+                return DeletedObject(obj, lambda: escape(obj))
+            if not self.admin_site.get_model_admin(type(obj)).has_delete_permission(request, obj):
+                perms_needed.add(str(obj._meta.verbose_name))
+            return DeletedObject(obj, lambda: change_link(obj))
 
         to_delete = collector.nested(format_callback)
         protected = [format_callback(obj) for obj in collector.protected]

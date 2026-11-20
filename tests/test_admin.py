@@ -35,6 +35,7 @@ from django_formwork import __version__, admin
 from django_formwork.admin import ActionLocation, site
 from django_formwork.admin.checks import check_model_admin
 from django_formwork.admin.contenttypes import GenericStackedInline
+from django_formwork.admin.helpers import FIRST_OBJECTS
 from django_formwork.admin.info import describe_fields, describe_search, describe_table
 from django_formwork.admin.models import HistoryEntry
 from django_formwork.admin.paginator import page_links
@@ -1215,6 +1216,19 @@ def test_delete_selected_keeps_protected_rows(admin_client, catalog):
     assert Category.objects.filter(pk=catalog.kitchen.pk).exists()
 
 
+def test_delete_selected_refuses_a_row_that_its_admin_keeps(admin_client, catalog, monkeypatch):
+    model_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(model_admin, "has_delete_permission", lambda request, obj=None: obj != catalog.beta)
+    data = {"action": "delete_selected", "_selected_action": [catalog.alpha.pk, catalog.beta.pk]}
+
+    soup = BeautifulSoup(admin_client.post(url(Item, "changelist"), data).content, "html.parser")
+    response = admin_client.post(url(Item, "changelist"), {**data, "post": "yes"})
+
+    assert soup.find("input", {"name": "post"}) is None
+    assert response.status_code == 403
+    assert Item.objects.filter(pk__in=[catalog.alpha.pk, catalog.beta.pk]).count() == 2
+
+
 def test_list_editable_saves_the_changed_rows(admin_client, catalog):
     data = {**management("form", 1, 1), "form-0-id": catalog.alpha.pk, "form-0-quantity": "77", "_save": "1"}
 
@@ -1888,6 +1902,16 @@ def test_delete_confirmation_groups_the_objects_of_a_model(admin_client, catalog
     assert "Parts 11" in listed
     assert "and 3 more" in listed
     assert "Part:" not in listed
+
+
+def test_delete_confirmation_names_only_the_objects_it_lists(admin_client, catalog, monkeypatch):
+    Part.objects.bulk_create(Part(item=catalog.alpha, name=f"Leg {number}") for number in range(20))
+    named = []
+    monkeypatch.setattr(Part, "__str__", lambda part: named.append(part.pk) or part.name)
+
+    admin_client.get(url(Item, "delete", catalog.alpha.pk))
+
+    assert len(named) == FIRST_OBJECTS
 
 
 @pytest.mark.parametrize(

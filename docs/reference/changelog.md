@@ -132,7 +132,8 @@
   `description_plural`, and the change form shows its actions in an
   Actions menu. The other ways to save sit in a menu next to Save, and the way an add or
   change form of a model was last saved becomes its main button. The delete pages group
-  the related objects per model and list the first few of each. A list that the search
+  the related objects per model and list the first few of each, and they build the name
+  and link of the listed objects only. A list that the search
   or the filters leave empty offers to clear them. The change form shows the history of
   the object next to its fields, with the values before and after each change. The admin
   keeps that history in its own table, so it does not need `django.contrib.admin`, and
