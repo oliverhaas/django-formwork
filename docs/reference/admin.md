@@ -723,8 +723,10 @@ them.
 `prepopulated_fields`). Rows are added and removed in the browser, and the formset
 indexes stay contiguous. A new row fills its prepopulated fields from its own fields; a
 saved row keeps its value. An inline's `form` subclasses `FormworkModelForm`, as the
-`ModelAdmin`'s does. A `TabularInline` shows its cell errors in tooltips, as
-[editable columns](#editable-columns) do.
+`ModelAdmin`'s does. A `TabularInline` has the rows of a list: as in
+[editable columns](#editable-columns), a field shows its box only in the row under the
+pointer or with the focus, and a cell error shows in a tooltip. A row the user adds keeps
+its boxes.
 
 With `"collapse"` in `classes`, the inline folds behind its title and row count, as a
 fieldset with `"collapse"` does. It starts open when one of its rows has an error.

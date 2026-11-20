@@ -631,6 +631,43 @@ def test_an_editable_value_lines_up_with_its_column_header(admin_page, live_serv
     assert featured["x"] == pytest.approx(featured_head["x"], abs=0.5)
 
 
+def test_a_tabular_inline_shows_the_fields_of_the_hovered_row_and_of_a_new_row(admin_page, live_server, kitchen):
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    Part.objects.create(item=item, name="Lid")
+    Part.objects.create(item=item, name="Handle")
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
+    lid = admin_page.locator("[name=parts-0-name]")
+    handle = admin_page.locator("[name=parts-1-name]")
+    new = admin_page.locator("[name=parts-2-name]")
+    no_border = "rgba(0, 0, 0, 0)"
+    admin_page.mouse.move(0, 0)
+    expect(lid).to_have_css("border-top-color", no_border)
+    expect(handle).to_have_css("border-top-color", no_border)
+    expect(new).not_to_have_css("border-top-color", no_border)
+
+    handle.hover()
+    expect(handle).not_to_have_css("border-top-color", no_border)
+    expect(lid).to_have_css("border-top-color", no_border)
+    assert admin_page.errors == []
+
+
+def test_a_tabular_inline_value_lines_up_with_its_header_and_the_card_title(admin_page, live_server, kitchen):
+    item = Item.objects.create(name="Kettle", category=kitchen)
+    Part.objects.create(item=item, name="Lid")
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{item.pk}/change/")
+    group = admin_page.locator("#parts-group")
+    text_start = "el => el.getBoundingClientRect().left + parseFloat(getComputedStyle(el).borderLeftWidth) + parseFloat(getComputedStyle(el).paddingLeft)"
+    title = group.locator("h2").bounding_box()["x"]
+    name = admin_page.locator("[name=parts-0-name]").evaluate(text_start)
+    quantity = admin_page.locator("[name=parts-0-quantity]").evaluate(text_start)
+    name_head = group.get_by_role("columnheader", name="Name").evaluate(text_start)
+    quantity_head = group.get_by_role("columnheader", name="Quantity").evaluate(text_start)
+
+    assert name == pytest.approx(title, abs=0.5)
+    assert name_head == pytest.approx(title, abs=0.5)
+    assert quantity == pytest.approx(quantity_head, abs=0.5)
+
+
 def test_an_inline_cell_error_shows_in_a_tooltip(admin_page, live_server, kitchen):
     item = Item.objects.create(name="Kettle", category=kitchen)
     Part.objects.create(item=item, name="Lid")

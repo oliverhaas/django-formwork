@@ -9,7 +9,7 @@
       <thead class="text-xs">
         <tr>
           {% for header in table.headers %}
-          <th class="whitespace-nowrap">
+          <th class="whitespace-nowrap"{% if header.indent %} data-indent{% endif %}>
             {{ header.label|capfirst }}{% if header.required %} <span class="text-error" aria-hidden="true">*</span>{% endif %}
             {% if header.help_text %}<span class="tooltip tooltip-bottom align-middle font-normal normal-case" data-tip="{{ header.help_text|striptags }}"><i class="icon icon-info size-3.5 opacity-50" aria-hidden="true"></i></span>{% endif %}
           </th>

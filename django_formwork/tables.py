@@ -39,6 +39,13 @@ class TableCell:
     field: BoundField | None = None
     display: Any = ""
 
+    @property
+    def boxed(self) -> bool:
+        """Whether the widget draws a box, which sets the value in from the cell's edge."""
+        if self.field is None:
+            return False
+        return getattr(self.field.field.widget, "input_type", None) not in {"checkbox", "radio"}
+
     @classmethod
     def for_field(cls, bound_field: BoundField) -> TableCell:
         """A widget cell, or for a disabled field its value as text."""

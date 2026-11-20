@@ -413,7 +413,7 @@
 {% if errors %}<span class="badge badge-error badge-soft badge-sm ml-auto">{{ _("Errors") }}</span>{% endif %}
 {% endset %}
 {% if inline.collapsible %}
-<details id="{{ inline.prefix }}-group" class="card group/inline scroll-mt-20 border border-base-300 bg-base-100"{% if errors or (inline.pager and inline.pager.requested) %} open{% endif %}{% if inline.prepopulated_fields %} x-data="formworkInline" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}"{% endif %}>
+<details id="{{ inline.prefix }}-group" class="card group/inline scroll-mt-20 border border-base-300 bg-base-100"{% if inline.is_tabular %} data-tabular{% endif %}{% if errors or (inline.pager and inline.pager.requested) %} open{% endif %}{% if inline.prepopulated_fields %} x-data="formworkInline" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}"{% endif %}>
   <summary class="flex cursor-pointer list-none items-center gap-2 px-6 py-4 select-none [&::-webkit-details-marker]:hidden">
     {{ title }}
     {{ icon("chevron-down", "size-4 text-base-content/50 transition-transform group-open/inline:rotate-180" ~ ("" if errors else " ml-auto")) }}
@@ -421,7 +421,7 @@
   <div class="border-t border-base-300">{{ caller() }}</div>
 </details>
 {% else %}
-<section id="{{ inline.prefix }}-group" class="card scroll-mt-20 border border-base-300 bg-base-100"{% if inline.prepopulated_fields %} x-data="formworkInline" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}"{% endif %}>
+<section id="{{ inline.prefix }}-group" class="card scroll-mt-20 border border-base-300 bg-base-100"{% if inline.is_tabular %} data-tabular{% endif %}{% if inline.prepopulated_fields %} x-data="formworkInline" data-prepopulated="{{ inline.prepopulated_fields|tojson_attr }}"{% endif %}>
   <header class="flex items-center gap-2 border-b border-base-300 px-6 py-4">{{ title }}</header>
   {{ caller() }}
 </section>

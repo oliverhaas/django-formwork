@@ -408,6 +408,7 @@ class InlineAdminFormSet:
                         "label": cell.field.label,
                         "required": cell.field.field.required,
                         "help_text": cell.field.help_text,
+                        "indent": TableCell(cell.name, field=cell.field).boxed,
                     }
                 )
             elif cell.readonly is not None:
