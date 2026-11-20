@@ -4,6 +4,8 @@
 
 ### Breaking changes
 
+- formwork needs Django 6.1. Projects on Django 6.0 can keep `django-formwork==0.1.0a3`
+  until they upgrade Django.
 - `DateRangeInput` and its `formwork/widgets/date_range.html` template are removed, so a
   form that uses `widgets.DateRangeInput` fails at import. `DateRangeField` takes
   Django's own `MultiWidget`, and two `DateInput`s in one show the same native inputs
@@ -119,7 +121,7 @@
   rows in pages of `per_page`, 10 in a table and 5 in a stack by default, with a pager
   next to Add another. Generic inlines come from `django_formwork.admin.contenttypes`.
   A `class Media` on an admin or an inline loads its files, without Django's jQuery. `@admin.action` takes Django 6.1's `location` and
-  `description_plural`, also on Django 6.0, and the change form shows its actions in an
+  `description_plural`, and the change form shows its actions in an
   Actions menu. The other ways to save sit in a menu next to Save, and the way an add or
   change form of a model was last saved becomes its main button. The delete pages group
   the related objects per model and list the first few of each. A list that the search

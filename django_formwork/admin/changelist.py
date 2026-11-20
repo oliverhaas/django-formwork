@@ -495,14 +495,7 @@ class ChangeList:
         else:
             ordering = [*(self.model_admin.get_ordering(self.request) or self.opts.ordering or ())]
         ordering.extend(self.root_queryset.query.order_by)
-        rows = self.root_queryset.order_by(*ordering)
-        if hasattr(rows, "totally_ordered"):
-            total = rows.totally_ordered
-        else:
-            # Django 6.0 has no QuerySet.totally_ordered; there only a primary key term ends the order.
-            pk_names = {"pk", self.opts.pk.name}
-            total = any(isinstance(term, str) and term.removeprefix("-") in pk_names for term in ordering)
-        if not total:
+        if not self.root_queryset.order_by(*ordering).totally_ordered:
             ordering.append("-pk")
         return ordering
 

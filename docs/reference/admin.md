@@ -689,7 +689,7 @@ Override `action_confirmation_template` on the admin, or
 built-in `delete_selected` shows as a Delete button next to the Actions menu and keeps
 its own page, which lists the related objects that the delete removes.
 
-The other arguments are Django 6.1's, and they also work on Django 6.0. `location`
+The other arguments are Django 6.1's. `location`
 puts an action in the list, on the change form or both, and the list labels it with
 `description_plural` when given:
 

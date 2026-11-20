@@ -6,22 +6,19 @@ The views render Jinja templates under ``formwork_admin/`` and formwork forms.
 from __future__ import annotations
 
 import copy
-import enum
 import io
 import json
-from dataclasses import dataclass
 from functools import cached_property, partial, update_wrapper
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 from urllib.parse import quote_plus, urlencode
 
-import django
 from django import forms
 from django.apps import apps
 from django.contrib import messages
 from django.contrib.admin import options as django_options
 from django.contrib.admin.exceptions import DisallowedModelAdminToField
-from django.contrib.admin.options import IncorrectLookupParameters, ShowFacets
+from django.contrib.admin.options import Action, ActionLocation, IncorrectLookupParameters, ShowFacets
 from django.contrib.admin.utils import (
     NestedObjects,
     NotRelationField,
@@ -87,7 +84,7 @@ from django_formwork.formsets import (
 from django_formwork.widgets import ChoiceLabel, Select
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
 
     from django.contrib.admin.options import _FieldsetSpec
     from django.db.models.fields.related import RelatedField
@@ -115,35 +112,7 @@ ACTION_CHECKBOX_NAME = "_selected_action"
 HORIZONTAL, VERTICAL = 1, 2
 #: The places on the changelist that a ``list_<name>`` method fills.
 SLOTS = ("top", "bottom")
-# What Django 6.1's deletion pages show for an object whose name is blank; Django 6.0 has no such constant.
-EMPTY_VALUE_STRING = getattr(django_options, "EMPTY_VALUE_STRING", "-")
-
-if TYPE_CHECKING or django.VERSION >= (6, 1):
-    from django.contrib.admin.options import Action, ActionLocation
-else:
-
-    class ActionLocation(enum.Enum):
-        """Where an action shows: Django 6.1's ``ActionLocation``, for Django 6.0."""
-
-        CHANGE_FORM = "CHANGE_FORM"
-        CHANGE_LIST = "CHANGE_LIST"
-
-    @dataclass
-    class Action:
-        """An action as ``get_actions()`` returns it: Django 6.1's ``Action``, for Django 6.0."""
-
-        func: Callable[..., Any]
-        name: str
-        description: str
-        plural_description: str
-        locations: list[ActionLocation]
-
-        # Code written for Django 6.0 unpacks an action as (func, name, description).
-        def __iter__(self) -> Iterator[Any]:
-            return iter((self.func, self.name, self.description))
-
-        def __getitem__(self, index: int) -> Any:
-            return (self.func, self.name, self.description)[index]
+EMPTY_VALUE_STRING = django_options.EMPTY_VALUE_STRING
 
 
 def get_content_type_for_model(obj: Any) -> Any:

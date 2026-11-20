@@ -302,9 +302,9 @@ class SearchableSelectMixin(_SelectBase):
 
     def clear_row(self, option: dict[str, Any], attrs: Mapping[str, Any]) -> dict[str, Any]:
         """The row that clears the value. Django's default blank label gives way to the placeholder, muted."""
-        # Django 6.0 writes "---------". 6.1 writes BLANK_CHOICE_LABEL, which a project can rename in ready().
-        defaults = (model_fields.BLANK_CHOICE_DASH[0][1], getattr(model_fields, "BLANK_CHOICE_LABEL", None))
-        if str(option["label"]) not in {str(label) for label in defaults if label is not None}:
+        # Django writes BLANK_CHOICE_LABEL, which a project can rename in ready(); code written before 6.1 "---------".
+        defaults = (model_fields.BLANK_CHOICE_DASH[0][1], model_fields.BLANK_CHOICE_LABEL)
+        if str(option["label"]) not in {str(label) for label in defaults}:
             return option
         # The text of the empty trigger: a floating label's placeholder is its label, not the empty text.
         placeholder = "" if self.floating else attrs.get("placeholder", "")

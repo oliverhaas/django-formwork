@@ -3,7 +3,7 @@
 [![CI](https://github.com/oliverhaas/django-formwork/actions/workflows/ci.yml/badge.svg)](https://github.com/oliverhaas/django-formwork/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/django-formwork.svg)](https://pypi.org/project/django-formwork/)
 [![Python](https://img.shields.io/pypi/pyversions/django-formwork.svg)](https://pypi.org/project/django-formwork/)
-[![Django](https://img.shields.io/badge/django-6.0-blue.svg)](https://www.djangoproject.com/)
+[![Django](https://img.shields.io/badge/django-6.1-blue.svg)](https://www.djangoproject.com/)
 [![License](https://img.shields.io/pypi/l/django-formwork.svg)](https://github.com/oliverhaas/django-formwork/blob/main/LICENSE)
 
 django-formwork is an opinionated UI framework for Django, built on Django forms. Forms are the central building block of most Django apps (CRUD pages, admin, search filters, sign-ups, content editors), so formwork treats the form as the primary UI surface. Define a `Form` or `ModelForm` and you get DaisyUI styling, widgets that go beyond Django's built-ins (dropdowns with server-side search, drop zones, OTP, date range, date picker, server-validated textarea, and more), and the htmx + Alpine wiring that makes them dynamic without bespoke per-page JS. Set `FORM_RENDERER` once, build the CSS, include the JS template tag, and `{{ form }}` produces the full DaisyUI markup. Django's admin is unaffected, since it renders widgets directly, never `{{ form }}` or `as_field_group()`. The package also ships [its own admin](#admin), built on these forms.
@@ -69,7 +69,7 @@ Install it with `pip install "django-formwork[admin]"`. The admin is experimenta
 
 ## Requirements
 
-Python 3.14+, Django 6.0 or 6.1, DaisyUI 5, Tailwind CSS 4. DaisyUI and Tailwind are not bundled.
+Python 3.14+, Django 6.1, DaisyUI 5, Tailwind CSS 4. DaisyUI and Tailwind are not bundled.
 
 ## Development
 

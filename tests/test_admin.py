@@ -4,7 +4,6 @@ import json
 from datetime import date, datetime, time
 from types import ModuleType, SimpleNamespace
 
-import django
 import django_filters
 import pytest
 from admin_app.admin import ItemAdmin, LowStockFilter, PartInline, ReviewInline
@@ -900,7 +899,6 @@ def test_action_shows_where_its_location_puts_it(admin_client, catalog, monkeypa
     assert (listed.get("set_status"), offered.get("set_status")) == labels
 
 
-@pytest.mark.skipif(django.VERSION < (6, 1), reason="Django 6.0's @admin.action takes no location")
 def test_change_form_offers_an_action_from_djangos_decorator(admin_client, catalog, monkeypatch):
     @django_admin.action(description="Verify", location=django_admin.ActionLocation.CHANGE_FORM)
     def verify(modeladmin, request, queryset):
