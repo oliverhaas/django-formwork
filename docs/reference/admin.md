@@ -1080,6 +1080,8 @@ pages, override `formwork_admin/skeletons.html` and add a
   five levels deep.
 - A relation to a model whose admin has `search_fields` pages its rows from the server.
   The change form no longer loads the whole related table into a `<select>`.
+- The rows of [editable columns](#editable-columns) and of an [inline](#inlines) load the
+  choices of a relation once for all rows. See [Shared choices](#shared-choices).
 - Without filters, the list counts a PostgreSQL table of more than 10,000 rows from the
   planner's estimate instead of `COUNT(*)`. Any filter or search counts exactly.
   `EstimatedCountPaginator.estimate_threshold` sets the limit.
@@ -1089,6 +1091,38 @@ pages, override `formwork_admin/skeletons.html` and add a
   load. A link in the sidebar, the breadcrumbs or a list row swaps the content, and the
   sidebar keeps its scroll position. The link loads its page when the pointer rests on
   it, and a slow page shows the skeleton of its layout until it arrives.
+
+### Shared choices
+
+A row of [editable columns](#editable-columns) or of an [inline](#inlines) lists the
+first page of a relation and the rows it has chosen. The rows load that page and their
+chosen rows with one query each for all rows, not one for each row. A row whose chosen
+value is missing from them loads it with a query of its own.
+
+The form or the formset can give a row choices of its own, so formwork shares the
+choices only where it sees no such hook:
+
+- an `__init__()` of the form,
+- an `__init__()`, `get_form_kwargs()`, `add_fields()` or `_construct_form()` of the
+  formset,
+- a callable `limit_choices_to` on the relation.
+
+Only the methods of your own classes count, not the ones in Django or formwork. With a
+hook, the rows load their choices one by one, and system check `formwork_admin.E504`
+asks you to set `share_choices` on the `ModelAdmin` or the inline:
+
+```python
+class EventAdmin(admin.ModelAdmin):
+    list_editable = ["venue", "host"]
+    form = EventForm  # its __init__() only sets widget attributes
+    share_choices = True
+```
+
+| `share_choices` | The rows |
+|---|---|
+| `None` (default) | share their choices, unless a hook can change them |
+| `True` | share the choices of the first row |
+| `False` | load their choices one by one |
 
 ## Keyboard
 

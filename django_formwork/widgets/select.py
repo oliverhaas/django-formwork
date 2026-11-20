@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Literal
 from urllib.parse import urlencode
 
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 
     from django.db.models import QuerySet
+    from django.forms.formsets import BaseFormSet
     from django.http import HttpRequest
     from django.utils.choices import _Choices
 
@@ -33,7 +35,15 @@ if TYPE_CHECKING:
 else:
     _SelectBase = object
 
-__all__ = ["BadgeColor", "ChoiceLabel", "SearchableSelectMixin", "Select", "label_extras", "shared_pages"]
+__all__ = [
+    "BadgeColor",
+    "ChoiceLabel",
+    "SearchableSelectMixin",
+    "Select",
+    "label_extras",
+    "share_choices",
+    "shared_pages",
+]
 
 # The rows that the selects of one render have loaded, by their query.
 _pages: ContextVar[dict[tuple[str, str, str], list[Any]] | None] = ContextVar("formwork_select_pages", default=None)
@@ -76,6 +86,80 @@ def _rows_of(queryset: QuerySet[Any], key: str, values: Iterable[str]) -> list[A
         wanted.append(value)
     # Sorted, so two selects with the same values ask for the same rows.
     return _load(queryset.filter(**{f"{key}__in": sorted(wanted)})) if wanted else []
+
+
+# The methods with which a form or a formset can give one row other choices than the next.
+_FORM_ROW_HOOKS = ("__init__",)
+_FORMSET_ROW_HOOKS = ("__init__", "get_form_kwargs", "add_fields", "_construct_form")
+_OWN_MODULES = frozenset({"builtins", "typing", "django", "django_formwork"})
+
+
+def _project_methods(klass: type, names: Sequence[str]) -> list[str]:
+    """``Class.method`` for each of ``names`` that a class outside Django and formwork defines for ``klass``."""
+    return [
+        f"{base.__qualname__}.{name}"
+        for base in klass.__mro__
+        if base.__module__.partition(".")[0] not in _OWN_MODULES
+        for name in names
+        if name in vars(base)
+    ]
+
+
+def row_choice_hooks(form_class: type, formset_class: type) -> list[str]:
+    """The methods with which the rows of a formset can get choices of their own."""
+    return [*_project_methods(form_class, _FORM_ROW_HOOKS), *_project_methods(formset_class, _FORMSET_ROW_HOOKS)]
+
+
+class _SharedChoices:
+    """A relation's first page and the selected rows of all rows of a formset, loaded when the first row renders."""
+
+    def __init__(
+        self, queryset: QuerySet[Any], key: str, rows: list[tuple[forms.BoundField, SearchableSelectMixin]]
+    ) -> None:
+        self.queryset = queryset
+        self.key = key
+        self.rows = rows
+
+    @cached_property
+    def page(self) -> list[Any]:
+        # One extra row tells whether more exist, so no COUNT runs.
+        return _load(self.queryset[: SEARCH_PAGE_SIZE + 1])
+
+    @cached_property
+    def selected(self) -> dict[str, Any]:
+        """The rows past the first page that a row has selected, by their value."""
+        shown = {str(getattr(obj, self.key)) for obj in self.page[:SEARCH_PAGE_SIZE]}
+        chosen = {str(value) for bound, select in self.rows for value in select.format_value(bound.value()) if value}
+        return {str(getattr(obj, self.key)): obj for obj in _rows_of(self.queryset, self.key, chosen - shown)}
+
+
+def _searchable(field: forms.Field | None) -> SearchableSelectMixin | None:
+    """The select with a server search that ``field`` renders, also inside a widget that wraps it."""
+    widget = getattr(field, "widget", None)
+    while widget is not None and not isinstance(widget, SearchableSelectMixin):
+        widget = getattr(widget, "widget", None)
+    return widget if widget is not None and widget.search_key is not None else None
+
+
+def share_choices(formset: BaseFormSet[Any], *, share: bool | None = None) -> None:
+    """Let the selects of a formset's rows load a relation's first page and their selected rows once for all rows.
+
+    ``None`` leaves out the fields whose rows can get choices of their own, ``True`` shares those too."""
+    rows = formset.forms
+    if share is False or not rows:
+        return
+    if share is None and row_choice_hooks(formset.form, type(formset)):
+        return
+    for name, field in rows[0].fields.items():
+        if not isinstance(field, forms.ModelChoiceField) or field.queryset is None:
+            continue
+        # Django calls a callable limit_choices_to again for every form.
+        if share is None and callable(field.limit_choices_to):
+            continue
+        selects = [(form[name], select) for form in rows if (select := _searchable(form.fields.get(name)))]
+        shared = _SharedChoices(field.queryset, field.to_field_name or "pk", selects)
+        for _bound, select in selects:
+            select.shared = shared
 
 
 def _defer_page(options: list[dict[str, Any]], pending: dict[str, Any]) -> list[dict[str, Any]]:
@@ -234,6 +318,8 @@ class SearchableSelectMixin(_SelectBase):
         # Set per render by optgroups().
         self.truncated = False
         self.selected_past_page: list[str] = []
+        # Set by share_choices() for the rows of a formset.
+        self.shared: _SharedChoices | None = None
 
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
@@ -347,11 +433,16 @@ class SearchableSelectMixin(_SelectBase):
             if getattr(field, "null_label", None) is not None:
                 blank.append((field.null_value, field.null_label))
             key = choices.field.to_field_name or "pk"
+            shared = self.shared
             # One extra row tells whether more exist, so no COUNT runs.
-            page = _load(choices.queryset[: limit + 1])
+            page = shared.page if shared is not None else _load(choices.queryset[: limit + 1])
             first = page[:limit]
             shown = {str(getattr(obj, key)) for obj in first}
-            rest = _rows_of(choices.queryset, key, chosen - shown)
+            past = chosen - shown
+            if shared is not None and past <= shared.selected.keys():
+                rest = [obj for value, obj in shared.selected.items() if value in past]
+            else:
+                rest = _rows_of(choices.queryset, key, past)
             self.selected_past_page = [str(getattr(obj, key)) for obj in rest]
             if len(page) > limit:
                 # The browser loads the page of a longer list, so only its selected rows need a label.

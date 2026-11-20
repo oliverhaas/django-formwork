@@ -9,18 +9,21 @@ from typing import TYPE_CHECKING, Any, cast
 from django import forms
 from django.apps import apps
 from django.conf import settings
-from django.contrib.admin.utils import NotRelationField, label_for_field
+from django.contrib.admin.utils import NotRelationField, flatten, flatten_fieldsets, label_for_field
 from django.core import checks
 from django.core.exceptions import FieldDoesNotExist
+from django.db.models.fields.related import ManyToManyField, RelatedField
 
 from django_formwork.admin.filters import build_filterset
 from django_formwork.forms import FormworkModelForm
+from django_formwork.formsets import FormworkBaseModelFormSet
+from django_formwork.widgets.select import row_choice_hooks
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
 
     from django.apps import AppConfig
-    from django.db.models import ForeignObjectRel
+    from django.db.models import ForeignObjectRel, Model
 
     from django_formwork.admin.options import ModelAdmin
 
@@ -170,7 +173,10 @@ def _check_inline(model_admin: ModelAdmin, inline: Any) -> list[checks.CheckMess
     from django_formwork.admin.options import InlineModelAdmin
 
     if isinstance(inline, type) and issubclass(inline, InlineModelAdmin):
-        return _check_form(inline, "form")
+        return [
+            *_check_form(inline, "form"),
+            *_check_inline_rows(model_admin, inline(model_admin.model, model_admin.admin_site)),
+        ]
     django_path = next(
         (
             path
@@ -193,6 +199,80 @@ def _check_inline(model_admin: ModelAdmin, inline: Any) -> list[checks.CheckMess
             id="formwork_admin.E104",
         )
     ]
+
+
+def _row_relations(owner: Any, names: Iterable[str]) -> list[RelatedField[Any, Any]]:
+    """The relations among ``names`` that the rows of ``owner`` edit in a select with a server search."""
+    relations = []
+    for name in names:
+        try:
+            field = owner.model._meta.get_field(name)
+        except FieldDoesNotExist:
+            continue
+        if not isinstance(field, RelatedField) or name in owner.radio_fields:
+            continue
+        # A many-to-many relation through a model of its own has no form field. A relation to another
+        # column than the primary key gets a select without a search.
+        if (
+            isinstance(field, ManyToManyField)
+            and not cast("type[Model]", field.remote_field.through)._meta.auto_created
+        ):
+            continue
+        if getattr(field.remote_field, "field_name", None) not in {None, field.related_model._meta.pk.name}:
+            continue
+        if owner._relation_searchable(field):
+            relations.append(field)
+    return relations
+
+
+def _check_share_choices(
+    owner: Any, relations: list[RelatedField[Any, Any]], formset_class: type
+) -> list[checks.CheckMessage]:
+    """Rows that can get choices of their own name whether they share their choices."""
+    if owner.share_choices is not None or not relations or not isinstance(owner.form, type):
+        return []
+    hooks = [
+        *row_choice_hooks(owner.form, formset_class),
+        *(
+            f"the callable limit_choices_to of '{field.name}'"
+            for field in relations
+            if callable(field.remote_field.limit_choices_to)
+        ),
+    ]
+    if not hooks:
+        return []
+    names = ", ".join(f"'{field.name}'" for field in relations)
+    return [
+        checks.Error(
+            f"The rows of '{type(owner).__qualname__}' can get choices of their own for {names} through "
+            f"{', '.join(hooks)}.",
+            hint="Set share_choices = True if every row gets the same choices, so that the rows load them once, "
+            "or share_choices = False.",
+            obj=type(owner),
+            id="formwork_admin.E504",
+        )
+    ]
+
+
+def _check_inline_rows(model_admin: ModelAdmin, inline: Any) -> list[checks.CheckMessage]:
+    if inline.fields:
+        names = flatten(inline.fields)
+    elif inline.fieldsets:
+        names = flatten_fieldsets(inline.fieldsets)
+    else:
+        names = [field.name for field in inline.model._meta.get_fields()]
+    skip = {*(inline.exclude or ()), *inline.readonly_fields, getattr(inline, "ct_field", None)}
+    relations = [
+        field
+        for field in _row_relations(inline, [name for name in names if name not in skip])
+        # The relation to the parent is no select.
+        if not (
+            field.name == inline.fk_name
+            if inline.fk_name
+            else field.many_to_one and field.related_model is model_admin.model
+        )
+    ]
+    return _check_share_choices(inline, relations, inline.formset)
 
 
 def check_model_admin(model_admin: ModelAdmin) -> list[checks.CheckMessage]:
@@ -249,6 +329,13 @@ def check_model_admin(model_admin: ModelAdmin) -> list[checks.CheckMessage]:
                     id="formwork_admin.E124",
                 ),
             )
+    errors.extend(
+        _check_share_choices(
+            model_admin,
+            _row_relations(model_admin, model_admin.list_editable),
+            FormworkBaseModelFormSet,
+        )
+    )
     for item in (*model_admin.autocomplete_fields, *model_admin.raw_id_fields):
         try:
             field = opts.get_field(item)

@@ -9,7 +9,7 @@ from __future__ import annotations
 import inspect
 from functools import partial
 from types import ModuleType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 from bs4 import BeautifulSoup
@@ -28,7 +28,7 @@ from django_formwork import views
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.search import SEARCH_PAGE_SIZE, search_url
 from django_formwork.widgets import ComboBox, Select, SelectMultiple
-from django_formwork.widgets.select import ChoiceLabel, shared_pages
+from django_formwork.widgets.select import ChoiceLabel, share_choices, shared_pages
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -112,6 +112,21 @@ class _NewestFirstUserForm(FormworkForm):
         queryset=User.objects.order_by("-pk"),
         widget=Select(search_fields=["email"], search_queryset=_users, search_decorator=None),
     )
+
+
+class _OwnUserForm(FormworkForm):
+    """Offers each row only the user it starts with."""
+
+    user = forms.ModelChoiceField(
+        queryset=User.objects.all(),
+        widget=Select(search_fields=["email"], search_queryset=_users, search_decorator=None),
+    )
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        cast("forms.ModelChoiceField[User]", self.fields["user"]).queryset = User.objects.filter(
+            pk=self.initial["user"]
+        )
 
 
 def _group_members(request: HttpRequest, *, group: int) -> QuerySet[User]:
@@ -634,6 +649,33 @@ def test_selects_that_share_their_pages_load_a_selected_row_once(django_assert_n
 
     picked = [soup.select_one("summary").get_text(strip=True) for soup in rendered]
     assert picked == [oldest.username, older.username, oldest.username]
+
+
+@pytest.mark.django_db
+def test_rows_of_a_formset_load_a_page_and_their_selected_rows_once(django_assert_num_queries: Any) -> None:
+    users = _make_users(SEARCH_PAGE_SIZE + 5)
+    initial = [{"user": user.pk} for user in (users[0], users[1], users[-1], users[0])]
+    formset_class = forms.formset_factory(_NewestFirstUserForm, extra=0)
+    alone = [str(form["user"]) for form in formset_class(initial=initial)]
+    formset = formset_class(initial=initial)
+    share_choices(formset)
+
+    with django_assert_num_queries(2):
+        shared = [str(form["user"]) for form in formset]
+
+    assert shared == alone
+
+
+@pytest.mark.django_db
+def test_rows_whose_form_narrows_their_choices_keep_their_own() -> None:
+    first, second = _make_users(2)
+    formset = forms.formset_factory(_OwnUserForm, extra=0)(initial=[{"user": first.pk}, {"user": second.pk}])
+    share_choices(formset)
+
+    rendered = [BeautifulSoup(str(form["user"]), "html.parser") for form in formset]
+
+    rows = [[int(row["data-value"]) for row in soup.select("li[role=option] [data-value]")] for soup in rendered]
+    assert rows == [[first.pk], [second.pk]]
 
 
 @pytest.mark.django_db

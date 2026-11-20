@@ -119,7 +119,10 @@
   `form` must subclass `FormworkModelForm`, and a system check names one that does not.
   Django's admin widgets on a `form` render as formwork's. An inline shows its saved
   rows in pages of `per_page`, 10 in a table and 5 in a stack by default, with a pager
-  next to Add another. Generic inlines come from `django_formwork.admin.contenttypes`.
+  next to Add another. The rows of a list or an inline load the choices of a relation
+  once for all rows. A form or formset that can change them per row needs
+  `share_choices`, which system check `formwork_admin.E504` reports. Generic inlines
+  come from `django_formwork.admin.contenttypes`.
   A `class Media` on an admin or an inline loads its files, without Django's jQuery. `@admin.action` takes Django 6.1's `location` and
   `description_plural`, and the change form shows its actions in an
   Actions menu. The other ways to save sit in a menu next to Save, and the way an add or

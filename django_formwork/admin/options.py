@@ -82,6 +82,7 @@ from django_formwork.formsets import (
     formwork_modelformset_factory,
 )
 from django_formwork.widgets import ChoiceLabel, Select
+from django_formwork.widgets.select import share_choices
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -140,6 +141,9 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
     sortable_by: Sequence[str] | None = None
     view_on_site: bool | Callable[[models.Model], str] = True
     show_full_result_count = True
+    # Whether the relations of editable rows load their choices once for all rows. None shares them
+    # unless a row can get choices of its own, which system check formwork_admin.E504 reports.
+    share_choices: bool | None = None
 
     model: type[models.Model]
     admin_site: Any
@@ -1605,6 +1609,7 @@ class ModelAdmin(BaseModelAdmin):
                     return HttpResponseRedirect(request.get_full_path())
             else:
                 formset = FormSet(queryset=cast("models.QuerySet[Any]", cl.page.object_list))
+            share_choices(formset, share=self.share_choices)
             cl.formset = formset
 
         context = self.page_context(
@@ -1686,6 +1691,7 @@ class ModelAdmin(BaseModelAdmin):
                 prefix = f"{prefix}-{prefixes[prefix]}"
             kwargs = self.get_formset_kwargs(request, obj, inline, prefix)
             formset = inline._paged_formset(request, FormSet, kwargs) if change else FormSet(**kwargs)
+            share_choices(formset, share=inline.share_choices)
             # A view-only inline posts nothing for its rows, so they skip validation unless deleted.
             if not inline.has_change_permission(request, obj if change else None):
                 for index, form in enumerate(formset.initial_forms):

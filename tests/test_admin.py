@@ -33,6 +33,8 @@ from django_formwork.admin.models import HistoryEntry
 from django_formwork.admin.paginator import page_links
 from django_formwork.admin.widgets import RELATION_SEARCH_KEY, AdminDateWidget
 from django_formwork.forms import FormworkModelForm
+from django_formwork.formsets import FormworkBaseInlineFormSet
+from django_formwork.search import SEARCH_PAGE_SIZE
 from django_formwork.widgets import Select, SelectMultiple, Textarea, TextInput
 
 pytestmark = pytest.mark.django_db
@@ -2213,6 +2215,9 @@ def test_relation_options_load_the_relations_their_description_reads(
 
 
 def test_editable_relation_of_a_list_loads_its_options_for_all_rows_at_once(admin_client, catalog, monkeypatch):
+    Category.objects.bulk_create(
+        Category(name=f"Aisle {number:02}", slug=f"aisle-{number:02}") for number in range(SEARCH_PAGE_SIZE)
+    )
     monkeypatch.setattr(site.get_model_admin(Item), "list_editable", ["category"])
 
     def load():
@@ -2221,10 +2226,29 @@ def test_editable_relation_of_a_list_loads_its_options_for_all_rows_at_once(admi
         return len(queries), len(soup.select("#changelist-table [name$=-category]"))
 
     queries, selects = load()
-    Item.objects.create(name="Gamma mug", category=catalog.kitchen)
+    Item.objects.create(name="Gamma mug", category=Category.objects.create(name="Workshop", slug="workshop"))
 
     assert selects == 2
     assert load() == (queries, 3)
+
+
+def test_inline_rows_load_the_choices_of_a_relation_at_once(admin_client, catalog, monkeypatch):
+    Tag.objects.bulk_create(Tag(name=f"aisle {number:02}") for number in range(SEARCH_PAGE_SIZE))
+    for name in ["spring", "summer", "winter"]:
+        Item.objects.create(name=f"{name} mug", category=catalog.kitchen).tags.add(Tag.objects.create(name=name))
+    inline = type("TagsInline", (admin.TabularInline,), {"model": Item, "fields": ["name", "tags"], "extra": 0})
+    monkeypatch.setattr(site.get_model_admin(Category), "inlines", [inline])
+
+    def load(*, share):
+        inline.share_choices = share
+        with CaptureQueriesContext(connection) as queries:
+            response = admin_client.get(url(Category, "change", catalog.kitchen.pk))
+        return len(queries), str(BeautifulSoup(response.content, "html.parser").select_one("#items-group"))
+
+    (shared, rows), (alone, own_rows) = load(share=None), load(share=False)
+
+    assert rows == own_rows
+    assert shared < alone
 
 
 def test_relation_search_keeps_the_model_ordering_under_an_annotated_admin(admin_client):
@@ -2478,6 +2502,49 @@ def test_checks_report_misconfigured_options(options, error_id):
     model_admin = type("BrokenAdmin", (admin.ModelAdmin,), options)(Item, site)
 
     assert [error.id for error in check_model_admin(model_admin)] == [error_id]
+
+
+class _RowForm(FormworkModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class _RowFormSet(FormworkBaseInlineFormSet):
+    def get_form_kwargs(self, index):
+        return super().get_form_kwargs(index)
+
+
+_EDITABLE_CATEGORY = {"list_display": ["name", "category"], "list_editable": ["category"]}
+
+
+@pytest.mark.parametrize(
+    ("model", "options", "errors"),
+    [
+        (Item, {**_EDITABLE_CATEGORY, "form": _RowForm}, ["formwork_admin.E504"]),
+        (Item, {**_EDITABLE_CATEGORY, "form": _RowForm, "share_choices": True}, []),
+        (Item, {**_EDITABLE_CATEGORY, "form": _RowForm, "share_choices": False}, []),
+        (Item, _EDITABLE_CATEGORY, []),
+        (Item, {"form": _RowForm}, []),
+        (
+            Category,
+            {"inlines": [type("RowsInline", (admin.TabularInline,), {"model": Item, "formset": _RowFormSet})]},
+            ["formwork_admin.E504"],
+        ),
+        (
+            Category,
+            {
+                "inlines": [
+                    type("NameInline", (admin.TabularInline,), {"model": Item, "fields": ["name"], "form": _RowForm})
+                ]
+            },
+            [],
+        ),
+    ],
+)
+def test_check_asks_rows_that_can_get_their_own_choices_to_set_share_choices(model, options, errors):
+    model_admin = type("RowsAdmin", (admin.ModelAdmin,), options)(model, site)
+
+    assert [error.id for error in check_model_admin(model_admin)] == errors
 
 
 @pytest.mark.parametrize(
