@@ -1133,6 +1133,8 @@ pages, override `formwork_admin/skeletons.html` and add a
 
 - The rows of a page load a relation or a deferred field that they read with one query
   for all rows. See [Relations of the rows](#relations-of-the-rows).
+- A column that shows a count or a sum computes it for the rows of the page only. See
+  [Computed columns](#computed-columns).
 - A relation to a model whose admin has `search_fields` pages its rows from the server.
   The change form no longer loads the whole related table into a `<select>`.
 - The rows of [editable columns](#editable-columns) and of an [inline](#inlines) load the
@@ -1190,6 +1192,36 @@ INSTALLED_APPS = [..., "django_nplus1"]
 MIDDLEWARE = [..., "django_nplus1.NPlus1Middleware"]
 NPLUS1_RAISE = True
 ```
+
+### Computed columns
+
+In Django's admin, a column that shows a count annotates `get_queryset()`. The list
+then joins the related table to count the rows that match the filters, and computes
+the value for each of them before it picks the page. In `@admin.display`, `annotate`
+names the expressions of the column instead. The admin computes them for the rows of
+the page with one query for each column, and sets each value on its row under its
+name:
+
+```python
+from django.db.models import Count
+
+
+class VenueAdmin(admin.ModelAdmin):
+    list_display = ["name", "city", "event_count"]
+
+    @admin.display(description=_("Events"), annotate={"num_events": Count("events")})
+    def event_count(self, obj):
+        return obj.num_events
+```
+
+The read-only fields of the change form and of the inline rows, and the columns of an
+export, get their values the same way. A name of `annotate` must not be a field of the
+model.
+
+Such a column does not sort, because a sort computes the value for every row that the
+filters keep. `ordering="num_events"` sorts by the expression of that name. Use it on
+a table of a few thousand rows. On a larger table, keep the value in a field of the
+model, for example with a database trigger, and show that field.
 
 ### Shared choices
 

@@ -61,21 +61,15 @@ class CompanyAdmin(admin.ModelAdmin):
     inlines = [ContactInline, DealInline, FollowUpInline]
     formfield_overrides = {models.URLField: {"widget": WebsiteInput}}
 
-    def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .annotate(
-                num_contacts=Count("contacts", distinct=True),
-                num_open_deals=Count("deals", filter=Q(deals__stage__in=Deal.OPEN_STAGES), distinct=True),
-            )
-        )
-
-    @admin.display(description="Contacts", ordering="num_contacts")
+    @admin.display(description="Contacts", ordering="num_contacts", annotate={"num_contacts": Count("contacts")})
     def contact_count(self, obj):
         return obj.num_contacts
 
-    @admin.display(description="Open deals", ordering="num_open_deals")
+    @admin.display(
+        description="Open deals",
+        ordering="num_open_deals",
+        annotate={"num_open_deals": Count("deals", filter=Q(deals__stage__in=Deal.OPEN_STAGES))},
+    )
     def open_deals(self, obj):
         return obj.num_open_deals
 

@@ -21,7 +21,8 @@ from django.contrib.contenttypes.admin import GenericTabularInline as DjangoGene
 from django.core import checks
 from django.core.paginator import Paginator
 from django.db import connection, models
-from django.db.models import FETCH_PEERS
+from django.db.models import FETCH_PEERS, Count
+from django.db.models.functions import Upper
 from django.db.models.signals import post_init
 from django.http import HttpResponse
 from django.test.utils import CaptureQueriesContext
@@ -695,6 +696,83 @@ def test_changelist_sorts_a_column_that_follows_a_relation(admin_client, catalog
     content = admin_client.get(url(Item, "changelist"), {"o": "-2"}).content
 
     assert content.index(b"Beta lamp") < content.index(b"Alpha kettle")
+
+
+@admin.display(description="Parts", ordering="num_parts", annotate={"num_parts": Count("parts")})
+def part_count(obj):
+    return obj.num_parts
+
+
+@admin.display(description="Parts", ordering="-num_parts", annotate={"num_parts": Count("parts")})
+def part_count_most_first(obj):
+    return obj.num_parts
+
+
+@admin.display(description="Tags", annotate={"num_tags": Count("tags")})
+def tag_count(obj):
+    return obj.num_tags
+
+
+@admin.display(description="Label", annotate={"label": Upper("name")})
+def part_label(obj):
+    return obj.label
+
+
+@pytest.mark.parametrize(
+    ("sort", "rows"),
+    [
+        ((part_count, "1"), ["Beta lamp 0", "Alpha kettle 2"]),
+        ((part_count, "-1"), ["Alpha kettle 2", "Beta lamp 0"]),
+        ((part_count_most_first, "1"), ["Alpha kettle 2", "Beta lamp 0"]),
+    ],
+    ids=["ascending", "descending", "descending-ordering"],
+)
+def test_display_annotation_shows_each_rows_value_and_sorts_by_it(admin_client, catalog, monkeypatch, sort, rows):
+    column, order = sort
+    Part.objects.create(item=catalog.alpha, name="Handle")
+    monkeypatch.setattr(site.get_model_admin(Item), "list_display", ["name", column])
+    monkeypatch.setattr(site.get_model_admin(Item), "actions", None)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist"), {"o": order}).content, "html.parser")
+
+    assert [row.get_text(" ", strip=True) for row in soup.select(LIST_ROWS)] == rows
+
+
+def test_display_annotations_of_two_columns_do_not_multiply_each_other(admin_client, catalog, monkeypatch):
+    Part.objects.create(item=catalog.alpha, name="Handle")
+    catalog.alpha.tags.add(Tag.objects.create(name="new"))
+    monkeypatch.setattr(site.get_model_admin(Item), "list_display", ["name", part_count, tag_count])
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    assert "Alpha kettle 2 2" in [row.get_text(" ", strip=True) for row in soup.select(LIST_ROWS)]
+
+
+def test_display_annotation_computes_for_the_page_rows_in_one_query(admin_client, catalog, monkeypatch):
+    """The count and the page's own query leave the annotation out."""
+    monkeypatch.setattr(site.get_model_admin(Item), "list_display", ["name", part_count])
+    monkeypatch.setattr(site.get_model_admin(Item), "list_per_page", 2)
+    Item.objects.create(name="Gamma mug", category=catalog.kitchen)
+
+    with CaptureQueriesContext(connection) as queries:
+        admin_client.get(url(Item, "changelist"))
+
+    assert len([query for query in queries if '"admin_app_part"' in query["sql"]]) == 1
+
+
+def test_display_annotation_shows_in_the_read_only_fields_of_the_form_and_its_inline_rows(
+    admin_client, catalog, monkeypatch
+):
+    Part.objects.create(item=catalog.alpha, name="Handle")
+    monkeypatch.setattr(site.get_model_admin(Item), "fieldsets", None)
+    monkeypatch.setattr(site.get_model_admin(Item), "readonly_fields", ["created", part_count])
+    monkeypatch.setattr(PartInline, "readonly_fields", [part_label])
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
+
+    legend = soup.find("span", class_="fieldset-legend", string="Parts")
+    assert legend.find_next_sibling("div").get_text(strip=True) == "2"
+    assert {"LID", "HANDLE"} <= set(soup.select_one("#parts-group").get_text(" ", strip=True).split())
 
 
 def test_changelist_shows_the_choice_label_in_a_column_that_follows_a_relation(admin_client, catalog, monkeypatch):

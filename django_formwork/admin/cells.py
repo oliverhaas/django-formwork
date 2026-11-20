@@ -16,9 +16,19 @@ from django.utils.safestring import SafeData
 from django.utils.translation import gettext
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable, Mapping
 
-__all__ = ["BADGE_COLORS", "Cell", "cell_for_field", "cell_for_value", "list_cell", "list_field"]
+__all__ = [
+    "BADGE_COLORS",
+    "Cell",
+    "annotate_rows",
+    "cell_for_field",
+    "cell_for_value",
+    "display_annotations",
+    "display_attr",
+    "list_cell",
+    "list_field",
+]
 
 # Choices without a colour of their own take these in turn, by their place in the choices.
 BADGE_COLORS = ("primary", "secondary", "accent", "info", "success", "warning", "error", "neutral")
@@ -111,6 +121,39 @@ def list_field(model: type[models.Model], name: str | Callable[..., Any]) -> Any
         return get_fields_from_path(model, name)[-1]
     except FieldDoesNotExist, NotRelationField:
         return None
+
+
+def display_attr(entry: str | Callable[..., Any], model_admin: Any) -> Any:
+    """What a column or a read-only entry names on the admin or else on the model, as ``lookup_field`` looks."""
+    if callable(entry):
+        return entry
+    attr = getattr(model_admin, entry, None) if entry != "__str__" else None
+    if attr is None:
+        attr = getattr(model_admin.model, entry, None)
+    return attr.fget if isinstance(attr, property) else attr
+
+
+def display_annotations(entries: Iterable[str | Callable[..., Any]], model_admin: Any) -> list[dict[str, Any]]:
+    """The ``annotate`` of each ``@display`` function that ``entries`` name and that has one."""
+    annotations = (getattr(display_attr(entry, model_admin), "admin_annotations", None) for entry in entries)
+    return [annotate for annotate in annotations if annotate]
+
+
+def annotate_rows(rows: Iterable[models.Model], annotations: Iterable[Mapping[str, Any]]) -> None:
+    """Set the values of each ``annotate`` on the saved ``rows``, computed for these rows only.
+
+    Each ``annotate`` takes a query of its own, so the joins of two columns do not multiply each other's counts.
+    """
+    saved = [row for row in rows if row.pk is not None]
+    if not saved:
+        return
+    queryset = type(saved[0])._base_manager.db_manager(saved[0]._state.db).filter(pk__in=[row.pk for row in saved])
+    for annotate in annotations:
+        values = queryset.order_by().values("pk").annotate(**annotate).values_list("pk", *annotate)
+        by_pk = {pk: rest for pk, *rest in values}
+        for row in saved:
+            for name, value in zip(annotate, by_pk.get(row.pk, ()), strict=False):
+                setattr(row, name, value)
 
 
 def list_cell(name: str | Callable[..., Any], obj: models.Model, model_admin: Any) -> Cell:

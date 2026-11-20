@@ -12,6 +12,9 @@ from django_formwork.forms import FormworkForm
 from .models import Event, Registration, Venue
 from .stats import event_figures, event_signups, event_stats
 
+# The registrations that hold a seat.
+TAKEN = ~Q(registrations__status__in=[Registration.Status.CANCELLED, Registration.Status.WAITLIST])
+
 
 class PostponeForm(FormworkForm):
     days = forms.IntegerField(min_value=1, max_value=365, initial=7, help_text="Start and end move by this many days.")
@@ -56,10 +59,7 @@ class VenueAdmin(admin.ModelAdmin):
         ("Location", {"fields": [("city", "country"), "address", "url"]}),
     ]
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).annotate(num_events=Count("events"))
-
-    @admin.display(description="Events", ordering="num_events")
+    @admin.display(description="Events", ordering="num_events", annotate={"num_events": Count("events")})
     def event_count(self, obj):
         return obj.num_events
 
@@ -94,10 +94,6 @@ class EventAdmin(admin.ModelAdmin):
     save_as = True
     actions = ["publish", "unpublish", "postpone"]
 
-    def get_queryset(self, request):
-        taken = ~Q(registrations__status__in=[Registration.Status.CANCELLED, Registration.Status.WAITLIST])
-        return super().get_queryset(request).annotate(num_registrations=Count("registrations", filter=taken))
-
     @admin.slot(lazy=True, skeleton="events/stats_skeleton.html")
     def list_top(self, request, queryset):
         return render_to_string("events/stats.html", event_stats(queryset), request)
@@ -109,7 +105,11 @@ class EventAdmin(admin.ModelAdmin):
     def change_bottom(self, request, obj):
         return render_to_string("events/event_signups.html", event_signups(obj), request)
 
-    @admin.display(description="Seats", ordering="num_registrations")
+    @admin.display(
+        description="Seats",
+        ordering="num_registrations",
+        annotate={"num_registrations": Count("registrations", filter=TAKEN)},
+    )
     def seats(self, obj):
         if obj.capacity is None:
             return obj.num_registrations

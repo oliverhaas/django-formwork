@@ -25,7 +25,7 @@ from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured, Susp
 from django.core.paginator import InvalidPage
 from django.db import models
 from django.db.models.constants import LOOKUP_SEP
-from django.db.models.expressions import Combinable, F, OrderBy
+from django.db.models.expressions import Combinable, F, OrderBy, OuterRef, Subquery
 from django.http import QueryDict
 from django.urls import reverse
 from django.utils.formats import number_format
@@ -34,7 +34,7 @@ from django.utils.http import urlencode
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _
 
-from django_formwork.admin.cells import list_cell, list_field
+from django_formwork.admin.cells import annotate_rows, display_annotations, display_attr, list_cell, list_field
 from django_formwork.admin.filters import SEARCH_VAR
 from django_formwork.admin.paginator import EstimatedCountPaginator, PageLink, page_links
 from django_formwork.admin.widgets import IS_POPUP_VAR, TO_FIELD_VAR
@@ -369,24 +369,25 @@ class ChangeList:
             return None
         if self.sortable_by is not None and name not in self.sortable_by:
             return None
-        if callable(name):
-            return getattr(name, "admin_order_field", None)
-        try:
-            field = self.opts.get_field(name)
-        except FieldDoesNotExist:
-            if name == "__str__":
-                return None
-            attr = getattr(self.model_admin, name, None) or getattr(self.model, name, None)
-            if attr is None and LOOKUP_SEP in name:
-                # A column that follows a relation, such as "author__name", sorts by that path.
-                return name
-            if isinstance(attr, property) and hasattr(attr, "fget"):
-                attr = attr.fget
-            return getattr(attr, "admin_order_field", None)
-        # A to-many column joins rows and repeats objects.
-        if field.many_to_many or field.one_to_many:
-            return None
-        return field.name
+        if isinstance(name, str):
+            try:
+                field = self.opts.get_field(name)
+            except FieldDoesNotExist:
+                if LOOKUP_SEP in name and display_attr(name, self.model_admin) is None:
+                    # A column that follows a relation, such as "author__name", sorts by that path.
+                    return name
+            else:
+                # A to-many column joins rows and repeats objects.
+                return None if field.many_to_many or field.one_to_many else field.name
+        attr = display_attr(name, self.model_admin)
+        ordering = getattr(attr, "admin_order_field", None)
+        annotations = getattr(attr, "admin_annotations", {})
+        if isinstance(ordering, str) and (annotation := ordering.removeprefix("-")) in annotations:
+            # A subquery per row: an aggregate in order_by() needs annotate(), whose join the count would keep.
+            rows = self.model._base_manager.filter(pk=OuterRef("pk")).order_by().values("pk")
+            expression = Subquery(rows.annotate(**{annotation: annotations[annotation]}).values(annotation))
+            return expression.desc() if ordering.startswith("-") else expression.asc()
+        return ordering
 
     @cached_property
     def column_names(self) -> dict[str, str | Callable[..., Any]]:
@@ -528,6 +529,7 @@ class ChangeList:
     @cached_property
     def result_list(self) -> list[models.Model]:
         rows = list(self.page.object_list)
+        annotate_rows(rows, display_annotations(self.list_display, self.model_admin))
         self.model_admin.prepare_rows(self.request, rows)
         return rows
 

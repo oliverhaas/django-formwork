@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from django_formwork.admin.options import ActionLocation, ModelAdmin
@@ -10,6 +10,7 @@ from django_formwork.admin.options import ActionLocation, ModelAdmin
 if TYPE_CHECKING:
     from django import forms
     from django.db import models
+    from django.db.models.expressions import BaseExpression, Combinable
     from django_stubs_ext import StrPromise
 
     from django_formwork.admin.sites import AdminSite
@@ -40,11 +41,15 @@ def display[F: Callable[..., Any]](
     function: F | None = None,
     *,
     boolean: bool | None = None,
-    ordering: str | None = None,
+    ordering: str | BaseExpression | Combinable | None = None,
     description: str | StrPromise | None = None,
     empty_value: str | None = None,
+    annotate: Mapping[str, BaseExpression | Combinable] | None = None,
 ) -> Any:
-    """``django.contrib.admin.display``, with the same attributes."""
+    """``django.contrib.admin.display``, with the same attributes.
+
+    ``annotate`` names expressions that the admin computes for the rows it shows, as ``QuerySet.annotate()`` does.
+    """
 
     def decorator(func: F) -> F:
         if boolean is not None and empty_value is not None:
@@ -58,6 +63,8 @@ def display[F: Callable[..., Any]](
             func.short_description = description  # type: ignore[attr-defined]
         if empty_value is not None:
             func.empty_value_display = empty_value  # type: ignore[attr-defined]
+        if annotate is not None:
+            func.admin_annotations = dict(annotate)  # type: ignore[attr-defined]
         return func
 
     return decorator if function is None else decorator(function)

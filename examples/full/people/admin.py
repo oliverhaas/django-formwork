@@ -34,10 +34,7 @@ class DepartmentAdmin(admin.ModelAdmin):
     search_fields = ["name", "code"]
     inlines = [EmployeeInline]
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).annotate(num_employees=Count("employees"))
-
-    @admin.display(description="Headcount", ordering="num_employees")
+    @admin.display(description="Headcount", ordering="num_employees", annotate={"num_employees": Count("employees")})
     def headcount(self, obj):
         return obj.num_employees
 

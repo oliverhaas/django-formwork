@@ -124,7 +124,9 @@
   `share_choices`, which system check `formwork_admin.E504` reports. The rows of a page
   load a relation that they read with one query for all rows, through Django's
   `FETCH_PEERS` fetch mode, which `fetch_mode` on an admin or an inline changes.
-  `list_select_related` is not needed and not read. Generic inlines
+  `list_select_related` is not needed and not read. `annotate` on `@admin.display`
+  computes a column's count or sum for the rows of the page only, where an annotation
+  in `get_queryset()` computes it for every row that the filters keep. Generic inlines
   come from `django_formwork.admin.contenttypes`.
   A `class Media` on an admin or an inline loads its files, without Django's jQuery. `@admin.action` takes Django 6.1's `location` and
   `description_plural`, and the change form shows its actions in an

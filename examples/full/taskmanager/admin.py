@@ -54,12 +54,11 @@ class MemberAdmin(admin.ModelAdmin):
     choice_description = ["employee__job_title", "email"]
     inlines = [AssignedTaskInline]
 
-    def get_queryset(self, request):
-        return (
-            super().get_queryset(request).annotate(num_open=Count("tasks", filter=~Q(tasks__status=Task.Status.DONE)))
-        )
-
-    @admin.display(description="Open tasks", ordering="num_open")
+    @admin.display(
+        description="Open tasks",
+        ordering="num_open",
+        annotate={"num_open": Count("tasks", filter=~Q(tasks__status=Task.Status.DONE))},
+    )
     def open_tasks(self, obj):
         return obj.num_open
 
@@ -70,10 +69,7 @@ class TagAdmin(admin.ModelAdmin):
     list_display = ["name", "color", "task_count"]
     search_fields = ["name"]
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).annotate(num_tasks=Count("tasks"))
-
-    @admin.display(description="Tasks", ordering="num_tasks")
+    @admin.display(description="Tasks", ordering="num_tasks", annotate={"num_tasks": Count("tasks")})
     def task_count(self, obj):
         return obj.num_tasks
 

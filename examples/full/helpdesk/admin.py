@@ -75,12 +75,11 @@ class TicketAdmin(admin.ModelAdmin):
     def change_top(self, request, obj):
         return render_to_string("charts/figures.html", ticket_figures(obj), request)
 
-    def get_queryset(self, request):
-        return (
-            super().get_queryset(request).annotate(num_replies=Count("replies", filter=Q(replies__is_internal=False)))
-        )
-
-    @admin.display(description="Replies", ordering="num_replies")
+    @admin.display(
+        description="Replies",
+        ordering="num_replies",
+        annotate={"num_replies": Count("replies", filter=Q(replies__is_internal=False))},
+    )
     def reply_count(self, obj):
         return obj.num_replies
 

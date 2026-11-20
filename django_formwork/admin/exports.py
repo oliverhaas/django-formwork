@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import io
 import itertools
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from django.http import HttpRequest, QueryDict
 from django.utils import timezone
 from django.utils.text import slugify
 
+from django_formwork.admin.cells import annotate_rows, display_attr
 from django_formwork.admin.formats import FORMATS, FileFormat
 
 if TYPE_CHECKING:
@@ -43,6 +45,8 @@ class Column:
     get: Callable[[models.Model], Any]
     #: A JSON field: JSON keeps the data, the other formats write it as JSON text.
     structured: bool = False
+    #: The ``annotate`` of the column's ``@display`` function, computed for each chunk of rows.
+    annotations: dict[str, Any] = dataclasses.field(default_factory=dict)
 
 
 def get_columns(model_admin: Any, request: HttpRequest) -> list[Column]:
@@ -55,7 +59,8 @@ def get_columns(model_admin: Any, request: HttpRequest) -> list[Column]:
         except FieldDoesNotExist:
             field = None
         if field is None or not (field.concrete or field.many_to_many):
-            columns.append(Column(_entry_name(entry), _lookup(entry, model_admin)))
+            annotations = getattr(display_attr(entry, model_admin), "admin_annotations", {})
+            columns.append(Column(_entry_name(entry), _lookup(entry, model_admin), annotations=annotations))
         elif field.many_to_many:
             columns.append(Column(field.name, _related_pks(field.name)))
         elif field.is_relation:
@@ -104,10 +109,12 @@ def export_rows(
     many = [column.name for column in columns if column.name in {field.name for field in opts.many_to_many}]
     if many:
         queryset = queryset.prefetch_related(*many)
+    annotations = [column.annotations for column in columns if column.annotations]
     for chunk in itertools.batched(pks, CHUNK_SIZE, strict=False):
         # A read of its own per chunk: the fetch mode loads a relation for the rows of one read. Over a
         # single iterator(), each chunk would go through every row before it.
         rows = list(queryset.in_bulk(chunk).values())
+        annotate_rows(rows, annotations)
         if prepare is not None:
             prepare(rows)
         for obj in rows:

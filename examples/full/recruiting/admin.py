@@ -104,22 +104,22 @@ class OpeningAdmin(admin.ModelAdmin):
     save_as = True
     actions = ["publish", "put_on_hold", "close"]
 
-    def get_queryset(self, request):
-        closed = [Application.Stage.HIRED, Application.Stage.REJECTED]
-        return (
-            super()
-            .get_queryset(request)
-            .annotate(
-                num_applications=Count("applications"),
-                num_active=Count("applications", filter=~Q(applications__stage__in=closed)),
-            )
-        )
-
-    @admin.display(description="Applicants", ordering="num_applications")
+    @admin.display(
+        description="Applicants", ordering="num_applications", annotate={"num_applications": Count("applications")}
+    )
     def applicant_count(self, obj):
         return obj.num_applications
 
-    @admin.display(description="In pipeline", ordering="num_active")
+    @admin.display(
+        description="In pipeline",
+        ordering="num_active",
+        annotate={
+            "num_active": Count(
+                "applications",
+                filter=~Q(applications__stage__in=[Application.Stage.HIRED, Application.Stage.REJECTED]),
+            )
+        },
+    )
     def in_pipeline(self, obj):
         return obj.num_active
 
@@ -165,10 +165,9 @@ class CandidateAdmin(admin.ModelAdmin):
     ]
     inlines = [CandidateApplicationInline]
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).annotate(num_applications=Count("applications"))
-
-    @admin.display(description="Applications", ordering="num_applications")
+    @admin.display(
+        description="Applications", ordering="num_applications", annotate={"num_applications": Count("applications")}
+    )
     def application_count(self, obj):
         return obj.num_applications
 

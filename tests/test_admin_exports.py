@@ -7,16 +7,17 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-from admin_app.models import Category, Item, Tag
+from admin_app.models import Category, Item, Part, Tag
 from bs4 import BeautifulSoup
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
+from django.db.models import Count
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from openpyxl import load_workbook
 
-from django_formwork.admin import site
+from django_formwork.admin import display, site
 from django_formwork.admin.exports import run_export_job
 from django_formwork.admin.models import ExportJob
 
@@ -137,6 +138,29 @@ def test_export_reads_its_rows_in_chunks_and_a_relation_once_per_chunk(admin_cli
         ("Beta lamp", "Kitchen"),
         ("Alpha kettle", "Kitchen"),
     ]
+    assert load()[0] == queries
+
+
+@display(annotate={"num_parts": Count("parts")})
+def part_count(obj):
+    return obj.num_parts
+
+
+def test_export_computes_a_display_annotation_once_per_chunk(admin_client, items, monkeypatch):
+    monkeypatch.setattr("django_formwork.admin.exports.CHUNK_SIZE", 2)
+    monkeypatch.setattr(site.get_model_admin(Item), "export_fields", ["name", part_count], raising=False)
+    Part.objects.bulk_create(Part(item=items[0], name=name) for name in ["Lid", "Handle"])
+    Item.objects.create(name="Gamma mug", category=items[0].category)
+
+    def load():
+        with CaptureQueriesContext(connection) as queries:
+            rows = csv_rows(export(admin_client, "csv", "o=1"))
+        return len(queries), [(row["name"], row["part_count"]) for row in rows]
+
+    queries, rows = load()
+    Item.objects.create(name="Delta cup", category=items[0].category)
+
+    assert rows == [("Alpha kettle", "2"), ("Beta lamp", "0"), ("Gamma mug", "0")]
     assert load()[0] == queries
 
 

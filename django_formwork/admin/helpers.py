@@ -22,7 +22,7 @@ from django.utils.html import conditional_escape, format_html, format_html_join
 from django.utils.safestring import SafeString, mark_safe
 from django.utils.text import capfirst
 
-from django_formwork.admin.cells import cell_for_field, cell_for_value, html
+from django_formwork.admin.cells import annotate_rows, cell_for_field, cell_for_value, display_annotations, html
 from django_formwork.admin.paginator import page_links
 from django_formwork.tables import Table, TableCell, TableRow
 
@@ -223,6 +223,8 @@ class AdminForm:
     @cached_property
     def fieldsets(self) -> list[Fieldset]:
         obj = getattr(self.form, "instance", None)
+        if obj is not None and self.model_admin is not None:
+            annotate_rows([obj], display_annotations(self.readonly_fields, self.model_admin))
         return [
             Fieldset(
                 name=name,
@@ -385,6 +387,8 @@ class InlineAdminFormSet:
 
     @cached_property
     def forms(self) -> list[InlineAdminForm]:
+        originals = [form.instance for form in self.formset.initial_forms]
+        annotate_rows(originals, display_annotations(self.readonly_fields, self.opts))
         return [
             self._admin_form(form, form.instance if form.instance.pk is not None else None)
             for form in self.formset.initial_forms + self.formset.extra_forms
