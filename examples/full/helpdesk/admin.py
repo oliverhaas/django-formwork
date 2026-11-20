@@ -32,9 +32,6 @@ class ReplyInline(admin.StackedInline):
     autocomplete_fields = ["author"]
     extra = 0
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related("author")
-
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
@@ -49,7 +46,6 @@ class TicketAdmin(admin.ModelAdmin):
         "opened_at",
         "reply_count",
     ]
-    list_select_related = ["requester__company", "assignee"]
     list_filter = [
         "status",
         "priority",

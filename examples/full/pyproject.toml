@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=9,<10", "pytest-django>=4.12,<5"]
+dev = ["django-nplus1>=0.6.2", "pytest>=9,<10", "pytest-django>=4.12,<5"]
 # PostgreSQL with django-pghistory: see "PostgreSQL and pghistory" in the README.
 postgres = ["django-pghistory>=3.9", "psycopg[binary]>=3.2"]
 

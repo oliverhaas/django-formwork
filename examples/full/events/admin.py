@@ -42,9 +42,6 @@ class RegistrationInline(admin.TabularInline):
     def has_add_permission(self, request, obj=None):
         return False
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related("contact")
-
 
 @admin.register(Venue)
 class VenueAdmin(admin.ModelAdmin):
@@ -71,7 +68,6 @@ class VenueAdmin(admin.ModelAdmin):
 class EventAdmin(admin.ModelAdmin):
     icon = "calendar-days"
     list_display = ["title", "kind", "starts_at", "venue", "host", "price", "seats", "is_published"]
-    list_select_related = ["venue", "host"]
     list_editable = ["kind", "starts_at", "venue", "host", "price", "is_published"]
     list_filter = [
         WhenFilter,
@@ -160,7 +156,6 @@ class EventAdmin(admin.ModelAdmin):
 class RegistrationAdmin(admin.ModelAdmin):
     icon = "ticket"
     list_display = ["contact", "contact__company", "event", "status", "registered_at", "checked_in_at"]
-    list_select_related = ["contact__company", "event"]
     list_filter = [
         "status",
         ("event", admin.RelatedOnlyFieldListFilter),

@@ -121,7 +121,10 @@
   rows in pages of `per_page`, 10 in a table and 5 in a stack by default, with a pager
   next to Add another. The rows of a list or an inline load the choices of a relation
   once for all rows. A form or formset that can change them per row needs
-  `share_choices`, which system check `formwork_admin.E504` reports. Generic inlines
+  `share_choices`, which system check `formwork_admin.E504` reports. The rows of a page
+  load a relation that they read with one query for all rows, through Django's
+  `FETCH_PEERS` fetch mode, which `fetch_mode` on an admin or an inline changes.
+  `list_select_related` is not needed and not read. Generic inlines
   come from `django_formwork.admin.contenttypes`.
   A `class Media` on an admin or an inline loads its files, without Django's jQuery. `@admin.action` takes Django 6.1's `location` and
   `description_plural`, and the change form shows its actions in an

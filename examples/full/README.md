@@ -106,7 +106,7 @@ The example doubles as an integration test bed for the package:
 uv run pytest
 ```
 
-Covers the persisted settings flow (Profile singleton, phone validation, avatar upload), the task flows (My work, the board, the task page and its activity) and a smoke test that renders the changelist, add and change page of every model in the admin. With the variables from "PostgreSQL and pghistory" set, `uv run --group postgres pytest` runs them on PostgreSQL.
+Covers the persisted settings flow (Profile singleton, phone validation, avatar upload), the task flows (My work, the board, the task page and its activity) and a smoke test that renders the changelist, add and change page of every model in the admin. [django-nplus1](https://github.com/oliverhaas/django-nplus1) fails a test whose page loads a relation for each row; on the dev server it logs a warning instead. With the variables from "PostgreSQL and pghistory" set, `uv run --group postgres pytest` runs them on PostgreSQL.
 
 ## CSS theme switching
 

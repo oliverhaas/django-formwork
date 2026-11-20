@@ -229,7 +229,7 @@ A site that grants access this way grants it for every model registered on it. R
 ## ModelAdmin
 
 The list, add, change, delete and history pages read the same options as Django's
-admin: `list_display`, `list_display_links`, `list_filter`, `list_select_related`,
+admin: `list_display`, `list_display_links`, `list_filter`,
 `list_per_page`, `list_max_show_all`, `list_editable`, `search_fields`,
 `search_help_text`, `date_hierarchy`, `ordering`, `sortable_by`, `fields`, `exclude`,
 `fieldsets`, `readonly_fields`, `prepopulated_fields`, `radio_fields`,
@@ -239,7 +239,9 @@ admin: `list_display`, `list_display_links`, `list_filter`, `list_select_related
 `delete_model()` and `response_*()` hooks.
 
 `save_on_top` is accepted and does nothing: the save buttons stay in the bar at the end of
-the form, which stays in view while the form has changes.
+the form, which stays in view while the form has changes. `list_select_related` is not
+read, because the rows load their relations without it. See
+[Relations of the rows](#relations-of-the-rows).
 
 The delete pages group the objects that a deletion takes with it per model at each
 level. A model with more than one object there shows its name and count, its first 8
@@ -308,13 +310,14 @@ Options this admin adds:
 | `list_badges` | Badge colors per value, by column: `{"status": {"active": "success", "archived": "warning"}}`. The select of the field on a form and its list filter show the same badges. |
 | `choice_description` | What a row shows under its name in the dropdown of a relation to this model: entries as in `list_display`. See [Related objects](#related-objects). |
 | `list_only_fields` | Load only these columns on the list page. |
+| `fetch_mode` | How the rows load a relation that they read. Default `FETCH_PEERS`, for all rows of the page together. See [Relations of the rows](#relations-of-the-rows). |
 | `list_defer_fields` | Skip these columns on the list page, for a large JSON or text column that no column shows. |
 | `list_per_page_options` | The page sizes the list offers next to its pages. Default `(25, 50, 100, 250)`. `list_per_page` is always one of them. |
 | `list_top`, `list_bottom` | Methods that return HTML for the list page, above the search row and under the list. See [Slots](#slots). |
 | `change_top`, `change_bottom` | Methods that return HTML for the change page, above the fields and under the save bar. See [Slots](#slots). |
 
-`list_only_fields` is opt-in. A `__str__` that reads a deferred field runs one query per
-row.
+`list_only_fields` is opt-in. A `__str__` that reads a field it leaves out costs one more
+query for the page.
 
 The page size menu shows while the list has more rows than the smallest size. It offers
 All while the rows fit `list_max_show_all`. The size picked goes into the URL as
@@ -386,10 +389,10 @@ method of the admin or the model, or a callable. Each value shows as the list sh
 and an empty value is left out. `manage.py check` reports an unknown entry as
 `formwork_admin.E503`.
 
-The dropdown loads a relation that an entry reads with `select_related()`, so the
-descriptions add no query per row. Its rows come from the model's default manager, as in
+The dropdown loads a relation that an entry reads for all its rows with one query, as
+[the list does](#relations-of-the-rows). Its rows come from the model's default manager, as in
 Django, not from `get_queryset()`. A method that reads an annotation gets it from
-`choice_queryset(queryset)`, which both the form and the search call:
+`choice_queryset(queryset)`, which the form, the list filter and the search call:
 
 ```python
 def choice_queryset(self, queryset):
@@ -1075,9 +1078,8 @@ pages, override `formwork_admin/skeletons.html` and add a
 
 ## Performance
 
-- A foreign key column joins only its own relation. Django's admin calls
-  `select_related()` without arguments for one, which follows every non-null relation
-  five levels deep.
+- The rows of a page load a relation or a deferred field that they read with one query
+  for all rows. See [Relations of the rows](#relations-of-the-rows).
 - A relation to a model whose admin has `search_fields` pages its rows from the server.
   The change form no longer loads the whole related table into a `<select>`.
 - The rows of [editable columns](#editable-columns) and of an [inline](#inlines) load the
@@ -1091,6 +1093,50 @@ pages, override `formwork_admin/skeletons.html` and add a
   load. A link in the sidebar, the breadcrumbs or a list row swaps the content, and the
   sidebar keeps its scroll position. The link loads its page when the pointer rests on
   it, and a slow page shows the skeleton of its layout until it arrives.
+
+### Relations of the rows
+
+`get_queryset()` gives the rows Django's fetch mode `FETCH_PEERS`. When the first row
+of a query reads a foreign key, a one-to-one relation, a generic foreign key or a
+deferred field, Django loads it for all rows of that query with one more query. The
+related rows get the same mode, so a `__str__` that reads a relation of its own also
+costs one query for the page and not one for each row.
+
+This applies to the list, the change form, the inlines, the exports, the import and the
+options of a relation. A column that follows a relation needs no `select_related()`.
+Relations to many rows do not load this way: a column that reads `obj.tags.all()` needs
+`prefetch_related()` in `get_queryset()`:
+
+```python
+class ArticleAdmin(admin.ModelAdmin):
+    list_display = ["title", "author", "tag_names"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("tags")
+
+    @admin.display(description=_("Tags"))
+    def tag_names(self, obj):
+        return ", ".join(tag.name for tag in obj.tags.all())
+```
+
+`fetch_mode` on a `ModelAdmin` or an inline takes another of Django's fetch modes, for
+example `FETCH_ONE`, which loads a relation for each row with a query of its own, as
+Django's admin does. `None` keeps the mode of the model's default manager.
+
+To find a column that still loads a relation for each row, run the tests of your admin
+with [django-nplus1](https://github.com/oliverhaas/django-nplus1) set to raise. Each
+test that loads a page then fails on the first relation that a row loads alone, and
+on a `select_related()` or a prefetch that the page never reads. For a default
+manager that joins a relation for `__str__`, return
+`super().get_queryset().fetch_mode(FETCH_PEERS)` instead. formwork's own tests run
+this way.
+
+```python
+# settings for the tests
+INSTALLED_APPS = [..., "django_nplus1"]
+MIDDLEWARE = [..., "django_nplus1.NPlus1Middleware"]
+NPLUS1_RAISE = True
+```
 
 ### Shared choices
 

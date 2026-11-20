@@ -38,9 +38,6 @@ class OpeningApplicationInline(admin.TabularInline):
     def has_add_permission(self, request, obj=None):
         return False
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related("candidate", "opening")
-
 
 class CandidateApplicationInline(admin.TabularInline):
     model = Application
@@ -71,7 +68,6 @@ class OpeningAdmin(admin.ModelAdmin):
         "in_pipeline",
         "opened_on",
     ]
-    list_select_related = ["department"]
     list_filter = [
         "status",
         "department",
@@ -181,7 +177,6 @@ class CandidateAdmin(admin.ModelAdmin):
 class ApplicationAdmin(admin.ModelAdmin):
     icon = "file-user"
     list_display = ["candidate", "opening", "stage", "owner", "rating", "applied_at", "moved_at"]
-    list_select_related = ["candidate", "opening", "owner"]
     list_filter = [
         "stage",
         ("opening", admin.RelatedOnlyFieldListFilter),
@@ -232,7 +227,6 @@ class ApplicationAdmin(admin.ModelAdmin):
 class InterviewAdmin(admin.ModelAdmin):
     icon = "calendar-clock"
     list_display = ["__str__", "application", "interviewer", "scheduled_at", "score"]
-    list_select_related = ["application__candidate", "application__opening", "interviewer"]
     list_filter = ["kind", "interviewer", ("score", admin.EmptyFieldListFilter), "scheduled_at"]
     search_fields = ["application__candidate__last_name", "application__opening__title", "feedback"]
     date_hierarchy = "scheduled_at"

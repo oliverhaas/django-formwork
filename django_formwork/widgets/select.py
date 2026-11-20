@@ -46,7 +46,7 @@ __all__ = [
 ]
 
 # The rows that the selects of one render have loaded, by their query.
-_pages: ContextVar[dict[tuple[str, str, str], list[Any]] | None] = ContextVar("formwork_select_pages", default=None)
+_pages: ContextVar[dict[tuple[Any, ...], list[Any]] | None] = ContextVar("formwork_select_pages", default=None)
 
 
 @contextmanager
@@ -68,7 +68,9 @@ def _load(queryset: QuerySet[Any]) -> list[Any]:
         sql, params = queryset.query.sql_with_params()
     except EmptyResultSet:
         return []
-    key = (queryset.db, sql, repr(params))
+    # The fetch mode and the prefetches load the rows' relations, and the SQL does not show them.
+    loading = (queryset._fetch_mode, queryset._prefetch_related_lookups)  # type: ignore[attr-defined]  # noqa: SLF001
+    key = (queryset.db, sql, repr(params), *loading)
     if key not in pages:
         pages[key] = list(queryset)
     return pages[key]

@@ -136,7 +136,7 @@ class ModelHistory(History):
 
         rows = HistoryEntry.objects.filter(
             content_type=ContentType.objects.get_for_model(obj, for_concrete_model=False), object_id=str(obj.pk)
-        ).select_related("user")
+        ).fetch_mode(models.FETCH_PEERS)
         return [_entry(row) for row in rows[start:stop]]
 
     def recent(self, request: HttpRequest, limit: int) -> list[Entry]:
@@ -144,7 +144,7 @@ class ModelHistory(History):
 
         if not request.user.is_authenticated:
             return []
-        rows = HistoryEntry.objects.filter(user_id=cast("Any", request.user.pk)).select_related("content_type", "user")
+        rows = HistoryEntry.objects.filter(user_id=cast("Any", request.user.pk)).fetch_mode(models.FETCH_PEERS)
         return [_entry(row) for row in rows[:limit]]
 
 

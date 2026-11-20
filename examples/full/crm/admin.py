@@ -84,7 +84,6 @@ class CompanyAdmin(admin.ModelAdmin):
 class ContactAdmin(admin.ModelAdmin):
     icon = "contact"
     list_display = ["__str__", "company", "email", "job_title", "is_primary", "newsletter", "last_contacted"]
-    list_select_related = ["company"]
     list_filter = ["is_primary", "newsletter", "company__industry", ("last_contacted", admin.EmptyFieldListFilter)]
     search_fields = ["first_name", "last_name", "email", "company__name"]
     choice_description = ["company", "job_title"]
@@ -106,7 +105,6 @@ class ContactAdmin(admin.ModelAdmin):
 class DealAdmin(admin.ModelAdmin):
     icon = "handshake"
     list_display = ["name", "company", "owner", "stage", "value", "currency", "probability", "expected_close"]
-    list_select_related = ["company", "owner"]
     list_filter = ["stage", "owner", "currency", "expected_close", ("company", admin.RelatedOnlyFieldListFilter)]
     list_badges = {"stage": Deal.STAGE_COLORS}
     search_fields = ["name", "company__name", "contact__last_name"]
@@ -144,7 +142,6 @@ class DealAdmin(admin.ModelAdmin):
 class ActivityAdmin(admin.ModelAdmin):
     icon = "messages-square"
     list_display = ["subject", "kind", "company", "contact", "logged_by", "occurred_at", "duration"]
-    list_select_related = ["company", "contact", "logged_by"]
     list_filter = ["kind", "logged_by", "occurred_at"]
     list_badges = {"kind": Activity.KIND_COLORS}
     search_fields = ["subject", "body", "company__name"]
@@ -169,7 +166,6 @@ class RegardingFilter(admin.SimpleListFilter):
 class FollowUpAdmin(admin.ModelAdmin):
     icon = "bell"
     list_display = ["title", "regarding_link", "owner", "due_at", "done"]
-    list_select_related = ["owner", "content_type"]
     list_filter = ["done", RegardingFilter, "owner", "due_at"]
     search_fields = ["title"]
     date_hierarchy = "due_at"

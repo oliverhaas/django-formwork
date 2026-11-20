@@ -19,6 +19,7 @@ from django.contrib.auth.models import Group, User
 from django.core.checks import Tags, run_checks
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
+from django.db.models import FETCH_PEERS
 from django.forms import modelform_factory
 from django.test import Client
 from django.urls import reverse
@@ -636,6 +637,44 @@ def test_selects_that_share_their_pages_load_each_queryset_once(django_assert_nu
 
     rows = [[int(row["data-value"]) for row in soup.select("li[role=option] [data-value]")] for soup in rendered]
     assert rows == [[first.pk, second.pk], [], [first.pk], [second.pk], [second.pk], [first.pk, second.pk]]
+
+
+def _cities(request: HttpRequest) -> QuerySet[City]:
+    return City.objects.all()
+
+
+class _CityForm(FormworkForm):
+    city = forms.ModelChoiceField(
+        queryset=City.objects.all(),
+        widget=Select(search_fields=["name"], search_queryset=_cities, search_decorator=None),
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "load_regions",
+    [lambda cities: cities.fetch_mode(FETCH_PEERS), lambda cities: cities.prefetch_related("region")],
+    ids=["fetch_mode", "prefetch"],
+)
+def test_selects_that_share_their_pages_load_the_rows_as_each_queryset_asks(
+    django_assert_num_queries: Any, load_regions: Callable[..., Any]
+) -> None:
+    """A select that loads the relations of its rows at once does not get the rows of a select that does not."""
+    region = Region.objects.create(name="North")
+    City.objects.bulk_create(City(name=f"City {number}", region=region) for number in range(5))
+    fields = []
+    for queryset in (City.objects.all(), load_regions(City.objects.all())):
+        form = _CityForm()
+        form.fields["city"].queryset = queryset
+        form.fields["city"].label_from_instance = lambda city: f"{city.name} in {city.region}"
+        fields.append(form["city"])
+
+    with shared_pages():
+        str(fields[0])
+        with django_assert_num_queries(2):
+            rendered = str(fields[1])
+
+    assert "City 4 in North" in rendered
 
 
 @pytest.mark.django_db

@@ -46,7 +46,6 @@ class DepartmentAdmin(admin.ModelAdmin):
 class EmployeeAdmin(admin.ModelAdmin):
     icon = "id-card"
     list_display = ["member", "job_title", "department", "manager", "employment_type", "start_date", "remote"]
-    list_select_related = ["member", "department", "manager__member"]
     list_filter = ["department", "employment_type", "remote", ("end_date", admin.EmptyFieldListFilter), "start_date"]
     list_badges = {"employment_type": Employee.TYPE_COLORS}
     search_fields = ["member__name", "member__email", "job_title"]
@@ -63,7 +62,6 @@ class EmployeeAdmin(admin.ModelAdmin):
 class TimeOffAdmin(admin.ModelAdmin):
     icon = "tree-palm"
     list_display = ["employee", "kind", "starts_on", "ends_on", "days", "status"]
-    list_select_related = ["employee__member"]
     list_filter = ["status", "kind", "employee__department", "starts_on"]
     list_badges = {"status": TimeOff.STATUS_COLORS}
     search_fields = ["employee__member__name", "note"]
@@ -94,7 +92,6 @@ class TimeOffAdmin(admin.ModelAdmin):
 class EquipmentAdmin(admin.ModelAdmin):
     icon = "laptop"
     list_display = ["asset_tag", "kind", "model_name", "assigned_to", "purchased_on", "in_warranty", "retired"]
-    list_select_related = ["assigned_to__member"]
     list_filter = ["kind", "retired", ("assigned_to", admin.EmptyFieldListFilter), "warranty_until"]
     search_fields = ["asset_tag", "serial_number", "model_name", "assigned_to__member__name"]
     autocomplete_fields = ["assigned_to"]

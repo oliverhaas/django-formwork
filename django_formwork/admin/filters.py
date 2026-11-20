@@ -236,10 +236,12 @@ class RelatedFilter(_FieldFilterMixin, django_filters.ModelChoiceFilter):
             queryset = related._default_manager.complex_filter(model_field.get_limit_choices_to())
         else:
             queryset = related._default_manager.all()
-        # In the related admin's order, as Django's filter lists them.
         related_admin = model_admin.admin_site.get_model_admin_or_none(related)
-        if related_admin is not None and (ordering := related_admin.get_ordering(request)):
-            queryset = queryset.order_by(*ordering)
+        if related_admin is not None:
+            # The rows the server's pages search, in the related admin's order, as Django's filter lists them.
+            queryset = related_admin.choice_queryset(queryset)
+            if ordering := related_admin.get_ordering(request):
+                queryset = queryset.order_by(*ordering)
         direct = LOOKUP_SEP not in self.field_name and isinstance(model_field, RelatedField)
         searchable = direct and not self.related_only and model_admin.admin_site.is_searchable(related)
         # One row, as Django's related filter picks, a many-to-many relation included.

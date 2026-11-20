@@ -21,10 +21,8 @@ from django.contrib.admin.exceptions import DisallowedModelAdminToField
 from django.contrib.admin.options import Action, ActionLocation, IncorrectLookupParameters, ShowFacets
 from django.contrib.admin.utils import (
     NestedObjects,
-    NotRelationField,
     display_for_value,
     flatten_fieldsets,
-    get_fields_from_path,
     model_format_dict,
     model_ngettext,
     quote,
@@ -33,7 +31,8 @@ from django.contrib.admin.utils import (
 from django.core.exceptions import BadRequest, FieldDoesNotExist, FieldError, PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, models, router, transaction
-from django.db.models import ManyToOneRel, prefetch_related_objects
+from django.db.models import FETCH_PEERS, ManyToOneRel
+from django.db.models.deletion import Collector
 from django.forms.formsets import DELETION_FIELD_NAME, INITIAL_FORM_COUNT, all_valid
 from django.forms.models import BaseModelFormSet, modelform_defines_fields
 from django.forms.utils import ErrorDict
@@ -88,6 +87,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping, Sequence
 
     from django.contrib.admin.options import _FieldsetSpec
+    from django.db.models.fetch_modes import FetchMode
     from django.db.models.fields.related import RelatedField
     from django.http import HttpRequest
     from django.urls import URLPattern
@@ -122,6 +122,17 @@ def get_content_type_for_model(obj: Any) -> Any:
     return ContentType.objects.get_for_model(obj, for_concrete_model=False)
 
 
+class _NestedObjects(NestedObjects):
+    """Django's ``NestedObjects``, loading the object a row belongs to for all rows at the first read.
+
+    Django joins it into each row, and a protected row never reads it. The fields a row's name
+    reads load the same way, where Django loads each row whole.
+    """
+
+    def related_objects(self, related_model: Any, related_fields: Any, objs: Any) -> models.QuerySet[Any]:
+        return Collector.related_objects(self, related_model, related_fields, objs).fetch_mode(FETCH_PEERS)
+
+
 class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
     """What a model admin and an inline share: the form, its fields and the ``Media`` of the class."""
 
@@ -144,6 +155,9 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
     # Whether the relations of editable rows load their choices once for all rows. None shares them
     # unless a row can get choices of its own, which system check formwork_admin.E504 reports.
     share_choices: bool | None = None
+    #: The fetch mode of the rows of ``get_queryset()``, as Django's ``QuerySet.fetch_mode()``. The default
+    #: loads a relation or a deferred field for all rows of a read at once. None keeps the manager's.
+    fetch_mode: FetchMode | None = FETCH_PEERS
 
     model: type[models.Model]
     admin_site: Any
@@ -398,11 +412,14 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
         return self.prepopulated_fields
 
     def get_queryset(self, request: HttpRequest) -> models.QuerySet[Any]:
-        queryset = self.model._default_manager.get_queryset()
+        queryset = self._fetch(self.model._default_manager.get_queryset())
         ordering = self.get_ordering(request)
         if ordering:
             queryset = queryset.order_by(*ordering)
         return queryset
+
+    def _fetch(self, queryset: models.QuerySet[Any]) -> models.QuerySet[Any]:
+        return queryset if self.fetch_mode is None else queryset.fetch_mode(self.fetch_mode)
 
     def get_sortable_by(self, request: HttpRequest) -> Sequence[Any]:
         return self.sortable_by if self.sortable_by is not None else self.get_list_display(request)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
@@ -449,7 +466,6 @@ class ModelAdmin(BaseModelAdmin):
     list_display: Sequence[Any] = ("__str__",)
     list_display_links: Sequence[Any] | None = ()
     list_filter: Sequence[Any] = ()
-    list_select_related: bool | Sequence[str] = False
     list_per_page = 100
     #: The page sizes the list offers next to its pages, with ``list_per_page`` among them; empty hides the menu.
     list_per_page_options: Sequence[int] = (25, 50, 100, 250)
@@ -702,9 +718,6 @@ class ModelAdmin(BaseModelAdmin):
     def get_list_filter(self, request: HttpRequest) -> Sequence[Any]:
         return self.list_filter
 
-    def get_list_select_related(self, request: HttpRequest) -> bool | Sequence[str]:
-        return self.list_select_related
-
     def get_search_fields(self, request: HttpRequest) -> Sequence[str]:
         return self.search_fields
 
@@ -721,21 +734,8 @@ class ModelAdmin(BaseModelAdmin):
         return ChoiceLabel(str(obj), description=format_html_join(" · ", "{}", ((text,) for text in texts)))
 
     def choice_queryset(self, queryset: models.QuerySet[Any]) -> models.QuerySet[Any]:
-        """The rows of a relation to this model, with the relations that ``choice_description`` reads."""
-        related = []
-        for name in self.choice_description:
-            try:
-                fields = get_fields_from_path(self.model, name) if isinstance(name, str) else []
-            except FieldDoesNotExist, NotRelationField:
-                continue
-            path = []
-            for field in fields:
-                if not (field.many_to_one or field.one_to_one):
-                    break
-                path.append(field.name)
-            if path:
-                related.append("__".join(path))
-        return queryset.select_related(*related) if related else queryset
+        """The rows of a relation to this model, in this admin's ``fetch_mode``."""
+        return self._fetch(queryset)
 
     def get_search_results(
         self, request: HttpRequest, queryset: models.QuerySet[Any], search_term: str
@@ -1322,16 +1322,16 @@ class ModelAdmin(BaseModelAdmin):
             first = objs[0]
         except IndexError:
             return [], {}, set(), []
-        collector = NestedObjects(using=router.db_for_write(first._meta.model), origin=objs)
+        collector = _NestedObjects(using=router.db_for_write(first._meta.model), origin=objs)
         collector.collect(objs)
         # The stubs key model_objs by name; Django keys it by model.
         model_objs = cast("dict[type[models.Model], set[models.Model]]", collector.model_objs)
-        links = {}
-        for model, instances in model_objs.items():
-            if model._meta.auto_created:
-                ends = [field.name for field in model._meta.fields if field.is_relation]
-                prefetch_related_objects(list(instances), *ends)
-                links[model] = ends
+        # The collector reads the rows with FETCH_PEERS, so the first line of a link row loads both ends of all.
+        links = {
+            model: [field.name for field in model._meta.fields if field.is_relation]
+            for model in model_objs
+            if model._meta.auto_created
+        }
         perms_needed: set[str] = set()
 
         def format_callback(obj: models.Model) -> DeletedObject:
@@ -2258,7 +2258,7 @@ def _delete_protected_form(
             if not self.cleaned_data.get(DELETION_FIELD_NAME, False):
                 return
             using = router.db_for_write(self._meta.model)
-            collector = NestedObjects(using=using)
+            collector = _NestedObjects(using=using)
             if self.instance._state.adding:
                 return
             collector.collect([self.instance])  # ty: ignore[invalid-argument-type]

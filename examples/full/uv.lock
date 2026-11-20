@@ -93,6 +93,7 @@ provides-extras = ["admin"]
 dev = [
     { name = "beautifulsoup4", specifier = "==4.15.0" },
     { name = "django-filter", specifier = ">=25.1" },
+    { name = "django-nplus1", specifier = "==0.6.2" },
     { name = "django-pghistory", specifier = ">=3" },
     { name = "django-stubs", specifier = "==6.1.2" },
     { name = "jinja2", specifier = ">=3.1.6" },
@@ -127,6 +128,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d2/e1/8c0e96247274c59e9dc2575c0d6c9cb472ec5f30faa7c192b4aebba68c9d/django_iconx-0.2.0.tar.gz", hash = "sha256:91c0c44c0d501a4cf00ae093085b4611e8b92d98f002ce39986cf74a4d0b68af", size = 11204, upload-time = "2026-04-12T07:22:39.857Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f0/62/ef7b6cfdaabfdebf509e95998dcef5e33d98c0a58cd967846bc4cf1ff617/django_iconx-0.2.0-py3-none-any.whl", hash = "sha256:72c39bf66925d30ce4710c84e7134fa2e63aa2bf76d3b130915de1b9e7a2e72e", size = 13985, upload-time = "2026-04-12T07:22:38.294Z" },
+]
+
+[[package]]
+name = "django-nplus1"
+version = "0.6.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/27/1d/4c0debdfac9456edf072d9ebe03b7b7c1fb939884f59f0b9fa6db41db7f6/django_nplus1-0.6.2.tar.gz", hash = "sha256:cadaf0aee11caa29e4eba86f1691bbd3af91203e49514314584115692f64a1e6", size = 29274, upload-time = "2026-10-04T07:09:49.144Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/22/6e/133754dbe0dd682c010df8e2ea98f8e19cd507caae45477c68ac1f34037e/django_nplus1-0.6.2-py3-none-any.whl", hash = "sha256:a02d467827ac56386b589eb4e67b4847331973b2b8522f35e2da1d2c3f0363f7", size = 35742, upload-time = "2026-10-04T07:09:47.741Z" },
 ]
 
 [[package]]
@@ -177,6 +190,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "django-nplus1" },
     { name = "pytest" },
     { name = "pytest-django" },
 ]
@@ -196,6 +210,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "django-nplus1", specifier = ">=0.6.2" },
     { name = "pytest", specifier = ">=9,<10" },
     { name = "pytest-django", specifier = ">=4.12,<5" },
 ]

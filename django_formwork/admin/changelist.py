@@ -358,31 +358,8 @@ class ChangeList:
         if duplicates:
             # A pk subquery keeps the rows unique without DISTINCT over every selected column.
             queryset = self.root_queryset.filter(pk__in=queryset.values("pk"))
-        queryset = self.apply_select_related(self.model_admin.get_changelist_queryset(self.request, queryset))
+        queryset = self.model_admin.get_changelist_queryset(self.request, queryset)
         return queryset.order_by(*self.ordering)
-
-    def apply_select_related(self, queryset: models.QuerySet[Any]) -> models.QuerySet[Any]:
-        """Join the relations the columns read.
-
-        Django calls ``select_related()`` without arguments for a bare foreign key column,
-        which follows every non-null relation five levels deep. This names each column's relation.
-        """
-        select_related = self.model_admin.list_select_related
-        if select_related is True:
-            return queryset.select_related()
-        if select_related:
-            return queryset.select_related(*select_related)
-        related = []
-        for name in self.list_display:
-            if not isinstance(name, str):
-                continue
-            try:
-                field = self.opts.get_field(name)
-            except FieldDoesNotExist:
-                continue
-            if field.many_to_one or (field.one_to_one and field.concrete):
-                related.append(name)
-        return queryset.select_related(*related) if related else queryset
 
     # Ordering
 

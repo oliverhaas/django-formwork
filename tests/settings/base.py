@@ -6,6 +6,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django_nplus1.NPlus1Middleware",
 ]
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 
@@ -16,6 +17,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.forms",
     "django_iconx",
+    "django_nplus1",
     "django_formwork",
     "django_formwork.admin",
     "e2e",
@@ -50,3 +52,5 @@ DATABASES = {
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+NPLUS1_RAISE = True

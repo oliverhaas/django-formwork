@@ -11,6 +11,8 @@ from admin_app.models import Category, Item, Tag
 from bs4 import BeautifulSoup
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from openpyxl import load_workbook
 
@@ -110,6 +112,32 @@ def test_export_fields_take_lookups_and_admin_methods(admin_client, items, monke
     rows = csv_rows(export(admin_client, "csv", "status=archived"))
 
     assert rows == [{"name": "Alpha kettle", "category__name": "Kitchen", "tag_names": "new / sale"}]
+
+
+def test_export_reads_its_rows_in_chunks_and_a_relation_once_per_chunk(admin_client, items, monkeypatch):
+    monkeypatch.setattr("django_formwork.admin.exports.CHUNK_SIZE", 2)
+    monkeypatch.setattr(site.get_model_admin(Item), "export_fields", ["name", "category__name"], raising=False)
+    office = Category.objects.create(name="Office", slug="office")
+    Item.objects.bulk_create(
+        Item(name=name, category=office) for name in ["Gamma desk", "Delta chair", "Epsilon shelf"]
+    )
+
+    def load():
+        with CaptureQueriesContext(connection) as queries:
+            rows = csv_rows(export(admin_client, "csv", "o=-1"))
+        return len(queries), [(row["name"], row["category__name"]) for row in rows]
+
+    queries, rows = load()
+    Item.objects.create(name="Zeta stool", category=Category.objects.create(name="Workshop", slug="workshop"))
+
+    assert rows == [
+        ("Gamma desk", "Office"),
+        ("Epsilon shelf", "Office"),
+        ("Delta chair", "Office"),
+        ("Beta lamp", "Kitchen"),
+        ("Alpha kettle", "Kitchen"),
+    ]
+    assert load()[0] == queries
 
 
 @pytest.mark.parametrize(

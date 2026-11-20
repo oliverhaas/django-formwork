@@ -215,7 +215,7 @@ def task_page(request, task, *, details=None, comment_form=None):
 
 @require_POST
 def task_comment(request, pk):
-    task = get_object_or_404(Task.objects.select_related("assignee"), pk=pk)
+    task = get_object_or_404(Task, pk=pk)
     form = CommentForm(request.POST)
     if not form.is_valid():
         return task_page(request, task, comment_form=form)

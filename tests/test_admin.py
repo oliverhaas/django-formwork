@@ -1,5 +1,6 @@
 """Tests for django_formwork.admin, driven through the demo app's admin pages."""
 
+import contextlib
 import json
 from datetime import date, datetime, time
 from types import ModuleType, SimpleNamespace
@@ -18,11 +19,13 @@ from django.contrib.contenttypes.admin import GenericTabularInline as DjangoGene
 from django.core import checks
 from django.core.paginator import Paginator
 from django.db import connection, models
+from django.db.models import FETCH_PEERS
 from django.http import HttpResponse
 from django.test.utils import CaptureQueriesContext
 from django.urls import path, reverse
 from django.utils import timezone, translation
 from django.utils.html import format_html
+from django_nplus1.exceptions import NPlus1Error
 
 from django_formwork import __version__, admin
 from django_formwork.admin import ActionLocation, site
@@ -501,15 +504,17 @@ def test_relation_filters_offer_rows_without_a_relation_where_the_field_allows_t
 
 
 def test_relation_filter_lists_rows_as_the_related_admin_orders_and_limits_them(admin_client, catalog, monkeypatch):
-    archive = Category.objects.create(name="Archive", slug="archive")
-    monkeypatch.setattr(site.get_model_admin(Category), "ordering", ["-name"])
+    Category.objects.create(name="Archive", slug="archive")
+    Category.objects.create(name="Basement", slug="basement")
+    category_admin = site.get_model_admin(Category)
+    monkeypatch.setattr(category_admin, "ordering", ["-name"])
+    monkeypatch.setattr(category_admin, "choice_queryset", lambda queryset: queryset.exclude(slug="basement"))
     monkeypatch.setattr(Item._meta.get_field("category").remote_field, "limit_choices_to", ~models.Q(slug="archive"))
 
     soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
 
     offered = [value for value in option_texts(soup, "category__id__exact") if value not in {"", "null"}]
     assert offered == [str(catalog.office.pk), str(catalog.kitchen.pk)]
-    assert str(archive.pk) not in offered
 
 
 def test_empty_relation_option_reads_and_writes_django_isnull(admin_client, catalog):
@@ -676,6 +681,22 @@ def test_changelist_shows_the_choice_label_in_a_column_that_follows_a_relation(a
     soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
 
     assert "Kitchenware" in soup.select_one(f"tr[data-pk='{catalog.alpha.pk}']").get_text()
+
+
+@pytest.mark.parametrize(
+    ("fetch_mode", "expectation"),
+    [(FETCH_PEERS, contextlib.nullcontext()), (None, pytest.raises(NPlus1Error))],
+    ids=["peers", "manager"],
+)
+def test_changelist_loads_a_relation_of_its_columns_for_all_rows_at_once(
+    admin_client, catalog, monkeypatch, fetch_mode, expectation
+):
+    item_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(item_admin, "list_display", ["name", "category", "category__slug"])
+    monkeypatch.setattr(item_admin, "fetch_mode", fetch_mode)
+
+    with expectation:
+        admin_client.get(url(Item, "changelist"))
 
 
 def test_changelist_pages_rows(admin_client, catalog, monkeypatch):
@@ -2201,17 +2222,21 @@ def test_relation_options_show_the_description_of_the_related_admin(admin_client
         assert list(row.stripped_strings) == ["Kitchen", "kitchen"]
 
 
-def test_relation_options_load_the_relations_their_description_reads(
-    rf, catalog, monkeypatch, django_assert_num_queries
-):
+def test_relation_options_load_the_relations_their_description_reads(rf, catalog, monkeypatch):
     monkeypatch.setattr(site.get_model_admin(Item), "choice_description", ["category", "status"])
     part_admin = admin.ModelAdmin(Part, site)
 
-    field = part_admin.formfield_for_foreignkey(Part._meta.get_field("item"), rf.get("/"))
+    def load():
+        field = part_admin.formfield_for_foreignkey(Part._meta.get_field("item"), rf.get("/"))
+        with CaptureQueriesContext(connection) as queries:
+            descriptions = [label.description for value, label in field.choices if value]
+        return len(queries), descriptions
 
-    with django_assert_num_queries(1):
-        descriptions = [label.description for value, label in field.choices if value]
+    queries, descriptions = load()
+    Item.objects.create(name="Zeta lamp", category=Category.objects.create(name="Workshop", slug="workshop"))
+
     assert descriptions == ["Kitchen · Archived", "Office · Draft"]
+    assert load()[0] == queries
 
 
 def test_editable_relation_of_a_list_loads_its_options_for_all_rows_at_once(admin_client, catalog, monkeypatch):

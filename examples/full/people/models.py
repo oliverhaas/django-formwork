@@ -26,8 +26,8 @@ class Department(models.Model):
 
 class EmployeeManager(models.Manager["Employee"]):
     def get_queryset(self):
-        # The name lives on the member, so every list of employees joins it.
-        return super().get_queryset().select_related("member")
+        # The name lives on the member: a list of employees loads the members of all rows at the first read.
+        return super().get_queryset().fetch_mode(models.FETCH_PEERS)
 
 
 class Employee(models.Model):

@@ -19,6 +19,7 @@ from django.contrib.admin import widgets as django_widgets
 from django.contrib.admin.utils import quote
 from django.core.exceptions import FieldDoesNotExist, PermissionDenied
 from django.db import models
+from django.forms.models import ModelChoiceIterator
 from django.forms.utils import to_current_timezone
 from django.http import Http404
 from django.urls import reverse
@@ -110,8 +111,20 @@ def relation_label(obj: models.Model, *, site: str, model: str, field: str) -> o
     return str(obj) if model_admin is None else model_admin.choice_label(obj)
 
 
+class _RowsAtOnce(ModelChoiceIterator):
+    """Django's options from one read of the rows, where Django's ``iterator()`` loads each row's relations alone."""
+
+    def __iter__(self) -> Any:
+        if self.field.empty_label is not None:
+            yield ("", self.field.empty_label)
+        for obj in self.queryset.all():
+            yield self.choice(obj)
+
+
 class RelatedChoiceField(forms.ModelChoiceField):
     """A relation whose options read as the related admin's ``choice_label()`` shows them."""
+
+    iterator = _RowsAtOnce
 
     def __init__(self, *args: Any, choice_label: Callable[[Any], object], **kwargs: Any) -> None:
         self.choice_label = choice_label
@@ -123,6 +136,8 @@ class RelatedChoiceField(forms.ModelChoiceField):
 
 class RelatedMultipleChoiceField(forms.ModelMultipleChoiceField):
     """``RelatedChoiceField`` for a many-to-many field."""
+
+    iterator = _RowsAtOnce
 
     def __init__(self, *args: Any, choice_label: Callable[[Any], object], **kwargs: Any) -> None:
         self.choice_label = choice_label

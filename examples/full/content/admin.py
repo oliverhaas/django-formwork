@@ -30,7 +30,6 @@ class TopicAdmin(admin.ModelAdmin):
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     list_display = ["title", "author", "status", "published_at", "reading_minutes", "comment_count", "allow_comments"]
-    list_select_related = ["author"]
     list_filter = ["status", "topics", "author", "allow_comments", "published_at"]
     list_badges = {"status": Post.STATUS_COLORS}
     list_defer_fields = ["body"]
@@ -73,7 +72,6 @@ class PostAdmin(admin.ModelAdmin):
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = ["name", "post", "created_at", "is_spam", "is_approved"]
-    list_select_related = ["post"]
     list_editable = ["is_approved"]
     list_filter = ["is_approved", "is_spam", "created_at"]
     search_fields = ["name", "email", "body", "post__title"]

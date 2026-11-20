@@ -94,8 +94,8 @@ class Candidate(models.Model):
 
 class ApplicationManager(models.Manager["Application"]):
     def get_queryset(self):
-        # The name of an application reads the candidate and the opening.
-        return super().get_queryset().select_related("candidate", "opening")
+        # The name of an application reads the candidate and the opening, for all rows at the first read.
+        return super().get_queryset().fetch_mode(models.FETCH_PEERS)
 
 
 class Application(models.Model):

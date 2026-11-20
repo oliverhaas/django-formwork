@@ -24,7 +24,6 @@ class PaymentInline(admin.TabularInline):
 class InvoiceAdmin(admin.ModelAdmin):
     icon = "receipt"
     list_display = ["number", "company", "status", "issued_on", "due_on", "is_overdue", "total", "currency"]
-    list_select_related = ["company"]
     list_filter = ["status", "currency", ("company", admin.RelatedOnlyFieldListFilter), "issued_on", "due_on"]
     list_badges = {"status": Invoice.STATUS_COLORS}
     search_fields = ["=number", "company__name"]
@@ -92,7 +91,6 @@ class InvoiceAdmin(admin.ModelAdmin):
 class PaymentAdmin(admin.ModelAdmin):
     icon = "banknote"
     list_display = ["invoice", "invoice__company", "amount", "method", "received_on", "reference"]
-    list_select_related = ["invoice__company"]
     list_filter = ["method", "received_on"]
     search_fields = ["reference", "invoice__number", "invoice__company__name"]
     date_hierarchy = "received_on"

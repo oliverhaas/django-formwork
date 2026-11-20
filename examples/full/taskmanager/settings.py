@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "django.forms",
     "django_iconx",
     "django_filters",
+    "django_nplus1",
     "django_formwork",
     "django_formwork.admin",
     "taskmanager",
@@ -37,6 +38,8 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    # Logs a relation that the rows of a page load one at a time; the tests raise instead.
+    "django_nplus1.NPlus1Middleware",
 ]
 
 ROOT_URLCONF = "taskmanager.urls"

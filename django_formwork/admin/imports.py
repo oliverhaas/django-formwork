@@ -462,12 +462,9 @@ def _match_records(
                 first[row.key] = row.number
 
     queryset = model_admin.get_queryset(request)
-    related = [column.name for column in mapping.columns if isinstance(column.model_field, models.ForeignKey)]
     # The values the form starts from, and the cells the preview compares.
     many = {column.name for column in mapping.columns if isinstance(column.model_field, models.ManyToManyField)}
     many.update(initial_many_to_many(form_class))
-    if related:
-        queryset = queryset.select_related(*related)
     if many:
         queryset = queryset.prefetch_related(*sorted(many))
     attnames = [key_field.attname for key_field in fields]

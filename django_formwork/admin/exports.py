@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import itertools
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -90,11 +91,16 @@ def _lookup(entry: str | Callable[..., Any], model_admin: Any) -> Callable[[mode
 def export_rows(columns: list[Column], queryset: models.QuerySet[Any]) -> Iterator[list[Any]]:
     """Each row's values, read in chunks, with the many-to-many columns prefetched."""
     opts = queryset.model._meta
+    pks = queryset.values_list("pk", flat=True).iterator(chunk_size=CHUNK_SIZE)
     many = [column.name for column in columns if column.name in {field.name for field in opts.many_to_many}]
     if many:
         queryset = queryset.prefetch_related(*many)
-    for obj in queryset.iterator(chunk_size=CHUNK_SIZE):
-        yield [column.get(obj) for column in columns]
+    for chunk in itertools.batched(pks, CHUNK_SIZE, strict=False):
+        # A read of its own per chunk: the fetch mode loads a relation for the rows of one read. Over a
+        # single iterator(), each chunk would go through every row before it.
+        rows = list(queryset.in_bulk(chunk).values())
+        for obj in rows:
+            yield [column.get(obj) for column in columns]
 
 
 def export_filename(opts: Any, export_format: FileFormat) -> str:
