@@ -607,9 +607,9 @@ class ModelAdmin(BaseModelAdmin):
             else flatten_fieldsets(cast("_FieldsetSpec", self.get_fieldsets(request, obj)))
         )
         excluded = self.get_exclude(request, obj)
-        exclude = [] if excluded is None else list(excluded)
+        exclude: list[Any] = [] if excluded is None else list(excluded)
         readonly_fields = self.get_readonly_fields(request, obj)
-        exclude.extend(name for name in readonly_fields if isinstance(name, str))
+        exclude.extend(readonly_fields)
         if change and hasattr(request, "user") and not self.has_change_permission(request, obj):
             exclude.extend(fields or ())
         if excluded is None and hasattr(self.form, "_meta") and self.form._meta.exclude:
@@ -2195,8 +2195,8 @@ class InlineModelAdmin(BaseModelAdmin):
             else flatten_fieldsets(cast("_FieldsetSpec", self.get_fieldsets(request, obj)))
         )
         excluded = self.get_exclude(request, obj)
-        exclude = [] if excluded is None else list(excluded)
-        exclude.extend(name for name in self.get_readonly_fields(request, obj) if isinstance(name, str))
+        exclude: list[Any] = [] if excluded is None else list(excluded)
+        exclude.extend(self.get_readonly_fields(request, obj))
         if excluded is None and hasattr(self.form, "_meta") and self.form._meta.exclude:
             exclude.extend(self.form._meta.exclude)
         can_delete = self.can_delete and self.has_delete_permission(request, obj)
