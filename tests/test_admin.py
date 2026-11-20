@@ -22,6 +22,7 @@ from django.core import checks
 from django.core.paginator import Paginator
 from django.db import connection, models
 from django.db.models import FETCH_PEERS
+from django.db.models.signals import post_init
 from django.http import HttpResponse
 from django.test.utils import CaptureQueriesContext
 from django.urls import path, reverse
@@ -456,6 +457,26 @@ def test_filters_keep_the_list_filter_order_in_the_row_and_in_the_menu(admin_cli
     items = soup.select("#changelist-filter-bar [data-more-item]")
     assert [item["data-more-item"] for item in items] == names
     assert [item.get_text(strip=True) for item in items] == ["Stock", "Status", "Quantity", "Category"]
+
+
+@pytest.fixture
+def loaded_items():
+    loaded = []
+
+    def collect(sender, instance, **kwargs):
+        loaded.append(instance)
+
+    post_init.connect(collect, sender=Item)
+    yield loaded
+    post_init.disconnect(collect, sender=Item)
+
+
+def test_simple_list_filter_loads_no_rows_past_the_page(admin_client, catalog, monkeypatch, loaded_items):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_per_page", 1)
+
+    admin_client.get(url(Item, "changelist"))
+
+    assert {item.pk for item in loaded_items} == {catalog.beta.pk}
 
 
 def option_texts(soup, name):

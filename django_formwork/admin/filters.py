@@ -489,7 +489,9 @@ class SimpleFilter(django_filters.ChoiceFilter):
 
     def filter(self, qs: QuerySet[Any], value: str) -> QuerySet[Any]:
         # Django calls queryset() whether or not the filter has a value, so a filter can apply a default.
-        return self.instance.queryset(self.parent.request, qs) or qs
+        # The check is for None: the truth of a queryset loads all of its rows.
+        filtered = self.instance.queryset(self.parent.request, qs)
+        return qs if filtered is None else filtered
 
     def facet_counts(self, qs: QuerySet[Any]) -> dict[str, int]:
         # Django's own count of each lookup: rows of qs that queryset() keeps with that value set.
