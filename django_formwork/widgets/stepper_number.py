@@ -7,10 +7,10 @@ from typing import Any
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from ._base import _ModuleScript
+from ._base import _FormworkTemplatesMixin, _ModuleScript
 
 
-class StepperNumberInput(forms.NumberInput):
+class StepperNumberInput(_FormworkTemplatesMixin, forms.NumberInput):
     """Number input between buttons that step it by its ``step`` attribute.
 
     ``min`` bounds the buttons without a native ``min`` attribute. ``integer`` drops the decimals.

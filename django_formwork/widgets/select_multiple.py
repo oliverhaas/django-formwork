@@ -37,6 +37,8 @@ class SelectMultiple(SearchableSelectMixin, forms.SelectMultiple):
     """
 
     template_name = "formwork/widgets/select_multiple.html"
+    #: The option rows alone, which a server search answers with.
+    option_list_template_name = "formwork/widgets/partials/select_multiple_options.html"
     search_variant = "select_multiple"
 
     class Media:

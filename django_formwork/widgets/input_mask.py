@@ -6,10 +6,10 @@ from typing import Any
 
 from django import forms
 
-from ._base import _ModuleScript
+from ._base import _FormworkTemplatesMixin, _ModuleScript
 
 
-class InputMask(forms.TextInput):
+class InputMask(_FormworkTemplatesMixin, forms.TextInput):
     """Text input with a fixed-format mask.
 
     Uses Alpine.js to enforce a pattern as the user types.

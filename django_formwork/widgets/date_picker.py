@@ -10,7 +10,7 @@ from django import forms
 from django.utils.functional import lazy
 from django.utils.translation import pgettext_lazy
 
-from ._base import _ModuleScript
+from ._base import _FormworkTemplatesMixin, _ModuleScript
 from ._calendar import calendar_context
 
 #: strftime code -> human placeholder token, for turning a date format into a
@@ -36,7 +36,7 @@ def _format_placeholder(date_format: str) -> str:
 _lazy_format_placeholder = lazy(_format_placeholder, str)
 
 
-class DatePicker(forms.DateInput):
+class DatePicker(_FormworkTemplatesMixin, forms.DateInput):
     """Text date input with a calendar dropdown, opt-in where the native ``DateInput`` does not fit.
 
     ``format`` sets how the input shows the date, both from the server and after a pick in the

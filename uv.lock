@@ -382,12 +382,12 @@ dependencies = [
     { name = "django" },
     { name = "django-filthyfields" },
     { name = "django-iconx" },
+    { name = "jinja2" },
 ]
 
 [package.optional-dependencies]
 admin = [
     { name = "django-filter" },
-    { name = "jinja2" },
 ]
 
 [package.dev-dependencies]
@@ -397,7 +397,6 @@ dev = [
     { name = "django-nplus1" },
     { name = "django-pghistory" },
     { name = "django-stubs" },
-    { name = "jinja2" },
     { name = "mypy" },
     { name = "numpy" },
     { name = "openpyxl" },
@@ -425,7 +424,7 @@ requires-dist = [
     { name = "django-filter", marker = "extra == 'admin'", specifier = ">=25.1" },
     { name = "django-filthyfields", specifier = ">=2.2.0" },
     { name = "django-iconx", specifier = ">=0.2.0" },
-    { name = "jinja2", marker = "extra == 'admin'", specifier = ">=3.1.6" },
+    { name = "jinja2", specifier = ">=3.1.6" },
 ]
 provides-extras = ["admin"]
 
@@ -436,7 +435,6 @@ dev = [
     { name = "django-nplus1", specifier = "==0.6.2" },
     { name = "django-pghistory", specifier = ">=3" },
     { name = "django-stubs", specifier = "==6.1.2" },
-    { name = "jinja2", specifier = ">=3.1.6" },
     { name = "mypy", specifier = "==2.4.1" },
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "openpyxl", specifier = "==3.1.5" },

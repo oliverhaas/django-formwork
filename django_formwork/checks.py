@@ -37,13 +37,13 @@ def check_search_urls(app_configs: Sequence[AppConfig] | None, **kwargs: Any) ->
 
 @register(Tags.templates)
 def check_forms_app(app_configs: Sequence[AppConfig] | None, **kwargs: Any) -> list[Error]:  # noqa: ARG001
-    """FormworkRenderer loads Django's widget templates through TEMPLATES."""
+    """FormworkRenderer loads the widget templates of other packages through TEMPLATES."""
     if apps.is_installed("django.forms"):
         return []
     return [
         Error(
-            "FormworkRenderer renders Django's widget templates through TEMPLATES, "
-            "which finds them only when django.forms is an installed app.",
+            "FormworkRenderer renders the widget templates of other packages through TEMPLATES, "
+            "which finds the Django templates they include only when django.forms is an installed app.",
             hint='Add "django.forms" to INSTALLED_APPS.',
             id="django_formwork.E002",
         ),

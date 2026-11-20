@@ -19,7 +19,7 @@ from django.utils.translation import gettext
 
 from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search_url
 
-from ._base import _ModuleScript
+from ._base import _FormworkTemplatesMixin, _ModuleScript
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
@@ -261,7 +261,7 @@ def label_extras(label: object, *, badges: bool = False) -> dict[str, str]:
     }
 
 
-class SearchableSelectMixin(_SelectBase):
+class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
     """Search and dropdown behavior shared by ``Select`` and ``SelectMultiple``."""
 
     option_inherits_attrs = False
@@ -504,6 +504,8 @@ class Select(SearchableSelectMixin, forms.Select):
     """
 
     template_name = "formwork/widgets/select.html"
+    #: The option rows alone, which a server search answers with.
+    option_list_template_name = "formwork/widgets/partials/select_options.html"
     search_variant = "select"
 
     class Media:

@@ -20,7 +20,7 @@ INSTALLED_APPS = [..., "django.forms", "django_iconx", "django_formwork"]
 FORM_RENDERER = "django_formwork.FormworkRenderer"
 ```
 
-`"django.forms"` gives the renderer Django's own widget templates. The `DjangoTemplates` backend must find app templates (`APP_DIRS=True` or the `app_directories` loader).
+The renderer brings its own Jinja2 engine for formwork's templates and Django's built-in widgets, so `TEMPLATES` needs no change. `"django.forms"` lets the widget templates of other packages include Django's.
 
 ```html
 {% load formwork static %}

@@ -7,8 +7,10 @@ from typing import Any
 from django import forms
 from django.forms.widgets import ChoiceWidget
 
+from ._base import _FormworkTemplatesMixin
 
-class _CardChoiceMixin(ChoiceWidget):
+
+class _CardChoiceMixin(_FormworkTemplatesMixin, ChoiceWidget):
     """Shared rendering for the card choice widgets."""
 
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:

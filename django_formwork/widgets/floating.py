@@ -7,12 +7,14 @@ from typing import TYPE_CHECKING, Any
 from django import forms
 from django.core.exceptions import ImproperlyConfigured
 
+from ._base import _FormworkTemplatesMixin
+
 if TYPE_CHECKING:
     from django.forms.renderers import BaseRenderer
     from django.utils.safestring import SafeString
 
 
-class FloatingLabelMixin(forms.Widget):
+class FloatingLabelMixin(_FormworkTemplatesMixin, forms.Widget):
     """Render the control inside DaisyUI's floating-label wrapper, reusing the placeholder as the label.
 
     The wrapper template includes the widget's own template, so any input template works unchanged.
@@ -47,4 +49,4 @@ class FloatingLabelMixin(forms.Widget):
         if not self.floating:
             return super().render(name, value, attrs, renderer)
         context = self.get_context(name, value, attrs)
-        return self._render(self.floating_wrapper_template, context, renderer)  # type: ignore[attr-defined]
+        return self._render(self.floating_wrapper_template, context, renderer)

@@ -39,6 +39,7 @@ from django_formwork.widgets import (
     TextInput,
     ToggleInput,
 )
+from django_formwork.widgets._base import _FormworkTemplatesMixin
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -196,7 +197,7 @@ IS_POPUP_VAR = "_popup"
 TO_FIELD_VAR = "_to_field"
 
 
-class RelatedWidgetWrapper(forms.Widget):
+class RelatedWidgetWrapper(_FormworkTemplatesMixin, forms.Widget):
     """A relation's widget, with links that add a row or edit the chosen one in a dialog.
 
     The same role as Django's ``RelatedFieldWidgetWrapper``. The related admin opens with ``_popup=1``.
@@ -270,14 +271,15 @@ class RelatedWidgetWrapper(forms.Widget):
         render = self.widget._render  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         rendered = render(self.widget.template_name, context, renderer)
         wrapper_context = self.get_wrapper_context(name, rendered, context["widget"].get("value"))
-        return self._render(self.template_name, wrapper_context, renderer)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        # Widget declares template_name optional; this class always sets it.
+        return self._render(self.template_name, wrapper_context, renderer)  # ty: ignore[invalid-argument-type]
 
     def label_links(self, name: str, value: Any, renderer: BaseRenderer | None = None) -> SafeString:
         """The Edit (or View) and Add links, for the field template's label row."""
         context = self.get_wrapper_context(name, "", value)
         if "change_related_template_url" not in context and "add_related_url" not in context:
             return SafeString()
-        return self._render(self.label_links_template_name, context, renderer)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        return self._render(self.label_links_template_name, context, renderer)
 
     def get_wrapper_context(self, name: str, rendered_widget: str, value: Any = None) -> dict[str, Any]:
         opts = self.rel.model._meta

@@ -14,6 +14,8 @@ from django.utils.html import format_html
 from django.utils.safestring import SafeString, mark_safe
 from django.utils.translation import gettext_lazy as _
 
+from django_formwork.renderers import formwork_renderer
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
@@ -152,6 +154,10 @@ class TableRow:
     def non_field_errors(self) -> Any:  # noqa: ANN401
         return self.form.non_field_errors()
 
+    def render(self) -> SafeString:
+        renderer = formwork_renderer(self.form.renderer)
+        return mark_safe(self.form.render(self.template_name, {"form": self.form, "row": self}, renderer))  # noqa: S308
+
 
 @dataclass
 class Table:
@@ -211,8 +217,18 @@ class Table:
     def actions(self) -> bool:
         return any(row.actions for row in self.rows) or (self.empty_row is not None and self.empty_row.actions)
 
+    # The texts with a name are built here, not in the template: makemessages finds no Jinja trans block.
+    @property
+    def empty_text(self) -> str:
+        return _("No %(name)s yet.") % {"name": self.verbose_name_plural}
+
+    @property
+    def add_text(self) -> str:
+        return _("Add another %(name)s") % {"name": self.verbose_name}
+
     def render(self) -> SafeString:
-        return mark_safe(self.formset.render(self.template_name, {"table": self, "formset": self.formset}))  # noqa: S308
+        renderer = formwork_renderer(self.formset.renderer)
+        return mark_safe(self.formset.render(self.template_name, {"table": self, "formset": self.formset}, renderer))  # noqa: S308
 
 
 class RowRenderMixin:
@@ -228,8 +244,7 @@ class RowRenderMixin:
         hidden_fields: Any
 
     def as_row(self, save_url: str = "") -> SafeString:
-        row = TableRow.for_form(self, save_url=save_url)
-        return mark_safe(self.render(self.template_name_row, {"form": self, "row": row}))  # noqa: S308
+        return TableRow.for_form(self, save_url=save_url).render()
 
     @property
     def row_hidden_inputs(self) -> SafeString:

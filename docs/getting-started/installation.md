@@ -31,18 +31,10 @@ INSTALLED_APPS = [
 # Every form renders through the formwork templates
 FORM_RENDERER = "django_formwork.FormworkRenderer"
 
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "APP_DIRS": True,
-        ...
-    },
-]
-
 STATICFILES_DIRS = [BASE_DIR / "static"]
 ```
 
-`FormworkRenderer` is a `TemplatesSetting` renderer: it loads templates through `TEMPLATES`, so a project template with the same path overrides any formwork template. `"django.forms"` supplies Django's own widget templates, and the `DjangoTemplates` backend must find app templates (`APP_DIRS=True` or the `app_directories` loader). `django_iconx` must be in `INSTALLED_APPS` for the next step to work. `STATICFILES_DIRS` tells the icon install where to put the downloaded files and lets Django serve them.
+`FormworkRenderer` renders formwork's templates and Django's built-in widget templates with a Jinja2 engine of its own, so `TEMPLATES` needs no change. A widget template that this engine does not find, such as one of another package, renders through `TEMPLATES`, and `"django.forms"` lets it include Django's templates. To override a formwork template, put a template with the same path in the `jinja2/` directory of an app listed before `django_formwork`. `django_iconx` must be in `INSTALLED_APPS` for the next step to work. `STATICFILES_DIRS` tells the icon install where to put the downloaded files and lets Django serve them.
 
 On startup, formwork imports the `forms` module of every installed app, so a form with a server-side search registers it before the first request.
 

@@ -23,7 +23,7 @@ ICON_FRUITS = [("a", ChoiceLabel("Apples", icon=mark_safe('<i class="icon icon-a
 MANY = [(str(i), f"Option {i}") for i in range(200)]
 SELECTED = "150"
 PAGE = "page"
-WIDGET_TEMPLATES = Path(django_formwork.__file__).parent / "templates" / "formwork" / "widgets"
+WIDGET_TEMPLATES = Path(django_formwork.__file__).parent / "jinja2" / "formwork" / "widgets"
 
 
 def _users(request):

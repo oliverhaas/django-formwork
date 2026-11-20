@@ -6,8 +6,10 @@ from typing import Any
 
 from django import forms
 
+from ._base import _FormworkTemplatesMixin
 
-class SuffixNumberInput(forms.NumberInput):
+
+class SuffixNumberInput(_FormworkTemplatesMixin, forms.NumberInput):
     """Number input with a static unit, currency or percent sign as a prefix or suffix inside the field."""
 
     template_name = "formwork/widgets/suffix_number.html"

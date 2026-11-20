@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import pytest
 from bs4 import BeautifulSoup
-from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 
 from django_formwork import ChoiceLabel
-from django_formwork.widgets import Select
+from django_formwork.renderers import FormworkRenderer
+from django_formwork.widgets import ComboBox, Select, SelectMultiple
 
 HOSTILE_VALUES = [
     "uuid-1234",  # hyphen: escapejs encodes it, HTML escaping does not
@@ -22,15 +22,15 @@ HOSTILE_VALUES = [
     "</button><script>alert(1)</script>",  # HTML break-out attempt
 ]
 
-WIDGETS = ["select", "combo_box", "select_multiple"]
+WIDGETS = {"select": Select, "combo_box": ComboBox, "select_multiple": SelectMultiple}
 
 PILL = mark_safe('<b class="pill">Jeans</b>')
 
 
 def _render_options(*, widget: str, value: str, label: str) -> BeautifulSoup:
     """Render a widget's server-search option fragment the way FormworkSearchView does."""
-    html = render_to_string(
-        f"formwork/widgets/{widget}.html#option_list",
+    html = FormworkRenderer().render(
+        WIDGETS[widget].option_list_template_name,
         {"options": [{"value": value, "label": label, "icon": "", "description": ""}]},
     )
     return BeautifulSoup(html, "html.parser")
@@ -100,8 +100,8 @@ def test_hostile_option_injects_no_markup(widget: str) -> None:
 @pytest.mark.parametrize("widget", WIDGETS)
 def test_label_html_renders_raw_while_data_label_stays_text(widget: str) -> None:
     """The rich-option slot is emitted unescaped; the filter and toggle read data-label."""
-    html = render_to_string(
-        f"formwork/widgets/{widget}.html#option_list",
+    html = FormworkRenderer().render(
+        WIDGETS[widget].option_list_template_name,
         {
             "options": [
                 {

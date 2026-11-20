@@ -1,0 +1,7 @@
+<div x-show="showSearch" x-cloak class="sticky top-0 z-10 bg-base-100 px-1 py-1.5 border-b border-base-300">
+  <div class="relative flex items-center">
+    <input x-ref="search" x-model="search" @input="clearHighlight()" @click.stop @change.stop type="search" class="clearable-search w-full bg-transparent ps-7 pe-7 py-1 focus:outline-1 focus:outline-base-content/30 rounded" placeholder="{{ _('Search...') }}" aria-label="{{ _('Search') }}"{% if widget.attrs.id %} aria-controls="{{ widget.attrs.id }}_listbox"{% endif %} :aria-activedescendant="activeOption"{% if widget.search_url %} hx-get="{{ widget.search_url }}" hx-trigger="input changed delay:300ms" hx-target="next ul" hx-swap="innerHTML" hx-sync="this:queue last"{% if widget.show_spinner %} hx-indicator="closest div"{% endif %} @htmx:config:request="onSearchConfig($event)"{% endif %}>
+    <span class="pointer-events-none absolute inset-y-0 start-2 flex items-center" aria-hidden="true">{% if widget.search_url and widget.show_spinner %}<span class="loading loading-spinner loading-xs htmx-indicator absolute"></span>{% endif %}<i class="icon icon-search size-3.5 text-base-content/50{% if widget.search_url and widget.show_spinner %} htmx-indicator-inverse{% endif %}"></i></span>
+    <button type="button" x-show="search" x-cloak @mousedown.prevent @click="clearSearch()" class="input-icon-button end-0.5 text-base-content/50" aria-label="{{ _('Clear search') }}"><i class="icon icon-x size-3.5" aria-hidden="true"></i></button>
+  </div>
+</div>

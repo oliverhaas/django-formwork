@@ -6,8 +6,10 @@ from typing import Any
 
 from django import forms
 
+from ._base import _FormworkTemplatesMixin
 
-class DataList(forms.TextInput):
+
+class DataList(_FormworkTemplatesMixin, forms.TextInput):
     """Text input with native ``<datalist>`` browser suggestions.
 
     Renders an ``<input>`` with a ``list`` attribute pointing to a

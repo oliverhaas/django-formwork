@@ -42,6 +42,22 @@
 - `form.as_row()` without an argument renders a row that does not save. It no longer
   reads a `save_url` that an earlier `as_rows(save_url)` set on the form, so pass the URL:
   `form.as_row(save_url)`.
+- A project template under `templates/formwork/` or `templates/django/forms/` no longer
+  overrides formwork's or Django's form templates. Formwork's form, field, widget and
+  table templates, and the admin's `formwork_admin/widgets/` templates, are Jinja2
+  templates now, and `FormworkRenderer` renders them and Django's built-in widget
+  templates with a Jinja2 engine of its own. To keep an override of a formwork template,
+  convert a fresh copy of the package's template to Jinja2 and put it at the same path in
+  the `jinja2/` directory of an app listed before `django_formwork`. Django's built-in
+  widget templates cannot be overridden this way. The fresh copy has new context names,
+  such as `widget.max_size_text` and `table.empty_text`, because `makemessages` finds no
+  text in a Jinja2 `{% trans %}` block. `TEMPLATES` needs no `DjangoTemplates` entry for
+  formwork, and `jinja2` moves from the `admin` extra to the package's dependencies.
+- Code that rendered the option rows of a select with
+  `formwork/widgets/select.html#option_list` fails with `TemplateDoesNotExist`. The rows
+  are templates of their own, `formwork/widgets/partials/select_options.html`,
+  `select_multiple_options.html` and `combo_box_options.html`, which each widget names in
+  `option_list_template_name`.
 
 ### Added
 
@@ -236,6 +252,9 @@
   when the list is longer than one page. The widget labels only its selected rows,
   because the browser loads the first page when the list opens. A
   `label_from_instance()` that counts its calls sees fewer of them.
+- An admin list with editable columns was slow to render: the example Event list, 100
+  rows with six editable columns, took about 390 ms on the server and sent 3.0 MB of
+  HTML. The Jinja2 templates bring it to 240 ms.
 
 ### Fixed
 

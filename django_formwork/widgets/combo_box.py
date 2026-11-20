@@ -10,7 +10,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from django_formwork.search import check_search_params, search_url
 
-from ._base import _ModuleScript
+from ._base import _FormworkTemplatesMixin, _ModuleScript
 from .select import _UNSET_DECORATOR, label_extras
 
 if TYPE_CHECKING:
@@ -25,13 +25,15 @@ if TYPE_CHECKING:
     Suggestions = Sequence[Suggestion] | Sequence[tuple[str, Sequence[Suggestion]]]
 
 
-class ComboBox(forms.TextInput):
+class ComboBox(_FormworkTemplatesMixin, forms.TextInput):
     """Text input with a suggestion dropdown; the submitted value is free text.
 
     ``suggestions`` are hints, flat or grouped as ``[(group, [...])]``.
     """
 
     template_name = "formwork/widgets/combo_box.html"
+    #: The option rows alone, which a server search answers with.
+    option_list_template_name = "formwork/widgets/partials/combo_box_options.html"
     search_variant = "combo_box"
     multiple = False
 

@@ -8,6 +8,8 @@ from django import forms
 from django.utils.functional import lazy
 from django.utils.translation import ngettext
 
+from ._base import _FormworkTemplatesMixin
+
 
 def _star_label(count: int) -> str:
     return ngettext("%(count)d star", "%(count)d stars", count) % {"count": count}
@@ -17,7 +19,7 @@ def _star_label(count: int) -> str:
 _lazy_star_label = lazy(_star_label, str)
 
 
-class Rating(forms.RadioSelect):
+class Rating(_FormworkTemplatesMixin, forms.RadioSelect):
     """Star-rating widget using DaisyUI's rating component.
 
     Renders a ``<div class="rating">`` containing radio inputs styled as

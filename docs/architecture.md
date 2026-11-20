@@ -24,10 +24,14 @@ Django admin renders only at the widget level, so formwork follows five constrai
 
 `FormworkRenderer` is a `TemplatesSetting` renderer. It renders `{{ form }}`
 with `formwork/forms/div.html` and each field group with
-`formwork/forms/field.html`, and it loads every template through the project's
-`TEMPLATES`. A full render and an htmx swap of the search results therefore
-resolve the same template, and a project overrides any formwork template from
-its own template directories. Formwork uses its own template paths: shadowing
+`formwork/forms/field.html`. Formwork's templates are Jinja2. The renderer
+loads them and Django's built-in widget templates from a Jinja2 engine of its
+own, which reads `django/forms/jinja2/` and the `jinja2/` directory of each
+installed app. A template that engine does not find, such as a widget template of another
+package, loads through the project's `TEMPLATES`. A full render and an htmx
+swap of the search results therefore resolve the same template, and an app
+listed before `django_formwork` overrides any formwork template from its
+`jinja2/` directory. Formwork uses its own template paths: shadowing
 `django/forms/div.html` from inside an app would change every form in every
 project that installs formwork.
 
@@ -47,7 +51,7 @@ them for a new widget and for a change to an existing one.
 | R7 | An inline Alpine attribute is one call: `onToggle()`, `onNav($event, 1)`, `matches($el)`. Move the value into the module if it contains `;`, `const`, `new …`, or a JS literal built from `{{ }}`. Put a repeated attribute block in one `x-bind` object on the shared base. Pass values through `data-*` attributes. | `'{{ v\|escapejs }}'` inside an expression parses only if escapejs escaped every quote. Bad: `x-show="!search \|\| '{{ option.label\|escapejs }}'.toLowerCase()…"`. Good: `x-show="matches($el)" data-label="{{ option.label }}"`. |
 | R8 | Use native HTML first, Alpine second, and a library last: `<details>`/`<summary>` for a dropdown, `<input type=search>` for a filter, `<button>` for an action. | The browser gives keyboard support and accessibility. |
 | R9 | Put the `id` on the focusable control. A hidden input that has the field `id` is a bug. | `<label for>` must point to an element that the user can click. |
-| R10 | Keep server concerns in Python. A template builds no URL and no query parameter. Option markup goes through the `#option_list` partial. | htmx swaps and full renders then use one code path. |
+| R10 | Keep server concerns in Python. A template builds no URL and no query parameter. Option markup goes through the widget's `option_list_template_name`. | htmx swaps and full renders then use one code path. |
 | R11 | The look of a widget is in its template, not in the Python class. A caller's `attrs={"class": …}` is only for a one-off variant. Add a CSS component class only after the same variant appears on a third page, and restate every hover and focus state in it. | DaisyUI state rules win over a plain component class. |
 | R12 | Name a widget after the primitive. Use Django's name for a drop-in replacement. Add a prefix only when two widgets coexist for one primitive. Do not name the library, the look, or a behaviour that is automatic. | See [Widget names](#widget-names). |
 

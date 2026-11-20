@@ -14,7 +14,7 @@ from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.formats import get_format
 from django.utils.translation import gettext, ngettext
 
-from ._base import _ModuleScript, _plural_forms
+from ._base import _FormworkTemplatesMixin, _ModuleScript, _plural_forms
 from ._calendar import calendar_context, format_date
 
 if TYPE_CHECKING:
@@ -49,7 +49,7 @@ def _sizing_texts(date_format: str, *placeholders: str) -> list[str]:
     return list(dict.fromkeys(re.sub(r"\d", "0", text) for text in texts))
 
 
-class DateRangePicker(forms.MultiWidget):
+class DateRangePicker(_FormworkTemplatesMixin, forms.MultiWidget):
     """A start and an end date, typed or picked in a two-month calendar, and posted as ISO.
 
     ``format`` is how the inputs show each date: a Django format setting name or a format string.

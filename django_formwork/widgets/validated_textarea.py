@@ -6,10 +6,10 @@ from typing import Any
 
 from django import forms
 
-from ._base import _ModuleScript
+from ._base import _FormworkTemplatesMixin, _ModuleScript
 
 
-class ValidatedTextarea(forms.Textarea):
+class ValidatedTextarea(_FormworkTemplatesMixin, forms.Textarea):
     """Textarea with server-side validation and word highlighting.
 
     Renders a textarea with a highlight overlay.  When ``validate_url``

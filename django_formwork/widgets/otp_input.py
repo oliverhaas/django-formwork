@@ -6,8 +6,10 @@ from typing import Any
 
 from django import forms
 
+from ._base import _FormworkTemplatesMixin
 
-class OTPInput(forms.TextInput):
+
+class OTPInput(_FormworkTemplatesMixin, forms.TextInput):
     """One-time code of ``length`` digits in a single input, drawn as one box per digit.
 
     One real input keeps SMS autofill and paste working.

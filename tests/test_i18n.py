@@ -50,13 +50,11 @@ from .conftest import PACKAGE, extract_messages
 if TYPE_CHECKING:
     from pathlib import Path
 
-TEMPLATES = sorted((PACKAGE / "templates").rglob("*.html"))
+TEMPLATES = sorted((PACKAGE / "jinja2").rglob("*.html"))
 
-_LOAD_I18N = re.compile(r"\{% load [^%]*\bi18n\b[^%]*%\}")
-_TRANSLATED_BLOCK = re.compile(r"\{%\s*(blocktranslate|blocktrans|comment)\b.*?%\}.*?\{%\s*end\1\s*%\}", re.DOTALL)
 _TEMPLATE_TAG = re.compile(r"\{%.*?%\}|\{\{.*?\}\}|\{#.*?#\}", re.DOTALL)
-_PARTIALDEF = re.compile(r"\{%\s*partialdef\s+([\w-]+)(\s+inline)?\s*%\}(.*?)\{%\s*endpartialdef\b[^%]*%\}", re.DOTALL)
-_PARTIAL = re.compile(r"\{%\s*partial\s+([\w-]+)\s*%\}")
+_MACRO = re.compile(r"\{%-?\s*macro\s+(\w+)\(.*?\)\s*-?%\}(.*?)\{%-?\s*endmacro\s*-?%\}", re.DOTALL)
+_MACRO_CALL = re.compile(r"\{\{-?\s*(\w+)\(.*?\)\s*-?\}\}")
 _PSEUDO = re.compile(r"⟦[^⟧]*⟧")
 _WORD = re.compile(r"[A-Za-z]{2,}")
 _NAME = re.compile(r"[^\W\d_]+\.?")
@@ -125,32 +123,26 @@ class _VisibleText(HTMLParser):
             self.texts.append(data)
 
 
-def _expand_partials(html: str) -> str:
-    """The template with each partial where it renders, so a partial of attributes lands inside its tag."""
-    partials = {m[1]: m[3] for m in _PARTIALDEF.finditer(html)}
-    html = _PARTIALDEF.sub(lambda m: m[3] if m[2] else "", html)
-    for _ in range(len(partials)):
-        html = _PARTIAL.sub(lambda m: partials[m[1]], html)
+def _expand_macros(html: str) -> str:
+    """The template with each macro where it is called, so a macro of attributes lands inside its tag."""
+    macros = {m[1]: m[2] for m in _MACRO.finditer(html)}
+    html = _MACRO.sub("", html)
+    for _ in range(len(macros)):
+        html = _MACRO_CALL.sub(lambda m: macros.get(m[1], m[0]), html)
     return html
 
 
 def _english(html: str, allowed: frozenset[str] = frozenset()) -> list[str]:
     """The texts ``html`` shows with a word that is not ``allowed`` and neither a template tag nor a pseudo-translation."""
     parser = _VisibleText()
-    parser.feed(_PSEUDO.sub("", _TEMPLATE_TAG.sub("", _TRANSLATED_BLOCK.sub("", _expand_partials(html)))))
+    parser.feed(_PSEUDO.sub("", _TEMPLATE_TAG.sub("", _expand_macros(html))))
     parser.close()
     texts = (text.strip() for text in parser.texts)
     return [text for text in texts if _WORD.search(_NAME.sub(lambda m: "" if m[0] in allowed else m[0], text))]
 
 
 def _template_id(path: Path) -> str:
-    return str(path.relative_to(PACKAGE / "templates"))
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("path", TEMPLATES, ids=_template_id)
-def test_template_loads_i18n_first(path):
-    assert _LOAD_I18N.match(path.read_text())
+    return str(path.relative_to(PACKAGE / "jinja2"))
 
 
 @pytest.mark.unit
@@ -168,6 +160,7 @@ def test_template_has_no_untranslated_text(path):
         "<span x-text=\"open ? 'Hide' : 'Show'\"></span>",
         '<div data-error="File too large"></div>',
         '<div data-forms="{&quot;other&quot;: &quot;files&quot;}"></div>',
+        "<p>{% trans n=count %}{{ n }} items{% endtrans %}</p>",
     ],
 )
 def test_untranslated_text_is_found(source):
@@ -178,9 +171,8 @@ def test_untranslated_text_is_found(source):
 @pytest.mark.parametrize(
     "source",
     [
-        "<p>{% translate 'Nothing here' %}</p>",
-        "<p>{% blocktranslate with n=count %}{{ n }} items{% endblocktranslate %}</p>",
-        '<div data-error="{% translate \'File too large\' %}" data-open="true"></div>',
+        "<p>{{ _('Nothing here') }}</p>",
+        '<div data-error="{{ _(\'File too large\') }}" data-open="true"></div>',
         '<span x-text="displayText || placeholder" :class="open && \'is-open\'">{{ label }} · 5</span>',
         "<script>const label = 'Close';</script>",
         '<div data-forms="{&quot;other&quot;: &quot;⟦files⟧&quot;}" data-selected="[]"></div>',

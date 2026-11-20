@@ -14,11 +14,11 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase
-from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+from django_formwork.renderers import FormworkRenderer
 from django_formwork.search import SEARCH_PAGE_SIZE, declared_params, get_field, ranked_search
 from django_formwork.widgets import ComboBox, Select, SelectMultiple
 from django_formwork.widgets.select import SearchableSelectMixin, label_extras
@@ -56,7 +56,7 @@ class FormworkSearchView(View):
 
     # The rows take the markup of the widget that asks, so one search serves every widget.
     option_templates: ClassVar[dict[str, str]] = {
-        cls.search_variant: f"{cls.template_name}#option_list" for cls in (Select, SelectMultiple, ComboBox)
+        cls.search_variant: cls.option_list_template_name for cls in (Select, SelectMultiple, ComboBox)
     }
 
     def setup(self, request: HttpRequest, *args: Any, **kwargs: Any) -> None:
@@ -152,7 +152,7 @@ class FormworkSearchView(View):
             options.insert(0, widget.clear_row(row, widget.attrs) if isinstance(widget, SearchableSelectMixin) else row)
         more = request.GET.copy()
         more["offset"] = str(offset + SEARCH_PAGE_SIZE)
-        html = render_to_string(
+        html = FormworkRenderer().render(
             template,
             {
                 "options": options,

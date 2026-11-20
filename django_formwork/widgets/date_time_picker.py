@@ -13,7 +13,7 @@ from django.utils.dateparse import parse_datetime
 from django.utils.formats import get_format
 from django.utils.translation import pgettext_lazy
 
-from ._base import _ModuleScript
+from ._base import _FormworkTemplatesMixin, _ModuleScript
 from ._calendar import calendar_context, format_date
 from .date_picker import _PLACEHOLDER_TOKENS
 
@@ -55,7 +55,7 @@ def _placeholder(date_format: str) -> str:
     return _FORMAT_CODE.sub(lambda match: match[1] or spelled.get(match[2], ""), date_format).strip()
 
 
-class DateTimePicker(forms.Widget):
+class DateTimePicker(_FormworkTemplatesMixin, forms.Widget):
     """A day and a time, typed or picked in a calendar, posted as ``YYYY-MM-DDTHH:MM`` local time.
 
     ``format`` is how the input shows the value: a Django format setting name or a format string."""

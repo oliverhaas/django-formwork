@@ -6,11 +6,14 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from django.utils.formats import number_format
+from django.utils.safestring import SafeString, mark_safe
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import ngettext
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from django.forms.renderers import BaseRenderer
 
 _KB = 1024
 _MB = 1024 * 1024
@@ -34,6 +37,15 @@ _FILE_ICONS = {
 }
 # The component picks the icon of a file the user picks from the same lists.
 _FILE_ICONS_JSON = json.dumps(_FILE_ICONS)
+
+
+class _FormworkTemplatesMixin:
+    """Render through a ``FormworkRenderer``, the one renderer that loads formwork's Jinja2 widget templates."""
+
+    def _render(self, template_name: str, context: dict[str, Any], renderer: BaseRenderer | None = None) -> SafeString:
+        from django_formwork.renderers import formwork_renderer
+
+        return mark_safe(formwork_renderer(renderer).render(template_name, context))  # noqa: S308
 
 
 class _ModuleScript(str):
@@ -94,7 +106,7 @@ def _format_accept(accept: str) -> str:
     return ", ".join(labels)
 
 
-class _UploadHintsMixin:
+class _UploadHintsMixin(_FormworkTemplatesMixin):
     """Adds the readable ``accept`` list and the ``max_size`` limit of an upload widget to its context."""
 
     max_size: int | None
@@ -107,4 +119,6 @@ class _UploadHintsMixin:
         if self.max_size is not None:
             context["widget"]["max_size"] = self.max_size
             context["widget"]["max_size_display"] = _format_size(self.max_size)
+            # Built here, not in the template: makemessages finds no Jinja trans block.
+            context["widget"]["max_size_text"] = _("Max %(size)s") % {"size": context["widget"]["max_size_display"]}
         return context

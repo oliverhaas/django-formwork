@@ -1,0 +1,1 @@
+{% if widget.pattern_hint and not widget.floating %}<div class="group/pattern">{% include "django/forms/widgets/input.html" %}{% include "formwork/widgets/partials/pattern_hint.html" %}</div>{% else %}{% include "django/forms/widgets/input.html" %}{% endif %}

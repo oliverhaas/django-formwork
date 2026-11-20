@@ -33,7 +33,7 @@
 
 /* Formwork's templates, the widget classes (class strings in Python) and the
    widget scripts.  Paths resolve against this file. */
-@source "../../templates/";
+@source "../../jinja2/";
 @source "../../widgets/";
 @source "./";
 

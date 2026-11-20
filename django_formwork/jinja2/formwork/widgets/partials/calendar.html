@@ -1,0 +1,55 @@
+<div class="calendar grid" @keydown="onGridKey($event)">
+  <template x-if="built">
+  <div class="calendar-days col-start-1 row-start-1 flex justify-center gap-6" :class="viewClass('days')" @mouseleave="hover(null)">{% for offset in calendar.offsets %}
+    <div class="calendar-month{% if not loop.first %} hidden sm:block{% endif %}">
+      <div class="calendar-caption">
+        {% if loop.first %}<button type="button" class="btn btn-ghost btn-sm btn-square" @click="page(-1)" aria-label="{{ _('Previous month') }}"><i class="icon icon-chevron-left rtl:rotate-180" aria-hidden="true"></i></button>{% else %}<span class="size-8 max-sm:hidden" aria-hidden="true"></span>{% endif %}
+        <button type="button" class="btn btn-ghost btn-sm gap-1" @click="showMonths({{ offset }})"><span x-text="monthTitle({{ offset }})"></span><i class="icon icon-chevron-down size-3.5 opacity-50" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-ghost btn-sm btn-square{% if not loop.last %} sm:invisible{% endif %}" @click="page(1)" aria-label="{{ _('Next month') }}"><i class="icon icon-chevron-right rtl:rotate-180" aria-hidden="true"></i></button>
+      </div>
+      <div role="grid" :aria-label="monthTitle({{ offset }})">
+        <div role="row" class="calendar-row">{% for weekday in calendar.weekdays %}<span role="columnheader" class="calendar-weekday"><abbr title="{{ weekday.name }}">{{ weekday.abbr }}</abbr></span>{% endfor %}</div>
+        <template x-for="(week, index) in weeks({{ offset }})" :key="index">
+          <div role="row" class="calendar-row">
+            <template x-for="cell in week" :key="cell.iso">
+              <div role="gridcell" class="calendar-cell" :class="cellClass(cell)" :aria-selected="isSelected(cell)">
+                <template x-if="!cell.hidden">
+                  <button type="button" class="btn btn-sm btn-square calendar-day size-9 text-sm font-normal" :class="dayClass(cell)" :data-date="cell.iso" :tabindex="dayTabindex(cell)" :aria-label="dateLabel(cell.iso)" :aria-current="todayMark(cell)" @click="pickDay(cell)" @mouseenter="hover(cell)" @focus="hover(cell)" x-text="cell.day"></button>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>{% endfor %}
+  </div>
+  </template>
+  <template x-if="built">
+  <div class="calendar-months col-start-1 row-start-1 flex flex-col" :class="viewClass('months')">
+    <div class="calendar-caption">
+      <button type="button" class="btn btn-ghost btn-sm btn-square" @click="page(-1)" aria-label="{{ _('Previous year') }}"><i class="icon icon-chevron-left rtl:rotate-180" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-ghost btn-sm gap-1" @click="showYears()"><span x-text="year"></span><i class="icon icon-chevron-down size-3.5 opacity-50" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-ghost btn-sm btn-square" @click="page(1)" aria-label="{{ _('Next year') }}"><i class="icon icon-chevron-right rtl:rotate-180" aria-hidden="true"></i></button>
+    </div>
+    <div class="calendar-choices">
+      <template x-for="(name, index) in monthNames" :key="index">
+        <button type="button" class="btn btn-sm font-normal" :class="monthClass(index)" @click="pickMonth(index)" x-text="name"></button>
+      </template>
+    </div>
+  </div>
+  </template>
+  <template x-if="built">
+  <div class="calendar-years col-start-1 row-start-1 flex flex-col" :class="viewClass('years')">
+    <div class="calendar-caption">
+      <button type="button" class="btn btn-ghost btn-sm btn-square" @click="page(-1)" aria-label="{{ _('Earlier years') }}"><i class="icon icon-chevron-left rtl:rotate-180" aria-hidden="true"></i></button>
+      <span class="text-sm font-semibold" x-text="yearsTitle"></span>
+      <button type="button" class="btn btn-ghost btn-sm btn-square" @click="page(1)" aria-label="{{ _('Later years') }}"><i class="icon icon-chevron-right rtl:rotate-180" aria-hidden="true"></i></button>
+    </div>
+    <div class="calendar-choices">
+      <template x-for="choice in years" :key="choice">
+        <button type="button" class="btn btn-sm font-normal" :class="yearClass(choice)" @click="pickYear(choice)" x-text="choice"></button>
+      </template>
+    </div>
+  </div>
+  </template>
+</div>

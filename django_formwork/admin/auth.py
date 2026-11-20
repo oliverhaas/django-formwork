@@ -32,6 +32,7 @@ from django_formwork.admin.options import ModelAdmin
 from django_formwork.admin.widgets import IS_POPUP_VAR, RADIO_ROW_CLASS
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.widgets import PasswordInput
+from django_formwork.widgets._base import _FormworkTemplatesMixin
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -52,7 +53,7 @@ __all__ = [
 ]
 
 
-class ReadOnlyPasswordHashWidget(auth_forms.ReadOnlyPasswordHashWidget):
+class ReadOnlyPasswordHashWidget(_FormworkTemplatesMixin, auth_forms.ReadOnlyPasswordHashWidget):
     """The hash's algorithm and parameters, and a link to the password page."""
 
     template_name = "formwork_admin/widgets/read_only_password_hash.html"

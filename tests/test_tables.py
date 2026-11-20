@@ -69,16 +69,31 @@ def test_disabled_multiple_choice_cell_shows_the_chosen_labels():
     assert "Apples, Bananas" in html
 
 
-def test_project_template_overrides_the_row_template(settings, tmp_path):
-    override = tmp_path / "formwork" / "tables" / "row.html"
+def test_an_app_listed_first_overrides_the_row_template(settings, tmp_path, monkeypatch):
+    app = tmp_path / "row_override"
+    override = app / "jinja2" / "formwork" / "tables" / "row.html"
     override.parent.mkdir(parents=True)
+    (app / "__init__.py").write_text("")
     override.write_text("<tbody>project row</tbody>")
-    settings.TEMPLATES = [{**settings.TEMPLATES[0], "DIRS": [tmp_path]}]
-    settings.FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
+    monkeypatch.syspath_prepend(tmp_path)
+    settings.INSTALLED_APPS = ["row_override", *settings.INSTALLED_APPS]
 
     html = CodeRowForm(instance=UniqueCode.objects.create(code="A")).as_row()
 
     assert "project row" in html
+
+
+def test_a_django_template_renders_the_rows_of_a_form_that_names_one(settings, tmp_path):
+    (tmp_path / "rows").mkdir()
+    (tmp_path / "rows" / "code.html").write_text("<tbody>{{ row.form.code.value }} in a project row</tbody>")
+    settings.TEMPLATES = [{**settings.TEMPLATES[0], "DIRS": [tmp_path]}]
+
+    class ProjectRowForm(CodeRowForm):
+        template_name_row = "rows/code.html"
+
+    html = ProjectRowForm(instance=UniqueCode.objects.create(code="A")).as_row()
+
+    assert "A in a project row" in html
 
 
 def test_row_save_updates_only_editable_fields():

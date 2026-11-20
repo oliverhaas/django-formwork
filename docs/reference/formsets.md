@@ -163,8 +163,8 @@ another row, where the admin puts the pager of an inline. Each row is a `TableRo
 `cells` and its `hidden` inputs; each cell is a `TableCell`, with the bound `field` or
 the `display` text of a disabled one.
 
-To override one for the whole project, put a template at the same path in a
-directory of your `TEMPLATES` setting.
+Both are Jinja2 templates. To override one for the whole project, put a template
+at the same path in the `jinja2/` directory of an app listed before `django_formwork`.
 
 ## Saving a row
 

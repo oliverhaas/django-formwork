@@ -7,10 +7,10 @@ from typing import Any
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from ._base import _ModuleScript
+from ._base import _FormworkTemplatesMixin, _ModuleScript
 
 
-class SearchInput(forms.TextInput):
+class SearchInput(_FormworkTemplatesMixin, forms.TextInput):
     """Search field with a leading magnifier (an htmx spinner while a request runs) and a clear button.
 
     ``filter_items`` is a CSS selector: typing hides the matching rows whose ``data-label`` misses the query.

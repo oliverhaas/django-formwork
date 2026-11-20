@@ -6,10 +6,11 @@ from typing import Any
 
 from django import forms
 
+from ._base import _FormworkTemplatesMixin
 from .select import ChoiceLabel
 
 
-class Display(forms.Widget):
+class Display(_FormworkTemplatesMixin, forms.Widget):
     """A value the user cannot change, in the box of a filled field. It posts nothing.
 
     Each item is a string or a ``ChoiceLabel``; with ``badges``, each item is a badge in its ``color``.

@@ -1,0 +1,15 @@
+<div class="date-picker" :data-open="open"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datepicker"{% endif %} x-data="formworkDatePicker" data-formwork-lazy data-value="{{ widget.iso_value }}" data-format="{{ widget.date_format }}" data-first-day="{{ widget.calendar.first_day }}" data-months="1" data-names="{{ widget.calendar.names_json }}" data-formats="{{ widget.calendar.formats_json }}" @click.outside="close()" @keydown.escape="onEscape($event)" @focusout="onFocusOut($event)">
+  <div class="date-picker-label" @click="focusInput($event)">
+    <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default('', true) }}"{% include "django/forms/widgets/attrs.html" %} @focus="onInputFocus()" @input="onInput()" @keydown.down="onInputDown($event)" autocomplete="off" class="grow{% if widget.extra_class %} {{ widget.extra_class }}{% endif %}">
+    <button type="button" class="date-picker-toggle" @click="toggle()" aria-label="{{ _('Open calendar') }}" :aria-expanded="open"{% if widget.attrs.id %} aria-controls="{{ widget.attrs.id }}_calendar"{% endif %}>
+      <i class="icon icon-calendar size-4" aria-hidden="true"></i>
+    </button>
+  </div>
+  <div x-ref="panel" popover="manual" x-show="open" x-cloak{% if widget.attrs.id %} id="{{ widget.attrs.id }}_calendar"{% endif %} role="dialog" aria-label="{{ _('Calendar') }}" class="dropdown-content calendar-panel bg-base-100 rounded-box shadow-lg border border-base-300" @mousedown="keepInputFocus($event)">
+    {% with calendar = widget.calendar %}{% include "formwork/widgets/partials/calendar.html" %}{% endwith %}
+    <div class="calendar-footer justify-between">
+      <button type="button" class="btn btn-ghost btn-sm" @click="pickToday()">{{ _("Today") }}</button>
+      <button type="button" class="btn btn-ghost btn-sm" @click="clear()">{{ _("Clear") }}</button>
+    </div>
+  </div>
+</div>
