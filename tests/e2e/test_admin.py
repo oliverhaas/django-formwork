@@ -617,7 +617,7 @@ def test_an_editable_value_lines_up_with_its_column_header(admin_page, live_serv
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
     head = admin_page.locator("#changelist-table thead")
     row = admin_page.locator("#changelist-table tbody tr[data-pk]")
-    status = row.locator("summary [x-html=labelHtml] .badge").bounding_box()
+    status = row.locator("summary .formwork-autowidth-stack > span:first-child .badge").bounding_box()
     quantity_end = row.locator("[name$=-quantity]").evaluate(
         "el => el.getBoundingClientRect().right - parseFloat(getComputedStyle(el).borderRightWidth) - parseFloat(getComputedStyle(el).paddingRight)"
     )
@@ -629,6 +629,85 @@ def test_an_editable_value_lines_up_with_its_column_header(admin_page, live_serv
     assert status["x"] == pytest.approx(status_head["x"], abs=0.5)
     assert quantity_end == pytest.approx(quantity_head["x"] + quantity_head["width"], abs=0.5)
     assert featured["x"] == pytest.approx(featured_head["x"], abs=0.5)
+
+
+@pytest.fixture
+def status_cell(admin_page, live_server, kitchen, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable", ["status", "quantity"])
+    Item.objects.create(name="Kettle", category=kitchen, quantity=3)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    cell = admin_page.locator("#changelist-table tbody tr[data-pk] td:has([name$=-status])")
+    expect(cell.locator("[data-formwork-stub]")).to_be_attached()
+    return cell
+
+
+def test_a_select_stub_opens_as_the_full_select_on_the_first_press_at_its_width(admin_page, status_cell):
+    held = []
+    admin_page.route("**/cells/**", lambda route: held.append(route))  # noqa: PLW0108 (Playwright reads the handler's signature, which a builtin lacks)
+    summary = status_cell.locator("summary")
+    width = summary.bounding_box()["width"]
+
+    summary.click()
+    held[0].continue_()
+
+    expect(status_cell.get_by_role("option", name="Active")).to_be_visible()
+    assert summary.bounding_box()["width"] == pytest.approx(width, abs=0.5)
+    status_cell.get_by_role("option", name="Active").click()
+    expect(status_cell.locator("[name$=-status]")).to_have_value("active")
+    assert admin_page.errors == []
+
+
+def test_a_select_stub_hands_its_focus_to_the_full_select(admin_page, status_cell):
+    status_cell.locator("summary").focus()
+
+    expect(status_cell.locator("[x-data=formworkSelect]")).to_be_attached()
+    expect(status_cell.locator("summary")).to_be_focused()
+    admin_page.keyboard.press("Enter")
+    expect(status_cell.get_by_role("option", name="Active")).to_be_visible()
+    assert admin_page.errors == []
+
+
+def test_a_pointer_resting_on_a_select_stub_loads_the_closed_select(admin_page, status_cell):
+    status_cell.locator("summary").hover()
+
+    expect(status_cell.locator("[x-data=formworkSelect]")).to_be_attached()
+    expect(status_cell.get_by_role("option", name="Active")).to_be_hidden()
+    assert admin_page.errors == []
+
+
+def test_text_typed_into_a_date_stub_carries_over_to_the_full_picker(admin_page, live_server, kitchen, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable", ["released"])
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    held = []
+    admin_page.route("**/cells/**", lambda route: held.append(route))  # noqa: PLW0108 (Playwright reads the handler's signature, which a builtin lacks)
+    released = admin_page.locator("#changelist-table [name$=-released]")
+
+    released.press_sequentially("2026-02-03")
+    held[0].continue_()
+
+    expect(admin_page.locator("#changelist-table [x-data=formworkDatePicker]")).to_be_attached()
+    expect(released).to_have_value("2026-02-03")
+    expect(released).to_be_focused()
+    assert admin_page.errors == []
+
+
+def test_a_failed_list_save_brings_the_full_selects_and_a_saved_one_the_stubs(admin_page, status_cell):
+    quantity = admin_page.locator("#changelist-table [name$=-quantity]")
+    save = admin_page.get_by_role("button", name="Save changes")
+    quantity.fill("-1")
+    save.click()
+    expect(quantity).to_have_attribute("aria-invalid", "true")
+    expect(status_cell.locator("[x-data=formworkSelect]")).to_be_attached()
+
+    status_cell.locator("summary").click()
+    status_cell.get_by_role("option", name="Active").click()
+    quantity.fill("4")
+    save.click()
+
+    expect(admin_page.get_by_role("status").filter(has_text="was changed successfully")).to_be_visible()
+    expect(status_cell.locator("[data-formwork-stub] summary")).to_contain_text("Active")
+    assert admin_page.errors == []
 
 
 def test_a_tabular_inline_shows_the_fields_of_the_hovered_row_and_of_a_new_row(admin_page, live_server, kitchen):

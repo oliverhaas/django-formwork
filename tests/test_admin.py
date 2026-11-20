@@ -4,7 +4,7 @@ import contextlib
 import csv
 import io
 import json
-from datetime import date, datetime, time
+from datetime import UTC, date, datetime, time
 from types import ModuleType, SimpleNamespace
 
 import django_filters
@@ -2744,6 +2744,114 @@ def test_list_editable_relation_has_no_dialog_buttons(admin_client, catalog, mon
 
     assert soup.select_one("#changelist [name=form-0-category]") is not None
     assert soup.select("#changelist [data-related-popup]") == []
+
+
+_STUB_COLUMNS = ["category", "status", "released", "available_from"]
+
+
+@pytest.fixture
+def stub_list(catalog, monkeypatch):
+    model_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(model_admin, "list_display", ["name", *_STUB_COLUMNS])
+    monkeypatch.setattr(model_admin, "list_editable", _STUB_COLUMNS)
+    Item.objects.filter(pk=catalog.alpha.pk).update(available_from=datetime(2026, 3, 4, 9, 30, tzinfo=UTC))
+    return catalog
+
+
+def _cell(soup, obj, field):
+    return soup.select_one(f"#changelist-table tr[data-pk='{obj.pk}'] td:has([name$=-{field}])")
+
+
+def test_saving_a_list_of_stubs_posts_the_values_of_its_rows(admin_client, stub_list):
+    stub_list.beta.delete()
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+    form = soup.find(id="changelist-form")
+    data = {el["name"]: el.get("value", "") for el in form.select("input[name^=form-]:not([disabled])")}
+    before = list(Item.objects.order_by("pk").values(*_STUB_COLUMNS))
+
+    response = admin_client.post(url(Item, "changelist"), {**data, "_save": "1"})
+
+    assert len(form.select("[data-formwork-stub]")) == len(_STUB_COLUMNS)
+    assert response.status_code == 302
+    assert list(Item.objects.order_by("pk").values(*_STUB_COLUMNS)) == before
+
+
+@pytest.mark.parametrize("stubs", [True, False])
+def test_a_list_select_shows_its_rows_choice_and_renders_the_options_only_without_stubs(
+    admin_client, stub_list, monkeypatch, stubs
+):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable_stubs", stubs)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    cell = _cell(soup, stub_list.alpha, "category")
+    assert cell.select_one("[name$=-category]")["value"] == str(stub_list.kitchen.pk)
+    assert "Kitchen" in cell.summary.get_text()
+    assert (cell.select("[role=option]") == []) is stubs
+
+
+def test_a_list_of_stubs_and_its_relation_filter_run_the_queries_of_the_full_list(admin_client, stub_list, monkeypatch):
+    model_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(model_admin, "list_filter", ["category"])
+
+    def queries(*, stubs):
+        monkeypatch.setattr(model_admin, "list_editable_stubs", stubs)
+        with CaptureQueriesContext(connection) as captured:
+            admin_client.get(url(Item, "changelist"))
+        return len(captured)
+
+    full = queries(stubs=False)
+
+    assert queries(stubs=True) == full
+
+
+@pytest.mark.parametrize("field", ["category", "status"])
+def test_a_select_stub_sizes_its_trigger_with_the_labels_of_the_full_select(
+    admin_client, stub_list, monkeypatch, field
+):
+    def label_copy():
+        soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+        return str(_cell(soup, stub_list.alpha, field).select_one(".formwork-autowidth"))
+
+    stubbed = label_copy()
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable_stubs", False)
+
+    assert label_copy() == stubbed
+
+
+def test_a_select_whose_rows_can_get_their_own_choices_keeps_the_full_select(admin_client, stub_list, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "form", _RowForm)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    assert _cell(soup, stub_list.alpha, "category").select("[data-formwork-stub]") == []
+    assert _cell(soup, stub_list.alpha, "status").select("[data-formwork-stub]") == []
+    assert _cell(soup, stub_list.alpha, "released").select("[data-formwork-stub]") != []
+
+
+def test_a_cell_answers_with_the_full_widget_for_the_value_its_stub_holds(admin_client, stub_list):
+    query = {"pk": stub_list.alpha.pk, "prefix": "form-0", "value": stub_list.office.pk}
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "cell", "category"), query).content, "html.parser")
+
+    value = soup.select_one("[x-data=formworkSelect] input[type=hidden]")
+    assert value["name"] == "form-0-category"
+    assert value["value"] == str(stub_list.office.pk)
+
+
+@pytest.mark.parametrize(("field", "pk"), [("name", None), ("category", "unknown")])
+def test_a_cell_of_a_column_the_list_does_not_edit_or_of_a_missing_row_is_not_found(admin_client, stub_list, field, pk):
+    query = {"pk": pk or stub_list.alpha.pk, "prefix": "form-0"}
+
+    assert admin_client.get(url(Item, "cell", field), query).status_code == 404
+
+
+def test_a_cell_is_refused_to_a_user_who_cannot_change_the_rows(staff_client, stub_list):
+    client = staff_client("view_item")
+
+    response = client.get(url(Item, "cell", "category"), {"pk": stub_list.alpha.pk, "prefix": "form-0"})
+
+    assert response.status_code == 403
 
 
 def test_view_on_site_redirects_to_the_object(admin_client, catalog):

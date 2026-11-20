@@ -181,6 +181,15 @@
   `as_rows(flush=True)` lays the table out to the edges of a card. The rows need
   `tables.js`, which `{% formwork_js %}` and `{{ formset.media }}` load. With a
   `save_url`, each row still saves by itself, without Add another, Remove or Delete.
+- An admin list renders the `Select`, `DatePicker` and `DateTimePicker` of each saved row
+  of its editable columns as a stub: the closed widget with its value. When the pointer
+  rests on a stub, or the stub takes the focus or a press, the full widget loads from the
+  new `cells/<field>/` view (URL name `<app_label>_<model_name>_cell`) and takes over the
+  focus, a typed date and the press. A select whose rows can get choices of their own
+  keeps the full widget. `list_editable_stubs = False` on the `ModelAdmin` renders the
+  full widgets. Tests that read the options of a list's select from the rendered page
+  request the cell instead, or set `list_editable_stubs = False`. See
+  [Widgets that load on use](admin.md#widgets-that-load-on-use).
 
 ### Changed
 
@@ -254,7 +263,8 @@
   `label_from_instance()` that counts its calls sees fewer of them.
 - An admin list with editable columns was slow to render: the example Event list, 100
   rows with six editable columns, took about 390 ms on the server and sent 3.0 MB of
-  HTML. The Jinja2 templates bring it to 240 ms.
+  HTML. The Jinja2 templates bring it to 240 ms. With the stubs from Added it takes
+  125 ms and sends 0.65 MB, with the same seven queries.
 
 ### Fixed
 

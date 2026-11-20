@@ -81,6 +81,7 @@ from django_formwork.formsets import (
     formwork_modelformset_factory,
 )
 from django_formwork.widgets import ChoiceLabel, Select
+from django_formwork.widgets._stub import stub_formset
 from django_formwork.widgets.select import share_choices
 
 if TYPE_CHECKING:
@@ -473,6 +474,8 @@ class ModelAdmin(BaseModelAdmin):
     list_per_page_options: Sequence[int] = (25, 50, 100, 250)
     list_max_show_all = 200
     list_editable: Sequence[str] = ()
+    #: Render the selects and date pickers of editable cells as stubs that load the full widget on first use.
+    list_editable_stubs = True
     #: Load only these columns on the changelist (opt-in: a ``__str__`` that reads a deferred field queries per row).
     list_only_fields: Sequence[str] | None = None
     #: Skip loading these columns on the changelist.
@@ -566,6 +569,7 @@ class ModelAdmin(BaseModelAdmin):
             path("import/", wrap(self.import_view), name="{}_{}_import".format(*info)),
             path("info/", wrap(self.info_view), name="{}_{}_info".format(*info)),
             path("slots/<str:slot>/", wrap(self.slot_view), name="{}_{}_slot".format(*info)),
+            path("cells/<str:field>/", wrap(self.cell_view), name="{}_{}_cell".format(*info)),
             path("history/", wrap(self.history_list_view), name="{}_{}_history_list".format(*info)),
             path("history/export/", wrap(self.history_export_view), name="{}_{}_history_export".format(*info)),
             path("<path:object_id>/history/", wrap(self.history_view), name="{}_{}_history".format(*info)),
@@ -585,6 +589,9 @@ class ModelAdmin(BaseModelAdmin):
 
     def url_name(self, view: str) -> str:
         return f"{self.admin_site.name}:{self.opts.app_label}_{self.opts.model_name}_{view}"
+
+    def _cell_url(self, field: str) -> str:
+        return reverse(self.url_name("cell"), args=(field,), current_app=self.admin_site.name)
 
     def redirect_to_change(self, request: HttpRequest, object_id: str) -> HttpResponse:
         return HttpResponseRedirect(reverse(self.url_name("change"), args=(object_id,)))
@@ -1088,6 +1095,27 @@ class ModelAdmin(BaseModelAdmin):
         if not self.has_view_or_change_permission(request, obj):
             raise PermissionDenied
         return HttpResponse(method(request, obj))
+
+    def cell_view(self, request: HttpRequest, field: str) -> HttpResponse:
+        """The full widget of an editable cell, for the stub that the list rendered in its place.
+
+        The query names the row's ``pk`` and form ``prefix``, and the ``value`` that the stub holds.
+        """
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+        obj = self.get_object(request, request.GET.get("pk", ""))
+        if obj is None or field not in self.list_editable:
+            raise Http404
+        if not self.has_change_permission(request, obj):
+            raise PermissionDenied
+        form = self.get_changelist_formset(request).form(
+            instance=obj,
+            prefix=request.GET.get("prefix"),
+            initial={field: request.GET["value"]} if "value" in request.GET else None,
+            use_required_attribute=False,
+        )
+        bound = form[field]
+        return HttpResponse(bound.as_widget(attrs={"aria-label": bound.label}))
 
     # Actions
 
@@ -1625,6 +1653,8 @@ class ModelAdmin(BaseModelAdmin):
             else:
                 formset = FormSet(queryset=cast("models.QuerySet[Any]", cl.page.object_list))
             share_choices(formset, share=self.share_choices)
+            if self.list_editable_stubs:
+                stub_formset(formset, self._cell_url, share=self.share_choices)
             cl.formset = formset
 
         context = self.page_context(

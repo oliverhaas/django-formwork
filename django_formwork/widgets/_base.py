@@ -48,6 +48,34 @@ class _FormworkTemplatesMixin:
         return mark_safe(formwork_renderer(renderer).render(template_name, context))  # noqa: S308
 
 
+class _StubMixin(_FormworkTemplatesMixin):
+    """A widget that renders as a stub while ``stub_url`` is set: the closed widget and its value, and no more.
+
+    The stub loads the full widget from ``stub_url`` on first hover, focus or press, and puts it in its place.
+    """
+
+    stub_template_name: str
+    #: Set for each row of an editable list, see ``django_formwork.widgets._stub``.
+    stub_url: str | None = None
+
+    def render(
+        self,
+        name: str,
+        value: Any,  # noqa: ANN401 (widget data)
+        attrs: dict[str, Any] | None = None,
+        renderer: BaseRenderer | None = None,
+    ) -> SafeString:
+        if self.stub_url is None:
+            return super().render(name, value, attrs, renderer)  # type: ignore[misc]
+        context = self.get_stub_context(name, value, attrs)
+        context["widget"]["stub_url"] = self.stub_url
+        return self._render(self.stub_template_name, context, renderer)
+
+    def get_stub_context(self, name: str, value: Any, attrs: dict[str, Any] | None) -> dict[str, Any]:  # noqa: ANN401
+        """The context of the stub, which leaves out what only the open widget shows."""
+        raise NotImplementedError
+
+
 class _ModuleScript(str):
     """Static path that ``forms.Media`` renders as ``<script type="module">``.
 

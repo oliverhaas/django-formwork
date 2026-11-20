@@ -1140,6 +1140,8 @@ pages, override `formwork_admin/skeletons.html` and add a
   The change form no longer loads the whole related table into a `<select>`.
 - The rows of [editable columns](#editable-columns) and of an [inline](#inlines) load the
   choices of a relation once for all rows. See [Shared choices](#shared-choices).
+- The selects and date pickers of editable columns render as stubs and load the full
+  widget when they are first used. See [Widgets that load on use](#widgets-that-load-on-use).
 - Without filters, the list counts a PostgreSQL table of more than 10,000 rows from the
   planner's estimate instead of `COUNT(*)`. Any filter or search counts exactly.
   `EstimatedCountPaginator.estimate_threshold` sets the limit.
@@ -1255,6 +1257,29 @@ class EventAdmin(admin.ModelAdmin):
 | `None` (default) | share their choices, unless a hook can change them |
 | `True` | share the choices of the first row |
 | `False` | load their choices one by one |
+
+### Widgets that load on use
+
+The saved rows of [editable columns](#editable-columns) render each `Select`,
+`DatePicker` and `DateTimePicker` as a stub: the closed widget with its value, and an
+input that posts the value as the full widget does. When the pointer rests on the stub,
+or the stub takes the focus or a press, the full widget loads and takes its place with
+the focus, a typed date and the press. After a failed save, the rows render the full
+widgets.
+
+The stubs load from `cells/<field>/` under the admin's URLs, named
+`<app_label>_<model_name>_cell`. The query names the row's `pk`, its form `prefix` and
+the `value` that the stub holds, so a changed value stays changed. The view checks the
+change permission for the row.
+
+These keep the full widget in every row:
+
+- a select whose rows can get choices of their own (see [Shared choices](#shared-choices)),
+  so that its width fits the row's options,
+- a select with a floating label,
+- a disabled field.
+
+`list_editable_stubs = False` on the `ModelAdmin` renders the full widgets in every row.
 
 ## Keyboard
 

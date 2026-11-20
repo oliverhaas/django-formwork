@@ -19,7 +19,7 @@ from django.utils.translation import gettext
 
 from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search_url
 
-from ._base import _FormworkTemplatesMixin, _ModuleScript
+from ._base import _FormworkTemplatesMixin, _ModuleScript, _StubMixin
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
@@ -128,19 +128,44 @@ class _SharedChoices:
         return _load(self.queryset[: SEARCH_PAGE_SIZE + 1])
 
     @cached_property
+    def values(self) -> set[str]:
+        return {str(value) for bound, select in self.rows for value in select.format_value(bound.value()) if value}
+
+    @cached_property
+    def shown(self) -> dict[str, Any]:
+        """The rows of the first page, by their value."""
+        return {str(getattr(obj, self.key)): obj for obj in self.page[:SEARCH_PAGE_SIZE]}
+
+    @cached_property
     def selected(self) -> dict[str, Any]:
         """The rows past the first page that a row has selected, by their value."""
-        shown = {str(getattr(obj, self.key)) for obj in self.page[:SEARCH_PAGE_SIZE]}
-        chosen = {str(value) for bound, select in self.rows for value in select.format_value(bound.value()) if value}
-        return {str(getattr(obj, self.key)): obj for obj in _rows_of(self.queryset, self.key, chosen - shown)}
+        past = self.values - self.shown.keys()
+        return {str(getattr(obj, self.key)): obj for obj in _rows_of(self.queryset, self.key, past)}
+
+    @cached_property
+    def chosen(self) -> dict[str, Any]:
+        """The rows that any row of the formset has selected, by their value, from ``shown`` and ``selected``."""
+        return {**{value: obj for value, obj in self.shown.items() if value in self.values}, **self.selected}
 
 
-def _searchable(field: forms.Field | None) -> SearchableSelectMixin | None:
-    """The select with a server search that ``field`` renders, also inside a widget that wraps it."""
+def _select_of(field: forms.Field | None) -> SearchableSelectMixin | None:
+    """The select that ``field`` renders, also inside a widget that wraps it."""
     widget = getattr(field, "widget", None)
     while widget is not None and not isinstance(widget, SearchableSelectMixin):
         widget = getattr(widget, "widget", None)
-    return widget if widget is not None and widget.search_key is not None else None
+    return widget
+
+
+def rows_share_choices(formset: BaseFormSet[Any], field: forms.Field, *, share: bool | None = None) -> bool:
+    """Whether the rows of ``formset`` get the same choices for ``field``.
+
+    ``share`` answers for every field; ``None`` says no when a row can get choices of its own."""
+    if share is not None:
+        return share
+    # Django calls a callable limit_choices_to again for every form.
+    if callable(getattr(field, "limit_choices_to", None)):
+        return False
+    return not row_choice_hooks(formset.form, type(formset))
 
 
 def share_choices(formset: BaseFormSet[Any], *, share: bool | None = None) -> None:
@@ -148,17 +173,14 @@ def share_choices(formset: BaseFormSet[Any], *, share: bool | None = None) -> No
 
     ``None`` leaves out the fields whose rows can get choices of their own, ``True`` shares those too."""
     rows = formset.forms
-    if share is False or not rows:
-        return
-    if share is None and row_choice_hooks(formset.form, type(formset)):
+    if not rows:
         return
     for name, field in rows[0].fields.items():
         if not isinstance(field, forms.ModelChoiceField) or field.queryset is None:
             continue
-        # Django calls a callable limit_choices_to again for every form.
-        if share is None and callable(field.limit_choices_to):
+        if not rows_share_choices(formset, field, share=share):
             continue
-        selects = [(form[name], select) for form in rows if (select := _searchable(form.fields.get(name)))]
+        selects = [(form[name], select) for form in rows if (select := _select_of(form.fields.get(name)))]
         shared = _SharedChoices(field.queryset, field.to_field_name or "pk", selects)
         for _bound, select in selects:
             select.shared = shared
@@ -191,6 +213,27 @@ _TEMPLATE_ATTRS = frozenset(
         "aria-describedby",
     }
 )
+
+
+def _trigger_context(widget: dict[str, Any]) -> None:
+    """Spread the widget's attrs over the trigger and the hidden input."""
+    attrs = widget["attrs"]
+    widget["aria_invalid"] = attrs.get("aria-invalid")
+    widget["aria_required"] = attrs.get("aria-required")
+    # `<label for>` cannot target the <summary>, so the label and the
+    # help/error rows are associated by id instead (see boundfield.py, field.html).
+    widget["aria_labelledby"] = attrs.get("aria-labelledby")
+    widget["aria_label"] = attrs.get("aria-label")
+    widget["aria_describedby"] = attrs.get("aria-describedby")
+    widget["disabled"] = bool(attrs.get("disabled"))
+    # The hidden input holds the value and fires `change` on a pick. Data and
+    # htmx attrs go there, the rest go on the trigger, which takes focus.
+    rest = {key: val for key, val in attrs.items() if key not in _TEMPLATE_ATTRS}
+    if widget["disabled"]:
+        rest.pop("tabindex", None)
+    widget["input_attrs"] = {key: val for key, val in rest.items() if key.startswith(("data-", "hx-"))}
+    widget["trigger_attrs"] = {key: val for key, val in rest.items() if key not in widget["input_attrs"]}
+
 
 BadgeColor = Literal["neutral", "primary", "secondary", "accent", "info", "success", "warning", "error"]
 
@@ -364,22 +407,7 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
         widget["options"] = options
         widget["badges"] = self.badges
         widget["selected_options"] = selected
-
-        widget["aria_invalid"] = widget["attrs"].get("aria-invalid")
-        widget["aria_required"] = widget["attrs"].get("aria-required")
-        # `<label for>` cannot target the <summary>, so the label and the
-        # help/error rows are associated by id instead (see boundfield.py, field.html).
-        widget["aria_labelledby"] = widget["attrs"].get("aria-labelledby")
-        widget["aria_label"] = widget["attrs"].get("aria-label")
-        widget["aria_describedby"] = widget["attrs"].get("aria-describedby")
-        widget["disabled"] = bool(widget["attrs"].get("disabled"))
-        # The hidden input holds the value and fires `change` on a pick. Data and
-        # htmx attrs go there, the rest go on the trigger, which takes focus.
-        rest = {key: val for key, val in widget["attrs"].items() if key not in _TEMPLATE_ATTRS}
-        if widget["disabled"]:
-            rest.pop("tabindex", None)
-        widget["input_attrs"] = {key: val for key, val in rest.items() if key.startswith(("data-", "hx-"))}
-        widget["trigger_attrs"] = {key: val for key, val in rest.items() if key not in widget["input_attrs"]}
+        _trigger_context(widget)
         widget["truncated"] = self.truncated
         widget["show_spinner"] = self.show_spinner
         widget["show_search"] = (
@@ -497,7 +525,7 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
                 widget["aria_labelledby"] = f"{id_}_floating_label {id_}"
 
 
-class Select(SearchableSelectMixin, forms.Select):
+class Select(_StubMixin, SearchableSelectMixin, forms.Select):
     """Single-select Alpine dropdown with text filtering; posts via a hidden input.
 
     Drop-in for a native ``<select>``: validation is unchanged.
@@ -506,6 +534,9 @@ class Select(SearchableSelectMixin, forms.Select):
     template_name = "formwork/widgets/select.html"
     #: The option rows alone, which a server search answers with.
     option_list_template_name = "formwork/widgets/partials/select_options.html"
+    stub_template_name = "formwork/widgets/select_stub.html"
+    #: The option labels that size a stub's trigger as they size the full one's, set with ``stub_url``.
+    stub_copy: Callable[[], str] | None = None
     search_variant = "select"
 
     class Media:
@@ -528,3 +559,42 @@ class Select(SearchableSelectMixin, forms.Select):
         widget["selected_label_html"] = first.get("label_html", "")
         widget["selected_toggle_class"] = first.get("selected_toggle_class", "")
         return context
+
+    def get_stub_context(self, name: str, value: Any, attrs: dict[str, Any] | None) -> dict[str, Any]:  # noqa: ANN401
+        # forms.Select's own context builds every option; the stub shows the selected one alone.
+        context = forms.Widget.get_context(self, name, value, attrs)
+        widget = context["widget"]
+        current = widget["value"]
+        if isinstance(current, (list, tuple)):
+            current = current[0] if current else ""
+        current = "" if current is None else str(current)
+        label = self._label_of(current) if current else None
+        extras = label_extras(label, badges=self.badges) if label is not None else {}
+        _trigger_context(widget)
+        widget.update(
+            {
+                "value": current if label is not None else "",
+                "selected_label": "" if label is None else str(label),
+                "selected_icon": extras.get("icon", ""),
+                "selected_label_html": extras.get("label_html", ""),
+                "selected_toggle_class": extras.get("selected_toggle_class", ""),
+                "trigger_placeholder": widget["attrs"].get("placeholder", ""),
+                "autowidth_copy": self.stub_copy() if self.stub_copy else "",
+            }
+        )
+        return context
+
+    def _label_of(self, value: str) -> object | None:
+        """The label of the choice that holds ``value``, or None."""
+        choices = self.choices
+        if not isinstance(choices, ModelChoiceIterator):
+            label: object
+            for choice, label in flatten_choices(choices):
+                if str(choice) == value:
+                    return label
+            return None
+        if self.shared is not None:
+            obj = self.shared.chosen.get(value)
+        else:
+            obj = next(iter(_rows_of(choices.queryset, choices.field.to_field_name or "pk", [value])), None)
+        return None if obj is None else choices.choice(obj)[1]

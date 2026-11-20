@@ -213,6 +213,116 @@ if (typeof document !== "undefined") {
   for (const type of START_EVENTS) document.addEventListener(type, start, true);
 }
 
+// --- Widgets that the server sent as a stub ----------------------------
+// An editable list renders its selects and date pickers as stubs: the closed
+// widget, and the value in an input that posts as the full widget's would. A
+// hover that rests on a stub, a focus or a press loads the full widget from
+// the stub's URL and puts it in the stub's place, started, so that the focus,
+// the typed text and the press move over to it.
+const STUB_HOVER_DELAY = 80;
+
+if (typeof document !== "undefined") {
+  const loading = new WeakMap();
+  const stubOf = (event) => event.target.closest?.("[data-formwork-stub]");
+  // The part of the full widget that stands where `el` stood in the stub.
+  const twin = (widget, el) => {
+    if (el.id) return document.getElementById(el.id);
+    return widget.querySelector(el.classList.length ? `${el.localName}.${el.classList[0]}` : el.localName);
+  };
+  const swapIn = (stub, html) => {
+    const template = document.createElement("template");
+    template.innerHTML = html.trim();
+    const widget = template.content.firstElementChild;
+    if (!widget || !stub.isConnected) return;
+    const active = stub.contains(document.activeElement) ? document.activeElement : null;
+    const typed = stub.querySelector('input:not([type="hidden"])');
+    // Started at once: the focus and the press below need its listeners, and
+    // Alpine's own observer would only see it after them.
+    widget._formworkStarted = true;
+    Alpine.mutateDom(() => stub.replaceWith(widget));
+    Alpine.initTree(widget);
+    window.htmx?.process?.(widget);
+    const input = typed && twin(widget, typed);
+    if (input && typed.value !== typed.defaultValue) {
+      input.value = typed.value;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    if (active) twin(widget, active)?.focus();
+    if (stub._formworkPress) twin(widget, stub._formworkPress)?.click();
+  };
+  const load = (stub) => {
+    if (!loading.has(stub)) {
+      const value = stub.querySelector("[name]")?.value ?? "";
+      const url = `${stub.dataset.formworkStub}&value=${encodeURIComponent(value)}`;
+      const done = fetch(url, { credentials: "same-origin" })
+        .then((response) => (response.ok ? response.text() : Promise.reject(new Error(response.statusText))))
+        .then((html) => swapIn(stub, html))
+        // The next hover, focus or press tries again.
+        .catch(() => loading.delete(stub));
+      loading.set(stub, done);
+    }
+    return loading.get(stub);
+  };
+
+  // A pointer that only passes over a list loads nothing.
+  let hover = null;
+  document.addEventListener(
+    "pointerover",
+    (event) => {
+      const stub = stubOf(event);
+      if (!stub || stub === hover?.stub || loading.has(stub)) return;
+      clearTimeout(hover?.timer);
+      hover = { stub, timer: setTimeout(() => load(stub), STUB_HOVER_DELAY) };
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointerout",
+    (event) => {
+      if (!hover || hover.stub.contains(event.relatedTarget)) return;
+      clearTimeout(hover.timer);
+      hover = null;
+    },
+    true,
+  );
+  for (const type of ["focusin", "pointerdown"]) {
+    document.addEventListener(
+      type,
+      (event) => {
+        const stub = stubOf(event);
+        if (stub) load(stub);
+      },
+      true,
+    );
+  }
+  document.addEventListener(
+    "click",
+    (event) => {
+      const stub = stubOf(event);
+      if (!stub) return;
+      // The stub's <details> must not open empty. The full widget gets the press.
+      event.preventDefault();
+      stub._formworkPress = event.target.closest("summary, input, button");
+      load(stub);
+    },
+    true,
+  );
+  // A swap that brings a stub where the page shows the full widget, or the
+  // full widget where the page shows a stub (a save with errors renders the
+  // rows in full), puts the new one in plainly first. A morph would keep the
+  // full widget's Alpine bindings on the stub, or leave the full widget unbound.
+  document.addEventListener("htmx:before:swap", (e) => {
+    for (const task of e.detail.tasks ?? []) {
+      for (const root of task.fragment?.querySelectorAll("[data-formwork-stub], [data-formwork-lazy]") ?? []) {
+        const old = root.id && document.getElementById(root.id);
+        if (old && old.hasAttribute("data-formwork-stub") !== root.hasAttribute("data-formwork-stub")) {
+          old.replaceWith(root.cloneNode(true));
+        }
+      }
+    }
+  });
+}
+
 // Numbers each htmx request when it has collected its values. A swap stamps
 // the formwork roots it brings in with the number of the request they answer,
 // so a widget can tell the answer to a request sent before its latest pick

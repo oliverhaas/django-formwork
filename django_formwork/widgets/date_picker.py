@@ -10,7 +10,7 @@ from django import forms
 from django.utils.functional import lazy
 from django.utils.translation import pgettext_lazy
 
-from ._base import _FormworkTemplatesMixin, _ModuleScript
+from ._base import _ModuleScript, _StubMixin
 from ._calendar import calendar_context
 
 #: strftime code -> human placeholder token, for turning a date format into a
@@ -36,7 +36,7 @@ def _format_placeholder(date_format: str) -> str:
 _lazy_format_placeholder = lazy(_format_placeholder, str)
 
 
-class DatePicker(_FormworkTemplatesMixin, forms.DateInput):
+class DatePicker(_StubMixin, forms.DateInput):
     """Text date input with a calendar dropdown, opt-in where the native ``DateInput`` does not fit.
 
     ``format`` sets how the input shows the date, both from the server and after a pick in the
@@ -45,6 +45,7 @@ class DatePicker(_FormworkTemplatesMixin, forms.DateInput):
     """
 
     template_name = "formwork/widgets/date_picker.html"
+    stub_template_name = "formwork/widgets/date_picker_stub.html"
     input_type = "text"
 
     class Media:
@@ -58,12 +59,16 @@ class DatePicker(_FormworkTemplatesMixin, forms.DateInput):
         super().__init__(attrs=defaults, format=resolved_format)
 
     def get_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = self.get_stub_context(name, value, attrs)
+        context["widget"]["calendar"] = calendar_context()
+        return context
+
+    def get_stub_context(self, name: str, value: str | None, attrs: dict[str, Any] | None) -> dict[str, Any]:
         # The template hardcodes class="grow"; rendering attrs.class too
         # would emit a duplicate class attribute, so pass it separately.
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
         widget["extra_class"] = widget["attrs"].pop("class", "")
-        widget["calendar"] = calendar_context()
         widget["iso_value"] = self._iso_value(value)
         widget["date_format"] = self.format
         return context

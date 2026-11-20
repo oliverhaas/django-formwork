@@ -13,7 +13,7 @@ from django.utils.dateparse import parse_datetime
 from django.utils.formats import get_format
 from django.utils.translation import pgettext_lazy
 
-from ._base import _FormworkTemplatesMixin, _ModuleScript
+from ._base import _ModuleScript, _StubMixin
 from ._calendar import calendar_context, format_date
 from .date_picker import _PLACEHOLDER_TOKENS
 
@@ -55,12 +55,13 @@ def _placeholder(date_format: str) -> str:
     return _FORMAT_CODE.sub(lambda match: match[1] or spelled.get(match[2], ""), date_format).strip()
 
 
-class DateTimePicker(_FormworkTemplatesMixin, forms.Widget):
+class DateTimePicker(_StubMixin, forms.Widget):
     """A day and a time, typed or picked in a calendar, posted as ``YYYY-MM-DDTHH:MM`` local time.
 
     ``format`` is how the input shows the value: a Django format setting name or a format string."""
 
     template_name = "formwork/widgets/date_time_picker.html"
+    stub_template_name = "formwork/widgets/date_time_picker_stub.html"
     supports_microseconds = False
     default_format = "SHORT_DATETIME_FORMAT"
     # The settings whose strftime formats a typed value can also take.
@@ -74,11 +75,16 @@ class DateTimePicker(_FormworkTemplatesMixin, forms.Widget):
         super().__init__(attrs)
 
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = self.get_stub_context(name, value, attrs)
+        input_formats = dict.fromkeys(str(fmt) for setting in self.input_format_settings for fmt in get_format(setting))
+        context["widget"]["calendar"] = calendar_context(value=self.format, input_formats=list(input_formats))
+        return context
+
+    def get_stub_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
-        input_formats = dict.fromkeys(str(fmt) for setting in self.input_format_settings for fmt in get_format(setting))
-        widget["calendar"] = calendar = calendar_context(value=self.format, input_formats=list(input_formats))
-        text_format = calendar["formats"]["value"]
+        # The calendar's "value" format.
+        text_format = str(get_format(self.format))
         parsed = self._parse(value)
         if parsed is None:
             # Text that names no day goes back as it came, next to the error it gets.
