@@ -1,6 +1,8 @@
 """Tests for django_formwork.admin, driven through the demo app's admin pages."""
 
 import contextlib
+import csv
+import io
 import json
 from datetime import date, datetime, time
 from types import ModuleType, SimpleNamespace
@@ -123,7 +125,7 @@ def test_admin_pages_render(admin_client, catalog, model):
         ("changelist", ()),
         ("add", ()),
         ("change", (obj.pk,)),
-        ("history", (obj.pk,)),
+        ("history_list", ()),
         ("delete", (obj.pk,)),
     ]:
         assert admin_client.get(url(model, view, *args)).status_code == 200, view
@@ -1477,10 +1479,10 @@ def media_files(response):
     return {tag.get("src") or tag.get("href") for tag in head.select("script[src*=admin_app], link[href*=admin_app]")}
 
 
-@pytest.mark.parametrize("view", ["changelist", "add", "change", "delete", "history"])
+@pytest.mark.parametrize("view", ["changelist", "add", "change", "delete", "history_list"])
 def test_admin_media_class_loads_on_every_page_of_the_admin(admin_client, catalog, monkeypatch, view):
     monkeypatch.setattr(ItemAdmin, "Media", ExtraMedia, raising=False)
-    args = [] if view in ("changelist", "add") else [catalog.alpha.pk]
+    args = [] if view in ("changelist", "add", "history_list") else [catalog.alpha.pk]
 
     response = admin_client.get(url(Item, view, *args))
 
@@ -1838,7 +1840,7 @@ def test_history_and_index_show_admin_changes(admin_client, catalog):
     data = item_data(catalog.office, name="Beta lamp", quantity="9")
     admin_client.post(url(Item, "change", catalog.beta.pk), data)
 
-    assert b"Quantity" in admin_client.get(url(Item, "history", catalog.beta.pk)).content
+    assert b"Quantity" in admin_client.get(url(Item, "history", catalog.beta.pk), follow=True).content
     assert b"Beta lamp" in admin_client.get(reverse("admin:index")).content
 
 
@@ -1853,6 +1855,9 @@ def test_index_lists_a_recent_object_once_with_what_its_saves_changed(admin_clie
     assert len(rows) == 2
     assert rows[1].startswith("Beta light Changed")
     assert {"Quantity", "Name"} <= set(rows[1].replace(",", " ").replace(".", " ").split())
+
+
+LIST_ROWS = "#changelist-table tbody tr"
 
 
 def history_rows(response, selector="#history li"):
@@ -1879,7 +1884,7 @@ def test_history_lists_a_changed_inline_row_under_its_name(admin_client, catalog
     data.update(management("parts", total=1, initial=1))
     admin_client.post(url(Item, "change", alpha.pk), data)
 
-    newest = history_rows(admin_client.get(url(Item, "history", alpha.pk)))[0]
+    newest = history_rows(admin_client.get(url(Item, "history", alpha.pk), follow=True), LIST_ROWS)[0]
 
     assert "Part “Lid” Quantity 1 → 2" in newest
 
@@ -1889,12 +1894,172 @@ def test_show_older_loads_the_next_entries(admin_client, catalog, monkeypatch):
     for quantity in ("7", "8"):
         admin_client.post(url(Item, "change", catalog.beta.pk), item_data(catalog.office, quantity=quantity))
     soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.beta.pk)).content, "html.parser")
-    older = soup.select_one("#history [hx-get]")["hx-get"]
+    older = soup.select_one("#history button[hx-get]")["hx-get"]
 
     response = admin_client.get(older, headers={"HX-Request": "true"})
 
     assert b"<html" not in response.content
     assert "50 → 7" in history_rows(response, "li")[0]
+
+
+@pytest.fixture
+def changes(admin_client, catalog):
+    admin_client.post(url(Item, "change", catalog.beta.pk), item_data(catalog.kitchen, name="Beta lamp", quantity="9"))
+    admin_client.post(url(Item, "add"), item_data(catalog.kitchen, slug="gamma"))
+    return catalog
+
+
+def test_history_list_shows_the_changes_of_every_object_newest_first(admin_client, changes):
+    rows = history_rows(admin_client.get(url(Item, "history_list")), LIST_ROWS)
+
+    assert len(rows) == 2
+    assert "Gamma desk" in rows[0]
+    assert "Added" in rows[0]
+    assert "Beta lamp" in rows[1]
+    assert "50 → 9" in rows[1]
+    assert "Office → Kitchen" in rows[1]
+
+
+@pytest.mark.parametrize(("action", "name"), [("add", "Gamma desk"), ("change", "Beta lamp")])
+def test_history_list_filters_by_action(admin_client, changes, action, name):
+    rows = history_rows(admin_client.get(url(Item, "history_list"), {"action": action}), LIST_ROWS)
+
+    assert len(rows) == 1
+    assert name in rows[0]
+
+
+def test_history_list_links_the_object_and_names_a_deleted_one(admin_client, changes):
+    admin_client.post(url(Item, "delete", changes.alpha.pk))
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "history_list")).content, "html.parser")
+
+    assert (
+        soup.select_one(f'{LIST_ROWS} a[href="{url(Item, "change", changes.beta.pk)}"]').get_text(strip=True)
+        == "Beta lamp"
+    )
+    deleted = soup.select_one(LIST_ROWS).get_text(" ", strip=True)
+    assert "Alpha kettle (deleted)" in deleted
+    assert "Deleted" in deleted
+
+
+def test_show_all_in_the_panel_lists_the_changes_of_its_object(admin_client, changes):
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", changes.beta.pk)).content, "html.parser")
+    show_all = next(link["href"] for link in soup.select("#history a") if link.get_text(strip=True) == "Show all")
+
+    rows = history_rows(admin_client.get(show_all), LIST_ROWS)
+
+    assert len(rows) == 1
+    assert "50 → 9" in rows[0]
+
+
+def test_history_list_exports_the_changes_as_text(admin_client, changes):
+    response = admin_client.post(url(Item, "history_export"), {"format": "csv", "query": "action=change"})
+
+    assert response["Content-Disposition"].startswith('attachment; filename="item-history-')
+    rows = list(csv.DictReader(io.StringIO(response.content.decode("utf-8-sig"))))
+    assert len(rows) == 1
+    assert rows[0]["object_id"] == str(changes.beta.pk)
+    assert rows[0]["action"] == "change"
+    assert "Quantity: 50 → 9" in rows[0]["changes"]
+
+
+@pytest.mark.parametrize(("codenames", "status"), [((), 403), (("view_item",), 200)])
+def test_history_list_needs_the_view_permission_of_the_model(staff_client, changes, codenames, status):
+    assert staff_client(*codenames).get(url(Item, "history_list")).status_code == status
+
+
+def test_list_links_its_history_unless_the_admin_turns_it_off(admin_client, catalog, monkeypatch):
+    history_link = f'#content a[href="{url(Item, "history_list")}"]'
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+    assert soup.select(history_link)
+
+    monkeypatch.setattr(ItemAdmin, "history_admin", None, raising=False)
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    assert not soup.select(history_link)
+    assert admin_client.get(url(Item, "history_list")).status_code == 404
+
+
+def test_history_admin_subclass_sets_the_columns(admin_client, changes, monkeypatch):
+    class Columns(admin.HistoryAdmin):
+        list_display = ("object", "action")
+
+    monkeypatch.setattr(ItemAdmin, "history_admin", Columns, raising=False)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "history_list")).content, "html.parser")
+
+    headers = [th.get_text(" ", strip=True) for th in soup.select("#changelist-table thead th")]
+    assert "Action" in headers
+    assert "Changes" not in headers
+    assert "50 → 9" not in soup.select_one("#changelist-table").get_text()
+
+
+@pytest.fixture
+def mugs(changes):
+    Item.objects.bulk_create(
+        Item(name=f"Mug {number}", slug=f"mug-{number}", category=changes.office) for number in range(SEARCH_PAGE_SIZE)
+    )
+    return changes
+
+
+def history_filters(client):
+    return BeautifulSoup(client.get(url(Item, "history_list")).content, "html.parser").select(
+        "#changelist-filter-bar [data-filter-list] > *"
+    )
+
+
+def test_history_list_shows_the_object_filter_first(admin_client, changes):
+    assert history_filters(admin_client)[0].select_one("[id$=_wrapper]")["id"] == "id_object_wrapper"
+
+
+def test_history_object_filter_searches_with_the_search_fields_of_the_model_admin(admin_client, mugs):
+    search = history_filters(admin_client)[0].select_one("input[hx-get]")["hx-get"]
+
+    soup = BeautifulSoup(admin_client.get(f"{search}&q=kitchen").content, "html.parser")
+
+    assert {row["data-label"] for row in soup.select("button[data-value]") if row["data-value"]} == {
+        "Alpha kettle",
+        "Beta lamp",
+        "Gamma desk",
+    }
+
+
+def test_history_object_filter_pages_an_admin_without_search_fields(admin_client, mugs, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "search_fields", ())
+
+    object_filter = history_filters(admin_client)[0].select_one("#id_object_wrapper")
+    page = admin_client.get(object_filter.select_one("li[hx-get]")["hx-get"])
+
+    assert object_filter["data-show-search"] == "false"
+    assert len(BeautifulSoup(page.content, "html.parser").select("button[data-value]")) == SEARCH_PAGE_SIZE
+
+
+def test_history_object_filter_shows_the_description_of_the_model_admin(admin_client, changes, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "choice_description", ["category"])
+
+    row = history_filters(admin_client)[0].select_one(f"button[data-value='{changes.alpha.pk}']")
+
+    assert list(row.stripped_strings) == ["Alpha kettle", "Kitchen"]
+
+
+def test_history_object_filter_lists_the_rows_inline_for_a_user_who_cannot_view_them(admin_client, mugs, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "has_view_permission", lambda self, request, obj=None: False)
+
+    object_filter = history_filters(admin_client)[0]
+
+    assert object_filter.select_one("input[hx-get]") is None
+    assert object_filter.select_one(f"button[data-value='{mugs.beta.pk}']") is not None
+
+
+@pytest.mark.parametrize(("field", "status"), [("", 200), ("category", 404)])
+def test_relation_search_needs_search_fields_only_for_a_relation(admin_client, catalog, monkeypatch, field, status):
+    monkeypatch.setattr(ItemAdmin, "search_fields", ())
+    monkeypatch.setattr(site.get_model_admin(Category), "search_fields", ())
+    params = {"widget": "select", "site": "admin", "model": "admin_app.item", "field": field}
+
+    response = admin_client.get(reverse("formwork:search", args=[RELATION_SEARCH_KEY]), params)
+
+    assert response.status_code == status
 
 
 def test_view_permission_shows_rows_read_only(staff_client, catalog):

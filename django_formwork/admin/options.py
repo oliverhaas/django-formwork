@@ -94,6 +94,7 @@ if TYPE_CHECKING:
     from django_stubs_ext import StrPromise
 
     from django_formwork.admin.filters import AdminFilterSet
+    from django_formwork.admin.history_admin import HistoryAdmin
     from django_formwork.widgets.select import BadgeColor
 
 __all__ = [
@@ -492,6 +493,8 @@ class ModelAdmin(BaseModelAdmin):
     delete_confirmation_max_display: int | None = 100
     #: How many entries the history panel loads at a time.
     history_per_page = 20
+    #: The admin of the model's history list (``HistoryAdmin`` or a subclass); None turns the list off.
+    history_admin: type[HistoryAdmin] | None
 
     # Custom templates (a name or a list of names, looked up in the admin's Jinja engine).
     add_form_template: str | Sequence[str] | None = None
@@ -501,7 +504,6 @@ class ModelAdmin(BaseModelAdmin):
     delete_selected_confirmation_template: str | Sequence[str] | None = None
     #: The page of an action with ``confirm`` or ``form``.
     action_confirmation_template: str | Sequence[str] | None = None
-    object_history_template: str | Sequence[str] | None = None
     import_template: str | Sequence[str] | None = None
     popup_response_template: str | Sequence[str] | None = None
 
@@ -563,6 +565,8 @@ class ModelAdmin(BaseModelAdmin):
             path("import/", wrap(self.import_view), name="{}_{}_import".format(*info)),
             path("info/", wrap(self.info_view), name="{}_{}_info".format(*info)),
             path("slots/<str:slot>/", wrap(self.slot_view), name="{}_{}_slot".format(*info)),
+            path("history/", wrap(self.history_list_view), name="{}_{}_history_list".format(*info)),
+            path("history/export/", wrap(self.history_export_view), name="{}_{}_history_export".format(*info)),
             path("<path:object_id>/history/", wrap(self.history_view), name="{}_{}_history".format(*info)),
             path("<path:object_id>/delete/", wrap(self.delete_view), name="{}_{}_delete".format(*info)),
             path("<path:object_id>/change/", wrap(self.change_view), name="{}_{}_change".format(*info)),
@@ -768,6 +772,9 @@ class ModelAdmin(BaseModelAdmin):
             self._filterset_classes[key] = build_filterset(self, list_filter, search_fields)
         return self._filterset_classes[key]
 
+    def prepare_rows(self, request: HttpRequest, rows: list[Any]) -> None:
+        """Load what the columns read for a page of the list or a chunk of an export, in a few queries."""
+
     def get_changelist_queryset(self, request: HttpRequest, queryset: models.QuerySet[Any]) -> models.QuerySet[Any]:
         """The changelist's rows narrowed to ``list_only_fields`` or without ``list_defer_fields``."""
         if self.list_only_fields:
@@ -795,6 +802,10 @@ class ModelAdmin(BaseModelAdmin):
         """The formats of ``export_formats`` that can run here; Excel needs openpyxl."""
         named = (formats.FORMATS.get(name) for name in self.export_formats)
         return [format_ for format_ in named if format_ is not None and format_.is_available()]
+
+    def export_name(self) -> str:
+        """The start of an export's file name, before its date."""
+        return str(self.opts.verbose_name_plural)
 
     def get_export_queryset(self, request: HttpRequest) -> models.QuerySet[Any]:
         """The changelist's rows for ``request.GET``, with every column loaded."""
@@ -825,9 +836,11 @@ class ModelAdmin(BaseModelAdmin):
             return HttpResponseRedirect(f"{changelist_url}?{query}" if query else changelist_url)
         columns = self.get_export_columns(list_request)
         buffer = io.BytesIO()
-        export_format.write(columns, exports.export_rows(columns, queryset), buffer)
+        export_format.write(
+            columns, exports.export_rows(columns, queryset, partial(self.prepare_rows, list_request)), buffer
+        )
         response = HttpResponse(buffer.getvalue(), content_type=export_format.content_type)
-        filename = exports.export_filename(self.opts, export_format)
+        filename = exports.export_filename(self.export_name(), export_format)
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
@@ -1637,6 +1650,7 @@ class ModelAdmin(BaseModelAdmin):
                 if self.has_import_permission(request) and self.get_import_formats(request) and not cl.is_popup
                 else ""
             ),
+            history_url=self._history_list_url(request) if not cl.is_popup else "",
             **(extra_context or {}),
         )
         response = self.render(request, self._templates(self.change_list_template, "change_list.html"), context)
@@ -2035,39 +2049,70 @@ class ModelAdmin(BaseModelAdmin):
         return {
             "history_entries": entries[: self.history_per_page],
             "history_next_url": f"{url}?start={start + self.history_per_page}" if more else "",
+            "history_list_url": self._history_list_url(request, obj),
         }
+
+    def get_history_admin(self) -> HistoryAdmin | None:
+        """The admin of the model's history list; None when ``history_admin`` is None or the backend has no table."""
+        from django_formwork.admin.history_admin import HistoryAdmin
+
+        backend = self.admin_site.history
+        admin_class = getattr(self, "history_admin", HistoryAdmin)
+        cached = self.__dict__.get("_history_admin")
+        if cached is None or cached[0] is not backend or cached[1] is not admin_class:
+            source = backend.source(self.model) if admin_class is not None else None
+            instance = admin_class(self, source) if admin_class is not None and source is not None else None
+            cached = (backend, admin_class, instance)
+            self.__dict__["_history_admin"] = cached
+        return cached[2]
+
+    def _history_list_url(self, request: HttpRequest, obj: models.Model | None = None) -> str:
+        """The history list, of one object or of all; empty without a list or the permission to see it."""
+        history_admin = self.get_history_admin()
+        if history_admin is None or not history_admin.has_view_permission(request):
+            return ""
+        url = reverse(self.url_name("history_list"), current_app=self.admin_site.name)
+        return url if obj is None else f"{url}?{urlencode({'object': obj.pk})}"
+
+    def history_list_view(self, request: HttpRequest) -> HttpResponse:
+        """Every change of the model's rows, newest first, as a list with filters."""
+        history_admin = self.get_history_admin()
+        if history_admin is None:
+            raise Http404
+        return history_admin.changelist_view(request)
+
+    def history_export_view(self, request: HttpRequest) -> HttpResponse:
+        history_admin = self.get_history_admin()
+        if history_admin is None:
+            raise Http404
+        return history_admin.export_view(request)
 
     def history_view(
         self, request: HttpRequest, object_id: str, extra_context: dict[str, Any] | None = None
     ) -> HttpResponse:
-        """The whole history of one object. The change form shows its first page next to the fields.
+        """The history of one object: the history list filtered to it.
 
-        An htmx request for ``?start=`` answers with the next entries only, which the "Show older"
-        button of the panel and of this page swap in.
+        An htmx request for ``?start=`` answers with the panel's next entries only, which its
+        "Show older" button swaps in.
         """
         obj = self.get_object(request, unquote(object_id))
         if obj is None:
             return self._get_obj_does_not_exist_redirect(request, object_id)
         if not self.has_view_or_change_permission(request, obj):
             raise PermissionDenied
-        try:
-            start = max(int(request.GET.get("start", 0)), 0)
-        except ValueError:
-            start = 0
-        context = self.page_context(
-            request,
-            title=_("Change history: %s") % obj,
-            subtitle=None,
-            object=obj,
-            original=obj,
-            change_url=self.with_preserved_filters(request, reverse(self.url_name("change"), args=(quote(obj.pk),))),
-            media=self.media,
-            **self._history_context(request, obj, start),
-            **(extra_context or {}),
-        )
         if request.headers.get("HX-Request") == "true" and "start" in request.GET:
+            try:
+                start = max(int(request.GET.get("start", 0)), 0)
+            except ValueError:
+                start = 0
+            context = self.page_context(
+                request, object=obj, original=obj, **self._history_context(request, obj, start), **(extra_context or {})
+            )
             return self.render(request, "formwork_admin/history_entries.html", context)
-        return self.render(request, self._templates(self.object_history_template, "object_history.html"), context)
+        url = self._history_list_url(request, obj)
+        if not url:
+            raise Http404
+        return HttpResponseRedirect(url)
 
 
 class InlineModelAdmin(BaseModelAdmin):

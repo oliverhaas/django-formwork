@@ -88,6 +88,8 @@ class HistoryEntry(models.Model):
         indexes = (
             models.Index(fields=["content_type", "object_id", "-time"], name="formwork_admin_history_obj"),
             models.Index(fields=["user", "-time"], name="formwork_admin_history_user"),
+            # A model's history list, newest first, without sorting all of the model's entries.
+            models.Index(fields=["content_type", "-time", "-id"], name="formwork_admin_history_list"),
         )
         verbose_name = _("history entry")
         verbose_name_plural = _("history entries")

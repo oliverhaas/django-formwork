@@ -954,8 +954,7 @@ The change form shows the history of the object to the right of its fields, or b
 them on a narrow page. Each entry names the user and the time, and lists the changed
 fields with their values before and after the save. A change to an inline row shows under
 the row's name. The panel loads `history_per_page` entries at a time, 20 by default, and
-its Show older button loads the next ones. The page at `<object_id>/history/` lists the
-same entries without the form.
+its Show older button loads the next ones.
 
 ![The history next to the change form](../img/admin/history.webp)
 
@@ -970,6 +969,50 @@ they added, changed or deleted.
 A value is stored as the form showed it: the name of a related object, the label of a
 choice, a localized date. A text longer than 300 characters is cut. A field with a
 `PasswordInput` widget, or with `password` in its name, shows without its values.
+
+### History list
+
+Each model also has a history list at `history/` under its list: every change of the
+model's rows, newest first. The History button above the list opens it. Show all in
+the panel and `<object_id>/history/` open it for one object. It works like the model's
+own list, with the columns Time, Object, User, Action and Changes, filters for the
+object, the action, the user and the time, pages, and the export. A row of a deleted
+object shows the name the object had, without a link. Each user who can view the model
+can see its history list. Nobody can change it.
+
+A subclass of `HistoryAdmin` sets the columns and the filters, and `history_admin` on
+the model's admin names it. `history_admin = None` turns the list off.
+
+```python
+from django_formwork import admin
+
+
+class CompanyHistory(admin.HistoryAdmin):
+    list_display = ["time", "object", "user", "changes"]
+    list_filter = ["user", "time"]
+    list_per_page = 100
+
+
+@admin.register(Company)
+class CompanyAdmin(admin.ModelAdmin):
+    history_admin = CompanyHistory
+```
+
+`list_display`, `list_filter` and `export_fields` take `time`, `object`, `user`,
+`action` and `changes`, and also the fields of the history's table and the methods of
+the subclass. `export_fields` also takes `object_id`. The filter for the object is first
+in each list, so the links to the history of one object keep working.
+
+The object filter loads the rows of the model's admin from the server, a page at a
+time, as Django's `autocomplete_fields` do. It searches with the admin's
+`get_search_results()`, so give the admin `search_fields`. Without them, the filter
+pages the rows and shows no search. The filter offers the rows of the admin's
+`get_queryset()`, so a deleted object has no option. The user filter works the same
+way when the user model has an admin.
+
+The list shows the changes of all rows, also of rows that the model admin's
+`get_queryset()` leaves out. To narrow it, override `get_queryset()` of the subclass,
+which returns rows of the history's table.
 
 ### pghistory
 
@@ -994,8 +1037,18 @@ its user without pghistory's middleware. A model that pghistory does not track k
 admin's own entries, and the recent actions on the dashboard still come from the admin's
 table.
 
+The history list of a tracked model reads the event table: each row is one event, with
+the changes since the event before it of the same object. The list orders the events by
+`pgh_id`, newest first, and so does a sort by the Time column, because pghistory gives
+`pgh_created_at` no index. A row of a deleted object takes its name from the values
+that its event kept. The user filter reads the `user` key of the event's context.
+
 Another store needs a subclass of `django_formwork.admin.history.History` with `log()`,
-`entries()` and `recent()`, and `context()` to wrap each admin view.
+`entries()` and `recent()`, and `context()` to wrap each admin view. Its `source()`
+returns a `HistorySource` for the history list of a model: the table, its order, the
+entries of a page of its rows, and the conditions of the action, user and object
+filters. Give the order an index, so that a page of a long history does not sort the
+whole table. A model without a source has no history list.
 
 ## Templates
 

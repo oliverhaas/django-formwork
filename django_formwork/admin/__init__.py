@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from django.contrib.admin.options import ShowFacets
 
     from django_formwork.admin.decorators import action, display, register, slot
+    from django_formwork.admin.history_admin import HistoryAdmin
     from django_formwork.admin.options import (
         HORIZONTAL,
         VERTICAL,
@@ -44,6 +45,7 @@ _EXPORTS = {
     "EmptyFieldListFilter": "django.contrib.admin.filters",
     "FieldListFilter": "django.contrib.admin.filters",
     "HORIZONTAL": "django_formwork.admin.options",
+    "HistoryAdmin": "django_formwork.admin.history_admin",
     "ListFilter": "django.contrib.admin.filters",
     "ModelAdmin": "django_formwork.admin.options",
     "RelatedFieldListFilter": "django.contrib.admin.filters",
@@ -71,6 +73,7 @@ __all__ = [
     "DateFieldListFilter",
     "EmptyFieldListFilter",
     "FieldListFilter",
+    "HistoryAdmin",
     "ListFilter",
     "ModelAdmin",
     "RelatedFieldListFilter",

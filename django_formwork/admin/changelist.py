@@ -527,7 +527,9 @@ class ChangeList:
 
     @cached_property
     def result_list(self) -> list[models.Model]:
-        return list(self.page.object_list)
+        rows = list(self.page.object_list)
+        self.model_admin.prepare_rows(self.request, rows)
+        return rows
 
     def page_url(self, number: int) -> str:
         return self.get_query_string({PAGE_VAR: number if number > 1 else None, ALL_VAR: None})

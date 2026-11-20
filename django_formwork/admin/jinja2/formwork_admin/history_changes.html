@@ -1,0 +1,16 @@
+{#- The Changes cell of the history list: the changed fields of an entry with their values, or its text. #}
+{% import "formwork_admin/macros.html" as m %}
+<div class="space-y-1.5">
+  {% for change in changes %}
+  {% if change.has_values %}
+  <div class="space-y-0.5">
+    {% if change.target %}<p class="font-medium break-words">{{ change.target }}</p>{% endif %}
+    {% for field in change.fields %}
+    <p class="break-words"><span class="text-base-content/60">{{ field.label|capfirst }}</span> {{ m.history_value(field) }}</p>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="break-words">{{ change.text }}</p>
+  {% endif %}
+  {% endfor %}
+</div>

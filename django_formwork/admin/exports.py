@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import itertools
 from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from django.contrib.admin.utils import lookup_field
@@ -88,8 +89,16 @@ def _lookup(entry: str | Callable[..., Any], model_admin: Any) -> Callable[[mode
     return get
 
 
-def export_rows(columns: list[Column], queryset: models.QuerySet[Any]) -> Iterator[list[Any]]:
-    """Each row's values, read in chunks, with the many-to-many columns prefetched."""
+def export_rows(
+    columns: list[Column],
+    queryset: models.QuerySet[Any],
+    prepare: Callable[[list[Any]], None] | None = None,
+) -> Iterator[list[Any]]:
+    """Each row's values, read in chunks, with the many-to-many columns prefetched.
+
+    ``prepare`` gets each chunk's rows before their values are read, as the list's
+    ``prepare_rows()`` gets a page.
+    """
     opts = queryset.model._meta
     pks = queryset.values_list("pk", flat=True).iterator(chunk_size=CHUNK_SIZE)
     many = [column.name for column in columns if column.name in {field.name for field in opts.many_to_many}]
@@ -99,13 +108,15 @@ def export_rows(columns: list[Column], queryset: models.QuerySet[Any]) -> Iterat
         # A read of its own per chunk: the fetch mode loads a relation for the rows of one read. Over a
         # single iterator(), each chunk would go through every row before it.
         rows = list(queryset.in_bulk(chunk).values())
+        if prepare is not None:
+            prepare(rows)
         for obj in rows:
             yield [column.get(obj) for column in columns]
 
 
-def export_filename(opts: Any, export_format: FileFormat) -> str:
+def export_filename(name: str, export_format: FileFormat) -> str:
     stamp = timezone.localtime().strftime("%Y-%m-%d-%H%M")
-    return f"{slugify(str(opts.verbose_name_plural))}-{stamp}.{export_format.extension}"
+    return f"{slugify(name)}-{stamp}.{export_format.extension}"
 
 
 # The background job
@@ -141,10 +152,15 @@ def run_export_job(job_id: int) -> None:
         request.path = model_admin.changelist_url(request)
         export_format = FORMATS[job.format]
         columns = model_admin.get_export_columns(request)
-        counter = _Counter(export_rows(columns, model_admin.get_export_queryset(request)))
+        rows = export_rows(
+            columns, model_admin.get_export_queryset(request), partial(model_admin.prepare_rows, request)
+        )
+        counter = _Counter(rows)
         buffer = io.BytesIO()
         export_format.write(columns, counter, buffer)
-        job.file.save(export_filename(model_admin.opts, export_format), ContentFile(buffer.getvalue()), save=False)
+        job.file.save(
+            export_filename(model_admin.export_name(), export_format), ContentFile(buffer.getvalue()), save=False
+        )
     except Exception as exc:
         job.status = ExportJob.Status.FAILED
         job.error = f"{type(exc).__name__}: {exc}"

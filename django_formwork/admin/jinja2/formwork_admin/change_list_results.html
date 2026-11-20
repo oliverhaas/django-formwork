@@ -181,9 +181,10 @@
               <div class="flex flex-col items-center gap-3 py-16 text-center">
                 <span class="grid size-12 place-items-center rounded-full bg-base-200 text-base-content/40">{{ icon("search-x" if filtered else "inbox", "size-6") }}</span>
                 <div>
-                  <p class="text-base font-medium">{{ _("No %(name)s found", name=opts.verbose_name_plural) if filtered else _("No %(name)s yet", name=opts.verbose_name_plural) }}</p>
+                  {% set items = items_name|default(opts.verbose_name_plural) %}
+                  <p class="text-base font-medium">{{ _("No %(name)s found", name=items) if filtered else _("No %(name)s yet", name=items) }}</p>
                   <p class="mt-1 text-sm text-base-content/60">
-                    {%- if not filtered %}{{ _("Once added, they appear here.") }}
+                    {%- if not filtered %}{{ empty_hint|default(_("Once added, they appear here.")) }}
                     {%- elif not cl.query %}{{ _("Nothing matches the filters.") }}
                     {%- elif cl.has_active_filters or cl.remaining_lookups %}{{ _("Nothing matches the search and filters.") }}
                     {%- else %}{{ _("Nothing matches the search.") }}{% endif %}

@@ -45,6 +45,9 @@
   </div>
   <div class="flex flex-wrap items-center gap-2">
     {% block object_tools %}
+    {% if history_url %}
+    <a {{ m.page_link(history_url, "list") }} class="btn gap-2">{{ icon("rotate-ccw-clock") }} {{ _("History") }}</a>
+    {% endif %}
     {% if import_url %}
     <a href="{{ import_url }}{% if preserved_filters %}?{{ preserved_filters }}{% endif %}" class="btn gap-2">{{ icon("upload") }} {{ _("Import") }}</a>
     {% endif %}

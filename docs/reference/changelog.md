@@ -135,7 +135,9 @@
   the object next to its fields, with the values before and after each change. The admin
   keeps that history in its own table, so it does not need `django.contrib.admin`, and
   with `history = PghistoryHistory()` on the site it reads the events of
-  django-pghistory. The recent actions on the dashboard list each object once, with what
+  django-pghistory. Each model also gets a history list of all changes of its rows,
+  with filters and the export, which `history_admin` sets up with a `HistoryAdmin`
+  subclass. The recent actions on the dashboard list each object once, with what
   its saves changed. The toolbar above a list's table holds the selected count, the
   actions and the save, and stays in view while the list scrolls. `list_top` and `list_bottom` methods
   show HTML of their own above and under a list, such as counts or a chart, and

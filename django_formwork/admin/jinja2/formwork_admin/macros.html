@@ -201,6 +201,21 @@
 </ul>
 {% endmacro %}
 
+{#- A changed field's values in the history: the old one struck through, an arrow and the new one. #}
+{% macro history_value(field) %}
+{%- if field.has_values -%}
+{% if field.old %}
+<span class="text-base-content/50 line-through decoration-base-content/30">{{ field.old }}</span>
+{% else %}
+<span class="italic text-base-content/50">{{ _("empty") }}</span>
+{% endif %}
+<span class="text-base-content/40" aria-hidden="true">&rarr;</span><span class="sr-only">{{ _("changed to") }}</span>
+<span class="{{ "font-medium" if field.new else "italic text-base-content/50" }}">{{ field.new if field.new else _("empty") }}</span>
+{%- else -%}
+<span class="italic text-base-content/50">{{ _("changed") }}</span>
+{%- endif -%}
+{% endmacro %}
+
 {# Home / app / model list, the first crumbs of every model page. #}
 {% macro model_crumbs(site, opts, changelist_url=None) %}
 <li><a href="{{ url(site.name ~ ":index") }}" class="text-base-content/60">{{ _("Home") }}</a></li>

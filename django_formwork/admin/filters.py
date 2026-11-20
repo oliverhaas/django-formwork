@@ -34,7 +34,7 @@ from django.utils.translation import gettext_lazy as _
 from django_filters.widgets import RangeWidget, SuffixedMultiWidget
 
 from django_formwork.admin.cells import badge_color
-from django_formwork.admin.widgets import date_input_format, relation_widget
+from django_formwork.admin.widgets import RELATION_SEARCH_KEY, date_input_format, relation_widget
 from django_formwork.forms import FormworkForm
 from django_formwork.widgets import ChoiceLabel, DateRangePicker, SearchInput, Select
 
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
     from django_formwork.widgets.select import BadgeColor
 
-__all__ = ["NULL_VALUE", "SEARCH_VAR", "AdminFilterSet", "build_filterset", "list_filter_path"]
+__all__ = ["NULL_VALUE", "SEARCH_VAR", "AdminFilterSet", "ObjectFilter", "build_filterset", "list_filter_path"]
 
 SEARCH_VAR = "q"
 
@@ -260,6 +260,52 @@ class RelatedFilter(_FieldFilterMixin, django_filters.ModelChoiceFilter):
         target = self.model_field.target_field.name
         rows = qs.order_by().values_list(f"{self.field_name}{LOOKUP_SEP}{target}").annotate(count=_count())
         return {_value_key(value): count for value, count in rows}
+
+
+class ObjectFilter(django_filters.ModelChoiceFilter):
+    """One row of ``model`` for a lookup that no relation follows, such as the object of the history list.
+
+    The filter's ``method`` turns the row into the lookup. A registered model's rows page from the server and
+    search as Django's autocomplete does: through the admin's ``get_queryset()`` and ``get_search_results()``.
+    """
+
+    def __init__(self, model: type[models.Model], *args: Any, **kwargs: Any) -> None:
+        kwargs.setdefault("empty_label", _("All"))
+        self.related_model = model
+        super().__init__(*args, **kwargs)
+
+    @property
+    def field(self) -> forms.Field:
+        if not hasattr(self, "_field"):
+            request = self.parent.request
+            site = self.parent.model_admin.admin_site
+            related_admin = site.get_model_admin_or_none(self.related_model)
+            if related_admin is None or not related_admin.has_view_permission(request):
+                self.extra.setdefault("queryset", self.related_model._default_manager.all())
+                self.extra.setdefault("widget", Select(**_floating(self.label)))
+                field = super().field
+            else:
+                # The first page and the server's pages list the same rows in the same order.
+                queryset = related_admin.choice_queryset(related_admin.get_queryset(request))
+                if not queryset.ordered:
+                    ordering = related_admin.get_ordering(request) or queryset.model._meta.ordering or ("-pk",)
+                    queryset = queryset.order_by(*ordering)
+                params = {"site": site.name, "model": self.related_model._meta.label_lower, "field": ""}
+                # Without search_fields the server pages the rows but cannot search them.
+                show_search = None if related_admin.get_search_fields(request) else False
+                widget = Select(
+                    search_key=RELATION_SEARCH_KEY,
+                    search_params=params,
+                    show_search=show_search,
+                    **_floating(self.label),
+                )
+                self.extra.setdefault("queryset", queryset)
+                self.extra.setdefault("widget", widget)
+                field = super().field
+                field.label_from_instance = related_admin.choice_label
+            field.label = ""
+            return field
+        return super().field
 
 
 class EmptyFilter(_FieldFilterMixin, django_filters.ChoiceFilter):

@@ -67,7 +67,10 @@ __all__ = [
 
 
 def relation_queryset(request: HttpRequest, *, site: str, model: str, field: str) -> QuerySet[Any]:
-    """The rows a relation's dropdown offers: the related admin's list, searched by its ``search_fields``."""
+    """The rows a relation's dropdown offers: the related admin's list, searched by its ``search_fields``.
+
+    An empty ``field`` offers the rows of ``model`` itself, which an admin without ``search_fields`` pages.
+    """
     # Deferred: sites imports options, which imports this module.
     from django_formwork.admin.sites import NotRegistered, get_site
 
@@ -76,20 +79,23 @@ def relation_queryset(request: HttpRequest, *, site: str, model: str, field: str
         raise PermissionDenied
     try:
         source = apps.get_model(model)
-        source_field = source._meta.get_field(field)
+        source_field = source._meta.get_field(field) if field else None
     except LookupError, ValueError, FieldDoesNotExist:
         raise Http404 from None
-    if not admin_site.is_registered(source) or source_field.remote_field is None:
+    if not admin_site.is_registered(source) or (source_field is not None and source_field.remote_field is None):
         raise Http404
     try:
-        model_admin = admin_site.get_model_admin(source_field.remote_field.model)
+        model_admin = admin_site.get_model_admin(source if source_field is None else source_field.remote_field.model)
     except NotRegistered:
         raise Http404 from None
-    if not model_admin.get_search_fields(request):
+    # A relation pages from here only when its admin can search, as Django's autocomplete asks.
+    if source_field is not None and not model_admin.get_search_fields(request):
         raise Http404
     if not model_admin.has_view_permission(request):
         raise PermissionDenied
-    queryset = model_admin.get_queryset(request).complex_filter(source_field.get_limit_choices_to())
+    queryset = model_admin.get_queryset(request)
+    if source_field is not None:
+        queryset = queryset.complex_filter(source_field.get_limit_choices_to())
     queryset = model_admin.choice_queryset(queryset)
     queryset, may_have_duplicates = model_admin.get_search_results(request, queryset, request.GET.get("q", "").strip())
     if may_have_duplicates:

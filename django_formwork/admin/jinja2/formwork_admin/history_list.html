@@ -1,0 +1,16 @@
+{#- The history list of a model: HistoryAdmin's changelist, under the model's own crumbs. #}
+{% extends "formwork_admin/change_list.html" %}
+{% import "formwork_admin/macros.html" as m %}
+
+{% block bodyclass %}formwork-admin-changelist formwork-admin-history app-{{ parent_admin.opts.app_label }} model-{{ parent_admin.opts.model_name }}{% endblock %}
+
+{% block breadcrumbs %}
+<li><a {{ m.page_link(url(site.name ~ ":index"), "index", site.index_title) }} class="text-base-content/60">{{ _("Home") }}</a></li>
+<li><a {{ m.page_link(url(site.name ~ ":app_list", app_label=parent_admin.opts.app_label), "app") }} class="text-base-content/60">{{ parent_admin.opts.app_config.verbose_name }}</a></li>
+<li><a {{ m.page_link(parent_changelist_url, "list") }} class="text-base-content/60">{{ parent_admin.opts.verbose_name_plural|capfirst }}</a></li>
+<li class="font-medium">{{ _("History") }}</li>
+{% endblock %}
+
+{% block info %}{% endblock %}
+
+{% block object_tools %}{% endblock %}

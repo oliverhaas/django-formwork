@@ -26,3 +26,13 @@ class Plain(models.Model):
 
     def __str__(self):
         return self.name
+
+
+@pghistory.track(pghistory.InsertEvent("snapshot"), pghistory.UpdateEvent("snapshot"))
+class Memo(models.Model):
+    """Tracked as pghistory 2's ``Snapshot`` tracked a model: each event has the one label."""
+
+    text = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.text

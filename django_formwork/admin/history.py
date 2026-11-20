@@ -9,12 +9,14 @@ from __future__ import annotations
 import contextlib
 import datetime as dt
 import decimal
+import itertools
 from dataclasses import dataclass
+from operator import attrgetter
 from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.core.exceptions import FieldDoesNotExist, ValidationError
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.db.models.fields.files import FieldFile
 from django.utils import formats, timezone, translation
@@ -33,8 +35,11 @@ __all__ = [
     "DELETE",
     "Change",
     "Entry",
+    "EntrySource",
+    "EventSource",
     "FieldChange",
     "History",
+    "HistorySource",
     "ModelHistory",
     "PghistoryHistory",
     "change_message",
@@ -100,6 +105,10 @@ class History:
         """The last entries of the user who made the request."""
         raise NotImplementedError
 
+    def source(self, model: type[models.Model]) -> HistorySource | None:
+        """The table the history list of ``model`` shows; None for a backend without one."""
+        return None
+
     @contextlib.contextmanager
     def context(self, request: HttpRequest) -> Generator[None]:
         """Wraps each admin view, so a backend can tie the database writes to the request."""
@@ -147,6 +156,9 @@ class ModelHistory(History):
         rows = HistoryEntry.objects.filter(user_id=cast("Any", request.user.pk)).fetch_mode(models.FETCH_PEERS)
         return [_entry(row) for row in rows[:limit]]
 
+    def source(self, model: type[models.Model]) -> HistorySource | None:
+        return EntrySource(model)
+
 
 class PghistoryHistory(ModelHistory):
     """The events of django-pghistory for the models it tracks, the admin's own entries for the others.
@@ -178,8 +190,198 @@ class PghistoryHistory(ModelHistory):
         entries = []
         for event in events:
             user = users.get(str((event.pgh_context or {}).get("user")), "")
-            entries.append(_event_entry(event, type(obj), user, values))
+            entries.append(_event_entry(event, type(obj), user, event.pgh_diff, values))
         return entries
+
+    def source(self, model: type[models.Model]) -> HistorySource | None:
+        from pghistory.core import event_models
+
+        tracking = event_models(tracks_model=model._meta.concrete_model)
+        return EventSource(model, tracking[0]) if tracking else super().source(model)
+
+
+# The history list
+
+
+class HistorySource:
+    """The table a model's history list shows, one row per change.
+
+    A backend returns one from ``History.source()``. The list pages the rows of ``queryset()``,
+    newest first by ``ordering``, and reads each page at once through ``entries()``.
+    """
+
+    #: The table, such as the admin's ``HistoryEntry`` or a pghistory event model.
+    model: type[models.Model]
+    #: The column the list's date filter reads.
+    time_field: str
+    #: Newest first, best with an index. The list's Time column sorts by the first field.
+    ordering: tuple[str, ...]
+
+    def __init__(self, tracked: type[models.Model]) -> None:
+        #: The model whose changes the table holds.
+        self.tracked = tracked
+
+    def queryset(self) -> models.QuerySet[Any]:
+        """The rows of the tracked model's changes."""
+        raise NotImplementedError
+
+    def entries(self, rows: Sequence[Any]) -> list[Entry]:
+        """One entry per row, in the rows' order. ``object_id`` names the changed object."""
+        raise NotImplementedError
+
+    def name(self, row: Any, entry: Entry) -> str:
+        """The name of a row's object after it was deleted."""
+        return entry.object_repr
+
+    def for_action(self, action: str) -> models.Q:
+        """The rows of one action: ``ADD``, ``CHANGE`` or ``DELETE``."""
+        raise NotImplementedError
+
+    def for_user(self, pk: Any) -> models.Q:
+        """The rows of the changes one user made."""
+        raise NotImplementedError
+
+    def for_object(self, pk: Any) -> models.Q:
+        """The rows of one object."""
+        raise NotImplementedError
+
+
+class EntrySource(HistorySource):
+    """The admin's own ``HistoryEntry`` table."""
+
+    time_field = "time"
+    ordering = ("-time", "-pk")
+
+    def __init__(self, tracked: type[models.Model]) -> None:
+        from django_formwork.admin.models import HistoryEntry
+
+        super().__init__(tracked)
+        self.model = HistoryEntry
+
+    def queryset(self) -> models.QuerySet[Any]:
+        from django.contrib.contenttypes.models import ContentType
+
+        content_type = ContentType.objects.get_for_model(self.tracked, for_concrete_model=False)
+        return self.model._default_manager.filter(content_type=content_type).fetch_mode(models.FETCH_PEERS)
+
+    def entries(self, rows: Sequence[Any]) -> list[Entry]:
+        return [_entry(row) for row in rows]
+
+    def for_action(self, action: str) -> models.Q:
+        return models.Q(action=action)
+
+    def for_user(self, pk: Any) -> models.Q:
+        return models.Q(user=pk)
+
+    def for_object(self, pk: Any) -> models.Q:
+        return models.Q(object_id=str(pk))
+
+
+class EventSource(HistorySource):
+    """A pghistory event model of the tracked model.
+
+    The list reads the event table itself, not pghistory's ``Events``, which works out each
+    event's diff across the whole table before a filter or a page applies. Here a page loads the
+    event before each of its rows in one more query and compares the two.
+    """
+
+    time_field = "pgh_created_at"
+    # The primary key follows the order of the events and has the index that pgh_created_at lacks.
+    ordering = ("-pgh_id",)
+
+    def __init__(self, tracked: type[models.Model], model: type[models.Model]) -> None:
+        super().__init__(tracked)
+        self.model = model
+        self.fields = [field for field in model._meta.concrete_fields if not field.name.startswith("pgh_")]
+        try:
+            context = model._meta.get_field("pgh_context")
+        except FieldDoesNotExist:
+            context = None
+        # A context is a row of pghistory's Context table, or a JSON field on the event itself.
+        self.context_path = (
+            None if context is None else "pgh_context__metadata" if context.is_relation else "pgh_context"
+        )
+
+    def queryset(self) -> models.QuerySet[Any]:
+        return self.model._default_manager.all().fetch_mode(models.FETCH_PEERS)
+
+    def entries(self, rows: Sequence[Any]) -> list[Entry]:
+        previous = self._previous(rows)
+        diffs = [self._diff(previous.get(row.pk), row) for row in rows]
+        users = _users({self._context(row).get("user") for row in rows})
+        values = _related_values(self.tracked, [diff or {} for diff in diffs])
+        return [
+            _event_entry(row, self.tracked, users.get(str(self._context(row).get("user")), ""), diff, values)
+            for row, diff in zip(rows, diffs, strict=True)
+        ]
+
+    def for_action(self, action: str) -> models.Q:
+        events = self.model._default_manager
+        first = ~models.Exists(
+            events.filter(pgh_obj_id=models.OuterRef("pgh_obj_id"), pgh_id__lt=models.OuterRef("pgh_id"))
+        )
+        # As _event_entry reads the labels of pghistory's own trackers.
+        added = models.Q(pgh_label="insert") | (models.Q(pgh_label="snapshot") & models.Q(first))
+        if action == ADD:
+            return added
+        if action == DELETE:
+            return models.Q(pgh_label="delete")
+        return ~added & ~models.Q(pgh_label="delete")
+
+    def for_user(self, pk: Any) -> models.Q:
+        if self.context_path is None:
+            return models.Q(pk__in=[])
+        # The JSON keeps the key as the context got it, a number or a text.
+        return models.Q(**{f"{self.context_path}__user": pk}) | models.Q(**{f"{self.context_path}__user": str(pk)})
+
+    def for_object(self, pk: Any) -> models.Q:
+        return models.Q(pgh_obj_id=pk)
+
+    def name(self, row: Any, entry: Entry) -> str:
+        """The object's name from the values the event keeps, as the object had them."""
+        names = {field.attname for field in self.tracked._meta.concrete_fields}
+        obj = self.tracked(
+            **{field.attname: getattr(row, field.attname) for field in self.fields if field.attname in names}
+        )
+        try:
+            return str(obj)
+        except ObjectDoesNotExist, AttributeError, TypeError, ValueError:
+            return ""
+
+    def _context(self, row: Any) -> dict[str, Any]:
+        if self.context_path is None:
+            return {}
+        context = row.pgh_context
+        return (getattr(context, "metadata", context) or {}) if context is not None else {}
+
+    def _previous(self, rows: Sequence[Any]) -> dict[Any, Any]:
+        """The event before each row of the same object, by ``pgh_id`` as pghistory's diff orders them."""
+        events = self.model._default_manager
+        before = events.filter(pgh_obj_id=models.OuterRef("pgh_obj_id"), pgh_id__lt=models.OuterRef("pgh_id"))
+        before_ids = events.filter(pk__in=[row.pk for row in rows]).values(
+            before=models.Subquery(before.order_by("-pgh_id").values("pgh_id")[:1])
+        )
+        # The rows and the events before them, in order per object: each row follows its own.
+        by_object: dict[Any, dict[Any, Any]] = {}
+        found: list[Any] = [*events.filter(pk__in=before_ids), *rows]
+        for event in found:
+            by_object.setdefault(event.pgh_obj_id, {})[event.pk] = event
+        previous = {}
+        for object_events in by_object.values():
+            for earlier, later in itertools.pairwise(sorted(object_events.values(), key=attrgetter("pk"))):
+                previous[later.pk] = earlier
+        return previous
+
+    def _diff(self, before: Any, after: Any) -> dict[str, list[Any]] | None:
+        """The changed columns, as pghistory's ``pgh_diff`` has them; None for an object's first event."""
+        if before is None:
+            return None
+        diff = {}
+        for field in self.fields:
+            old, new = field.value_from_object(before), field.value_from_object(after)
+            if old != new:
+                diff[cast("str", field.column)] = [old, new]
+        return diff
 
 
 def _entry(row: Any) -> Entry:
@@ -361,18 +563,19 @@ def changes_from_message(message: Any) -> tuple[Change, ...]:
     return tuple(changes)
 
 
-def _event_entry(event: Any, model: type[models.Model], user: str, values: dict[Any, dict[str, str]]) -> Entry:
+def _event_entry(
+    event: Any, model: type[models.Model], user: str, diff: dict[str, Any] | None, values: dict[Any, dict[str, str]]
+) -> Entry:
     # The labels of pghistory's own trackers. A snapshot without a diff is the first one, so the insert.
     label = event.pgh_label
-    diff = event.pgh_diff or {}
     if label == "delete":
         action, text = DELETE, _("Deleted.")
-    elif label == "insert" or (label == "snapshot" and not diff):
+    elif label == "insert" or (label == "snapshot" and diff is None):
         action, text = ADD, _("Added.")
     else:
         action, text = CHANGE, "" if label in {"update", "snapshot"} else capfirst(label.replace("_", " ")) + "."
     fields = []
-    for column, (old, new) in diff.items():
+    for column, (old, new) in (diff or {}).items():
         field = _field_for_column(model, column)
         if field is None:
             continue

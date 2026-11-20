@@ -1,8 +1,12 @@
 {#- The object's history next to its change form, or below it on a narrow page. It scrolls with the page. #}
+{% import "formwork_admin/macros.html" as m %}
 <aside id="history" class="card border border-base-300 bg-base-100" aria-labelledby="history-title">
   <div class="flex items-center gap-2 border-b border-base-300 px-4 py-3">
     {{ icon("rotate-ccw-clock", "size-4 text-base-content/50") }}
     <h2 id="history-title" class="font-semibold">{{ _("History") }}</h2>
+    {% if history_list_url and history_entries %}
+    <a {{ m.page_link(history_list_url, "list") }} class="link link-hover ms-auto text-sm text-base-content/60 hover:text-base-content">{{ _("Show all") }}</a>
+    {% endif %}
   </div>
   <div class="px-4 py-3">
     {% if history_entries %}
