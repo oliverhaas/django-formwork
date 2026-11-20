@@ -55,7 +55,7 @@
   {% endblock %}
 
   {#- The history sits right of the fields where both fit, and below them on a narrower page. #}
-  <div class="{{ "grid grid-cols-1 gap-6 @min-[66rem]:grid-cols-[minmax(0,1fr)_18rem] @min-[66rem]:items-start" if show_history }}">
+  <div class="{{ "grid grid-cols-1 gap-6 @min-[68rem]:grid-cols-[minmax(0,1fr)_21rem] @min-[68rem]:items-start" if show_history }}">
     <div class="min-w-0">
       {{ m.errors_alert(error_count, adminform.non_field_errors) }}
 

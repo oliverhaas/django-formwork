@@ -78,7 +78,7 @@
 <template id="formwork-admin-skeleton-{{ kind }}">
   <div aria-hidden="true" class="mx-auto {{ "@container max-w-[83.5rem]" if history else "max-w-5xl" }}">
     {{ header(title=false, icon=true, subtitle=history) }}
-    <div class="{{ "grid grid-cols-1 gap-6 @min-[66rem]:grid-cols-[minmax(0,1fr)_18rem] @min-[66rem]:items-start" if history }}">
+    <div class="{{ "grid grid-cols-1 gap-6 @min-[68rem]:grid-cols-[minmax(0,1fr)_21rem] @min-[68rem]:items-start" if history }}">
       <div class="min-w-0">
         <div class="grid grid-cols-1 gap-6">
           <div class="card border border-base-300 bg-base-100">
@@ -122,7 +122,7 @@
 <template id="formwork-admin-skeleton-index">
   <div aria-hidden="true">
     {{ header(subtitle=true) }}
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem]">
       <div class="grid content-start gap-6">{{ cards([["w-24", "w-16"], ["w-28", "w-20", "w-16"]]) }}</div>
       <div class="card h-fit border border-base-300 bg-base-100">
         <div class="flex items-center gap-2 border-b border-base-300 px-5 py-3.5">
