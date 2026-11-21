@@ -57,6 +57,18 @@ def test_date_time_picker_placeholder_spells_its_format(date_format, placeholder
 
 
 @pytest.mark.unit
+@pytest.mark.usefixtures("pseudo_catalog")
+def test_date_time_picker_placeholder_follows_the_active_language():
+    """The same format spells in each request's language."""
+    placeholders = []
+    for language in ("en", "de", "en"):
+        with translation.override(language):
+            shown, _ = inputs(render_widget(DateTimePicker(format="d.m.Y H:i")))
+        placeholders.append(shown["placeholder"])
+    assert placeholders == ["DD.MM.YYYY hh:mm", "⟦DD⟧.⟦MM⟧.⟦YYYY⟧ ⟦hh⟧:⟦mm⟧", "DD.MM.YYYY hh:mm"]
+
+
+@pytest.mark.unit
 def test_date_time_picker_puts_data_and_htmx_attrs_on_the_posted_input():
     """The hidden input carries data- and hx- attrs, which fire with its change; the rest stay on the text input."""
     attrs = {"id": "id_when", "class": "input-sm", "hx-post": "/save/", "data-autosave": "1"}

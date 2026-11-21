@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from functools import lru_cache
 from typing import Any
 
 from django import forms
+from django.core.signals import setting_changed
 from django.forms.utils import to_current_timezone
-from django.utils import dateformat
+from django.utils import dateformat, translation
 from django.utils.dateparse import parse_datetime
 from django.utils.formats import get_format
-from django.utils.translation import pgettext_lazy
+from django.utils.translation import get_language, pgettext_lazy
 
 from ._base import _ModuleScript, _StubMixin
 from ._calendar import calendar_context, format_date
@@ -48,11 +50,25 @@ _FORMAT_CODE = re.compile(r"\\(.)|([aAbcdDeEfFgGhHiIjlLmMnNoOPrsStTUuwWyYzZ])")
 
 def _placeholder(date_format: str) -> str:
     """A Django format spelled out, such as ``MM/DD/YYYY hh:mm``."""
+    return _spelled(date_format, get_language())
+
+
+@lru_cache(maxsize=64)
+def _spelled(date_format: str, language: str | None) -> str:
     morning = dt.datetime(2000, 1, 1)  # noqa: DTZ001 (only formatted)
-    spelled = {code: str(token) for code, token in _SPELLED.items()}
-    spelled |= {code: dateformat.format(morning, code) for code in "aA"}
+    with translation.override(language):
+        spelled = {code: str(token) for code, token in _SPELLED.items()}
+        spelled |= {code: dateformat.format(morning, code) for code in "aA"}
     spelled |= {"f": f"{spelled['h']}:{spelled['i']}", "P": f"{spelled['h']}:{spelled['i']} {spelled['a']}"}
     return _FORMAT_CODE.sub(lambda match: match[1] or spelled.get(match[2], ""), date_format).strip()
+
+
+def _forget_spellings(*, setting: str, **_: Any) -> None:
+    if setting in {"LOCALE_PATHS", "INSTALLED_APPS"}:
+        _spelled.cache_clear()
+
+
+setting_changed.connect(_forget_spellings)
 
 
 class DateTimePicker(_StubMixin, forms.Widget):
