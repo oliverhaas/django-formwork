@@ -2848,8 +2848,8 @@ or the stub takes the focus or a press, the full widget loads and takes its plac
 the focus, a typed date and the press. After a failed save, a field with an error renders
 the full widget next to its error, and the other fields stay stubs.</p>
 <p>The stubs load from <code>cells/&lt;field&gt;/</code> under the admin's URLs, named
-<code>&lt;app_label&gt;_&lt;model_name&gt;_cell</code>. The query names the row's <code>pk</code>, its form <code>prefix</code> and
-the <code>value</code> that the stub holds, so a changed value stays changed. The view builds the
+<code>&lt;app_label&gt;_&lt;model_name&gt;_cell</code>. The query names the row's <code>pk</code> and its form <code>prefix</code>,
+and holds the stub's inputs under their names, so a changed value stays changed. The view builds the
 row with the list's formset, so the row gets the choices that a hook of the form or of
 the formset gives it, and it checks the change permission for the row.</p>
 <p>A select is as wide as its longest option, so a stub holds the labels of the options.

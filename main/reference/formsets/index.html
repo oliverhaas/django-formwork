@@ -1246,8 +1246,8 @@ the stub takes the focus or a press, the full widget loads from <code>cell_url</
 place with the focus, a typed date and the press. The stubs of a select load the labels
 of their rows with one query for all rows. A field with an error renders the full widget.</p>
 <p><code>FormworkCellMixin</code> is the view behind <code>cell_url</code>. The query names the <code>field</code>, the
-row's <code>pk</code>, its form <code>prefix</code> and the <code>value</code> that the stub holds, so a changed value
-stays changed. The view builds the row with <code>formset_class</code>, so the row gets the
+row's <code>pk</code> and its form <code>prefix</code>, and holds the stub's inputs under their names, so a
+changed value stays changed. The view builds the row with <code>formset_class</code>, so the row gets the
 choices that a hook of the form or of the formset gives it.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkCellMixin</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
