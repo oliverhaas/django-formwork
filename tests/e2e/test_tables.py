@@ -13,9 +13,11 @@ from django_formwork import (
     FormworkModelForm,
     formwork_modelformset_factory,
 )
-from django_formwork.widgets import DatePicker, Select, SelectMultiple
+from django_formwork.widgets import ChoiceLabel, ComboBox, ComboBoxMultiple, DatePicker, Select, SelectMultiple
 
 pytestmark = pytest.mark.django_db(transaction=True)
+
+_NAMES = [ChoiceLabel("Lamp", icon="\U0001f4a1"), "Kettle", "Toaster"]
 
 
 class RowForm(FormworkModelForm):
@@ -23,8 +25,14 @@ class RowForm(FormworkModelForm):
 
     class Meta:
         model = Item
-        fields = ["name", "category", "tags", "released"]
-        widgets = {"category": Select(), "tags": SelectMultiple(), "released": DatePicker()}
+        fields = ["name", "category", "tags", "released", "notes"]
+        widgets = {
+            "name": ComboBox(suggestions=_NAMES),
+            "category": Select(),
+            "tags": SelectMultiple(),
+            "released": DatePicker(),
+            "notes": ComboBoxMultiple(suggestions=_NAMES),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,8 +57,12 @@ def items():
     kitchen = Category.objects.create(name="Kitchen", slug="kitchen")
     Category.objects.create(name="Garden", slug="garden")
     tags = [Tag.objects.create(name=name) for name in ("eco", "new", "sale", "used")]
-    for name, count, released in [("Kettle", 0, None), ("Lamp", 2, dt.date(2026, 3, 4)), ("Toaster", 4, None)]:
-        Item.objects.create(name=name, category=kitchen, released=released).tags.set(tags[:count])
+    for name, count, released, notes in [
+        ("Kettle", 0, None, ""),
+        ("Lamp", 2, dt.date(2026, 3, 4), "Lamp, Kettle"),
+        ("Toaster", 4, None, "Toaster"),
+    ]:
+        Item.objects.create(name=name, category=kitchen, released=released, notes=notes).tags.set(tags[:count])
 
 
 def test_the_stubs_of_a_table_look_like_its_full_widgets_before_and_after_they_load(rows_page, items):
@@ -58,7 +70,7 @@ def test_the_stubs_of_a_table_look_like_its_full_widgets_before_and_after_they_l
     full = rows_page.screenshot()
     rows_page.open(rows, RowCell)
     stubs = rows_page.page.locator("[data-formwork-stub]")
-    expect(stubs).to_have_count(12)
+    expect(stubs).to_have_count(18)
     with_stubs = rows_page.screenshot()
     for count in range(stubs.count(), 0, -1):
         stubs.first.hover()
@@ -94,7 +106,7 @@ def test_dates_typed_into_both_parts_of_a_range_stub_carry_over_to_the_full_pick
     kettle.get_by_label("End date").press_sequentially("2026-02-09")
     held[0].fallback()
     expect(kettle.locator("[x-data=formworkDateRangePicker]")).to_be_attached()
-    kettle.locator("[name$=-name]").focus()
+    kettle.get_by_label("End date").blur()
 
     expect(kettle.locator("[name$=-period_0]")).to_have_value("2026-02-03")
     expect(kettle.locator("[name$=-period_1]")).to_have_value("2026-02-09")
@@ -108,4 +120,17 @@ def test_a_press_on_the_icon_of_a_range_stub_opens_the_calendar_of_the_full_pick
     kettle.locator(".icon-calendar-range").click()
 
     expect(kettle.get_by_role("dialog", name="Calendar")).to_be_visible()
+    assert rows_page.errors == []
+
+
+def test_a_press_on_the_icon_of_a_combo_box_stub_opens_the_suggestions_of_the_full_combo_box(rows_page, items):
+    rows_page.open(rows, RowCell)
+    lamp = rows_page.page.locator("tbody", has=rows_page.page.locator("[name$=-name][value=Lamp]"))
+    name = lamp.locator(".formwork-combobox:has([name$=-name])")
+
+    name.locator(".combobox-display").click()
+
+    expect(name).to_have_attribute("x-data", "formworkComboBox")
+    expect(name.locator("[name$=-name]")).to_be_focused()
+    expect(name.get_by_role("listbox")).to_be_visible()
     assert rows_page.errors == []
