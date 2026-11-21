@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import json
 import re
+from functools import cache
 from typing import TYPE_CHECKING, Any
 
+from django.core.signals import setting_changed
 from django.utils import dateformat
 from django.utils.dates import MONTHS, MONTHS_3, MONTHS_ALT, MONTHS_AP, WEEKDAYS, WEEKDAYS_ABBR
 from django.utils.formats import get_format
-from django.utils.translation import gettext
+from django.utils.translation import get_language, gettext, override
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
 
 # Django's date format codes, as django.utils.dateformat reads them.
 _FORMAT_CODE = re.compile(r"(?<!\\)([aAbcdDeEfFgGhHiIjlLmMnNoOPrsStTUuwWyYzZ])")
@@ -21,21 +24,34 @@ _FORMAT_CODE = re.compile(r"(?<!\\)([aAbcdDeEfFgGhHiIjlLmMnNoOPrsStTUuwWyYzZ])")
 _INPUT_NAMES = {"a": {"D", "l"}, "A": {"D", "l"}, "p": {"a", "A"}}
 
 
-def _names() -> dict[str, list[str]]:
-    """The names each code writes, in the active language. Months start at January, weekdays at Monday."""
+@cache
+def _names(language: str | None) -> dict[str, list[str]]:
+    """The names each code writes in ``language``. Months start at January, weekdays at Monday.
+
+    Cached, as every calendar of a page asks for them."""
     months = range(1, 13)
-    return {
-        "F": [str(MONTHS[month]) for month in months],
-        "N": [str(MONTHS_AP[month]) for month in months],
-        "E": [str(MONTHS_ALT[month]) for month in months],
-        "b": [str(MONTHS_3[month]) for month in months],
-        "M": [str(MONTHS_3[month]).title() for month in months],
-        "l": [str(WEEKDAYS[day]) for day in range(7)],
-        "D": [str(WEEKDAYS_ABBR[day]) for day in range(7)],
-        "a": [gettext("a.m."), gettext("p.m.")],
-        "A": [gettext("AM"), gettext("PM")],
-        "P": [gettext("midnight"), gettext("noon")],
-    }
+    with override(language):
+        return {
+            "F": [str(MONTHS[month]) for month in months],
+            "N": [str(MONTHS_AP[month]) for month in months],
+            "E": [str(MONTHS_ALT[month]) for month in months],
+            "b": [str(MONTHS_3[month]) for month in months],
+            "M": [str(MONTHS_3[month]).title() for month in months],
+            "l": [str(WEEKDAYS[day]) for day in range(7)],
+            "D": [str(WEEKDAYS_ABBR[day]) for day in range(7)],
+            "a": [gettext("a.m."), gettext("p.m.")],
+            "A": [gettext("AM"), gettext("PM")],
+            "P": [gettext("midnight"), gettext("noon")],
+        }
+
+
+def _reset_names(*, setting: str, **_: object) -> None:
+    # The settings with which Django reloads its translations.
+    if setting in {"INSTALLED_APPS", "LANGUAGES", "LANGUAGE_CODE", "LOCALE_PATHS"}:
+        _names.cache_clear()
+
+
+setting_changed.connect(_reset_names)
 
 
 def calendar_context(months: int = 1, *, input_formats: Sequence[str] = (), **formats: str) -> dict[str, Any]:
@@ -52,7 +68,7 @@ def calendar_context(months: int = 1, *, input_formats: Sequence[str] = (), **fo
             codes |= _INPUT_NAMES.get(code, set())
     if codes & {"a", "A", "P"}:
         codes |= {"a", "A"}
-    names = {code: names for code, names in _names().items() if code in codes}
+    names = {code: names for code, names in _names(get_language()).items() if code in codes}
     first_day = int(get_format("FIRST_DAY_OF_WEEK"))
     # Django counts weekdays from Monday, the calendar's FIRST_DAY_OF_WEEK from Sunday.
     columns = [(first_day + offset + 6) % 7 for offset in range(7)]

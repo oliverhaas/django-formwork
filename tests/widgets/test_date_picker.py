@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 
 import pytest
 from bs4 import BeautifulSoup
@@ -113,6 +114,17 @@ def test_date_picker_weekdays_follow_the_language(language, first_days):
     header = [str(cell.abbr.string) for cell in soup.find_all(role="columnheader")]
     assert header[:2] == first_days
     assert len(header) == 7
+
+
+@pytest.mark.unit
+def test_date_picker_month_names_follow_the_language_of_each_render():
+    """The names the script reads typed dates with change with the active language."""
+    months = []
+    for language in ["en", "de", "en"]:
+        with translation.override(language):
+            soup = render_widget(DatePicker(), attrs={"id": "id_due_date"})
+        months.append(json.loads(soup.find(attrs={"data-names": True})["data-names"])["F"][2])
+    assert months == ["March", "März", "March"]
 
 
 @pytest.mark.unit
