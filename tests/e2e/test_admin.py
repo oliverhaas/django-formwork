@@ -1377,6 +1377,36 @@ def test_a_select_stub_in_an_inline_row_loads_the_full_select_and_saves_its_choi
     assert admin_page.errors == []
 
 
+class TagRowsInline(TabularInline):
+    model = Item.tags.through
+    extra = 0
+
+
+def test_a_tag_added_in_the_dialog_from_the_stub_of_an_inline_row_is_chosen_and_saved(
+    admin_page, live_server, kitchen, monkeypatch
+):
+    model_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(model_admin, "fieldsets", [(None, {"fields": ["name", "category"]})])
+    monkeypatch.setattr(model_admin, "inlines", [TagRowsInline])
+    kettle = Item.objects.create(name="Kettle", category=kitchen)
+    kettle.tags.add(Tag.objects.create(name="sale"))
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/{kettle.pk}/change/")
+    tag = admin_page.locator('td:has([name$="-0-tag"])')
+    expect(tag.locator("[data-related] [data-formwork-stub]")).to_be_attached()
+
+    tag.get_by_role("link", name="Add another tag").click()
+    dialog = related_dialog(admin_page)
+    dialog.locator("[name=name]").fill("eco")
+    dialog.get_by_role("button", name="Save", exact=True).click()
+    expect(admin_page.locator("dialog")).to_have_count(0)
+    expect(tag.locator("summary")).to_match_aria_snapshot("- text: eco")
+    admin_page.get_by_role("button", name="Save", exact=True).click()
+
+    expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/item/")
+    assert list(kettle.tags.values_list("name", flat=True)) == ["eco"]
+    assert admin_page.errors == []
+
+
 class SlugInline(TabularInline):
     model = Item
     fields = ["name", "slug"]

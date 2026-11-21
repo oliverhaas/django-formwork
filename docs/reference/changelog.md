@@ -198,7 +198,8 @@
   the choices that a hook gives it. After a failed save, only the fields with an error
   render in full. `list_editable_stubs = False` on the `ModelAdmin` renders the full
   widgets. The saved rows of a `TabularInline` render the same stubs on a change form,
-  which load from the new `<object_id>/cells/<field>/` view (URL name
+  also for a relation field next to its add and change buttons. They load from the new
+  `<object_id>/cells/<field>/` view (URL name
   `<app_label>_<model_name>_change_cell`); `stubs = False` on the inline renders the
   full widgets. Outside the admin, `formset.as_rows(cell_url=...)` renders the same
   stubs, with the new `FormworkCellMixin` as the view behind `cell_url`. Tests that read

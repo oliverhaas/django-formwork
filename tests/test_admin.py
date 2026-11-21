@@ -2998,7 +2998,7 @@ def test_a_cell_is_refused_to_a_user_who_cannot_change_the_rows(staff_client, st
 
 class _ItemRowsInline(admin.TabularInline):
     model = Item
-    fields = ["name", "status", "released"]
+    fields = ["name", "status", "tags", "released"]
     extra = 1
 
 
@@ -3009,7 +3009,7 @@ def stub_inline(catalog, monkeypatch):
 
 
 @pytest.mark.parametrize(("attrs", "stubbed"), [({}, True), ({"stubs": False}, False), ({"layout": "stacked"}, False)])
-def test_the_saved_rows_of_a_tabular_inline_render_their_selects_and_date_pickers_as_stubs(
+def test_the_saved_rows_of_a_tabular_inline_render_their_selects_relations_and_date_pickers_as_stubs(
     admin_client, stub_inline, monkeypatch, attrs, stubbed
 ):
     for name, value in attrs.items():
@@ -3028,9 +3028,18 @@ def test_the_saved_rows_of_a_tabular_inline_render_their_selects_and_date_picker
             url(Category, "change_cell", kitchen.pk, field),
             {"pk": [str(stub_inline.alpha.pk)], "prefix": ["items-0"]},
         )
-        for field in ("status", "released")
+        for field in ("status", "tags", "released")
         if stubbed
     ]
+
+
+def test_the_relation_stub_of_an_inline_row_keeps_the_links_of_the_relation_widget(admin_client, stub_inline):
+    soup = BeautifulSoup(admin_client.get(url(Category, "change", stub_inline.kitchen.pk)).content, "html.parser")
+
+    cell = soup.select_one("[data-formset-row=items-0] td:has([name=items-0-tags])")
+    stub = cell.select_one("[x-data=formworkRelated] [data-formwork-stub]")
+    assert [el["value"] for el in stub.select("[name=items-0-tags]") if el["value"]] == [str(stub_inline.sale.pk)]
+    assert [link["data-related-popup"] for link in cell.select("[data-related-popup]")] == ["add"]
 
 
 def test_an_inline_cell_answers_with_the_full_widget_for_the_value_its_stub_holds(admin_client, stub_inline):
@@ -3040,6 +3049,20 @@ def test_an_inline_cell_answers_with_the_full_widget_for_the_value_its_stub_hold
 
     value = BeautifulSoup(response.content, "html.parser").select_one("[x-data=formworkSelect] input[type=hidden]")
     assert (value["name"], value["value"]) == ("items-0-status", Item.Status.ACTIVE)
+
+
+def test_an_inline_cell_of_a_relation_answers_with_the_select_alone_for_the_values_its_stub_holds(
+    admin_client, stub_inline
+):
+    new = Tag.objects.create(name="new")
+    query = {"pk": stub_inline.alpha.pk, "prefix": "items-0", "items-0-tags": ["", new.pk]}
+
+    response = admin_client.get(url(Category, "change_cell", stub_inline.kitchen.pk, "tags"), query)
+
+    soup = BeautifulSoup(response.content, "html.parser")
+    assert soup.find()["x-data"] == "formworkSelectMultiple"
+    assert soup.select("[data-related], [data-related-popup]") == []
+    assert [box["value"] for box in soup.select("input[name=items-0-tags][checked]")] == [str(new.pk)]
 
 
 @pytest.mark.parametrize(

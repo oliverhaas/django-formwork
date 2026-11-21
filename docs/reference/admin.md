@@ -1315,8 +1315,9 @@ from `<object_id>/cells/<field>/`, named `<app_label>_<model_name>_change_cell`,
 same query. The view finds the inline by the row's prefix and builds the row with the
 inline's formset, from `get_formset_kwargs()`, so a row of another object gets a 404. It
 checks the change permission for the object and for the inline's rows. A relation field
-with the buttons that add or change a related object, such as a `ForeignKey` of the
-inline's model, keeps its full widget. A `StackedInline` renders the full widgets.
+keeps the buttons that add or change a related object next to its stub, and the view
+answers with the select alone. A related object added in the dialog becomes the stub's
+value, and the refresh of the form lists it. A `StackedInline` renders the full widgets.
 `stubs = False` on the inline does the same for a `TabularInline`.
 
 ## Keyboard

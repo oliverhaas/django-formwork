@@ -548,8 +548,9 @@ document.addEventListener("alpine:init", () => {
 
   // A relation's dropdown with buttons that add a row or change the chosen one in a dialog.
   Alpine.data("formworkRelated", () => ({
+    // A stub of a saved inline row posts the field from hidden inputs, as the controls below.
     field() {
-      return this.$root.querySelector(".formwork-select, .formwork-select-multiple");
+      return this.$root.querySelector(":is(.formwork-select, .formwork-select-multiple):not([data-formwork-stub])");
     },
 
     // A click with a modifier key opens the full page, in a new tab or window.
@@ -639,12 +640,13 @@ document.addEventListener("alpine:init", () => {
       });
     },
 
-    // Radio buttons, checkboxes or a native select. The refresh lists the rows with their new
-    // names, so only the choice changes here.
+    // Radio buttons, checkboxes, a native select or the hidden inputs of a stub. The refresh
+    // lists the rows with their new names, so only the choice changes here.
     applyToControls({ action, value, newValue, chosen }) {
       for (const el of this.$root.querySelectorAll("input, option")) {
         if ((el.closest("select") ?? el).name !== this.$root.dataset.name) continue;
-        if (el.value === value && action === "delete") el[el.tagName === "OPTION" ? "selected" : "checked"] = false;
+        if (el.value === value && action === "delete" && el.type === "hidden") el.value = "";
+        else if (el.value === value && action === "delete") el[el.tagName === "OPTION" ? "selected" : "checked"] = false;
         else if (el.value === value && action === "change") el.value = newValue;
         else if (chosen && !action && el.type === "radio") el.checked = false;
       }

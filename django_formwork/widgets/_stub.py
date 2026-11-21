@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from functools import cache, partial
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlencode
 
-from ._base import _StubMixin
+from ._base import _StubMixin, widget_of
 from .select import SearchableSelectMixin, rows_share_choices
 
 if TYPE_CHECKING:
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from django import forms
     from django.forms.formsets import BaseFormSet
+    from django.utils.safestring import SafeString
 
 
 def _shared_copy(bound: forms.BoundField, select: SearchableSelectMixin) -> str:
@@ -28,10 +29,10 @@ def with_query(url: str, **query: Any) -> str:
 
 
 def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, share: bool | None = None) -> None:
-    """Render the widgets of a formset's saved rows as stubs; call it after ``share_choices``.
+    """Render the widgets of a formset's saved rows as stubs, also inside a wrapping widget; call it after ``share_choices``.
 
-    A field with an error renders in full, next to its error. ``url_of(name)`` answers with a field's
-    full widget for the query ``pk`` and ``prefix``, and the stub's inputs under their names."""
+    A field with an error renders in full, next to its error. ``url_of(name)`` answers with ``loaded_widget`` for
+    the query ``pk`` and ``prefix``, and the stub's inputs under their names."""
     # Built when the first stub renders, where the selects of the page share their queries.
     copies: dict[str, Callable[[], str]] = {}
     urls: dict[str, str] = {}
@@ -40,8 +41,8 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
         if pk is None:
             continue
         for name, field in form.fields.items():
-            widget = field.widget
-            if field.disabled or not isinstance(widget, _StubMixin) or name in form.errors:
+            widget = widget_of(field, _StubMixin)
+            if field.disabled or widget is None or name in form.errors:
                 continue
             if isinstance(widget, SearchableSelectMixin):
                 if widget.floating:
@@ -52,6 +53,15 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
             if name not in urls:
                 urls[name] = url_of(name)
             widget.stub_url = with_query(urls[name], pk=pk, prefix=form.prefix)
+
+
+def loaded_widget(bound: forms.BoundField) -> SafeString:
+    """The full widget that takes the place of the stub of ``bound``, without a widget that wraps it.
+
+    The field's label names it, as a table cell has no ``<label>``."""
+    # Each stub widget is a Widget; _StubMixin is only its mixin.
+    widget = cast("forms.Widget", widget_of(bound.field, _StubMixin))
+    return bound.as_widget(widget, attrs={"aria-label": str(bound.label)})
 
 
 def formset_row(

@@ -93,7 +93,7 @@ from django_formwork.formsets import (
     formwork_modelformset_factory,
 )
 from django_formwork.widgets import ChoiceLabel, Select
-from django_formwork.widgets._stub import formset_row, stub_formset
+from django_formwork.widgets._stub import formset_row, loaded_widget, stub_formset
 from django_formwork.widgets.select import share_choices
 
 if TYPE_CHECKING:
@@ -1172,8 +1172,7 @@ class ModelAdmin(BaseModelAdmin):
             raise Http404
         if not self.has_change_permission(request, form.instance):
             raise PermissionDenied
-        bound = form[field]
-        return HttpResponse(bound.as_widget(attrs={"aria-label": bound.label}))
+        return HttpResponse(loaded_widget(form[field]))
 
     def change_cell_view(self, request: HttpRequest, object_id: str, field: str) -> HttpResponse:
         """The full widget of a cell of a tabular inline, for the stub that the change form rendered in its place.
@@ -1208,8 +1207,7 @@ class ModelAdmin(BaseModelAdmin):
         )
         if form is None or field not in form.fields or form.fields[field].disabled:
             raise Http404
-        bound_field = form[field]
-        return HttpResponse(bound_field.as_widget(attrs={"aria-label": str(bound_field.label)}))
+        return HttpResponse(loaded_widget(form[field]))
 
     # Actions
 

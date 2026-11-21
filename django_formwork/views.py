@@ -23,7 +23,7 @@ from django_formwork.forms import PREFIX_INPUT_NAME
 from django_formwork.renderers import FormworkRenderer
 from django_formwork.search import SEARCH_PAGE_SIZE, declared_params, get_field, ranked_search
 from django_formwork.widgets import ComboBox, Select, SelectMultiple
-from django_formwork.widgets._stub import formset_row
+from django_formwork.widgets._stub import formset_row, loaded_widget
 from django_formwork.widgets.select import SearchableSelectMixin, label_extras, with_peers
 
 if TYPE_CHECKING:
@@ -399,5 +399,4 @@ class FormworkCellMixin(_RowsViewMixin):
             raise Http404("Row no longer exists")
         if name not in form.fields or form.fields[name].disabled:
             raise Http404("No such field")
-        bound_field = form[name]
-        return HttpResponse(bound_field.as_widget(attrs={"aria-label": str(bound_field.label)}))
+        return HttpResponse(loaded_widget(form[name]))

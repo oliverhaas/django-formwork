@@ -39,6 +39,14 @@ _FILE_ICONS = {
 _FILE_ICONS_JSON = json.dumps(_FILE_ICONS)
 
 
+def widget_of[W](field: Any, kind: type[W]) -> W | None:  # noqa: ANN401 (a form field, or None)
+    """The widget of ``kind`` that ``field`` renders, also inside a widget that wraps it as ``widget``."""
+    widget = getattr(field, "widget", None)
+    while widget is not None and not isinstance(widget, kind):
+        widget = getattr(widget, "widget", None)
+    return widget
+
+
 class _FormworkTemplatesMixin:
     """Render through a ``FormworkRenderer``, the one renderer that loads formwork's Jinja2 widget templates."""
 

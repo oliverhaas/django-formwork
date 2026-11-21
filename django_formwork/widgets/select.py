@@ -20,7 +20,7 @@ from django.utils.translation import gettext
 
 from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search_url
 
-from ._base import _FormworkTemplatesMixin, _ModuleScript, _StubMixin
+from ._base import _FormworkTemplatesMixin, _ModuleScript, _StubMixin, widget_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Generator, Iterable, Iterator, Mapping, Sequence
@@ -168,14 +168,6 @@ class _SharedChoices:
         return {**{value: obj for value, obj in self.shown.items() if value in self.values}, **self.selected}
 
 
-def _select_of(field: forms.Field | None) -> SearchableSelectMixin | None:
-    """The select that ``field`` renders, also inside a widget that wraps it."""
-    widget = getattr(field, "widget", None)
-    while widget is not None and not isinstance(widget, SearchableSelectMixin):
-        widget = getattr(widget, "widget", None)
-    return widget
-
-
 def rows_share_choices(formset: BaseFormSet[Any], field: forms.Field, *, share: bool | None = None) -> bool:
     """Whether the rows of ``formset`` get the same choices for ``field``.
 
@@ -202,7 +194,9 @@ def share_choices(formset: BaseFormSet[Any], *, share: bool | None = None) -> No
             continue
         if not rows_share_choices(formset, field, share=share):
             continue
-        selects = [(form[name], select) for form in rows if (select := _select_of(form.fields.get(name)))]
+        selects = [
+            (form[name], select) for form in rows if (select := widget_of(form.fields.get(name), SearchableSelectMixin))
+        ]
         shared = _SharedChoices(field.queryset, field.to_field_name or "pk", selects)
         for _bound, select in selects:
             select.shared = shared
