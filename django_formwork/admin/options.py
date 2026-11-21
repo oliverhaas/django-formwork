@@ -94,7 +94,7 @@ from django_formwork.formsets import (
 )
 from django_formwork.widgets import ChoiceLabel, Select
 from django_formwork.widgets._stub import formset_row, loaded_widget, stub_formset
-from django_formwork.widgets.select import column_options, share_choices
+from django_formwork.widgets.select import share_choices
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
@@ -1748,7 +1748,6 @@ class ModelAdmin(BaseModelAdmin):
             if self.list_editable_stubs:
                 stub_formset(formset, self._cell_url, share=self.share_choices)
             cl.formset = formset
-            cl.option_lists = column_options(formset)
 
         context = self.page_context(
             request,

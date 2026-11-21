@@ -40,6 +40,7 @@ from django_formwork.admin.paginator import EstimatedCountPaginator, PageLink, p
 from django_formwork.admin.widgets import IS_POPUP_VAR, TO_FIELD_VAR
 from django_formwork.fields import DisplayField
 from django_formwork.widgets import Select
+from django_formwork.widgets.select import column_options
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -118,7 +119,7 @@ class ChangeList:
         self.search_help_text = model_admin.search_help_text
         self.root_queryset = model_admin.get_queryset(request)
         self.formset = formset
-        # The option rows of each select column of the editable rows, which their selects copy.
+        # The option rows of each select column of the editable rows, which their selects copy. Set by rows.
         self.option_lists = ""
         self.title = capfirst(self.opts.verbose_name_plural)
 
@@ -657,6 +658,10 @@ class ChangeList:
     def rows(self) -> list[dict[str, Any]]:
         """A row per object of the page: its form of the editable formset, else a form that shows its values."""
         posted = {form.instance.pk: form for form in self.formset.forms} if self.formset is not None else {}
+        # The rows render with the page, so the column lists load their choices in its shared pages, as the
+        # relation filters do.
+        if self.formset is not None:
+            self.option_lists = column_options(self.formset)
         linked = bool(self.links) and self.model_admin.has_view_or_change_permission(self.request)
         rows = []
         for index, obj in enumerate(self.result_list):
