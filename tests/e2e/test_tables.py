@@ -50,6 +50,7 @@ def test_the_stubs_of_a_table_look_like_its_full_widgets_before_and_after_they_l
     for count in range(stubs.count(), 0, -1):
         stubs.first.hover()
         expect(stubs).to_have_count(count - 1)
+    rows_page.page.locator(".overflow-x-auto").evaluate("table => table.scrollTo(0, 0)")
     loaded = rows_page.screenshot()
 
     rows_page.assert_same_screens(full, with_stubs, "full", "stubs")
