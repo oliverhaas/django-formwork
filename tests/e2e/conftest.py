@@ -6,10 +6,12 @@ We override Django settings for e2e-specific URL routing and templates.
 
 import io
 import os
+import threading
 from pathlib import Path
 
 import numpy as np
 import pytest
+from django.core.handlers.wsgi import WSGIHandler
 from django.template import engines
 from django.test import RequestFactory
 from e2e.views import _page_html
@@ -63,6 +65,24 @@ def _navigate(page, live_server, path):
         }""",
     )
     return page
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _one_request_at_a_time():
+    """The live server answers one request at a time: its threads share one in-memory SQLite connection.
+
+    Two requests at once could get no row for the same query, so a user lookup answered as signed out.
+    """
+    lock = threading.RLock()
+    handle = WSGIHandler.__call__
+
+    def serial(self, environ, start_response):
+        with lock:
+            return handle(self, environ, start_response)
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(WSGIHandler, "__call__", serial)
+        yield
 
 
 @pytest.fixture(autouse=True)
