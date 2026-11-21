@@ -15,7 +15,14 @@ except PackageNotFoundError:
 if TYPE_CHECKING:
     from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
     from django_formwork.boundfield import FormworkBoundField
-    from django_formwork.fields import DateRange, DateRangeField, DateTimeRange, DateTimeRangeField, MultipleFileField
+    from django_formwork.fields import (
+        DateRange,
+        DateRangeField,
+        DateTimeRange,
+        DateTimeRangeField,
+        DisplayField,
+        MultipleFileField,
+    )
     from django_formwork.forms import (
         FormworkForm,
         FormworkFormMetaclass,
@@ -47,6 +54,7 @@ _EXPORTS = {
     "DateRangeField": "django_formwork.fields",
     "DateTimeRange": "django_formwork.fields",
     "DateTimeRangeField": "django_formwork.fields",
+    "DisplayField": "django_formwork.fields",
     "FormworkBaseInlineFormSet": "django_formwork.formsets",
     "FormworkBaseModelFormSet": "django_formwork.formsets",
     "FormworkBoundField": "django_formwork.boundfield",
@@ -73,6 +81,7 @@ __all__ = [
     "DateRangeField",
     "DateTimeRange",
     "DateTimeRangeField",
+    "DisplayField",
     "FormworkBaseInlineFormSet",
     "FormworkBaseModelFormSet",
     "FormworkBoundField",

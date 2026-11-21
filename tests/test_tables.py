@@ -11,7 +11,13 @@ from django.http import Http404
 from django.test import RequestFactory
 from e2e.models import UniqueCode
 
-from django_formwork import FormworkForm, FormworkModelForm, FormworkRowSaveMixin, formwork_modelformset_factory
+from django_formwork import (
+    DisplayField,
+    FormworkForm,
+    FormworkModelForm,
+    FormworkRowSaveMixin,
+    formwork_modelformset_factory,
+)
 from django_formwork.tables import PREFIX_INPUT_NAME
 
 pytestmark = pytest.mark.django_db
@@ -67,6 +73,17 @@ def test_disabled_multiple_choice_cell_shows_the_chosen_labels():
     html = TagsForm(initial={"tags": ["a", "b"]}).as_row()
 
     assert "Apples, Bananas" in html
+
+
+def test_a_display_column_shows_the_value_of_its_source_as_text():
+    UniqueCode.objects.create(code="A", label="alpha")
+    form = type("CodeForm", (CodeRowForm,), {"summary": DisplayField(source=lambda obj: [obj.code, obj.label])})
+    formset = formwork_modelformset_factory(UniqueCode, form=form, extra=0)(queryset=UniqueCode.objects.all())
+
+    cell = BeautifulSoup(formset.as_rows(), "html.parser").find("td", attrs={"data-field": "summary"})
+
+    assert cell.get_text(strip=True) == "A, alpha"
+    assert cell.find("input") is None
 
 
 def test_an_app_listed_first_overrides_the_row_template(settings, tmp_path, monkeypatch):

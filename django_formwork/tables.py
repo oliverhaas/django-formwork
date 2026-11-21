@@ -10,10 +10,11 @@ from django.core.exceptions import ImproperlyConfigured
 from django.forms import Media
 from django.forms.formsets import DELETION_FIELD_NAME
 from django.utils.choices import flatten_choices
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import SafeString, mark_safe
 from django.utils.translation import gettext_lazy as _
 
+from django_formwork.fields import DisplayField
 from django_formwork.renderers import formwork_renderer
 
 if TYPE_CHECKING:
@@ -51,6 +52,11 @@ class TableCell:
     @classmethod
     def for_field(cls, bound_field: BoundField) -> TableCell:
         """A widget cell, or for a disabled field its value as text."""
+        if isinstance(bound_field.field, DisplayField):
+            value = bound_field.value()
+            if isinstance(value, list | tuple):
+                value = format_html_join(", ", "{}", ((item,) for item in value))
+            return cls(bound_field.name, display="" if value is None else value)
         if not bound_field.field.disabled:
             return cls(bound_field.name, field=bound_field)
         form = bound_field.form

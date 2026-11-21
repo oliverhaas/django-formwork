@@ -37,6 +37,7 @@ from django.forms.models import (
 
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
 from django_formwork.boundfield import FormworkBoundField
+from django_formwork.fields import DisplayField
 from django_formwork.renderers import FormworkRenderer
 from django_formwork.search import register_form_searches
 from django_formwork.tables import RowRenderMixin
@@ -167,6 +168,7 @@ class _DirtyOnlyFormMixin:
         add_error: Any
         data: Any
         files: Any
+        fields: Any
 
     def __init__(self, *args: Any, validate_dirty_only: bool | None = None, **kwargs: Any) -> None:
         if validate_dirty_only is None:
@@ -183,12 +185,20 @@ class _DirtyOnlyFormMixin:
         """True when an unchanged field's initial goes through ``to_python()`` into ``cleaned_data``."""
         return False
 
+    def _drop_display_fields(self) -> None:
+        for name, field in self.fields.items():
+            if isinstance(field, DisplayField):
+                self.cleaned_data.pop(name, None)
+
     def _clean_fields(self) -> None:
         if not self._validate_dirty_only:
             super()._clean_fields()  # type: ignore[misc]
+            self._drop_display_fields()
             return
         for name, bf in self._bound_items():
             field = bf.field
+            if isinstance(field, DisplayField):
+                continue
             if self._unchanged(bf):
                 try:
                     resolve = self._resolves_initial(bf)
@@ -207,9 +217,12 @@ class _DirtyOnlyFormMixin:
     async def _aclean_fields(self) -> None:
         if not self._validate_dirty_only:
             await super()._aclean_fields()  # type: ignore[misc]
+            self._drop_display_fields()
             return
         for name, bf in self._bound_items():
             field = bf.field
+            if isinstance(field, DisplayField):
+                continue
             if self._unchanged(bf):
                 try:
                     resolve = self._resolves_initial(bf)

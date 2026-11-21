@@ -181,6 +181,12 @@
   `as_rows(flush=True)` lays the table out to the edges of a card. The rows need
   `tables.js`, which `{% formwork_js %}` and `{{ formset.media }}` load. With a
   `save_url`, each row still saves by itself, without Add another, Remove or Delete.
+- `DisplayField` shows a value that a form never posts: a field, a method, a property or
+  an annotation of the form's instance, or a function of the instance. It renders with
+  the `Display` widget, and as text in a cell of `formset.as_rows()`. The field reads its
+  value when the page renders it, so an annotation that the view adds after the post
+  shows. A post that names the field changes nothing, because formwork's forms leave it
+  out of `cleaned_data`. See [DisplayField](forms.md#displayfield).
 - An admin list renders the `Select`, `DatePicker` and `DateTimePicker` of each saved row
   of its editable columns as a stub: the closed widget with its value. When the pointer
   rests on a stub, or the stub takes the focus or a press, the full widget loads from the

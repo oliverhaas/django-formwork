@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import pytest
+from admin_app.models import Category, Item, Tag
+from bs4 import BeautifulSoup
 from django import forms
+from django.db.models import Count
 from django.utils.html import format_html
 
-from django_formwork.forms import FormworkForm
+from django_formwork import DisplayField
+from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.widgets import ChoiceLabel, Display
 
 from .conftest import render_form, render_widget
@@ -68,3 +72,77 @@ def test_display_is_named_by_the_field_label(renderer):
     group = soup.select_one("#id_owner")
     assert group["aria-labelledby"].split()[0] == "id_owner_label"
     assert all(soup.find(id=i) is not None for i in group["aria-describedby"].split())
+
+
+def item_form(name, field, fields=("name",)):
+    meta = type("Meta", (), {"model": Item, "fields": list(fields)})
+    return type("ItemForm", (FormworkModelForm,), {name: field, "Meta": meta})
+
+
+def shown_items(form, name):
+    soup = BeautifulSoup(form[name].as_field_group(), "html.parser")
+    return [span.get_text() for span in soup.select("div[role=group] > span")]
+
+
+@pytest.fixture
+def item():
+    kitchen = Category.objects.create(name="Kitchen", slug="kitchen")
+    kettle = Item.objects.create(name="Kettle", category=kitchen, status=Item.Status.ACTIVE, quantity=3)
+    kettle.tags.add(Tag.objects.create(name="new"), Tag.objects.create(name="sale"))
+    return Item.objects.annotate(tag_count=Count("tags")).get(pk=kettle.pk)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("name", "field", "items"),
+    [
+        ("status", DisplayField(), ["Active"]),
+        ("tags", DisplayField(), ["new", "sale"]),
+        ("tag_count", DisplayField(), ["2"]),
+        ("title", DisplayField(source="__str__"), ["Kettle"]),
+        ("double", DisplayField(source=lambda item: item.quantity * 2), ["6"]),
+    ],
+    ids=["choice-label", "relation", "annotation", "method", "function"],
+)
+def test_display_field_shows_a_value_of_the_instance(item, name, field, items):
+    assert shown_items(item_form(name, field)(instance=item), name) == items
+
+
+@pytest.mark.django_db
+def test_display_field_shows_no_related_rows_on_an_unsaved_instance():
+    assert shown_items(item_form("tags", DisplayField())(), "tags") == []
+
+
+@pytest.mark.unit
+def test_display_field_of_a_form_without_an_instance_shows_its_initial_value():
+    form_class = type("NoteForm", (FormworkForm,), {"author": DisplayField()})
+    assert shown_items(form_class(initial={"author": "Ada"}), "author") == ["Ada"]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("validate_dirty_only", [False, True])
+def test_display_field_stays_out_of_cleaning_and_never_reads_its_value(validate_dirty_only):
+    """A post reads no display value: an annotation the page adds later is not there yet."""
+    reads = []
+    form_class = type(
+        "NoteForm",
+        (FormworkForm,),
+        {"text": forms.CharField(), "author": DisplayField(initial=lambda: reads.append(1) or "Ada")},
+    )
+    form = form_class(data={"text": "Hi", "author": "Bob"}, validate_dirty_only=validate_dirty_only)
+
+    assert form.is_valid()
+    assert form.changed_data == ["text"]
+    assert form.cleaned_data == {"text": "Hi"}
+    assert reads == []
+
+
+@pytest.mark.django_db
+def test_display_field_named_after_a_model_field_leaves_that_field_alone_on_save(item):
+    data = {"name": "Pot", "status": Item.Status.ARCHIVED}
+    form = item_form("status", DisplayField(), fields=("name", "status"))(data=data, instance=item)
+
+    form.save()
+
+    item.refresh_from_db()
+    assert (item.name, item.status) == ("Pot", Item.Status.ACTIVE)

@@ -128,7 +128,8 @@ def task_edit_all(request):
 - **Cells.** A row has one cell per visible field. A disabled field shows as text:
   the instance's `get_<field>_display()`, else the instance's value (a
   comma-separated list for a many-to-many field), else the labels of the chosen
-  values.
+  values. A [`DisplayField`](forms.md#displayfield) shows its value as text, a list
+  comma-separated.
 - **Errors.** A cell keeps its errors in a tooltip under the widget. The tooltip shows
   while the pointer is on the cell or the focus is in it, so the row keeps its
   height. The errors of a whole row show above the row, the formset's own errors

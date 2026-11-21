@@ -805,17 +805,18 @@ stored one.
 
 **Parent class:** `forms.Widget`
 
-A value the user cannot change, in the box of a filled field. It posts nothing,
-so put it on a `disabled` field. Each item is a string or a `ChoiceLabel`; with
-`badges=True`, each item is a badge in its `color`.
+A value the user cannot change, in the box of a filled field. It posts nothing.
+[`DisplayField`](forms.md#displayfield) uses it and reads the value from the form's
+instance. On another field, set `disabled=True`. Each item is a string or a
+`ChoiceLabel`; with `badges=True`, each item is a badge in its `color`.
 
 ```python
-status = forms.Field(
-    disabled=True,
-    required=False,
-    widget=widgets.Display(badges=True),
-)
-form = OrderForm(initial={"status": [ChoiceLabel("Paid", color="success")]})
+def event_kind(event):
+    return [ChoiceLabel(event.get_kind_display(), color=Event.KIND_COLORS[event.kind])]
+
+
+class EventForm(FormworkModelForm):
+    kind = DisplayField(source=event_kind, widget=widgets.Display(badges=True))
 ```
 
 ---

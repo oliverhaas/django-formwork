@@ -14,7 +14,7 @@ forms without the global renderer.
 Everything documented here is importable from the package root:
 
 ```python
-from django_formwork import FormworkForm, FormworkModel, FormworkModelForm, section_forms
+from django_formwork import DisplayField, FormworkForm, FormworkModel, FormworkModelForm, section_forms
 ```
 
 ## Base classes
@@ -381,6 +381,39 @@ out, and it does not need Alpine.
   so the fields the post leaves out keep their stored values.
 - `data-section-indicator="<selector>"` on a field wrapper shows that indicator
   while a save the field started runs.
+
+## DisplayField
+
+`DisplayField` shows a value that the form never posts: a field, a method, a property
+or an annotation of the form's instance. It renders with the
+[`Display`](widgets.md#display) widget, and as text in a cell of
+[`formset.as_rows()`](formsets.md#editable-tables).
+
+```python
+from django_formwork import DisplayField, FormworkModelForm
+
+
+class EventForm(FormworkModelForm):
+    kind = DisplayField()
+    venue = DisplayField()
+    seats = DisplayField(source=lambda event: event.capacity or "No limit")
+
+    class Meta:
+        model = Event
+        fields = ["title", "starts_at", "ends_at"]
+```
+
+`source` is the name of an attribute or a method of the instance, or a function of the
+instance. It defaults to the field's name. A field with choices shows its label, from
+`get_<name>_display()`, and a relation shows its related rows. An unsaved instance
+shows no related rows. A form without an instance shows the field's `initial` value.
+
+The field reads its value when the page renders it, not when the form validates. An
+annotation that the view adds to the instance after the post therefore shows. A post
+never changes the value: `FormworkForm` and `FormworkModelForm` leave the field out of
+`cleaned_data` and `changed_data`, also when the post has a value with its name. A
+`DisplayField` with the name of a model field keeps that field out of `save()`. A plain
+Django form puts `None` in `cleaned_data` for it, so use a formwork form.
 
 ## FormworkModel
 

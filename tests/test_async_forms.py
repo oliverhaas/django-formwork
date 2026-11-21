@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.test import override_settings
 from e2e.models import BasicFormData, City, DirtyTrackedData, Region
 
+from django_formwork import DisplayField
 from django_formwork.forms import FormworkForm, FormworkModelForm
 
 pytestmark = pytest.mark.django_db
@@ -452,3 +453,19 @@ class TestForceAsync:
         """Without the setting, sync methods work normally."""
         form = SyncCleanForm(data={"name": "alice", "email": "a@b.com"})
         assert form.is_valid() is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("validate_dirty_only", [False, True])
+async def test_ais_valid_leaves_out_a_display_field_and_never_reads_its_value(validate_dirty_only):
+    reads = []
+    form_class = type(
+        "NoteForm",
+        (FormworkForm,),
+        {"text": forms.CharField(), "author": DisplayField(initial=lambda: reads.append(1) or "Ada")},
+    )
+    form = form_class(data={"text": "Hi", "author": "Bob"}, validate_dirty_only=validate_dirty_only)
+
+    assert await form.ais_valid()
+    assert form.cleaned_data == {"text": "Hi"}
+    assert reads == []
