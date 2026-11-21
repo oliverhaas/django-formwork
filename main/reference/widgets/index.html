@@ -2801,15 +2801,16 @@ size on the server as well.</p>
 <hr />
 <h2 id="display">Display<a class="headerlink" href="#display" title="Permanent link">&para;</a></h2>
 <p><strong>Parent class:</strong> <code>forms.Widget</code></p>
-<p>A value the user cannot change, in the box of a filled field. It posts nothing,
-so put it on a <code>disabled</code> field. Each item is a string or a <code>ChoiceLabel</code>; with
-<code>badges=True</code>, each item is a badge in its <code>color</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="n">status</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">Field</span><span class="p">(</span>
-</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>    <span class="n">disabled</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Display</span><span class="p">(</span><span class="n">badges</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="p">)</span>
-</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="n">form</span> <span class="o">=</span> <span class="n">OrderForm</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Paid"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"success"</span><span class="p">)]})</span>
+<p>A value the user cannot change, in the box of a filled field. It posts nothing.
+<a href="../forms/#displayfield"><code>DisplayField</code></a> uses it and reads the value from the form's
+instance. On another field, set <code>disabled=True</code>. Each item is a string or a
+<code>ChoiceLabel</code>; with <code>badges=True</code>, each item is a badge in its <code>color</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">event_kind</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>    <span class="k">return</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">get_kind_display</span><span class="p">(),</span> <span class="n">color</span><span class="o">=</span><span class="n">Event</span><span class="o">.</span><span class="n">KIND_COLORS</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">kind</span><span class="p">])]</span>
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>
+</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>
+</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">EventForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
+</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>    <span class="n">kind</span> <span class="o">=</span> <span class="n">DisplayField</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">event_kind</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Display</span><span class="p">(</span><span class="n">badges</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </span></code></pre></div>
 <hr />
 <h2 id="patternhintmixin">PatternHintMixin<a class="headerlink" href="#patternhintmixin" title="Permanent link">&para;</a></h2>

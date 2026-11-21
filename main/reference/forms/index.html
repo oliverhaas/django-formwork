@@ -687,6 +687,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#displayfield" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DisplayField
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#formworkmodel" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1018,6 +1029,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#displayfield" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DisplayField
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#formworkmodel" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1059,7 +1081,7 @@ the project renders styled, including plain <code>forms.Form</code>. Reach for t
 classes when you want the behaviours below, or formwork styling on individual
 forms without the global renderer.</p>
 <p>Everything documented here is importable from the package root:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormworkForm</span><span class="p">,</span> <span class="n">FormworkModel</span><span class="p">,</span> <span class="n">FormworkModelForm</span><span class="p">,</span> <span class="n">section_forms</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">DisplayField</span><span class="p">,</span> <span class="n">FormworkForm</span><span class="p">,</span> <span class="n">FormworkModel</span><span class="p">,</span> <span class="n">FormworkModelForm</span><span class="p">,</span> <span class="n">section_forms</span>
 </span></code></pre></div>
 <h2 id="base-classes">Base classes<a class="headerlink" href="#base-classes" title="Permanent link">&para;</a></h2>
 <table>
@@ -1431,17 +1453,44 @@ out, and it does not need Alpine.</p>
 <li><code>data-section-indicator="&lt;selector&gt;"</code> on a field wrapper shows that indicator
   while a save the field started runs.</li>
 </ul>
+<h2 id="displayfield">DisplayField<a class="headerlink" href="#displayfield" title="Permanent link">&para;</a></h2>
+<p><code>DisplayField</code> shows a value that the form never posts: a field, a method, a property
+or an annotation of the form's instance. It renders with the
+<a href="../widgets/#display"><code>Display</code></a> widget, and as text in a cell of
+<a href="../formsets/#editable-tables"><code>formset.as_rows()</code></a>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">DisplayField</span><span class="p">,</span> <span class="n">FormworkModelForm</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">EventForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">kind</span> <span class="o">=</span> <span class="n">DisplayField</span><span class="p">()</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">venue</span> <span class="o">=</span> <span class="n">DisplayField</span><span class="p">()</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    <span class="n">seats</span> <span class="o">=</span> <span class="n">DisplayField</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="k">lambda</span> <span class="n">event</span><span class="p">:</span> <span class="n">event</span><span class="o">.</span><span class="n">capacity</span> <span class="ow">or</span> <span class="s2">"No limit"</span><span class="p">)</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>        <span class="n">model</span> <span class="o">=</span> <span class="n">Event</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"title"</span><span class="p">,</span> <span class="s2">"starts_at"</span><span class="p">,</span> <span class="s2">"ends_at"</span><span class="p">]</span>
+</span></code></pre></div>
+<p><code>source</code> is the name of an attribute or a method of the instance, or a function of the
+instance. It defaults to the field's name. A field with choices shows its label, from
+<code>get_&lt;name&gt;_display()</code>, and a relation shows its related rows. An unsaved instance
+shows no related rows. A form without an instance shows the field's <code>initial</code> value.</p>
+<p>The field reads its value when the page renders it, not when the form validates. An
+annotation that the view adds to the instance after the post therefore shows. A post
+never changes the value: <code>FormworkForm</code> and <code>FormworkModelForm</code> leave the field out of
+<code>cleaned_data</code> and <code>changed_data</code>, also when the post has a value with its name. A
+<code>DisplayField</code> with the name of a model field keeps that field out of <code>save()</code>. A plain
+Django form puts <code>None</code> in <code>cleaned_data</code> for it, so use a formwork form.</p>
 <h2 id="formworkmodel">FormworkModel<a class="headerlink" href="#formworkmodel" title="Permanent link">&para;</a></h2>
 <p><code>FormworkModel</code> is an abstract model base that mixes in
 <code>filthyfields.DirtyFieldsMixin</code>, providing the <code>get_dirty_fields()</code> that
 <code>validate_dirty_only</code> needs, and adds one helper for <code>clean()</code> rules:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Ticket</span><span class="p">(</span><span class="n">FormworkModel</span><span class="p">):</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">status</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">closed_at</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields_dirty</span><span class="p">(</span><span class="s2">"status"</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"closed"</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed_at</span><span class="p">:</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">"Closing a ticket requires closed_at."</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Ticket</span><span class="p">(</span><span class="n">FormworkModel</span><span class="p">):</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="n">status</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">closed_at</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields_dirty</span><span class="p">(</span><span class="s2">"status"</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"closed"</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed_at</span><span class="p">:</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">"Closing a ticket requires closed_at."</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>fields_dirty(*names)</code> is <code>True</code> if any of the named fields changed since the
 instance was loaded from the database. New instances always return <code>True</code>, so

@@ -1188,7 +1188,8 @@ add a row. Put it in a <code>&lt;form&gt;</code> and save it as any other formse
 <li><strong>Cells.</strong> A row has one cell per visible field. A disabled field shows as text:
   the instance's <code>get_&lt;field&gt;_display()</code>, else the instance's value (a
   comma-separated list for a many-to-many field), else the labels of the chosen
-  values.</li>
+  values. A <a href="../forms/#displayfield"><code>DisplayField</code></a> shows its value as text, a list
+  comma-separated.</li>
 <li><strong>Errors.</strong> A cell keeps its errors in a tooltip under the widget. The tooltip shows
   while the pointer is on the cell or the focus is in it, so the row keeps its
   height. The errors of a whole row show above the row, the formset's own errors
