@@ -8,5 +8,5 @@
     <div x-show="hasError" x-cloak role="alert" class="alert alert-error alert-soft m-1.5">{{ _("Search failed. Please try again.") }}</div>
     <div x-show="noResults" x-cloak class="p-1">{% include "formwork/widgets/partials/no_results_alert.html" %}</div>
   </div>
-  <span class="formwork-autowidth" aria-hidden="true">{% if not widget.search_url %}{% for option in widget.options %}<span>{{ option.label }}</span>{% endfor %}{% endif %}</span>
+  <span class="formwork-autowidth" aria-hidden="true">{% if not widget.search_url %}{{ widget.options|join("\n", attribute="label") }}{% endif %}</span>
 </div>

@@ -270,7 +270,13 @@
 - An admin list with editable columns was slow to render: the example Event list, 100
   rows with six editable columns, took about 390 ms on the server and sent 3.0 MB of
   HTML. The Jinja2 templates bring it to 240 ms. With the stubs from Added it takes
-  125 ms and sends 0.65 MB, with the same seven queries.
+  110 ms and sends 0.65 MB, with the same seven queries.
+- The hidden copy of the option labels that sizes a `Select`, `SelectMultiple` or
+  `ComboBox` is one line of text per label, where it was one element per label. The
+  widths stay the same, and the example Event list has 12% fewer elements for the
+  browser to lay out. A badge select keeps one element per label. Overrides of
+  `formwork/widgets/select.html`, `select_multiple.html` and `combo_box.html` keep
+  working.
 
 ### Fixed
 

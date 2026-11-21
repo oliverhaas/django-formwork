@@ -24,14 +24,11 @@ def _autowidth_copy(bound: forms.BoundField, select: Select) -> str:
     # A list that loads its options from the server has no copy in the full select either.
     if widget["search_url"]:
         return ""
-    return format_html_join(
-        "",
-        "<span>{}</span>",
-        (
-            (option["label_html"] if widget["badges"] and option.get("label_html") else option["label"],)
-            for option in widget["options"]
-        ),
-    )
+    if widget["badges"]:
+        return format_html_join(
+            "", "<span>{}</span>", ((option.get("label_html") or option["label"],) for option in widget["options"])
+        )
+    return format_html_join("\n", "{}", ((option["label"],) for option in widget["options"]))
 
 
 def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, share: bool | None = None) -> None:
