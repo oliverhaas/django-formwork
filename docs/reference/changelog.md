@@ -197,6 +197,12 @@
   key, and one per row and many-to-many field for the values the form starts from. A
   Formwork formset now runs each of them once for all rows. See
   [Formsets](formsets.md#loading-the-rows).
+- A select whose option labels read a relation, such as
+  `f"{city.name} in {city.region}"` in `label_from_instance`, ran one query per option.
+  `Select`, `SelectMultiple` and the server search of every dropdown now load the rows
+  with Django's `FETCH_PEERS` in place of the default `FETCH_ONE`, so the relation loads
+  for all rows with one query. A queryset that sets another fetch mode, such as
+  `FETCH_RAISE`, keeps it.
 - `DateRangeField` shows one control with a range calendar instead of two native date
   inputs. It posts the same `<name>_0` and `<name>_1` ISO dates, so views and tests that
   post the form need no change. Browser tests that fill the two inputs do. To keep the

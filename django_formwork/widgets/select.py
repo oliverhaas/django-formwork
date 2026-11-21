@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 
 from django import forms
 from django.core.exceptions import EmptyResultSet, ImproperlyConfigured, ValidationError
+from django.db.models import FETCH_ONE, FETCH_PEERS
 from django.db.models import fields as model_fields
 from django.forms.models import ModelChoiceIterator
 from django.utils.choices import flatten_choices
@@ -59,8 +60,19 @@ def shared_pages() -> Generator[None]:
         _pages.reset(token)
 
 
+def with_peers(queryset: QuerySet[Any]) -> QuerySet[Any]:
+    """``queryset`` with ``FETCH_PEERS`` in place of Django's default ``FETCH_ONE``, as each label can read a relation.
+
+    A mode that the queryset sets otherwise, such as ``FETCH_RAISE``, stays.
+    """
+    if queryset._fetch_mode is FETCH_ONE:  # type: ignore[attr-defined]  # noqa: SLF001
+        return queryset.fetch_mode(FETCH_PEERS)
+    return queryset
+
+
 def _load(queryset: QuerySet[Any]) -> list[Any]:
     """The rows of ``queryset``, which ``shared_pages()`` keeps for the next select that asks for them."""
+    queryset = with_peers(queryset)
     pages = _pages.get()
     if pages is None:
         return list(queryset)
@@ -445,11 +457,13 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
         first = {"page_only": 1, "exclude": self.selected_past_page}
         return {"pending_url": f"{page}&{urlencode(first, doseq=True)}", "group": ""}
 
-    def optgroups(
+    def optgroups(  # noqa: C901
         self, name: str, value: list[str], attrs: dict[str, Any] | None = None
     ) -> list[tuple[str | None, list[dict[str, Any]], int | None]]:
         """Every choice without a server search, else one page plus the selected ones."""
         if self.search_key is None:
+            if isinstance(self.choices, ModelChoiceIterator):
+                self.choices.queryset = with_peers(self.choices.queryset)
             return super().optgroups(name, value, attrs)
         chosen = {str(subvalue) for subvalue in value if subvalue}
         limit = SEARCH_PAGE_SIZE

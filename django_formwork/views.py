@@ -21,7 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django_formwork.renderers import FormworkRenderer
 from django_formwork.search import SEARCH_PAGE_SIZE, declared_params, get_field, ranked_search
 from django_formwork.widgets import ComboBox, Select, SelectMultiple
-from django_formwork.widgets.select import SearchableSelectMixin, label_extras
+from django_formwork.widgets.select import SearchableSelectMixin, label_extras, with_peers
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -125,7 +125,7 @@ class FormworkSearchView(View):
         if any(isinstance(value, int) and abs(value) > _DB_INT_MAX for value in excluded):
             raise Http404
         queryset = queryset.exclude(**{f"{to_field_name}__in": excluded})
-        queryset = self.search(queryset, widget=widget, query=query)
+        queryset = with_peers(self.search(queryset, widget=widget, query=query))
         # One row past the cap: cheaper than a COUNT and enough to say "there are more".
         rows = list(queryset[offset : offset + SEARCH_PAGE_SIZE + 1])
         truncated = len(rows) > SEARCH_PAGE_SIZE

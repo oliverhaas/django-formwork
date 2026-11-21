@@ -38,7 +38,7 @@ from .models import City
 
 
 def cities(request):
-    return City.objects.filter(active=True).select_related("country")
+    return City.objects.filter(active=True)
 
 
 class CityForm(FormworkForm):
@@ -81,7 +81,10 @@ name whose `search_queryset` closes over other values raises
 The endpoint renders each row with `label_from_instance` of the field, so a
 [`ChoiceLabel`](widgets.md#choicelabel) adds an icon, a description or a
 trigger class to the results. A `ComboBox` over a `CharField` takes its own
-`label_from_instance=` and falls back to `str()`.
+`label_from_instance=` and falls back to `str()`. The endpoint loads the rows with
+Django's `FETCH_PEERS` in place of the default `FETCH_ONE`, so a label that reads a
+relation, such as `city.country`, loads it for the whole page with one query. A
+queryset that sets another fetch mode keeps it.
 
 A search that several fields reuse has one field, and so one `label_from_instance`.
 With `search_label=callable(obj, **params)` on the widget that registers the search,

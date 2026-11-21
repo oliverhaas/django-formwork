@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import inspect
 from functools import partial
+from operator import attrgetter
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, cast
 
@@ -19,7 +20,7 @@ from django.contrib.auth.models import Group, User
 from django.core.checks import Tags, run_checks
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
-from django.db.models import FETCH_PEERS
+from django.db.models import FETCH_RAISE
 from django.forms import modelform_factory
 from django.test import Client
 from django.urls import reverse
@@ -650,23 +651,65 @@ class _CityForm(FormworkForm):
     )
 
 
+class _CityInRegionField(forms.ModelChoiceField):
+    def label_from_instance(self, obj: Any) -> str:
+        return f"{obj.name} in {obj.region}"
+
+
+class _CityInRegionForm(FormworkForm):
+    searched = _CityInRegionField(
+        queryset=City.objects.all(),
+        widget=Select(search_fields=["name"], search_queryset=_cities, search_decorator=None),
+    )
+    listed = _CityInRegionField(queryset=City.objects.all(), widget=Select())
+
+
+def _cities_in_regions(count: int) -> None:
+    for number in range(count):
+        City.objects.create(name=f"City {number}", region=Region.objects.create(name=f"Region {number}"))
+
+
+@pytest.mark.django_db
+@pytest.mark.nplus1
+@pytest.mark.parametrize("name", ["searched", "listed"])
+def test_select_options_load_the_relation_of_their_labels_for_all_rows_at_once(name: str) -> None:
+    _cities_in_regions(3)
+
+    rendered = str(_CityInRegionForm()[name])
+
+    assert "City 2 in Region 2" in rendered
+
+
+@pytest.mark.django_db
+@pytest.mark.nplus1
+def test_search_loads_the_relation_of_its_labels_for_all_rows_at_once() -> None:
+    _cities_in_regions(3)
+
+    response = Client().get(search_url(_key(_CityInRegionForm, "searched"), {}, widget="select"))
+
+    assert "City 2 in Region 2" in response.content.decode()
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "load_regions",
-    [lambda cities: cities.fetch_mode(FETCH_PEERS), lambda cities: cities.prefetch_related("region")],
+    ("first", "second"),
+    [
+        (lambda: City.objects.fetch_mode(FETCH_RAISE), City.objects.all),
+        (City.objects.all, lambda: City.objects.prefetch_related("region")),
+    ],
     ids=["fetch_mode", "prefetch"],
 )
 def test_selects_that_share_their_pages_load_the_rows_as_each_queryset_asks(
-    django_assert_num_queries: Any, load_regions: Callable[..., Any]
+    django_assert_num_queries: Any, first: Callable[[], QuerySet[City]], second: Callable[[], QuerySet[City]]
 ) -> None:
-    """A select that loads the relations of its rows at once does not get the rows of a select that does not."""
+    """A select whose rows load their relations otherwise does not get the rows of another select."""
     region = Region.objects.create(name="North")
     City.objects.bulk_create(City(name=f"City {number}", region=region) for number in range(5))
     fields = []
-    for queryset in (City.objects.all(), load_regions(City.objects.all())):
+    for queryset, label in ((first(), attrgetter("name")), (second(), lambda city: f"{city.name} in {city.region}")):
         form = _CityForm()
         form.fields["city"].queryset = queryset
-        form.fields["city"].label_from_instance = lambda city: f"{city.name} in {city.region}"
+        form.fields["city"].label_from_instance = label
         fields.append(form["city"])
 
     with shared_pages():

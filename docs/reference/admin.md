@@ -1179,7 +1179,9 @@ class ArticleAdmin(admin.ModelAdmin):
 
 `fetch_mode` on a `ModelAdmin` or an inline takes another of Django's fetch modes, for
 example `FETCH_ONE`, which loads a relation for each row with a query of its own, as
-Django's admin does. `None` keeps the mode of the model's default manager.
+Django's admin does. `None` keeps the mode of the model's default manager. The options
+of a relation field switch `FETCH_ONE` to `FETCH_PEERS` either way, as every formwork
+select does.
 
 To find a column that still loads a relation for each row, run the tests of your admin
 with [django-nplus1](https://github.com/oliverhaas/django-nplus1) set to raise. Each

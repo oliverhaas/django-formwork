@@ -208,6 +208,12 @@ assignee = MemberChoiceField(
 )
 ```
 
+`label_from_instance` of a `ModelChoiceField` can read a relation of the row, as in
+`f"{city.name} in {city.region}"`. `Select` and `SelectMultiple` load the rows with
+Django's `FETCH_PEERS` in place of the default `FETCH_ONE`, so the first label that
+reads the relation loads it for all rows with one query. A queryset that sets another
+fetch mode, such as `FETCH_RAISE`, keeps it.
+
 Option groups render as headings. For a domain choice set, such as a country
 select with flag icons, subclass `Select` in your project and set the choices;
 formwork ships no domain widgets.
