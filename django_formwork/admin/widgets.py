@@ -243,6 +243,9 @@ class RelatedWidgetWrapper(_FormworkTemplatesMixin, forms.Widget):
     def is_hidden(self) -> bool:
         return self.widget.is_hidden
 
+    def use_required_attribute(self, initial: Any) -> bool:
+        return self.widget.use_required_attribute(initial)
+
     @property
     def media(self) -> forms.Media:
         return self.widget.media

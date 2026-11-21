@@ -2799,6 +2799,17 @@ def test_relation_buttons_show_next_to_any_visible_widget(admin_client, catalog,
     assert len(soup.select('#id_tags_field [data-related-popup="add"]')) == buttons
 
 
+def test_a_required_relation_shown_as_checkboxes_does_not_require_every_box(admin_client, catalog, monkeypatch):
+    overrides = {models.ManyToManyField: {"widget": forms.CheckboxSelectMultiple, "required": True}}
+    monkeypatch.setattr(site.get_model_admin(Item), "formfield_overrides", overrides)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
+
+    boxes = soup.select("#id_tags_field input[type=checkbox]")
+    assert boxes
+    assert [box for box in boxes if box.has_attr("required")] == []
+
+
 def test_change_button_is_dimmed_without_a_chosen_row(admin_client, catalog):
     soup = BeautifulSoup(admin_client.get(url(Item, "add")).content, "html.parser")
 
