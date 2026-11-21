@@ -2741,7 +2741,9 @@ Relations to many rows do not load this way: a column that reads <code>obj.tags.
 </span></code></pre></div>
 <p><code>fetch_mode</code> on a <code>ModelAdmin</code> or an inline takes another of Django's fetch modes, for
 example <code>FETCH_ONE</code>, which loads a relation for each row with a query of its own, as
-Django's admin does. <code>None</code> keeps the mode of the model's default manager.</p>
+Django's admin does. <code>None</code> keeps the mode of the model's default manager. The options
+of a relation field switch <code>FETCH_ONE</code> to <code>FETCH_PEERS</code> either way, as every formwork
+select does.</p>
 <p>To find a column that still loads a relation for each row, run the tests of your admin
 with <a href="https://github.com/oliverhaas/django-nplus1">django-nplus1</a> set to raise. Each
 test that loads a page then fails on the first relation that a row loads alone, and

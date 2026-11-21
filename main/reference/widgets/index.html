@@ -2141,6 +2141,11 @@ instead; see <a href="../views/#server-side-search">Server-side search</a>.</p>
 </span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="p">),</span>
 </span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="p">)</span>
 </span></code></pre></div>
+<p><code>label_from_instance</code> of a <code>ModelChoiceField</code> can read a relation of the row, as in
+<code>f"{city.name} in {city.region}"</code>. <code>Select</code> and <code>SelectMultiple</code> load the rows with
+Django's <code>FETCH_PEERS</code> in place of the default <code>FETCH_ONE</code>, so the first label that
+reads the relation loads it for all rows with one query. A queryset that sets another
+fetch mode, such as <code>FETCH_RAISE</code>, keeps it.</p>
 <p>Option groups render as headings. For a domain choice set, such as a country
 select with flag icons, subclass <code>Select</code> in your project and set the choices;
 formwork ships no domain widgets.</p>

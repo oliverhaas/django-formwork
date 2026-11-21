@@ -1146,7 +1146,7 @@ which <code>FormworkSearchView</code> serves for every registered search.</p>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="k">def</span><span class="w"> </span><span class="nf">cities</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="k">return</span> <span class="n">City</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">select_related</span><span class="p">(</span><span class="s2">"country"</span><span class="p">)</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="k">return</span> <span class="n">City</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="k">class</span><span class="w"> </span><span class="nc">CityForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
@@ -1211,7 +1211,10 @@ name whose <code>search_queryset</code> closes over other values raises
 <p>The endpoint renders each row with <code>label_from_instance</code> of the field, so a
 <a href="../widgets/#choicelabel"><code>ChoiceLabel</code></a> adds an icon, a description or a
 trigger class to the results. A <code>ComboBox</code> over a <code>CharField</code> takes its own
-<code>label_from_instance=</code> and falls back to <code>str()</code>.</p>
+<code>label_from_instance=</code> and falls back to <code>str()</code>. The endpoint loads the rows with
+Django's <code>FETCH_PEERS</code> in place of the default <code>FETCH_ONE</code>, so a label that reads a
+relation, such as <code>city.country</code>, loads it for the whole page with one query. A
+queryset that sets another fetch mode keeps it.</p>
 <p>A search that several fields reuse has one field, and so one <code>label_from_instance</code>.
 With <code>search_label=callable(obj, **params)</code> on the widget that registers the search,
 the endpoint labels each row with it instead, with the params of the field that asks.</p>
