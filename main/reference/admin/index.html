@@ -2842,8 +2842,8 @@ asks you to set <code>share_choices</code> on the <code>ModelAdmin</code> or the
 <code>DatePicker</code> and <code>DateTimePicker</code> as a stub: the closed widget with its value, and an
 input that posts the value as the full widget does. When the pointer rests on the stub,
 or the stub takes the focus or a press, the full widget loads and takes its place with
-the focus, a typed date and the press. After a failed save, the rows render the full
-widgets.</p>
+the focus, a typed date and the press. After a failed save, a field with an error renders
+the full widget next to its error, and the other fields stay stubs.</p>
 <p>The stubs load from <code>cells/&lt;field&gt;/</code> under the admin's URLs, named
 <code>&lt;app_label&gt;_&lt;model_name&gt;_cell</code>. The query names the row's <code>pk</code>, its form <code>prefix</code> and
 the <code>value</code> that the stub holds, so a changed value stays changed. The view builds the
