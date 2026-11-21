@@ -1226,6 +1226,9 @@ add a row. Put it in a <code>&lt;form&gt;</code> and save it as any other formse
   <code>can_add = False</code> on the formset class, or <code>edit_only=True</code>, removes Add another.</li>
 <li><strong>Empty table.</strong> Without rows, the table shows "No <em>tasks</em> yet.", with the model's
   <code>verbose_name_plural</code>.</li>
+<li><strong>Choices.</strong> A <code>Select</code> or <code>SelectMultiple</code> of a relation loads its choices with one
+  query for all rows. A row loads its own when the form or the formset can give it
+  other choices, as <a href="../admin/#shared-choices">Shared choices</a> lists.</li>
 </ul>
 <p><code>as_rows(flush=True)</code> is for a table in a card: the table runs to the card's edges,
 and its first and last columns take the card's padding.</p>
