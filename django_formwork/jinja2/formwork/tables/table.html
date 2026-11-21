@@ -1,34 +1,34 @@
 <div id="{{ formset.prefix }}-table" x-data="formworkFormset" data-prefix="{{ formset.prefix }}" data-min="{{ formset.min_num }}" data-max="{{ formset.max_num }}">
   {{ formset.management_form }}
   {% if formset.non_form_errors() %}
-  <div role="alert" class="alert alert-error alert-soft {% if table.flush %}mx-4 mt-4{% else %}mb-3{% endif %}"><i class="icon icon-circle-exclamation-point size-5" aria-hidden="true"></i><span>{{ formset.non_form_errors()|join(" ") }}</span></div>
+  <div role="alert" class="alert alert-error alert-soft {% if flush %}mx-4 mt-4{% else %}mb-3{% endif %}"><i class="icon icon-circle-exclamation-point size-5" aria-hidden="true"></i><span>{{ formset.non_form_errors()|join(" ") }}</span></div>
   {% endif %}
-  <div class="overflow-x-auto" x-show="total"{% if not table.rows %} x-cloak{% endif %}>
+  <div class="overflow-x-auto" x-show="total"{% if not rows %} x-cloak{% endif %}>
     {# Flush, the first column lines up with a card's title, 1.5rem in. #}
-    <table class="table table-sm{% if table.flush %} [&_:is(th,td):first-child]:pl-6 [&_:is(th,td):last-child]:pr-4{% endif %}" x-ref="rows">
+    <table class="table table-sm{% if flush %} [&_:is(th,td):first-child]:pl-6 [&_:is(th,td):last-child]:pr-4{% endif %}" x-ref="rows">
       <thead class="text-xs">
         <tr>
-          {% for header in table.headers %}
+          {% for header in headers %}
           <th class="whitespace-nowrap"{% if header.indent %} data-indent{% endif %}>
             {{ header.label|capfirst }}{% if header.required %} <span class="text-error" aria-hidden="true">*</span>{% endif %}
             {% if header.help_text %}<span class="tooltip tooltip-bottom align-middle font-normal normal-case" data-tip="{{ header.help_text|striptags }}"><i class="icon icon-info size-3.5 opacity-50" aria-hidden="true"></i></span>{% endif %}
           </th>
           {% endfor %}
-          {% if table.actions %}<th class="w-px"><span class="sr-only">{{ _("Actions") }}</span></th>{% endif %}
+          {% if actions %}<th class="w-px"><span class="sr-only">{{ _("Actions") }}</span></th>{% endif %}
         </tr>
       </thead>
-      {% for row in table.rows %}{{ row.render() }}{% endfor %}
+      {% for row in rows %}{{ row.form.render_row(row) }}{% endfor %}
     </table>
   </div>
-  {{ table.option_lists }}
-  {% if table.empty_row %}<template x-ref="empty">{{ table.empty_row.render() }}</template>{% endif %}
-  <p class="px-6 py-8 text-center text-sm text-base-content/50" x-show="!total"{% if table.rows %} x-cloak{% endif %}>
-    {{ table.empty_text }}
+  {{ option_lists }}
+  {% if empty_row %}<template x-ref="empty">{{ empty_row.form.render_row(empty_row) }}</template>{% endif %}
+  <p class="px-6 py-8 text-center text-sm text-base-content/50" x-show="!total"{% if rows %} x-cloak{% endif %}>
+    {{ empty_text }}
   </p>
-  {% if table.empty_row or table.footer %}
-  <div class="flex flex-wrap items-center gap-3 border-t border-base-300 py-2{% if table.flush %} pr-4 pl-3{% endif %}"{% if not table.footer %} x-show="canAdd"{% endif %}>
-    {% if table.empty_row %}<button type="button" class="btn btn-ghost btn-sm text-primary" @click="add()"{% if table.footer %} x-show="canAdd"{% endif %}><i class="icon icon-plus size-4" aria-hidden="true"></i> {{ table.add_text }}</button>{% endif %}
-    {{ table.footer }}
+  {% if empty_row or footer %}
+  <div class="flex flex-wrap items-center gap-3 border-t border-base-300 py-2{% if flush %} pr-4 pl-3{% endif %}"{% if not footer %} x-show="canAdd"{% endif %}>
+    {% if empty_row %}<button type="button" class="btn btn-ghost btn-sm text-primary" @click="add()"{% if footer %} x-show="canAdd"{% endif %}><i class="icon icon-plus size-4" aria-hidden="true"></i> {{ add_text }}</button>{% endif %}
+    {{ footer }}
   </div>
   {% endif %}
 </div>

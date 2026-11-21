@@ -129,7 +129,8 @@ def task_edit_all(request):
   the instance's `get_<field>_display()`, else the instance's value (a
   comma-separated list for a many-to-many field), else the labels of the chosen
   values. A [`DisplayField`](forms.md#displayfield) shows its value as text, a list
-  comma-separated.
+  comma-separated. The text is the bound field's `display_value`, so a field with a
+  `bound_field_class` of its own can change it.
 - **Errors.** A cell keeps its errors in a tooltip under the widget. The tooltip shows
   while the pointer is on the cell or the focus is in it, so the row keeps its
   height. The errors of a whole row show above the row, the formset's own errors
@@ -142,6 +143,8 @@ def task_edit_all(request):
   fades and is struck through until the save deletes it. Add another hides at
   `max_num`, Remove at `min_num`, and the indexes of the rows stay contiguous.
   `can_add = False` on the formset class, or `edit_only=True`, removes Add another.
+  A formset method `row_url(form)` that returns a URL gives the row an Open link in
+  its last column.
 - **Empty table.** Without rows, the table shows "No *tasks* yet.", with the model's
   `verbose_name_plural`.
 - **Choices.** A `Select` or `SelectMultiple` of a relation loads its choices with one
@@ -167,12 +170,14 @@ way, as one `<tbody>`. [Saving a row](#saving-a-row) describes the view behind
 
 ### Widgets that load on use
 
-`formset.as_rows(cell_url=...)` renders each `Select`, `SelectMultiple`, `DatePicker`
-and `DateTimePicker` of the saved rows as a stub: the closed widget with its value, and
+`formset.as_rows(cell_url=...)` renders each `Select`, `SelectMultiple`, `ComboBox`,
+`ComboBoxMultiple`, `DatePicker`, `DateTimePicker`, `DateRangePicker` and
+`DateTimeRangePicker` of the saved rows as a stub: the closed widget with its value, and
 inputs that post the value as the full widget does. When the pointer rests on a stub, or
 the stub takes the focus or a press, the full widget loads from `cell_url` and takes its
-place with the focus, a typed date and the press. The stubs of a select load the labels
-of their rows with one query for all rows. A field with an error renders the full widget.
+place with the focus, the typed text and the press. The stubs of a select load the
+labels of their rows with one query for all rows. A field with an error renders the full
+widget.
 
 `FormworkCellMixin` is the view behind `cell_url`. The query names the `field`, the
 row's `pk` and its form `prefix`, and holds the stub's inputs under their names, so a
@@ -205,28 +210,19 @@ view as you protect the page.
 
 ### Templates
 
-| Template                     | Renders                    | Context           | Set per class on                   |
-|------------------------------|----------------------------|-------------------|------------------------------------|
-| `formwork/tables/table.html` | `as_rows()`: the `<table>` | `table`, `formset`| the formset, `template_name_table` |
-| `formwork/tables/row.html`   | `as_row()`: one `<tbody>`  | `row`, `form`     | the form, `template_name_row`      |
+| Template                     | Renders                    | Context                          | Set per class on                   |
+|------------------------------|----------------------------|----------------------------------|------------------------------------|
+| `formwork/tables/table.html` | `as_rows()`: the `<table>` | `formset.get_table_context()`    | the formset, `template_name_table` |
+| `formwork/tables/row.html`   | `as_row()`: one `<tbody>`  | `form.get_row_context()`         | the form, `template_name_row`      |
 
-`table` is a `django_formwork.tables.Table`, with the `headers`, the `rows`, the
-`empty_row` that Add another copies and the `footer` markup at the right end of the Add
-another row, where the admin puts the pager of an inline. Each row is a `TableRow`, with the `form`, its
-`cells` and its `hidden` inputs; each cell is a `TableCell`, with the bound `field` or
-the `display` text of a disabled one.
-
-For a template of your own, `Table.for_formset(formset)` builds the table that
-`as_rows()` renders. Its keyword arguments change what the table shows:
-
-- `fields`: the names of the columns, in their order. A name that the forms do not
-  have gets no column.
-- `display`: a function of a bound field that returns what the cell of a
-  `DisplayField` or a disabled field shows, in place of the text above.
-- `link`: a function of a form that returns the URL of the row's own page, or `""`.
-  A row with a URL has an Open link in its last column.
-
-The admin builds its tabular inlines and its lists this way.
+The table context has the `headers`, the `rows`, the `empty_row` that Add another
+copies and the `footer` markup at the right end of the Add another row, where the
+admin puts the pager of an inline. Each row is the context of a row: the `form`, its
+`cells` (the visible bound fields) and its `hidden` inputs. To change what a table
+shows, override `get_table_context()` on the formset or `get_row_context()` on the
+form. `render_table(context)` and `render_row(context)` render a context that you
+changed. A form without these methods, such as a plain `ModelForm`, gets them from
+the formset.
 
 Both are Jinja2 templates. To override one for the whole project, put a template
 at the same path in the `jinja2/` directory of an app listed before `django_formwork`.

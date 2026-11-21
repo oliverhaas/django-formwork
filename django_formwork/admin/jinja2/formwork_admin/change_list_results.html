@@ -141,7 +141,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for row in cl.table.rows %}
+          {% for row in cl.rows %}
           {% set obj, index = row.form.instance, loop.index0 %}
           {% set row_errors = row.form.non_field_errors() if editable else () %}
           {% if row_errors %}
@@ -162,14 +162,15 @@
             {% endif %}
             {% for c in row.cells %}
             {% set column = cl.columns[loop.index0] %}
-            <td class="{{ "min-w-48" if column.wrap else "whitespace-nowrap" }}{{ " text-right" if column.numeric }}"{% if c.field is not none %} data-editable data-formwork-field{% if column.indent %} data-indent{% endif %}{% if c.changed %} data-formwork-changed{% if c.field.initial_checked %} data-formwork-initial="{{ c.field.initial_checked }}"{% endif %}{% endif %}{% if c.field.errors %} data-invalid{% endif %}{% endif %}>
-              {% if c.field is not none %}
-              {{ c.widget }}{{ m.cell_notes(c.field) }}
+            {% set field_editable = not c.field.disabled %}
+            <td class="{{ "min-w-48" if column.wrap else "whitespace-nowrap" }}{{ " text-right" if column.numeric }}"{% if field_editable %} data-editable data-formwork-field{% if column.indent %} data-indent{% endif %}{% if row.form.is_bound and c.name in row.form.changed_data %} data-formwork-changed{% if c.initial_checked %} data-formwork-initial="{{ c.initial_checked }}"{% endif %}{% endif %}{% if c.errors %} data-invalid{% endif %}{% endif %}>
+              {% if field_editable %}
+              {{ c.as_widget(attrs={"aria-label": c.label|string}) }}{{ m.cell_notes(c) }}
               {% elif column.linked and row.link %}
               {% set pick = cl.pick(obj) %}
-              <a {% if cl.is_popup %}href="{{ row.link }}"{% else %}{{ m.page_link(row.link, "change") }}{% endif %} class="link link-primary font-medium"{% if pick %} data-popup-pick="{{ pick|tojson_attr }}"{% endif %}>{{ m.cell(c.display) }}</a>
+              <a {% if cl.is_popup %}href="{{ row.link }}"{% else %}{{ m.page_link(row.link, "change") }}{% endif %} class="link link-primary font-medium"{% if pick %} data-popup-pick="{{ pick|tojson_attr }}"{% endif %}>{{ m.cell(c.value()) }}</a>
               {% else %}
-              {{ m.cell(c.display) }}
+              {{ m.cell(c.value()) }}
               {% endif %}
             </td>
             {% endfor %}
@@ -210,7 +211,7 @@
         </tbody>
       </table>
     </div>
-    {{ cl.table.option_lists }}
+    {{ cl.option_lists }}
     {% if editable %}</form>{% endif %}
 
     {#- Kept without rows, as change_list.html waits for it before the first render. It ends the card,

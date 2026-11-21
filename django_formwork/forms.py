@@ -27,6 +27,7 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db.models import Model, UniqueConstraint
 from django.forms import Form, ModelForm
 from django.forms.forms import DeclarativeFieldsMetaclass
+from django.forms.formsets import DELETION_FIELD_NAME
 from django.forms.models import (
     InlineForeignKeyField,
     ModelChoiceField,
@@ -34,16 +35,18 @@ from django.forms.models import (
     ModelMultipleChoiceField,
     construct_instance,
 )
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from django_formwork.async_forms import AsyncFormMixin, AsyncModelFormMixin
 from django_formwork.boundfield import FormworkBoundField
 from django_formwork.fields import DisplayField
-from django_formwork.renderers import FormworkRenderer
+from django_formwork.renderers import FormworkRenderer, formwork_renderer
 from django_formwork.search import register_form_searches
-from django_formwork.tables import RowRenderMixin
 
 if TYPE_CHECKING:
     from django.forms import BoundField
+    from django.utils.safestring import SafeString
 
 __all__ = [
     "FormworkForm",
@@ -55,6 +58,10 @@ __all__ = [
 _M = TypeVar("_M", bound=Model)
 
 _ERROR_DISPLAY_CHOICES = ("auto", "inline", "tooltip")
+
+#: Hidden input carrying the form prefix so the save endpoint can rebind the
+#: same field namespace the row was rendered with.
+PREFIX_INPUT_NAME = "_formwork_prefix"
 
 
 def _check_meta(cls: type) -> None:
@@ -418,6 +425,75 @@ else:
 
         def __class_getitem__(cls, item: object) -> type[ModelForm]:
             return ModelForm
+
+
+class RowRenderMixin:
+    """Add ``as_row()`` to a form: render it as one table ``<tbody>``."""
+
+    template_name_row = "formwork/tables/row.html"
+
+    if TYPE_CHECKING:
+        prefix: str | None
+        fields: dict[str, Any]
+        renderer: Any
+        add_prefix: Any
+        render: Any
+        hidden_fields: Any
+        visible_fields: Any
+        __getitem__: Any
+
+    def as_row(self, save_url: str = "") -> SafeString:
+        return self.render_row(self.get_row_context(save_url=save_url))
+
+    def render_row(self, context: dict[str, Any]) -> SafeString:
+        """The row template with ``context``, a dict from ``get_row_context()``."""
+        return self.render(self.template_name_row, context, formwork_renderer(self.renderer))
+
+    def get_row_context(
+        self, *, save_url: str = "", new: bool = False, can_delete: bool = False, link: str = "", actions: bool = False
+    ) -> dict[str, Any]:
+        """The row template's context: a cell per visible field, and what the last column holds.
+
+        ``new`` rows have Remove, saved ones with ``can_delete`` a Delete toggle, and ``link`` an Open link.
+        """
+        hidden = self.row_hidden_inputs if save_url else mark_safe("".join(str(bf) for bf in self.hidden_fields()))  # noqa: S308
+        deletion_field = None
+        if can_delete and not new and DELETION_FIELD_NAME in self.fields:
+            deletion_field = self[DELETION_FIELD_NAME]
+        return {
+            "form": self,
+            "row_id": self.row_id,
+            "cells": [bound_field for bound_field in self.visible_fields() if bound_field.name != DELETION_FIELD_NAME],
+            "hidden": hidden,
+            "new": new,
+            "deletion_field": deletion_field,
+            "link": link,
+            "save_url": save_url,
+            "actions": actions,
+        }
+
+    @property
+    def row_hidden_inputs(self) -> SafeString:
+        """Prefix + hidden inputs for hand-authored autosave rows.
+
+        Emits the pk explicitly, not via the formset's ``id`` field, so a row re-rendered from a
+        standalone form (as the save view does) still round-trips its pk.
+        """
+        parts: list[str] = [
+            format_html('<input type="hidden" name="{}" value="{}">', PREFIX_INPUT_NAME, self.prefix or ""),
+        ]
+        instance = getattr(self, "instance", None)
+        pk_name = None
+        if instance is not None:
+            pk_name = instance._meta.pk.name  # noqa: SLF001
+            pk = "" if instance.pk is None else instance.pk
+            parts.append(format_html('<input type="hidden" name="{}" value="{}">', self.add_prefix(pk_name), pk))
+        parts.extend(str(bf) for bf in self.hidden_fields() if bf.name != pk_name)
+        return mark_safe("".join(parts))  # noqa: S308 (parts are escaped / widget-safe)
+
+    @property
+    def row_id(self) -> str:
+        return f"formwork-row-{self.prefix or 'form'}"
 
 
 class FormworkForm(

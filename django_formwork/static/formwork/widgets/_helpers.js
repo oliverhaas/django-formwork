@@ -220,11 +220,11 @@ if (typeof document !== "undefined") {
 }
 
 // --- Widgets that the server sent as a stub ----------------------------
-// An editable list renders its selects and date pickers as stubs: the closed
-// widget, and the value in an input that posts as the full widget's would. A
-// hover that rests on a stub, a focus or a press loads the full widget from
-// the stub's URL and puts it in the stub's place, started, so that the focus,
-// the typed text and the press move over to it.
+// An editable list renders its selects, combo boxes and date pickers as stubs:
+// the closed widget, and the value in an input that posts as the full widget's
+// would. A hover that rests on a stub, a focus or a press loads the full widget
+// from the stub's URL and puts it in the stub's place, started, so that the
+// focus, the typed text and the press move over to it.
 const STUB_HOVER_DELAY = 80;
 
 if (typeof document !== "undefined") {
@@ -241,17 +241,19 @@ if (typeof document !== "undefined") {
     const widget = template.content.firstElementChild;
     if (!widget || !stub.isConnected) return;
     const active = stub.contains(document.activeElement) ? document.activeElement : null;
-    const typed = stub.querySelector('input:not([type="hidden"])');
+    const typed = stub.querySelectorAll('input:not([type="hidden"])');
     // Started at once: the focus and the press below need its listeners, and
     // Alpine's own observer would only see it after them.
     widget._formworkStarted = true;
     Alpine.mutateDom(() => stub.replaceWith(widget));
     Alpine.initTree(widget);
     window.htmx?.process?.(widget);
-    const input = typed && twin(widget, typed);
-    if (input && typed.value !== typed.defaultValue) {
-      input.value = typed.value;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+    for (const part of typed) {
+      const input = twin(widget, part);
+      if (input && part.value !== part.defaultValue) {
+        input.value = part.value;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
     }
     if (active) twin(widget, active)?.focus();
     if (stub._formworkPress) twin(widget, stub._formworkPress)?.click();
@@ -310,7 +312,7 @@ if (typeof document !== "undefined") {
       if (!stub) return;
       // The stub's <details> must not open empty. The full widget gets the press.
       event.preventDefault();
-      stub._formworkPress = event.target.closest("summary, input, button");
+      stub._formworkPress = event.target.closest('summary, input, button, [role="group"], .combobox-display');
       load(stub);
     },
     true,

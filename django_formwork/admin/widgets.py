@@ -243,6 +243,9 @@ class RelatedWidgetWrapper(_FormworkTemplatesMixin, forms.Widget):
     def is_hidden(self) -> bool:
         return self.widget.is_hidden
 
+    def use_required_attribute(self, initial: Any) -> bool:
+        return self.widget.use_required_attribute(initial)
+
     @property
     def media(self) -> forms.Media:
         return self.widget.media
@@ -266,11 +269,9 @@ class RelatedWidgetWrapper(_FormworkTemplatesMixin, forms.Widget):
     def render(
         self, name: str, value: Any, attrs: dict[str, Any] | None = None, renderer: BaseRenderer | None = None
     ) -> SafeString:
-        context = self.widget.get_context(name, value, attrs)
-        # The stubs lack Widget._render.
-        render = self.widget._render  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-        rendered = render(self.widget.template_name, context, renderer)
-        wrapper_context = self.get_wrapper_context(name, rendered, context["widget"].get("value"))
+        # The widget's own render, which a stub replaces in the saved rows of a tabular inline.
+        rendered = self.widget.render(name, value, attrs, renderer)
+        wrapper_context = self.get_wrapper_context(name, rendered, value)
         # Widget declares template_name optional; this class always sets it.
         return self._render(self.template_name, wrapper_context, renderer)  # ty: ignore[invalid-argument-type]
 

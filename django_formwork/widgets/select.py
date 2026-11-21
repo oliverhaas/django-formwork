@@ -16,11 +16,12 @@ from django.forms.models import ModelChoiceIterator
 from django.utils.choices import flatten_choices
 from django.utils.formats import number_format
 from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext
 
 from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search_url
 
-from ._base import _FormworkTemplatesMixin, _ModuleScript, _StubMixin
+from ._base import _FormworkTemplatesMixin, _ModuleScript, _StubMixin, widget_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Generator, Iterable, Iterator, Mapping, Sequence
@@ -170,14 +171,6 @@ class _SharedChoices:
         return {**{value: obj for value, obj in self.shown.items() if value in self.values}, **self.selected}
 
 
-def _select_of(field: forms.Field | None) -> SearchableSelectMixin | None:
-    """The select that ``field`` renders, also inside a widget that wraps it."""
-    widget = getattr(field, "widget", None)
-    while widget is not None and not isinstance(widget, SearchableSelectMixin):
-        widget = getattr(widget, "widget", None)
-    return widget
-
-
 def rows_share_choices(formset: BaseFormSet[Any], field: forms.Field, *, share: bool | None = None) -> bool:
     """Whether the rows of ``formset`` get the same choices for ``field``.
 
@@ -194,7 +187,7 @@ def share_choices(formset: BaseFormSet[Any], *, share: bool | None = None) -> No
     """Let the selects of a formset's rows load a relation's choices once for all rows.
 
     ``None`` leaves out the fields whose rows can get choices of their own, ``True`` shares those too.
-    The first call for a formset decides, so ``Table.for_formset`` keeps what the admin set before."""
+    The first call for a formset decides, so ``as_rows()`` keeps what the admin set before."""
     rows = formset.forms
     if not rows or getattr(formset, "_formwork_shared", False):
         return
@@ -204,10 +197,43 @@ def share_choices(formset: BaseFormSet[Any], *, share: bool | None = None) -> No
             continue
         if not rows_share_choices(formset, field, share=share):
             continue
-        selects = [(form[name], select) for form in rows if (select := _select_of(form.fields.get(name)))]
+        selects = [
+            (form[name], select) for form in rows if (select := widget_of(form.fields.get(name), SearchableSelectMixin))
+        ]
         shared = _SharedChoices(field.queryset, field.to_field_name or "pk", selects)
         for _bound, select in selects:
             select.shared = shared
+
+
+def column_options(formset: BaseFormSet[Any]) -> SafeString:
+    """Let the selects of a table column copy their option rows from one ``<template>``, and return the templates.
+
+    Call it after ``share_choices`` and ``stub_formset``, before the rows render. A column qualifies when its rows
+    list the same choices, all of them, and a row renders in full. The row of Add another keeps its own options,
+    as does the full widget that replaces a stub."""
+    rows = formset.forms
+    lists = []
+    for bound in rows[0].visible_fields() if rows else ():
+        select = widget_of(bound.field, SearchableSelectMixin)
+        if select is None or select.search_key is not None or bound.field.disabled:
+            continue
+        # A relation's rows share their choices where share_choices() said so, other choices where no hook changes them.
+        if isinstance(bound.field, forms.ModelChoiceField):
+            if select.shared is None:
+                continue
+        elif not rows_share_choices(formset, bound.field):
+            continue
+        selects = [
+            row_select for form in rows if (row_select := widget_of(form.fields.get(bound.name), SearchableSelectMixin))
+        ]
+        if all(getattr(row_select, "stub_url", None) is not None for row_select in selects):
+            continue
+        template_id = f"{formset.prefix}-{bound.name}-options"
+        for row_select in selects:
+            row_select.options_template_id = template_id
+        options = select.option_list(bound.html_name, bound.build_widget_attrs({}), formset.renderer)
+        lists.append(format_html('<template id="{}">{}</template>', template_id, options))
+    return mark_safe("".join(lists))  # noqa: S308
 
 
 def _defer_page(options: list[dict[str, Any]], pending: dict[str, Any]) -> list[dict[str, Any]]:
@@ -339,7 +365,7 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
     option_list_template_name: ClassVar[str]
     #: The option labels that size the stubs of rows that share their choices, set with ``stub_url``.
     stub_copy: Callable[[], str] | None = None
-    #: The id of the ``<template>`` that holds the option rows of a table column, set by ``Table.for_formset``.
+    #: The id of the ``<template>`` that holds the option rows of a table column, set by ``column_options()``.
     #: The select copies the rows from it when its list opens, so each row does not repeat them.
     options_template_id = ""
 

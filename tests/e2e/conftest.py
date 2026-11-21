@@ -390,7 +390,7 @@ class RowsPage(_ScreenPage):
             body = self.cell_view().get(RequestFactory().get(f"{url.path}?{url.query}")).content
         else:
             rows = self.formset().as_rows(cell_url="/rows/cell/" if self.cell_view else "")
-            body = _page_html("Rows", f'<div class="card-body">{rows}</div>')
+            body = _page_html("Rows", f'<div class="card-body">{rows}</div>', width="max-w-5xl")
         route.fulfill(content_type="text/html", body=body)
 
 

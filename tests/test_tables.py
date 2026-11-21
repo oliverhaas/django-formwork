@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -18,6 +19,8 @@ from django.utils.datastructures import MultiValueDict
 from e2e.models import City, Region, UniqueCode
 
 from django_formwork import (
+    DateRange,
+    DateRangeField,
     DisplayField,
     FormworkBaseModelFormSet,
     FormworkCellMixin,
@@ -26,8 +29,8 @@ from django_formwork import (
     FormworkRowSaveMixin,
     formwork_modelformset_factory,
 )
-from django_formwork.tables import PREFIX_INPUT_NAME, Table
-from django_formwork.widgets import Select, SelectMultiple
+from django_formwork.forms import PREFIX_INPUT_NAME
+from django_formwork.widgets import ChoiceLabel, ComboBox, ComboBoxMultiple, Select, SelectMultiple
 
 pytestmark = pytest.mark.django_db
 
@@ -95,40 +98,36 @@ def test_a_display_column_shows_the_value_of_its_source_as_text():
     assert cell.find("input") is None
 
 
-def test_for_formset_fields_name_and_order_the_columns():
-    UniqueCode.objects.create(code="A", label="alpha")
-    formset = formwork_modelformset_factory(UniqueCode, form=CodeRowForm, extra=0)(queryset=UniqueCode.objects.all())
-
-    soup = BeautifulSoup(Table.for_formset(formset, fields=["label", "missing", "code"]).render(), "html.parser")
-
-    row = soup.select_one("table > tbody")
-    assert [cell["data-field"] for cell in row.find_all("td", attrs={"data-field": True})] == ["label", "code"]
-
-
-def test_for_formset_display_shows_a_field_that_posts_nothing():
-    UniqueCode.objects.create(code="A", label="alpha")
-    formset = formwork_modelformset_factory(UniqueCode, form=CodeRowForm, extra=0)(queryset=UniqueCode.objects.all())
-
-    table = Table.for_formset(formset, display=lambda bound_field: bound_field.form.instance.label.upper())
-
-    cell = BeautifulSoup(table.render(), "html.parser").find("td", attrs={"data-field": "label"})
-    assert cell.get_text(strip=True) == "ALPHA"
-
-
-def test_for_formset_link_gives_a_row_an_open_link():
+def test_row_url_gives_a_row_an_open_link():
     first = UniqueCode.objects.create(code="A")
     UniqueCode.objects.create(code="B")
-    formset = type("Rows", (CodeFormSet,), {"can_add": False, "can_delete": False})(
-        queryset=UniqueCode.objects.order_by("code")
-    )
 
-    table = Table.for_formset(
-        formset, link=lambda form: f"/codes/{form.instance.pk}/" if form.instance == first else ""
-    )
+    class LinkedRows(CodeFormSet):
+        can_add = False
+        can_delete = False
 
-    linked, plain = BeautifulSoup(table.render(), "html.parser").select("table > tbody")
+        def row_url(self, form):
+            return f"/codes/{form.instance.pk}/" if form.instance == first else ""
+
+    html = LinkedRows(queryset=UniqueCode.objects.order_by("code")).as_rows()
+
+    linked, plain = BeautifulSoup(html, "html.parser").select("table > tbody")
     assert linked.find("a", attrs={"aria-label": "Open"})["href"] == f"/codes/{first.pk}/"
     assert plain.find("a", attrs={"aria-label": "Open"}) is None
+
+
+def test_as_rows_renders_a_plain_model_form():
+    class PlainForm(forms.ModelForm):
+        class Meta:
+            model = UniqueCode
+            fields = ["code"]
+
+    UniqueCode.objects.create(code="A")
+    formset = formwork_modelformset_factory(UniqueCode, form=PlainForm, extra=0)(queryset=UniqueCode.objects.all())
+
+    cell = BeautifulSoup(formset.as_rows(), "html.parser").find("td", attrs={"data-field": "code"})
+
+    assert cell.find("input")["value"] == "A"
 
 
 def test_an_app_listed_first_overrides_the_row_template(settings, tmp_path, monkeypatch):
@@ -147,7 +146,7 @@ def test_an_app_listed_first_overrides_the_row_template(settings, tmp_path, monk
 
 def test_a_django_template_renders_the_rows_of_a_form_that_names_one(settings, tmp_path):
     (tmp_path / "rows").mkdir()
-    (tmp_path / "rows" / "code.html").write_text("<tbody>{{ row.form.code.value }} in a project row</tbody>")
+    (tmp_path / "rows" / "code.html").write_text("<tbody>{{ form.code.value }} in a project row</tbody>")
     settings.TEMPLATES = [{**settings.TEMPLATES[0], "DIRS": [tmp_path]}]
 
     class ProjectRowForm(CodeRowForm):
@@ -516,19 +515,22 @@ def _rows(*, cell_url=""):
     return BeautifulSoup(formset.as_rows(cell_url=cell_url), "html.parser")
 
 
-def _toggles(soup):
-    toggles = soup.select("details:has([name$=-tags]) > summary")
-    for tag in [*toggles, *(child for toggle in toggles for child in toggle.find_all())]:
-        tag.attrs = {name: value for name, value in tag.attrs.items() if not name.startswith((":", "x-"))}
-    return [str(toggle) for toggle in toggles]
+def _closed(soup, selector):
+    elements = soup.select(selector)
+    for tag in [*elements, *(child for element in elements for child in element.find_all())]:
+        tag.attrs = {
+            name: value for name, value in tag.attrs.items() if not name.startswith((":", "x-", "@", "aria-controls"))
+        }
+    return [str(element) for element in elements]
 
 
 def test_the_select_multiple_stubs_of_as_rows_show_the_closed_toggles_of_the_full_selects(tagged):
     stubs = _rows(cell_url="/cells/")
 
     assert len(stubs.select("[data-formwork-stub]:has([name$=-tags])")) == 3
-    assert len(set(_toggles(stubs))) == 3
-    assert _toggles(stubs) == _toggles(_rows())
+    toggles = "details:has([name$=-tags]) > summary"
+    assert len(set(_closed(stubs, toggles))) == 3
+    assert _closed(stubs, toggles) == _closed(_rows(), toggles)
 
 
 @pytest.mark.parametrize("cell_url", ["", "/cells/"])
@@ -568,3 +570,120 @@ def test_a_select_multiple_cell_answers_with_the_full_select_for_the_values_its_
     checked = soup.select("[x-data=formworkSelectMultiple] input[type=checkbox][checked]")
     assert [box["value"] for box in checked] == [str(sale.pk), str(used.pk)]
     assert eco.name in soup.select_one(".formwork-autowidth").get_text()
+
+
+class PeriodRowForm(FormworkModelForm):
+    period = DateRangeField(required=False)
+
+    class Meta:
+        model = Item
+        fields = ["name"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        released = self.instance.released
+        self.initial["period"] = DateRange(released, released and released + dt.timedelta(days=6))
+
+
+PeriodFormSet = formwork_modelformset_factory(Item, form=PeriodRowForm, extra=0)
+
+
+class PeriodCell(FormworkCellMixin):
+    formset_class = PeriodFormSet
+    queryset = Item.objects.all()
+
+
+@pytest.fixture
+def released():
+    kitchen = Category.objects.create(name="Kitchen", slug="kitchen")
+    return [
+        Item.objects.create(name=name, category=kitchen, released=day)
+        for name, day in [("Kettle", None), ("Lamp", dt.date(2026, 3, 4))]
+    ]
+
+
+def _periods(*, cell_url=""):
+    return BeautifulSoup(PeriodFormSet(queryset=Item.objects.order_by("pk")).as_rows(cell_url=cell_url), "html.parser")
+
+
+def test_the_date_range_stubs_of_as_rows_show_the_closed_fields_of_the_full_pickers(released):
+    stubs = _periods(cell_url="/cells/")
+
+    assert len(stubs.select("[data-formwork-stub] [role=group]")) == 2
+    assert _closed(stubs, ".date-range-picker [role=group]") == _closed(_periods(), ".date-range-picker [role=group]")
+
+
+def test_the_date_range_stubs_of_as_rows_post_the_ranges_of_their_rows(released):
+    stubs = _periods(cell_url="/cells/").select("input[name]")
+
+    formset = PeriodFormSet(
+        {stub["name"]: stub.get("value", "") for stub in stubs}, queryset=Item.objects.order_by("pk")
+    )
+
+    assert formset.is_valid()
+    assert not formset.has_changed()
+
+
+def test_a_date_range_cell_answers_with_the_full_picker_for_the_range_its_stub_holds(released):
+    query = {"form-1-period_0": "2026-05-01", "form-1-period_1": "2026-05-09"}
+
+    soup = _cell(PeriodCell, field="period", pk=released[1].pk, prefix="form-1", **query)
+
+    picker = soup.select_one("[x-data=formworkDateRangePicker]")
+    assert (picker["data-start"], picker["data-end"]) == ("2026-05-01", "2026-05-09")
+
+
+_NAMES = [ChoiceLabel("Lamp", icon="\U0001f4a1"), "Kettle", "Toaster"]
+
+
+class NamedRowForm(FormworkModelForm):
+    class Meta:
+        model = Item
+        fields = ["name", "notes"]
+        widgets = {"name": ComboBox(suggestions=_NAMES), "notes": ComboBoxMultiple(suggestions=_NAMES)}
+
+
+NamedFormSet = formwork_modelformset_factory(Item, form=NamedRowForm, extra=0)
+
+
+@pytest.fixture
+def named():
+    kitchen = Category.objects.create(name="Kitchen", slug="kitchen")
+    for name, notes in [("Kettle", ""), ("Lamp", "Lamp, Kettle"), ("Sink", "Sink")]:
+        Item.objects.create(name=name, category=kitchen, notes=notes)
+
+
+def _named(*, cell_url=""):
+    return BeautifulSoup(NamedFormSet(queryset=Item.objects.order_by("pk")).as_rows(cell_url=cell_url), "html.parser")
+
+
+def test_the_combo_box_stubs_of_as_rows_size_their_inputs_by_the_suggestions_of_the_full_combo_boxes(named):
+    stubs = _named(cell_url="/cells/")
+
+    assert len(stubs.select("[data-formwork-stub].formwork-combobox")) == 6
+    copies = ".formwork-combobox > .formwork-autowidth"
+    assert _closed(stubs, copies) == _closed(_named(), copies)
+
+
+def test_the_combo_box_stubs_of_as_rows_post_the_values_of_their_rows(named):
+    stubs = _named(cell_url="/cells/").select("input[name]")
+
+    formset = NamedFormSet(
+        {stub["name"]: stub.get("value", "") for stub in stubs}, queryset=Item.objects.order_by("pk")
+    )
+
+    assert formset.is_valid()
+    assert not formset.has_changed()
+
+
+@pytest.mark.parametrize(
+    ("field", "shown"),
+    [("name", ["", "\U0001f4a1Lamp", ""]), ("notes", ["", "\U0001f4a1Lamp,\xa0Kettle", "Sink"])],
+)
+def test_a_combo_box_stub_shows_its_value_with_the_icons_of_its_suggestions(named, field, shown):
+    stubs = _named(cell_url="/cells/").select(f".formwork-combobox:has([name$=-{field}])")
+
+    displays = [stub.select_one(".combobox-display") for stub in stubs]
+
+    assert [display.get_text() if display else "" for display in displays] == shown
+    assert [bool(stub.select(".text-transparent")) for stub in stubs] == [bool(text) for text in shown]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, cast
@@ -21,11 +22,18 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import conditional_escape, format_html, format_html_join
 from django.utils.safestring import SafeString, mark_safe
 from django.utils.text import capfirst
+from django.utils.translation import gettext as _
 
-from django_formwork.admin.cells import annotate_rows, cell_for_field, cell_for_value, display_annotations, html
+from django_formwork.admin.cells import (
+    annotate_rows,
+    cell_for_field,
+    cell_for_value,
+    display_annotations,
+    html,
+    list_cell,
+)
 from django_formwork.admin.paginator import page_links
-from django_formwork.fields import DisplayField
-from django_formwork.tables import Table
+from django_formwork.fields import DisplayField, _DisplayBoundField
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -51,6 +59,8 @@ __all__ = [
     "deleted_groups",
     "display_field",
     "field_name",
+    "list_display_field",
+    "show_display_fields",
 ]
 
 # The action and delete pages name this many objects of a kind and count the rest.
@@ -203,11 +213,42 @@ def display_field(name: Any, model_admin: Any, model: type[models.Model], *, sav
     return DisplayField(label=label, help_text=help_text, source=contents)
 
 
+def list_display_field(entry: Any, model_admin: Any, model: type[models.Model]) -> DisplayField:
+    """A ``list_display`` entry as a form field, its value the cell the list shows."""
+    label, help_text = _label_and_help(entry, model_admin, model)
+    return DisplayField(label=label, help_text=help_text, source=lambda obj: list_cell(entry, obj, model_admin))
+
+
+def _contents(value: Any, empty: str) -> SafeString:
+    """A value as the change form shows it read-only: an icon for a boolean, ``empty`` for none."""
+    cell = cell_for_value(value, empty)
+    return mark_safe(cell["text"] if cell["kind"] == "html" else html(cell))  # noqa: S308
+
+
 def _shown(bound_field: BoundField, model_admin: Any) -> ReadonlyField:
     """A ``DisplayField`` as the change form shows a read-only value."""
-    cell = cell_for_value(bound_field.value(), model_admin.get_empty_value_display())
-    contents = mark_safe(cell["text"] if cell["kind"] == "html" else html(cell))  # noqa: S308
+    contents = _contents(bound_field.value(), model_admin.get_empty_value_display())
     return ReadonlyField(bound_field.name, str(bound_field.label), contents, str(bound_field.help_text))
+
+
+class _AdminDisplayBoundField(_DisplayBoundField):
+    """A ``DisplayField`` whose table cell shows its value as the change form does."""
+
+    @property
+    def display_value(self) -> SafeString:
+        return _contents(self.value(), self.field.empty_value_display)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+
+
+def show_display_fields(form_class: type[ModelForm[Any]], model_admin: Any) -> None:
+    """Show each ``DisplayField`` of an admin-built form class as the change form shows a read-only value.
+
+    Each such field is copied, so the class the project declared keeps its own."""
+    for name, form_field in form_class.base_fields.items():
+        if isinstance(form_field, DisplayField):
+            shown = copy.copy(form_field)
+            shown.bound_field_class = _AdminDisplayBoundField
+            shown.empty_value_display = model_admin.get_empty_value_display()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            form_class.base_fields[name] = shown
 
 
 def _rows(
@@ -391,12 +432,9 @@ class InlineAdminFormSet:
         _show_errors_inline(form)
         readonly = self.readonly_fields
         if original is not None and not self.has_change_permission:
+            # The form shows the values of a row the user cannot change as DisplayFields, and these its hidden ones.
             locked = [name for name in form.fields if name not in {DELETION_FIELD_NAME, form._meta.model._meta.pk.name}]
             readonly = [*readonly, *locked]
-            # The row's fields show their values, and a table shows a disabled field as its value.
-            for name in locked:
-                if not form[name].is_hidden:
-                    form.fields[name].disabled = True
         fieldsets = [
             Fieldset(
                 name=name,
@@ -470,30 +508,21 @@ class InlineAdminFormSet:
     def can_add(self) -> bool:
         return self.has_add_permission and self.formset.max_num > len(self.formset.forms)
 
-    def _cell_display(self, bound_field: BoundField) -> SafeString:
-        """A cell that posts nothing, as the change form shows a read-only value."""
-        if isinstance(bound_field.field, DisplayField):
-            return _shown(bound_field, self.opts).contents
-        original = cast("ModelForm[Any]", bound_field.form).instance
-        return readonly_contents(bound_field.name, original if original.pk is not None else None, self.opts)
-
     def table(self, footer: str = "") -> SafeString:
         """The tabular layout: formwork's formset table, flush in the inline's card.
 
         ``footer`` goes at the right end of the Add another row: the pager, for a paged inline.
         """
-        self.forms  # noqa: B018 (the rows take their error display and their read-only fields)
-        table = Table.for_formset(
-            self.formset,
-            flush=True,
-            fields=[field_name(name) for name in flatten_fieldsets(cast("_FieldsetSpec", self.fieldsets_spec))],
-            display=self._cell_display,
-            link=self._change_url,
+        self.forms  # noqa: B018 (the rows take their error display and their read-only values)
+        formset = self.formset
+        formset.row_url = self._change_url
+        context = formset.get_table_context(flush=True)
+        context.update(
+            footer=footer,
+            empty_text=_("No %(name)s yet.") % {"name": self.group_name},
+            add_text=_("Add another %(name)s") % {"name": self.verbose_name},
         )
-        table.verbose_name = self.verbose_name
-        table.verbose_name_plural = self.group_name
-        table.footer = footer
-        return table.render()
+        return formset.render_table(context)
 
     @property
     def non_form_errors(self) -> Any:

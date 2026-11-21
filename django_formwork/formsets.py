@@ -66,6 +66,8 @@ from django.db.models import (
 from django.db.models.expressions import DatabaseDefault
 from django.db.models.functions import Coalesce
 from django.db.models.sql import Query
+from django.forms import Media
+from django.forms.formsets import DELETION_FIELD_NAME
 from django.forms.models import (
     BaseInlineFormSet,
     BaseModelFormSet,
@@ -73,20 +75,25 @@ from django.forms.models import (
     inlineformset_factory,
     modelformset_factory,
 )
+from django.utils.translation import gettext as _
 
-from django_formwork.forms import FormworkModelForm
-from django_formwork.renderers import FormworkRenderer
-from django_formwork.tables import TableRenderMixin
-from django_formwork.widgets.select import rows_share_choices
+from django_formwork.forms import FormworkModelForm, RowRenderMixin
+from django_formwork.renderers import FormworkRenderer, formwork_renderer
+from django_formwork.widgets._stub import stub_formset, with_query
+from django_formwork.widgets.select import column_options, rows_share_choices, share_choices
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Generator
     from datetime import date as date_type
 
+    from django.forms import BaseFormSet, BoundField
+    from django.utils.safestring import SafeString
+
 
 __all__ = [
     "FormworkBaseInlineFormSet",
     "FormworkBaseModelFormSet",
+    "TableRenderMixin",
     "formwork_inlineformset_factory",
     "formwork_modelformset_factory",
 ]
@@ -861,6 +868,112 @@ class _LoadedAtOnceMixin:
             keys.discard(None)
             self._posted_rows[queryset.db] = queryset.in_bulk(keys)
         return self._posted_rows[queryset.db]
+
+
+class TableRenderMixin:
+    """Add ``as_rows()`` to a formset: render it as one editable ``<table>``."""
+
+    template_name_table = "formwork/tables/table.html"
+    #: Add another appends a row. A model formset with ``edit_only=True`` has none either way.
+    can_add = True
+
+    if TYPE_CHECKING:
+        form: type[Any]
+        forms: list[Any]
+        empty_form: Any
+        can_delete: bool
+        renderer: Any
+        render: Any
+        initial_form_count: Any
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Give the form of a formset class the row methods when it has none, as a plain ``ModelForm``."""
+        super().__init_subclass__(**kwargs)
+        form = cls.__dict__.get("form")
+        if form is not None and not issubclass(form, RowRenderMixin):
+            cls.form = type(form.__name__, (RowRenderMixin, form), {})
+
+    def as_rows(self, save_url: str = "", *, flush: bool = False, cell_url: str = "") -> SafeString:
+        return self.render_table(self.get_table_context(save_url=save_url, flush=flush, cell_url=cell_url))
+
+    def render_table(self, context: dict[str, Any]) -> SafeString:
+        """The table template with ``context``, a dict from ``get_table_context()``."""
+        return self.render(self.template_name_table, context, formwork_renderer(self.renderer))
+
+    def row_url(self, form: Any) -> str:  # noqa: ANN401, ARG002
+        """The page of the row of ``form``, which the row links in its last column; ``""`` for none."""
+        return ""
+
+    def get_table_context(self, *, save_url: str = "", flush: bool = False, cell_url: str = "") -> dict[str, Any]:
+        """The table template's context: the headers, a row context per form, and the row that Add another copies.
+
+        ``option_lists`` holds the option rows of each select column once, which the rows' selects copy.
+
+        With ``save_url``, each row saves by itself and the table has no Add another, Remove or Delete.
+        With ``cell_url``, the selects, combo boxes and date pickers of saved rows render as stubs that load from it.
+        """
+        formset = cast("BaseFormSet[Any]", self)
+        # The rows load the choices of a relation once, whether they render in full or as stubs.
+        share_choices(formset)
+        if cell_url:
+            stub_formset(formset, lambda name: with_query(cell_url, field=name))
+        option_lists = column_options(formset)
+        can_add = not save_url and self.can_add and not getattr(self, "edit_only", False)
+        can_delete = not save_url and self.can_delete
+        initial = self.initial_form_count()
+        links = [self.row_url(form) for form in self.forms]
+        new_rows = len(self.forms) > initial
+        actions = not save_url and (can_add or can_delete or new_rows or any(links))
+        rows = [
+            form.get_row_context(
+                new=index >= initial, can_delete=can_delete, save_url=save_url, actions=actions, link=links[index]
+            )
+            for index, form in enumerate(self.forms)
+        ]
+        empty_form = self.empty_form
+        empty_row = empty_form.get_row_context(new=True, actions=actions) if can_add else None
+        model = getattr(self, "model", None)
+        opts = model._meta if model is not None else None  # noqa: SLF001
+        # The texts with a name are built here, not in the template: makemessages finds no Jinja trans block.
+        names = {
+            "empty_text": _("No %(name)s yet.") % {"name": opts.verbose_name_plural if opts is not None else _("rows")},
+            "add_text": _("Add another %(name)s") % {"name": opts.verbose_name if opts is not None else _("row")},
+        }
+        return {
+            "formset": self,
+            "headers": [
+                _header(bound_field)
+                for bound_field in empty_form.visible_fields()
+                if bound_field.name != DELETION_FIELD_NAME
+            ],
+            "rows": rows,
+            "empty_row": empty_row,
+            "actions": actions and (bool(rows) or empty_row is not None),
+            "flush": flush,
+            "footer": "",
+            "option_lists": option_lists,
+            **names,
+        }
+
+    @property
+    def media(self) -> Media:
+        from django_formwork.widgets._base import _ModuleScript
+
+        return super().media + Media(js=[_ModuleScript("formwork/tables.js")])  # type: ignore[misc]
+
+
+def _header(bound_field: BoundField) -> dict[str, Any]:
+    """A column's header: the label, a red asterisk for a required field, and the help text."""
+    shows_value = bound_field.field.disabled
+    return {
+        "name": bound_field.name,
+        "label": bound_field.label,
+        "required": getattr(bound_field, "is_mandatory", bound_field.field.required) and not shows_value,
+        "help_text": bound_field.help_text,
+        # A boxed widget sets its value in from the cell's edge, and the header lines up with the value.
+        "indent": not shows_value
+        and getattr(bound_field.field.widget, "input_type", None) not in {"checkbox", "radio"},
+    }
 
 
 class FormworkBaseModelFormSet(TableRenderMixin, _BatchedUniquenessMixin, _LoadedAtOnceMixin, BaseModelFormSet):

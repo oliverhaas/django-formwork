@@ -11,8 +11,7 @@ from typing import TYPE_CHECKING, Any
 from django.contrib.contenttypes.forms import BaseGenericInlineFormSet, generic_inlineformset_factory
 
 from django_formwork.admin.options import InlineModelAdmin
-from django_formwork.formsets import _BatchedUniquenessMixin, _LoadedAtOnceMixin
-from django_formwork.tables import TableRenderMixin
+from django_formwork.formsets import TableRenderMixin, _BatchedUniquenessMixin, _LoadedAtOnceMixin
 
 if TYPE_CHECKING:
     from django.forms.models import BaseModelFormSet

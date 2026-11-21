@@ -62,8 +62,8 @@
   your project overrides `formwork/tables/table.html`, the admin's
   `formwork_admin/change_list_results.html`, `formwork/widgets/select.html` or
   `select_multiple.html`. Copy them again from the package: the table templates render
-  `{{ table.option_lists }}`, and the select templates leave out their option rows when
-  `widget.options_template_id` is set.
+  `{{ option_lists }}` and `{{ cl.option_lists }}`, and the select templates leave out
+  their option rows when `widget.options_template_id` is set.
 
 ### Added
 
@@ -187,8 +187,7 @@
   `as_rows(flush=True)` lays the table out to the edges of a card. The rows need
   `tables.js`, which `{% formwork_js %}` and `{{ formset.media }}` load. With a
   `save_url`, each row still saves by itself, without Add another, Remove or Delete.
-  For a template of your own, `Table.for_formset()` builds the table, and its `fields`,
-  `display` and `link` arguments pick the columns, show the values and link the rows.
+  A formset method `row_url(form)` links each row to its own page.
   See [Templates](formsets.md#templates).
 - `DisplayField` shows a value that a form never posts: a field, a method, a property or
   an annotation of the form's instance, or a function of the instance. It renders with
@@ -196,19 +195,21 @@
   value when the page renders it, so an annotation that the view adds after the post
   shows. A post that names the field changes nothing, because formwork's forms leave it
   out of `cleaned_data`. See [DisplayField](forms.md#displayfield).
-- An admin list renders the `Select`, `SelectMultiple`, `DatePicker` and `DateTimePicker`
-  of each saved row of its editable columns as a stub: the closed widget with its value.
-  When the pointer rests on a stub, or the stub takes the focus or a press, the full
-  widget loads from the new `cells/<field>/` view (URL name `<app_label>_<model_name>_cell`)
-  and takes over the focus, a typed date and the press. The view builds the row with the list's formset, so
-  the row keeps the choices that a hook gives it. After a failed save, only the fields
-  with an error render in full. `list_editable_stubs = False` on the `ModelAdmin` renders
-  the full widgets. The saved rows of a `TabularInline` render the same stubs on a change
-  form, which load from the new `<object_id>/cells/<field>/` view (URL name
-  `<app_label>_<model_name>_change_cell`); `stubs = False` on the inline renders the full
-  widgets. Outside the admin, `formset.as_rows(cell_url=...)` renders the same stubs,
-  with the new `FormworkCellMixin` as the view behind `cell_url`. Tests that read the
-  options of a select in a list or an inline from the rendered page request the cell
+- An admin list renders the `Select`, `SelectMultiple`, `ComboBox`, `ComboBoxMultiple`,
+  `DatePicker`, `DateTimePicker`, `DateRangePicker` and `DateTimeRangePicker` of each
+  saved row of its editable columns as a stub: the closed widget with its value. When the
+  pointer rests on a stub, or the stub takes the focus or a press, the full widget loads
+  from the new `cells/<field>/` view (URL name `<app_label>_<model_name>_cell`) and takes
+  over the focus, the typed text and the press. The view builds the row with the list's formset, so the row keeps
+  the choices that a hook gives it. After a failed save, only the fields with an error
+  render in full. `list_editable_stubs = False` on the `ModelAdmin` renders the full
+  widgets. The saved rows of a `TabularInline` render the same stubs on a change form,
+  also for a relation field next to its add and change buttons. They load from the new
+  `<object_id>/cells/<field>/` view (URL name
+  `<app_label>_<model_name>_change_cell`); `stubs = False` on the inline renders the
+  full widgets. Outside the admin, `formset.as_rows(cell_url=...)` renders the same
+  stubs, with the new `FormworkCellMixin` as the view behind `cell_url`. Tests that read
+  the options of a select in a list or an inline from the rendered page request the cell
   instead, or turn the stubs off. See
   [Widgets that load on use](admin.md#widgets-that-load-on-use) and, for `as_rows()`,
   [Widgets that load on use](formsets.md#widgets-that-load-on-use).
@@ -299,7 +300,7 @@
   rows with six editable columns, took about 390 ms on the server and sent 3.0 MB of
   HTML. The Jinja2 templates bring it to 240 ms. With the stubs from Added it takes
   110 ms and sends 0.65 MB, with the same seven queries.
-- `formset.as_rows()` and `Table.for_formset()` ran one query per row for each `Select`
+- `formset.as_rows()` ran one query per row for each `Select`
   or `SelectMultiple` of a relation that lists all its choices: 100 rows with three such
   columns ran 203 queries. The rows now list the choices once, with 7 queries, and render
   in 207 ms instead of 282 ms. Rows whose form or formset defines a hook that can give a
@@ -308,14 +309,14 @@
   decides as before.
 - A `DatePicker`, `DateTimePicker` or range picker translates its month and weekday names
   once per language, not once per widget, which saves about 12 ms on 100 rows.
-- The selects of `formset.as_rows()` and `Table.for_formset()` repeated every option in
-  every row. A column whose rows list the same choices now renders them once, in a
-  `<template>`, and each row's list copies them when it first opens. 100 rows with three
-  such columns render in 122 ms instead of 205 ms and send 2.0 MB of HTML instead of
-  5.3 MB. A column of a relation qualifies when its rows share their choices, as in the
-  entry above. A column of fixed choices qualifies unless the form or formset has a hook
-  that can change them. Searched lists, stubs and the row of Add another keep their own
-  options.
+- The selects of `formset.as_rows()`, of a tabular admin inline and of an editable admin
+  list repeated every option in every row. A column whose rows list the same choices now
+  renders them once, in a `<template>`, and each row's list copies them when it first
+  opens. 100 rows with three such columns render in 122 ms instead of 205 ms and send
+  2.0 MB of HTML instead of 5.3 MB. A column of a relation qualifies when its rows share
+  their choices, as in the entry above. A column of fixed choices qualifies unless the
+  form or formset has a hook that can change them. Searched lists, stubs and the row of
+  Add another keep their own options.
 - The hidden copy of the option labels that sizes a `Select`, `SelectMultiple` or
   `ComboBox` is one line of text per label, where it was one element per label. The
   widths stay the same, and the example Event list has 12% fewer elements for the
