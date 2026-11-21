@@ -4,6 +4,7 @@ from datetime import date
 
 import pytest
 from admin_app.models import Category, Item, Tag
+from django.utils.datastructures import MultiValueDict
 from playwright.sync_api import expect
 
 from django_formwork import FormworkCellMixin, FormworkModelForm, formwork_modelformset_factory
@@ -68,4 +69,49 @@ def test_a_select_multiple_stub_opens_as_the_full_select_on_the_first_press(rows
 
     expect(tags).to_have_attribute("x-data", "formworkSelectMultiple")
     expect(tags.locator("input[type=checkbox][name$=-tags]:checked")).to_have_count(3)
+    assert rows_page.errors == []
+
+
+def _row(rows_page, name):
+    return rows_page.page.locator("tbody", has=rows_page.page.locator(f"[name$=-name][value={name}]"))
+
+
+def test_a_select_of_a_full_row_lists_the_options_of_its_column_and_marks_its_own(rows_page, items):
+    rows_page.open(rows)
+    category = _row(rows_page, "Lamp").locator("details:has([name$=-category])")
+
+    category.locator("summary").click()
+    expect(category.get_by_role("option", name="Kitchen")).to_have_attribute("aria-selected", "true")
+    category.get_by_role("option", name="Garden").click()
+    category.locator("summary").click()
+
+    expect(category.get_by_role("option", name="Garden")).to_have_attribute("aria-selected", "true")
+    expect(category.get_by_role("option", name="Kitchen")).to_have_attribute("aria-selected", "false")
+    expect(category.locator("input[type=hidden][name$=-category]")).to_have_value(
+        str(Category.objects.get(slug="garden").pk)
+    )
+    assert rows_page.errors == []
+
+
+def test_a_select_multiple_of_a_full_row_posts_the_tags_picked_from_the_options_of_its_column(rows_page, items):
+    rows_page.open(rows)
+    tags = _row(rows_page, "Lamp").locator("details:has([name$=-tags])")
+
+    tags.locator("summary").click()
+    expect(tags.locator("input[type=checkbox]:checked")).to_have_count(2)
+    tags.get_by_role("option", name="used").click()
+    posted = rows_page.page.evaluate(
+        """() => [...document.querySelectorAll("input[name]")]
+          .filter((input) => !input.disabled && !(input.type === "checkbox" && !input.checked))
+          .map((input) => [input.name, input.value])"""
+    )
+    data = MultiValueDict()
+    for name, value in posted:
+        data.appendlist(name, value)
+    formset = RowFormSet(data, queryset=Item.objects.order_by("pk"))
+    assert formset.is_valid(), formset.errors
+    formset.save()
+
+    tagged = {item.name: sorted(tag.name for tag in item.tags.all()) for item in Item.objects.all()}
+    assert tagged == {"Kettle": [], "Lamp": ["eco", "new", "used"], "Toaster": ["eco", "new", "sale", "used"]}
     assert rows_page.errors == []

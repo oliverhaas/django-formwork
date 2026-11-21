@@ -146,7 +146,9 @@ def task_edit_all(request):
   `verbose_name_plural`.
 - **Choices.** A `Select` or `SelectMultiple` of a relation loads its choices with one
   query for all rows. A row loads its own when the form or the formset can give it
-  other choices, as [Shared choices](admin.md#shared-choices) lists.
+  other choices, as [Shared choices](admin.md#shared-choices) lists. When the rows of
+  a column list the same choices, the table renders the option rows once, and a row's
+  list copies them when it opens.
 
 `as_rows(flush=True)` is for a table in a card: the table runs to the card's edges,
 and its first and last columns take the card's padding.

@@ -27,8 +27,10 @@ if TYPE_CHECKING:
 
     from django.db.models import QuerySet
     from django.forms.formsets import BaseFormSet
+    from django.forms.renderers import BaseRenderer
     from django.http import HttpRequest
     from django.utils.choices import _Choices
+    from django.utils.safestring import SafeString
 
     # Typed base so mypy resolves the cooperative super() calls. At runtime the
     # mixin inherits object and is placed in front of a concrete select widget.
@@ -333,8 +335,13 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
     search_threshold = 10
     # Names the option markup the dispatch view renders for this widget.
     search_variant: ClassVar[str]
+    #: The template of the option rows, which the search endpoint and a table column render.
+    option_list_template_name: ClassVar[str]
     #: The option labels that size the stubs of rows that share their choices, set with ``stub_url``.
     stub_copy: Callable[[], str] | None = None
+    #: The id of the ``<template>`` that holds the option rows of a table column, set by ``Table.for_formset``.
+    #: The select copies the rows from it when its list opens, so each row does not repeat them.
+    options_template_id = ""
 
     def id_for_label(self, id_: str, index: str = "0") -> str:  # noqa: ARG002
         # The trigger is a <summary>, which `<label for>` cannot target.
@@ -393,6 +400,7 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
+        widget["options_template_id"] = self.options_template_id
         pending = self._search_context(widget)
 
         # One pass: annotate each option from its ChoiceLabel and collect the
@@ -439,6 +447,14 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
         )
         self._floating_context(widget, clear)
         return context
+
+    def option_list(
+        self, name: str, attrs: dict[str, Any] | None = None, renderer: BaseRenderer | None = None
+    ) -> SafeString:
+        """The option rows with nothing chosen, which the selects of a table column copy when they open."""
+        widget = self.get_context(name, None, attrs)["widget"]
+        context = {"widget": widget, "options": widget["options"], "truncated": False, "more_url": None}
+        return self._render(self.option_list_template_name, context, renderer)
 
     def autowidth_copy(self, widget: Mapping[str, Any]) -> str:
         """The option labels that size the trigger, from the context of the full select."""

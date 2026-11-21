@@ -418,16 +418,41 @@ def test_as_rows_runs_the_same_queries_for_more_rows(cities, cell_url):
     assert queries() == two_rows
 
 
-def test_the_selects_of_as_rows_list_every_choice_and_select_the_choice_of_their_row(cities):
+def test_the_selects_of_as_rows_copy_every_choice_from_one_list_of_their_column(cities):
     soup = BeautifulSoup(CityFormSet(queryset=City.objects.order_by("pk")).as_rows(), "html.parser")
 
     selects = soup.select("[x-data=formworkSelect]")
-    labels = [[option["data-label"] for option in select.select("[role=option]")] for select in selects]
-    selected = [[option["data-label"] for option in select.select("[aria-selected=true]")] for select in selects]
-    assert labels == [labels[0]] * 3
-    assert {"North", "South"} <= set(labels[0])
-    assert selected[:2] == [["North"], ["South"]]
-    assert not {"North", "South"} & set(selected[2])
+    (source,) = {select.select_one("[role=listbox]").get("data-options") for select in selects}
+    labels = [option["data-label"] for option in soup.find("template", id=source).select("[role=option]")]
+    assert not soup.select("[x-data=formworkSelect] [role=option]")
+    assert {"North", "South"} <= set(labels)
+    assert [select["data-value"] for select in selects] == [str(city.region_id) for city in cities] + [""]
+
+
+class SizeRowForm(CityRowForm):
+    size = forms.ChoiceField(choices=[("s", "Small"), ("l", "Large")], widget=Select())
+
+
+class OwnSizeRowForm(SizeRowForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["size"].choices = [*self.fields["size"].choices, ("own", self.instance.name)]
+
+
+@pytest.mark.parametrize(
+    ("form", "own", "copied"),
+    [(SizeRowForm, [], ["Small", "Large"]), (OwnSizeRowForm, ["Small", "Large", "Brighton"], [])],
+)
+def test_the_selects_of_fixed_choices_copy_them_from_their_column_unless_a_row_can_change_them(
+    cities, form, own, copied
+):
+    formset = formwork_modelformset_factory(City, form=form, extra=0)(queryset=City.objects.order_by("pk"))
+
+    soup = BeautifulSoup(formset.as_rows(), "html.parser")
+
+    assert [option["data-label"] for option in soup.select("[data-name=form-1-size] [role=option]")] == own
+    templates = soup.find_all("template", id="form-size-options")
+    assert [option["data-label"] for template in templates for option in template.select("[role=option]")] == copied
 
 
 def test_a_cell_answers_with_the_full_select_for_the_value_its_stub_holds(cities):
@@ -506,9 +531,12 @@ def test_the_select_multiple_stubs_of_as_rows_show_the_closed_toggles_of_the_ful
     assert _toggles(stubs) == _toggles(_rows())
 
 
-def test_the_select_multiple_stubs_of_as_rows_post_the_values_of_their_rows(tagged):
+@pytest.mark.parametrize("cell_url", ["", "/cells/"])
+def test_the_select_multiples_of_as_rows_post_the_values_of_their_rows(tagged, cell_url):
     data = MultiValueDict()
-    for element in _rows(cell_url="/cells/").select("input[name]"):
+    for element in _rows(cell_url=cell_url).select("input[name]"):
+        if element.find_parent("template") or (element.get("type") == "checkbox" and not element.has_attr("checked")):
+            continue
         data.appendlist(element["name"], element.get("value", ""))
 
     formset = TagsFormSet(data, queryset=Item.objects.order_by("pk"))

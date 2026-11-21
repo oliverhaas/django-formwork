@@ -555,11 +555,24 @@ const baseData = () => ({
         el.open = false;
         return;
       }
+      this.fillOptions();
       this.showPanel();
     };
     new MutationObserver(sync).observe(el, { attributeFilter: ["open"] });
     // A widget that a script opened starts on the toggle event, after the change.
     if (el.open) sync();
+  },
+
+  // The rows of a table column list their options once, in a <template>
+  // that each row's list copies when it first opens. A morph empties the
+  // list again, and the next open copies the rows anew.
+  fillOptions() {
+    const list = this.$refs.options;
+    const source = list?.dataset.options && document.getElementById(list.dataset.options);
+    if (!source || list.querySelector("[role=option]")) return;
+    list.replaceChildren(source.content.cloneNode(true));
+    this.syncChecked?.();
+    this.syncRows();
   },
 
   onToggle() {
@@ -660,10 +673,13 @@ const baseData = () => ({
 
   // The rows a typed search brought in are the answer to that search; the
   // form's own render lists other rows, so a morph leaves them. It also
-  // leaves an open list, whose first page the render does not hold.
+  // leaves an open list, whose first page the render does not hold, and the
+  // copied rows of a table column, which the render leaves out.
   keepSearchedList() {
     const list = this.$refs.options;
-    if (list) list._formworkAcceptMorph = () => !(this.hasSearchUrl && (this.query || this.isOpen));
+    if (!list) return;
+    const elsewhere = () => this.hasSearchUrl || "options" in list.dataset;
+    list._formworkAcceptMorph = () => !(elsewhere() && (this.query || this.isOpen));
   },
 
   // htmx 4 builds the GET query from the request body. The search box has no

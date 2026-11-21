@@ -7,7 +7,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Any
 
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.forms import Media
+from django.forms import Media, ModelChoiceField
 from django.forms.formsets import DELETION_FIELD_NAME
 from django.http import Http404, HttpResponse
 from django.utils.choices import flatten_choices
@@ -18,7 +18,7 @@ from django.utils.translation import gettext_lazy as _
 from django_formwork.fields import DisplayField
 from django_formwork.renderers import formwork_renderer
 from django_formwork.widgets._stub import formset_row, stub_formset, with_query
-from django_formwork.widgets.select import share_choices
+from django_formwork.widgets.select import _select_of, rows_share_choices, share_choices
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -208,6 +208,8 @@ class Table:
     verbose_name_plural: Any = ""
     #: Markup at the right end of the Add another row, such as a pager. The row shows while it has any.
     footer: Any = ""
+    #: The option rows of each select column, once for all rows, which the selects copy when they open.
+    option_lists: str = ""
     template_name: str = TABLE_TEMPLATE
 
     @classmethod
@@ -256,6 +258,7 @@ class Table:
         model = getattr(formset, "model", None)
         opts = model._meta if model is not None else None  # noqa: SLF001
         return cls(
+            option_lists=_option_lists(formset, fields),
             formset=formset,
             headers=[
                 {
@@ -295,6 +298,36 @@ class Table:
     def render(self) -> SafeString:
         renderer = formwork_renderer(self.formset.renderer)
         return mark_safe(self.formset.render(self.template_name, {"table": self, "formset": self.formset}, renderer))  # noqa: S308
+
+
+def _option_lists(formset: Any, fields: Sequence[str] | None) -> SafeString:  # noqa: ANN401
+    """A ``<template>`` per select column with the option rows that its rows would each repeat.
+
+    A column qualifies when its rows list the same choices, all of them, and a row renders in full.
+    The template row of Add another keeps its own options, as does the full widget that replaces a stub."""
+    rows = formset.forms
+    if not rows:
+        return SafeString("")
+    lists = []
+    for bound in _columns(rows[0], fields):
+        select = _select_of(bound.field)
+        if select is None or select.search_key is not None or TableCell.shows_value(bound):
+            continue
+        # A relation's rows share their choices where share_choices() said so, other choices where no hook changes them.
+        if isinstance(bound.field, ModelChoiceField):
+            if select.shared is None:
+                continue
+        elif not rows_share_choices(formset, bound.field):
+            continue
+        selects = [row_select for form in rows if (row_select := _select_of(form.fields.get(bound.name)))]
+        if all(getattr(row_select, "stub_url", None) is not None for row_select in selects):
+            continue
+        template_id = f"{formset.prefix}-{bound.name}-options"
+        for row_select in selects:
+            row_select.options_template_id = template_id
+        options = select.option_list(bound.html_name, bound.build_widget_attrs({}), formset.renderer)
+        lists.append(format_html('<template id="{}">{}</template>', template_id, options))
+    return mark_safe("".join(lists))  # noqa: S308
 
 
 def _columns(form: Any, fields: Sequence[str] | None) -> list[BoundField]:  # noqa: ANN401

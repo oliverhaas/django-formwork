@@ -58,6 +58,12 @@
   are templates of their own, `formwork/widgets/partials/select_options.html`,
   `select_multiple_options.html` and `combo_box_options.html`, which each widget names in
   `option_list_template_name`.
+- In a table, the selects of a column with the same choices in every row open empty if
+  your project overrides `formwork/tables/table.html`, the admin's
+  `formwork_admin/change_list_results.html`, `formwork/widgets/select.html` or
+  `select_multiple.html`. Copy them again from the package: the table templates render
+  `{{ table.option_lists }}`, and the select templates leave out their option rows when
+  `widget.options_template_id` is set.
 
 ### Added
 
@@ -302,6 +308,14 @@
   decides as before.
 - A `DatePicker`, `DateTimePicker` or range picker translates its month and weekday names
   once per language, not once per widget, which saves about 12 ms on 100 rows.
+- The selects of `formset.as_rows()` and `Table.for_formset()` repeated every option in
+  every row. A column whose rows list the same choices now renders them once, in a
+  `<template>`, and each row's list copies them when it first opens. 100 rows with three
+  such columns render in 122 ms instead of 205 ms and send 2.0 MB of HTML instead of
+  5.3 MB. A column of a relation qualifies when its rows share their choices, as in the
+  entry above. A column of fixed choices qualifies unless the form or formset has a hook
+  that can change them. Searched lists, stubs and the row of Add another keep their own
+  options.
 - The hidden copy of the option labels that sizes a `Select`, `SelectMultiple` or
   `ComboBox` is one line of text per label, where it was one element per label. The
   widths stay the same, and the example Event list has 12% fewer elements for the

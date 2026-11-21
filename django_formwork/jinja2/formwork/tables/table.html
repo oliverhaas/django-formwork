@@ -20,6 +20,7 @@
       {% for row in table.rows %}{{ row.render() }}{% endfor %}
     </table>
   </div>
+  {{ table.option_lists }}
   {% if table.empty_row %}<template x-ref="empty">{{ table.empty_row.render() }}</template>{% endif %}
   <p class="px-6 py-8 text-center text-sm text-base-content/50" x-show="!total"{% if table.rows %} x-cloak{% endif %}>
     {{ table.empty_text }}

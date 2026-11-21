@@ -57,8 +57,9 @@ class SelectMultiple(_StubMixin, SearchableSelectMixin, forms.SelectMultiple):
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
         # Stated positively: the endpoint renders rows without widget context, so
-        # a negated guard would name them.
-        widget["option_name"] = "" if widget["search_url"] else name
+        # a negated guard would name them. A searched list and the rows of a table
+        # column hold other rows than the selected ones, so hidden inputs post those.
+        widget["option_name"] = "" if widget["search_url"] or widget["options_template_id"] else name
         self._toggle_context(widget)
         widget["selected_json"] = json.dumps(
             [
