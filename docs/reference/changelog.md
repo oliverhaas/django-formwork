@@ -194,10 +194,13 @@
   focus, a typed date and the press. The view builds the row with the list's formset, so
   the row keeps the choices that a hook gives it. After a failed save, only the fields
   with an error render in full. `list_editable_stubs = False` on the `ModelAdmin` renders
-  the full widgets. Outside the admin, `formset.as_rows(cell_url=...)` renders the same
-  stubs, with the new `FormworkCellMixin` as the view behind `cell_url`. Tests that read
-  the options of a list's select from the rendered page request the cell instead, or set
-  `list_editable_stubs = False`. See
+  the full widgets. The saved rows of a `TabularInline` render the same stubs on a change
+  form, which load from the new `<object_id>/cells/<field>/` view (URL name
+  `<app_label>_<model_name>_change_cell`); `stubs = False` on the inline renders the full
+  widgets. Outside the admin, `formset.as_rows(cell_url=...)` renders the same stubs,
+  with the new `FormworkCellMixin` as the view behind `cell_url`. Tests that read the
+  options of a select in a list or an inline from the rendered page request the cell
+  instead, or turn the stubs off. See
   [Widgets that load on use](admin.md#widgets-that-load-on-use) and, for `as_rows()`,
   [Widgets that load on use](formsets.md#widgets-that-load-on-use).
 - `makemessages` reads a template in a `jinja2` directory with Jinja's parser, so it

@@ -6,6 +6,7 @@ import io
 import json
 from datetime import UTC, date, datetime, time
 from types import ModuleType, SimpleNamespace
+from urllib.parse import parse_qs, urlsplit
 
 import django_filters
 import pytest
@@ -2982,6 +2983,74 @@ def test_a_cell_is_refused_to_a_user_who_cannot_change_the_rows(staff_client, st
     response = client.get(url(Item, "cell", "category"), {"pk": stub_list.alpha.pk, "prefix": "form-0"})
 
     assert response.status_code == 403
+
+
+class _ItemRowsInline(admin.TabularInline):
+    model = Item
+    fields = ["name", "status", "released"]
+    extra = 1
+
+
+@pytest.fixture
+def stub_inline(catalog, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Category), "inlines", [_ItemRowsInline])
+    return catalog
+
+
+@pytest.mark.parametrize(("attrs", "stubbed"), [({}, True), ({"stubs": False}, False), ({"layout": "stacked"}, False)])
+def test_the_saved_rows_of_a_tabular_inline_render_their_selects_and_date_pickers_as_stubs(
+    admin_client, stub_inline, monkeypatch, attrs, stubbed
+):
+    for name, value in attrs.items():
+        monkeypatch.setattr(_ItemRowsInline, name, value)
+    kitchen = stub_inline.kitchen
+
+    soup = BeautifulSoup(admin_client.get(url(Category, "change", kitchen.pk)).content, "html.parser")
+
+    found = [
+        (stub.select_one("[name]")["name"], urlsplit(stub["data-formwork-stub"]))
+        for stub in soup.select("[data-formwork-stub]")
+    ]
+    assert [(name, link.path, parse_qs(link.query)) for name, link in found] == [
+        (
+            f"items-0-{field}",
+            url(Category, "change_cell", kitchen.pk, field),
+            {"pk": [str(stub_inline.alpha.pk)], "prefix": ["items-0"]},
+        )
+        for field in ("status", "released")
+        if stubbed
+    ]
+
+
+def test_an_inline_cell_answers_with_the_full_widget_for_the_value_its_stub_holds(admin_client, stub_inline):
+    query = {"pk": stub_inline.alpha.pk, "prefix": "items-0", "value": Item.Status.ACTIVE}
+
+    response = admin_client.get(url(Category, "change_cell", stub_inline.kitchen.pk, "status"), query)
+
+    value = BeautifulSoup(response.content, "html.parser").select_one("[x-data=formworkSelect] input[type=hidden]")
+    assert (value["name"], value["value"]) == ("items-0-status", Item.Status.ACTIVE)
+
+
+@pytest.mark.parametrize(
+    ("field", "prefix", "row"),
+    [("price", "items-0", "alpha"), ("status", "parts-0", "alpha"), ("status", "items-0", "beta")],
+)
+def test_an_inline_cell_of_a_field_the_inline_lacks_or_of_another_objects_row_is_not_found(
+    admin_client, stub_inline, field, prefix, row
+):
+    query = {"pk": getattr(stub_inline, row).pk, "prefix": prefix}
+
+    assert admin_client.get(url(Category, "change_cell", stub_inline.kitchen.pk, field), query).status_code == 404
+
+
+@pytest.mark.parametrize("codenames", [("view_category", "change_item"), ("change_category", "view_item")])
+def test_an_inline_cell_is_refused_to_a_user_who_cannot_change_the_object_or_its_rows(
+    staff_client, stub_inline, codenames
+):
+    client = staff_client(*codenames)
+    query = {"pk": stub_inline.alpha.pk, "prefix": "items-0"}
+
+    assert client.get(url(Category, "change_cell", stub_inline.kitchen.pk, "status"), query).status_code == 403
 
 
 def test_view_on_site_redirects_to_the_object(admin_client, catalog):

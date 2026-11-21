@@ -89,12 +89,13 @@ from django_formwork.formsets import (
     formwork_inlineformset_factory,
     formwork_modelformset_factory,
 )
+from django_formwork.tables import TableCell
 from django_formwork.widgets import ChoiceLabel, Select
 from django_formwork.widgets._stub import formset_row, stub_formset
 from django_formwork.widgets.select import share_choices
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     from django.contrib.admin.options import _FieldsetSpec
     from django.db.models.fetch_modes import FetchMode
@@ -603,6 +604,11 @@ class ModelAdmin(BaseModelAdmin):
                 wrap(self.change_slot_view),
                 name="{}_{}_change_slot".format(*info),
             ),
+            path(
+                "<path:object_id>/cells/<str:field>/",
+                wrap(self.change_cell_view),
+                name="{}_{}_change_cell".format(*info),
+            ),
             path("<path:object_id>/", wrap(self.redirect_to_change), name="{}_{}_redirect".format(*info)),
         ]
 
@@ -615,6 +621,9 @@ class ModelAdmin(BaseModelAdmin):
 
     def _cell_url(self, field: str) -> str:
         return reverse(self.url_name("cell"), args=(field,), current_app=self.admin_site.name)
+
+    def _change_cell_url(self, obj: models.Model, field: str) -> str:
+        return reverse(self.url_name("change_cell"), args=(quote(obj.pk), field), current_app=self.admin_site.name)
 
     def redirect_to_change(self, request: HttpRequest, object_id: str) -> HttpResponse:
         return HttpResponseRedirect(reverse(self.url_name("change"), args=(object_id,)))
@@ -1151,6 +1160,40 @@ class ModelAdmin(BaseModelAdmin):
             raise PermissionDenied
         bound = form[field]
         return HttpResponse(bound.as_widget(attrs={"aria-label": bound.label}))
+
+    def change_cell_view(self, request: HttpRequest, object_id: str, field: str) -> HttpResponse:
+        """The full widget of a cell of a tabular inline, for the stub that the change form rendered in its place.
+
+        The query names the row's ``pk`` and form ``prefix``, and the ``value`` that the stub holds.
+        """
+        obj = self.get_object(request, unquote(object_id))
+        if obj is None:
+            raise Http404
+        if not self.has_change_permission(request, obj):
+            raise PermissionDenied
+        row_prefix = request.GET.get("prefix", "")
+        formset_prefix = row_prefix.rpartition("-")[0]
+        found = next((item for item in self._inline_formsets(request, obj) if item[2] == formset_prefix), None)
+        if found is None:
+            raise Http404
+        FormSet, inline, prefix = found  # noqa: N806
+        if not inline.has_change_permission(request, obj):
+            raise PermissionDenied
+        try:
+            pk = inline.opts.pk.to_python(request.GET.get("pk"))
+        except ValidationError as error:
+            raise Http404 from error
+        kwargs = self.get_formset_kwargs(request, obj, inline, prefix)
+        # Built by the inline's formset, which keeps the rows of this object only.
+        form = formset_row(
+            FormSet,
+            row_prefix,
+            value_of={field: request.GET["value"]} if "value" in request.GET else {},
+            **{**kwargs, "queryset": kwargs["queryset"].filter(pk=pk)},
+        )
+        if form is None or field not in form.fields or form.fields[field].disabled:
+            raise Http404
+        return HttpResponse(TableCell(field, field=form[field]).widget)
 
     # Actions
 
@@ -1764,17 +1807,15 @@ class ModelAdmin(BaseModelAdmin):
     ) -> tuple[list[Any], list[InlineModelAdmin]]:
         formsets: list[Any] = []
         inline_instances: list[InlineModelAdmin] = []
-        prefixes: dict[str, int] = {}
-        for FormSet, inline in self.get_formsets_with_inlines(request, obj if change else None):  # noqa: N806
-            prefix = FormSet.get_default_prefix()
-            prefixes[prefix] = prefixes.get(prefix, 0) + 1
-            if prefixes[prefix] != 1 or not prefix:
-                prefix = f"{prefix}-{prefixes[prefix]}"
+        for FormSet, inline, prefix in self._inline_formsets(request, obj if change else None):  # noqa: N806
             kwargs = self.get_formset_kwargs(request, obj, inline, prefix)
             formset = inline._paged_formset(request, FormSet, kwargs) if change else FormSet(**kwargs)
             share_choices(formset, share=inline.share_choices)
+            can_change = inline.has_change_permission(request, obj if change else None)
+            if change and obj is not None and can_change and inline.stubs and inline.layout == "tabular":
+                stub_formset(formset, partial(self._change_cell_url, obj), share=inline.share_choices)
             # A view-only inline posts nothing for its rows, so they skip validation unless deleted.
-            if not inline.has_change_permission(request, obj if change else None):
+            if not can_change:
                 for index, form in enumerate(formset.initial_forms):
                     deleted = (
                         inline.has_delete_permission(request, obj)
@@ -1786,6 +1827,18 @@ class ModelAdmin(BaseModelAdmin):
             formsets.append(formset)
             inline_instances.append(inline)
         return formsets, inline_instances
+
+    def _inline_formsets(
+        self, request: HttpRequest, obj: models.Model | None
+    ) -> Iterator[tuple[Any, InlineModelAdmin, str]]:
+        """Each inline's formset class, the inline and the prefix of its formset on the change form."""
+        prefixes: dict[str, int] = {}
+        for FormSet, inline in self.get_formsets_with_inlines(request, obj):  # noqa: N806
+            prefix = FormSet.get_default_prefix()
+            prefixes[prefix] = prefixes.get(prefix, 0) + 1
+            if prefixes[prefix] != 1 or not prefix:
+                prefix = f"{prefix}-{prefixes[prefix]}"
+            yield FormSet, inline, prefix
 
     def get_formset_kwargs(
         self, request: HttpRequest, obj: models.Model | None, inline: InlineModelAdmin, prefix: str
@@ -2201,6 +2254,9 @@ class InlineModelAdmin(BaseModelAdmin):
     layout = "stacked"
     #: The saved rows a change form shows at a time, with links to the other pages; ``None`` shows all.
     per_page: int | None = 5
+    #: The saved rows of a tabular inline render each ``Select``, ``DatePicker`` and ``DateTimePicker``
+    #: as a stub, which loads the full widget on use. False renders the full widgets.
+    stubs = True
 
     def __init__(self, parent_model: type[models.Model], admin_site: Any) -> None:
         self.admin_site = admin_site

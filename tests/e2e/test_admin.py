@@ -1355,6 +1355,28 @@ def test_a_tag_added_in_the_dialog_shows_in_inline_rows_added_after(admin_page, 
     assert admin_page.errors == []
 
 
+def test_a_select_stub_in_an_inline_row_loads_the_full_select_and_saves_its_choice(
+    admin_page, live_server, kitchen, monkeypatch
+):
+    monkeypatch.setattr(site.get_model_admin(Category), "inlines", [ItemInline])
+    kettle = Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/category/{kitchen.pk}/change/")
+    status = admin_page.locator("#items-group [data-formset-row=items-0] td:has([name$=-status])")
+    expect(status.locator("[data-formwork-stub]")).to_be_attached()
+
+    status.locator("summary").click()
+    expect(status.get_by_role("option", name="Active")).to_be_visible()
+    expect(admin_page.locator("#items-group .formwork-dirty")).to_have_count(0)
+    status.get_by_role("option", name="Active").click()
+    expect(admin_page.locator("#items-group .formwork-dirty")).to_have_count(1)
+    admin_page.get_by_role("button", name="Save", exact=True).click()
+
+    expect(admin_page).to_have_url(f"{live_server.url}/admin/admin_app/category/")
+    kettle.refresh_from_db()
+    assert kettle.status == Item.Status.ACTIVE
+    assert admin_page.errors == []
+
+
 class SlugInline(TabularInline):
     model = Item
     fields = ["name", "slug"]

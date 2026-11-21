@@ -52,7 +52,9 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
             widget.stub_url = with_query(urls[name], pk=pk, prefix=form.prefix)
 
 
-def formset_row(formset_class: type[BaseFormSet[Any]], prefix: str, *, value_of: dict[str, str], **kwargs: Any) -> Any:  # noqa: ANN401
+def formset_row(
+    formset_class: type[BaseFormSet[Any]], prefix: str, /, *, value_of: dict[str, str], **kwargs: Any
+) -> Any:  # noqa: ANN401
     """The form of the first row of ``formset_class(**kwargs)``, as the formset builds it, under the form ``prefix``.
 
     ``value_of`` sets the value of a field over the row's saved one. None when the formset has no saved row.
