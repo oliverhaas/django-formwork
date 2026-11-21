@@ -1288,13 +1288,17 @@ widgets.
 
 The stubs load from `cells/<field>/` under the admin's URLs, named
 `<app_label>_<model_name>_cell`. The query names the row's `pk`, its form `prefix` and
-the `value` that the stub holds, so a changed value stays changed. The view checks the
-change permission for the row.
+the `value` that the stub holds, so a changed value stays changed. The view builds the
+row with the list's formset, so the row gets the choices that a hook of the form or of
+the formset gives it, and it checks the change permission for the row.
+
+A select is as wide as its longest option, so a stub holds the labels of the options.
+The rows of a select that [share their choices](#shared-choices) share the labels too. A
+row with choices of its own loads them for its stub, with the queries of the full
+select.
 
 These keep the full widget in every row:
 
-- a select whose rows can get choices of their own (see [Shared choices](#shared-choices)),
-  so that its width fits the row's options,
 - a select with a floating label,
 - a disabled field.
 

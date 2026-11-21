@@ -15,7 +15,7 @@ from django.db.models import fields as model_fields
 from django.forms.models import ModelChoiceIterator
 from django.utils.choices import flatten_choices
 from django.utils.formats import number_format
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.translation import gettext
 
 from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search_url
@@ -225,6 +225,18 @@ _TEMPLATE_ATTRS = frozenset(
         "aria-describedby",
     }
 )
+
+
+def autowidth_copy(widget: dict[str, Any]) -> str:
+    """The option labels that size a select's trigger, from the context of the full select."""
+    # A list that loads its options from the server has no copy in the full select either.
+    if widget["search_url"]:
+        return ""
+    if widget["badges"]:
+        return format_html_join(
+            "", "<span>{}</span>", ((option.get("label_html") or option["label"],) for option in widget["options"])
+        )
+    return format_html_join("\n", "{}", ((option["label"],) for option in widget["options"]))
 
 
 def _trigger_context(widget: dict[str, Any]) -> None:
@@ -549,7 +561,7 @@ class Select(_StubMixin, SearchableSelectMixin, forms.Select):
     #: The option rows alone, which a server search answers with.
     option_list_template_name = "formwork/widgets/partials/select_options.html"
     stub_template_name = "formwork/widgets/select_stub.html"
-    #: The option labels that size a stub's trigger as they size the full one's, set with ``stub_url``.
+    #: The option labels that size the stubs of rows that share their choices, set with ``stub_url``.
     stub_copy: Callable[[], str] | None = None
     search_variant = "select"
 
@@ -575,6 +587,13 @@ class Select(_StubMixin, SearchableSelectMixin, forms.Select):
         return context
 
     def get_stub_context(self, name: str, value: Any, attrs: dict[str, Any] | None) -> dict[str, Any]:  # noqa: ANN401
+        if self.stub_copy is None:
+            # A row with choices of its own loads them to size its stub, as the full select does.
+            context = self.get_context(name, value, attrs)
+            widget = context["widget"]
+            widget["trigger_placeholder"] = widget["attrs"].get("placeholder", "")
+            widget["autowidth_copy"] = autowidth_copy(widget)
+            return context
         # forms.Select's own context builds every option; the stub shows the selected one alone.
         context = forms.Widget.get_context(self, name, value, attrs)
         widget = context["widget"]
@@ -593,7 +612,7 @@ class Select(_StubMixin, SearchableSelectMixin, forms.Select):
                 "selected_label_html": extras.get("label_html", ""),
                 "selected_toggle_class": extras.get("selected_toggle_class", ""),
                 "trigger_placeholder": widget["attrs"].get("placeholder", ""),
-                "autowidth_copy": self.stub_copy() if self.stub_copy else "",
+                "autowidth_copy": self.stub_copy(),
             }
         )
         return context

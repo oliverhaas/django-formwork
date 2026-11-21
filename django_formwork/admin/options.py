@@ -90,7 +90,7 @@ from django_formwork.formsets import (
     formwork_modelformset_factory,
 )
 from django_formwork.widgets import ChoiceLabel, Select
-from django_formwork.widgets._stub import stub_formset
+from django_formwork.widgets._stub import formset_row, stub_formset
 from django_formwork.widgets.select import share_choices
 
 if TYPE_CHECKING:
@@ -1132,17 +1132,23 @@ class ModelAdmin(BaseModelAdmin):
         """
         if not self.has_change_permission(request):
             raise PermissionDenied
-        obj = self.get_object(request, request.GET.get("pk", ""))
-        if obj is None or field not in self.list_editable:
+        if field not in self.list_editable:
             raise Http404
-        if not self.has_change_permission(request, obj):
-            raise PermissionDenied
-        form = self.get_changelist_formset(request).form(
-            instance=obj,
-            prefix=request.GET.get("prefix"),
-            initial={field: request.GET["value"]} if "value" in request.GET else None,
-            use_required_attribute=False,
+        try:
+            pk = self.opts.pk.to_python(request.GET.get("pk"))
+        except ValidationError as error:
+            raise Http404 from error
+        # Built by the list's formset, so that a hook of the formset gives the row its choices.
+        form = formset_row(
+            self.get_changelist_formset(request),
+            request.GET.get("prefix", ""),
+            value_of={field: request.GET["value"]} if "value" in request.GET else {},
+            queryset=self.get_queryset(request).filter(pk=pk),
         )
+        if form is None:
+            raise Http404
+        if not self.has_change_permission(request, form.instance):
+            raise PermissionDenied
         bound = form[field]
         return HttpResponse(bound.as_widget(attrs={"aria-label": bound.label}))
 

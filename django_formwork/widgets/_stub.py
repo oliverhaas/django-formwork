@@ -6,10 +6,8 @@ from functools import cache, partial
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
 
-from django.utils.html import format_html_join
-
 from ._base import _StubMixin
-from .select import Select, rows_share_choices
+from .select import Select, autowidth_copy, rows_share_choices
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -18,24 +16,14 @@ if TYPE_CHECKING:
     from django.forms.formsets import BaseFormSet
 
 
-def _autowidth_copy(bound: forms.BoundField, select: Select) -> str:
-    """The option labels that size a select's trigger, as the full select renders them."""
-    widget = select.get_context(bound.html_name, bound.value(), bound.build_widget_attrs({}))["widget"]
-    # A list that loads its options from the server has no copy in the full select either.
-    if widget["search_url"]:
-        return ""
-    if widget["badges"]:
-        return format_html_join(
-            "", "<span>{}</span>", ((option.get("label_html") or option["label"],) for option in widget["options"])
-        )
-    return format_html_join("\n", "{}", ((option["label"],) for option in widget["options"]))
+def _shared_copy(bound: forms.BoundField, select: Select) -> str:
+    return autowidth_copy(select.get_context(bound.html_name, bound.value(), bound.build_widget_attrs({}))["widget"])
 
 
 def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, share: bool | None = None) -> None:
     """Render the widgets of an unbound formset's saved rows as stubs; call it after ``share_choices``.
 
-    ``url_of(name)`` answers with a field's full widget for the query ``pk``, ``prefix`` and ``value``.
-    A select whose rows can get choices of their own keeps the full widget."""
+    ``url_of(name)`` answers with a field's full widget for the query ``pk``, ``prefix`` and ``value``."""
     if formset.is_bound:
         return
     # Built when the first stub renders, where the selects of the page share their queries.
@@ -50,11 +38,23 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
             if field.disabled or not isinstance(widget, _StubMixin):
                 continue
             if isinstance(widget, Select):
-                if widget.floating or not rows_share_choices(formset, field, share=share):
+                if widget.floating:
                     continue
-                if name not in copies:
-                    copies[name] = cache(partial(_autowidth_copy, form[name], widget))
-                widget.stub_copy = copies[name]
+                # Rows that share their choices share the labels that size their stubs.
+                if rows_share_choices(formset, field, share=share):
+                    widget.stub_copy = copies.setdefault(name, cache(partial(_shared_copy, form[name], widget)))
             if name not in urls:
                 urls[name] = url_of(name)
             widget.stub_url = f"{urls[name]}?{urlencode({'pk': pk, 'prefix': form.prefix})}"
+
+
+def formset_row(formset_class: type[BaseFormSet[Any]], prefix: str, *, value_of: dict[str, str], **kwargs: Any) -> Any:  # noqa: ANN401
+    """The form of the first row of ``formset_class(**kwargs)``, as the formset builds it, under the form ``prefix``.
+
+    ``value_of`` sets the value of a field over the row's saved one. None when the formset has no saved row.
+    """
+    kwargs.setdefault("prefix", prefix.rpartition("-")[0] or None)
+    form_kwargs = kwargs.pop("form_kwargs", None) or {}
+    initial = {**form_kwargs.get("initial", {}), **value_of}
+    formset = formset_class(form_kwargs={**form_kwargs, "prefix": prefix, "initial": initial}, **kwargs)
+    return next(iter(formset.initial_forms), None)

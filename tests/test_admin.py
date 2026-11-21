@@ -41,7 +41,7 @@ from django_formwork.admin.models import HistoryEntry
 from django_formwork.admin.paginator import page_links
 from django_formwork.admin.widgets import RELATION_SEARCH_KEY, AdminDateWidget
 from django_formwork.forms import FormworkModelForm
-from django_formwork.formsets import FormworkBaseInlineFormSet
+from django_formwork.formsets import FormworkBaseInlineFormSet, FormworkBaseModelFormSet
 from django_formwork.search import SEARCH_PAGE_SIZE
 from django_formwork.widgets import Select, SelectMultiple, Textarea, TextInput
 
@@ -2859,9 +2859,26 @@ def test_a_list_select_shows_its_rows_choice_and_renders_the_options_only_withou
     assert (cell.select("[role=option]") == []) is stubs
 
 
-def test_a_list_of_stubs_and_its_relation_filter_run_the_queries_of_the_full_list(admin_client, stub_list, monkeypatch):
+class _OwnCategoryForm(FormworkModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].queryset = Category.objects.filter(pk=self.instance.category_id)
+
+
+class _OwnCategoryFormSet(FormworkBaseModelFormSet):
+    def add_fields(self, form, index):
+        super().add_fields(form, index)
+        form.fields["category"].queryset = Category.objects.filter(pk=form.instance.category_id)
+
+
+@pytest.mark.parametrize("form", [None, _OwnCategoryForm])
+def test_a_list_of_stubs_and_its_relation_filter_run_the_queries_of_the_full_list(
+    admin_client, stub_list, monkeypatch, form
+):
     model_admin = site.get_model_admin(Item)
     monkeypatch.setattr(model_admin, "list_filter", ["category"])
+    if form is not None:
+        monkeypatch.setattr(model_admin, "form", form)
 
     def queries(*, stubs):
         monkeypatch.setattr(model_admin, "list_editable_stubs", stubs)
@@ -2888,14 +2905,26 @@ def test_a_select_stub_sizes_its_trigger_with_the_labels_of_the_full_select(
     assert label_copy() == stubbed
 
 
-def test_a_select_whose_rows_can_get_their_own_choices_keeps_the_full_select(admin_client, stub_list, monkeypatch):
-    monkeypatch.setattr(site.get_model_admin(Item), "form", _RowForm)
+def test_the_stub_of_a_row_with_its_own_choices_sizes_its_trigger_with_the_rows_labels(
+    admin_client, stub_list, monkeypatch
+):
+    model_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(model_admin, "form", _OwnCategoryForm)
 
-    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+    def cells():
+        soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+        return [_cell(soup, obj, "category") for obj in (stub_list.alpha, stub_list.beta)]
 
-    assert _cell(soup, stub_list.alpha, "category").select("[data-formwork-stub]") == []
-    assert _cell(soup, stub_list.alpha, "status").select("[data-formwork-stub]") == []
-    assert _cell(soup, stub_list.alpha, "released").select("[data-formwork-stub]") != []
+    stubs = cells()
+    monkeypatch.setattr(model_admin, "list_editable_stubs", False)
+    full = cells()
+
+    assert all(cell.select("[data-formwork-stub]") for cell in stubs)
+    assert [str(cell.select_one(".formwork-autowidth")) for cell in stubs] == [
+        str(cell.select_one(".formwork-autowidth")) for cell in full
+    ]
+    assert "Office" in full[1].select_one(".formwork-autowidth").get_text()
+    assert "Office" not in full[0].select_one(".formwork-autowidth").get_text()
 
 
 def test_a_cell_answers_with_the_full_widget_for_the_value_its_stub_holds(admin_client, stub_list):
@@ -2906,6 +2935,22 @@ def test_a_cell_answers_with_the_full_widget_for_the_value_its_stub_holds(admin_
     value = soup.select_one("[x-data=formworkSelect] input[type=hidden]")
     assert value["name"] == "form-0-category"
     assert value["value"] == str(stub_list.office.pk)
+
+
+def test_a_cell_gives_its_row_the_choices_that_the_lists_formset_gives_it(admin_client, stub_list, monkeypatch):
+    model_admin = site.get_model_admin(Item)
+    get_formset = model_admin.get_changelist_formset
+    monkeypatch.setattr(
+        model_admin,
+        "get_changelist_formset",
+        lambda request, **kwargs: get_formset(request, formset=_OwnCategoryFormSet, **kwargs),
+    )
+    query = {"pk": stub_list.beta.pk, "prefix": "form-1"}
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "cell", "category"), query).content, "html.parser")
+
+    assert [option.get_text(strip=True) for option in soup.select("[role=option]")] == ["Office"]
+    assert soup.select_one("input[type=hidden]")["name"] == "form-1-category"
 
 
 @pytest.mark.parametrize(("field", "pk"), [("name", None), ("category", "unknown")])

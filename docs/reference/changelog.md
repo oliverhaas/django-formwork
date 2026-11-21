@@ -191,9 +191,9 @@
   of its editable columns as a stub: the closed widget with its value. When the pointer
   rests on a stub, or the stub takes the focus or a press, the full widget loads from the
   new `cells/<field>/` view (URL name `<app_label>_<model_name>_cell`) and takes over the
-  focus, a typed date and the press. A select whose rows can get choices of their own
-  keeps the full widget. `list_editable_stubs = False` on the `ModelAdmin` renders the
-  full widgets. Tests that read the options of a list's select from the rendered page
+  focus, a typed date and the press. The view builds the row with the list's formset, so
+  the row keeps the choices that a hook gives it. `list_editable_stubs = False` on the
+  `ModelAdmin` renders the full widgets. Tests that read the options of a list's select from the rendered page
   request the cell instead, or set `list_editable_stubs = False`. See
   [Widgets that load on use](admin.md#widgets-that-load-on-use).
 - `makemessages` reads a template in a `jinja2` directory with Jinja's parser, so it
