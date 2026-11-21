@@ -2845,6 +2845,22 @@ def test_saving_a_list_of_stubs_posts_the_values_of_its_rows(admin_client, stub_
     assert list(Item.objects.order_by("pk").values(*_STUB_COLUMNS)) == before
 
 
+def test_a_failed_list_save_renders_stubs_for_the_fields_without_errors(admin_client, stub_list):
+    stub_list.beta.delete()
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+    form = soup.find(id="changelist-form")
+    data = {el["name"]: el.get("value", "") for el in form.select("input[name^=form-]:not([disabled])")}
+    data.update({"form-0-released": "not a date", "form-0-category": str(stub_list.office.pk)})
+
+    soup = BeautifulSoup(admin_client.post(url(Item, "changelist"), {**data, "_save": "1"}).content, "html.parser")
+
+    released = _cell(soup, stub_list.alpha, "released")
+    category = _cell(soup, stub_list.alpha, "category")
+    assert released.select("[data-formwork-stub]") == []
+    assert released.select_one("[name$=-released]")["aria-invalid"] == "true"
+    assert category.select_one("[data-formwork-stub] [name$=-category]")["value"] == str(stub_list.office.pk)
+
+
 @pytest.mark.parametrize("stubs", [True, False])
 def test_a_list_select_shows_its_rows_choice_and_renders_the_options_only_without_stubs(
     admin_client, stub_list, monkeypatch, stubs

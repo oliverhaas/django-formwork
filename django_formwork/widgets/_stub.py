@@ -21,11 +21,10 @@ def _shared_copy(bound: forms.BoundField, select: Select) -> str:
 
 
 def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, share: bool | None = None) -> None:
-    """Render the widgets of an unbound formset's saved rows as stubs; call it after ``share_choices``.
+    """Render the widgets of a formset's saved rows as stubs; call it after ``share_choices``.
 
-    ``url_of(name)`` answers with a field's full widget for the query ``pk``, ``prefix`` and ``value``."""
-    if formset.is_bound:
-        return
+    A field with an error renders in full, next to its error. ``url_of(name)`` answers with a field's
+    full widget for the query ``pk``, ``prefix`` and ``value``."""
     # Built when the first stub renders, where the selects of the page share their queries.
     copies: dict[str, Callable[[], str]] = {}
     urls: dict[str, str] = {}
@@ -35,7 +34,7 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
             continue
         for name, field in form.fields.items():
             widget = field.widget
-            if field.disabled or not isinstance(widget, _StubMixin):
+            if field.disabled or not isinstance(widget, _StubMixin) or name in form.errors:
                 continue
             if isinstance(widget, Select):
                 if widget.floating:

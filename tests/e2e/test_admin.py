@@ -710,13 +710,13 @@ def test_text_typed_into_a_date_stub_carries_over_to_the_full_picker(admin_page,
     assert admin_page.errors == []
 
 
-def test_a_failed_list_save_brings_the_full_selects_and_a_saved_one_the_stubs(admin_page, status_cell):
+def test_a_failed_list_save_keeps_the_stubs_of_the_fields_without_errors(admin_page, status_cell):
     quantity = admin_page.locator("#changelist-table [name$=-quantity]")
     save = admin_page.get_by_role("button", name="Save changes")
     quantity.fill("-1")
     save.click()
     expect(quantity).to_have_attribute("aria-invalid", "true")
-    expect(status_cell.locator("[x-data=formworkSelect]")).to_be_attached()
+    expect(status_cell.locator("[data-formwork-stub]")).to_be_attached()
 
     status_cell.locator("summary").click()
     status_cell.get_by_role("option", name="Active").click()

@@ -314,8 +314,8 @@ if (typeof document !== "undefined") {
     true,
   );
   // A swap that brings a stub where the page shows the full widget, or the
-  // full widget where the page shows a stub (a save with errors renders the
-  // rows in full), puts the new one in plainly first. A morph would keep the
+  // full widget where the page shows a stub (a save renders a field with an
+  // error in full), puts the new one in plainly first. A morph would keep the
   // full widget's Alpine bindings on the stub, or leave the full widget unbound.
   // The focus stays: a save sent with Enter from a loaded date picker leaves
   // it on the stub, which loads the full widget again.
