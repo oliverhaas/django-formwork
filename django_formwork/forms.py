@@ -19,6 +19,7 @@ Both classes register the server search of each field whose widget takes a
 from __future__ import annotations
 
 import inspect
+from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from asgiref.sync import sync_to_async
@@ -342,8 +343,11 @@ class _DirtyOnlyModelFormMixin(_DirtyOnlyFormMixin):
             if isinstance(field, InlineForeignKeyField):
                 exclude.add(name)
 
+        # A FormworkBaseModelFormSet looks up the foreign keys of all its forms at once.
+        checks = getattr(self, "_foreign_key_checks", None)
         try:
-            self.instance.full_clean(exclude=exclude, validate_unique=False, validate_constraints=False)
+            with checks.serving(self.instance) if checks else nullcontext():
+                self.instance.full_clean(exclude=exclude, validate_unique=False, validate_constraints=False)
         except ValidationError as e:
             self._update_errors(e)
 

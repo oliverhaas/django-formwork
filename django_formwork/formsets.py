@@ -42,13 +42,28 @@ different day than stock and its duplicate missed.
 
 from __future__ import annotations
 
+import copy
 from collections import defaultdict
-from contextlib import nullcontext, suppress
+from contextlib import contextmanager, nullcontext, suppress
+from functools import cached_property, partial
 from typing import TYPE_CHECKING, Any, TypeGuard, cast
 
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db import DatabaseError, connection, connections, router, transaction
-from django.db.models import BooleanField, CheckConstraint, Q, UniqueConstraint, Value, prefetch_related_objects
+from django.db.models import (
+    BooleanField,
+    CheckConstraint,
+    CompositePrimaryKey,
+    Field,
+    ForeignKey,
+    IntegerField,
+    Model,
+    Q,
+    UniqueConstraint,
+    Value,
+    prefetch_related_objects,
+)
+from django.db.models.expressions import DatabaseDefault
 from django.db.models.functions import Coalesce
 from django.db.models.sql import Query
 from django.forms.models import (
@@ -62,12 +77,12 @@ from django.forms.models import (
 from django_formwork.forms import FormworkModelForm
 from django_formwork.renderers import FormworkRenderer
 from django_formwork.tables import TableRenderMixin
+from django_formwork.widgets.select import rows_share_choices
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Collection, Generator
     from datetime import date as date_type
 
-    from django.db.models import Model
 
 __all__ = [
     "FormworkBaseInlineFormSet",
@@ -627,16 +642,141 @@ class _RowField(ModelChoiceField):
         return super().to_python(value)
 
 
+class _PostedChoices:
+    """The rows that the forms of a formset posted for one relation, by their value, loaded once for all forms."""
+
+    def __init__(self, queryset: Any, key: str, values: Callable[[], set[str]]) -> None:  # noqa: ANN401
+        self.queryset = queryset
+        self.key = key
+        self.values = values
+
+    @cached_property
+    def rows(self) -> dict[str, Model]:
+        opts = self.queryset.model._meta  # noqa: SLF001
+        key = opts.pk if self.key == "pk" else opts.get_field(self.key)
+        low, high = (
+            connections[self.queryset.db].ops.integer_field_range(key.get_internal_type())
+            if isinstance(key, IntegerField)
+            else (None, None)
+        )
+        # Values that Django's own lookup never sends to the database keep that lookup.
+        # ``__in`` would send an out-of-range integer, and PostgreSQL rejects a null character.
+        values = set()
+        for value in self.values():
+            with suppress(ValueError, TypeError, ValidationError):
+                prepared = key.get_prep_value(value)
+                out_of_range = isinstance(prepared, int) and (
+                    (low is not None and prepared < low) or (high is not None and prepared > high)
+                )
+                if not out_of_range and "\x00" not in value:
+                    values.add(value)
+        if not values:
+            return {}
+        return {str(getattr(row, self.key)): row for row in self.queryset.filter(**{f"{self.key}__in": values})}
+
+    def to_python(self, field: ModelChoiceField, value: Any) -> Any:  # noqa: ANN401
+        """Django's ``to_python``, which finds a posted value among ``rows`` instead of its own query."""
+        if isinstance(value, str) and value not in field.empty_values:
+            field.validate_no_null_characters(value)
+            if (row := self.rows.get(value)) is not None:
+                # Each form gets an instance of its own, as from its own query.
+                return copy.copy(row)
+        return type(field).to_python(field, value)
+
+
+class _ForeignKeyChecks:
+    """Django's model-level check that a foreign key names a row, with one query per relation for all forms.
+
+    A row that the batched query does not return, and a foreign key of a subclass that changes
+    its own ``validate()`` or ``clean()``, gets Django's own query and error.
+    """
+
+    def __init__(self, posted: Callable[[str], _PostedChoices | None]) -> None:
+        self.posted = posted
+        self.found: dict[tuple[Field[Any, Any], str], set[Any]] = {}
+
+    @contextmanager
+    def serving(self, instance: Model) -> Generator[None]:
+        """Let ``instance.full_clean()`` look up its foreign keys among the rows of all forms."""
+        # The batch stands in for Django's own clean_fields() only; an override, such as the
+        # admin import's on each instance, keeps its own lookups.
+        if type(instance).clean_fields is not Model.clean_fields or "clean_fields" in vars(instance):
+            yield
+            return
+        instance.clean_fields = partial(self.clean_fields, instance)  # type: ignore[method-assign]
+        try:
+            yield
+        finally:
+            del instance.clean_fields
+
+    def clean_fields(self, instance: Model, exclude: Collection[str] | None = None) -> None:
+        """Django's ``Model.clean_fields()``, with :meth:`clean` for ``field.clean()``."""
+        if exclude is None:
+            exclude = set()
+        errors = {}
+        for f in instance._meta.fields:  # noqa: SLF001
+            if f.name in exclude or f.generated:
+                continue
+            raw_value = getattr(instance, f.attname)
+            if f.blank and raw_value in f.empty_values:
+                continue
+            if isinstance(raw_value, DatabaseDefault):
+                continue
+            try:
+                setattr(instance, f.attname, self.clean(f, raw_value, instance))
+            except ValidationError as e:
+                errors[f.name] = e.error_list
+        if errors:
+            raise ValidationError(errors)
+
+    def clean(self, field: Field[Any, Any], raw_value: Any, instance: Model) -> Any:  # noqa: ANN401
+        """``field.clean()``, which skips the query of ``ForeignKey.validate()`` for a row the batch found."""
+        if not (
+            isinstance(field, ForeignKey)
+            and type(field).clean is Field.clean
+            and type(field).validate is ForeignKey.validate
+            and not field.remote_field.parent_link
+            and not callable(field.remote_field.limit_choices_to)
+        ):
+            return field.clean(raw_value, instance)
+        value = field.to_python(raw_value)
+        if value is None or value not in self._found(field, instance):
+            return field.clean(raw_value, instance)
+        super(ForeignKey, field).validate(value, instance)
+        field.run_validators(value)
+        return value
+
+    def _found(self, field: ForeignKey[Any, Any], instance: Model) -> set[Any]:
+        """The values of ``field`` that the forms posted and that name a row ``ForeignKey.validate()`` accepts."""
+        target = field.remote_field.model
+        using = router.db_for_read(target, instance=instance)
+        if (field, using) not in self.found:
+            posted = self.posted(field.name)
+            values = {getattr(row, field.target_field.attname) for row in posted.rows.values()} if posted else set()
+            rows = target._base_manager.using(using).filter(**{f"{field.remote_field.field_name}__in": values})  # noqa: SLF001
+            rows = rows.complex_filter(field.get_limit_choices_to())
+            self.found[field, using] = set(rows.values_list(field.target_field.attname, flat=True)) if values else set()
+        return self.found[field, using]
+
+
+def _has_unique_key(field: ModelChoiceField) -> bool:
+    """Whether a value names at most one row, so that one query can find the rows of all values."""
+    queryset: Any = field.queryset
+    opts = queryset.model._meta  # noqa: SLF001
+    key = opts.pk if field.to_field_name is None else opts.get_field(field.to_field_name)
+    return key.unique and not isinstance(key, CompositePrimaryKey)
+
+
 class _LoadedAtOnceMixin:
     """Load what the forms of a model formset read from the database for all forms at once.
 
-    The many-to-many values the forms start from take one query per field, and the rows of the posted
-    primary keys one query, where Django runs both once per form.
+    Django runs these once per form: the posted primary keys, the many-to-many initials and the posted relations.
     """
 
     if TYPE_CHECKING:
         _pk_field: Any
         data: Any
+        files: Any
         form: type[Any]
         model: Any
         get_queryset: Callable[[], Any]
@@ -649,6 +789,8 @@ class _LoadedAtOnceMixin:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._many_to_many_loaded = False
         self._posted_rows: dict[str, dict[Any, Model]] = {}
+        self._posted_choices: dict[str, _PostedChoices | None] = {}
+        self._foreign_key_checks = _ForeignKeyChecks(self._posted_choices.get)
         super().__init__(*args, **kwargs)
 
     def _construct_form(self, i: int, **kwargs: Any) -> Any:  # noqa: ANN401
@@ -657,7 +799,11 @@ class _LoadedAtOnceMixin:
             self._many_to_many_loaded = True
             if names := initial_many_to_many(self.form):
                 prefetch_related_objects(list(self.get_queryset()), *names)
-        return super()._construct_form(i, **kwargs)  # type: ignore[misc]
+        form = super()._construct_form(i, **kwargs)  # type: ignore[misc]
+        if form.is_bound:
+            # A FormworkModelForm checks its foreign keys with these; a plain ModelForm ignores them.
+            form._foreign_key_checks = self._foreign_key_checks  # noqa: SLF001
+        return form
 
     def add_fields(self, form: Any, index: int | None) -> None:  # noqa: ANN401
         name = self.model._meta.pk.name  # noqa: SLF001
@@ -673,6 +819,36 @@ class _LoadedAtOnceMixin:
                 required=field.required,
                 widget=field.widget,
             )
+        if form.is_bound:
+            for field_name, choice_field in form.fields.items():
+                if choices := self._choices_posted_for(field_name, choice_field):
+                    choice_field.to_python = partial(choices.to_python, choice_field)
+
+    def _choices_posted_for(self, name: str, field: Any) -> _PostedChoices | None:  # noqa: ANN401
+        """The rows the forms posted for a relation field, or None where each form keeps Django's query."""
+        if name not in self._posted_choices:
+            shared = (
+                isinstance(field, ModelChoiceField)
+                and type(field).to_python is ModelChoiceField.to_python
+                and field.queryset is not None
+                and not field.disabled
+                and _has_unique_key(field)
+                and rows_share_choices(cast("Any", self), field)
+            )
+            self._posted_choices[name] = (
+                _PostedChoices(field.queryset, field.to_field_name or "pk", partial(self._posted_values, name, field))
+                if shared
+                else None
+            )
+        return self._posted_choices[name]
+
+    def _posted_values(self, name: str, field: Any) -> set[str]:  # noqa: ANN401
+        values = set()
+        for i in range(self.total_form_count()):
+            value = field.widget.value_from_datadict(self.data, self.files, f"{self.add_prefix(i)}-{name}")
+            if isinstance(value, str) and value not in field.empty_values:
+                values.add(value)
+        return values
 
     def _rows(self, queryset: Any) -> dict[Any, Model]:  # noqa: ANN401
         """The rows of the primary keys the forms posted, by key, with one query per database."""

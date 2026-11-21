@@ -85,11 +85,20 @@ Two cases compare values in Python where Django compares them in SQL:
 
 ## Loading the rows
 
-Django runs two more queries for each row of a model formset: one that finds the row
-of the posted primary key, and one for each many-to-many field that the form shows.
-A Formwork formset runs each of them once for all rows. A primary key that the formset
-cannot read from the post, for example through a custom widget, gets Django's own
-query.
+Django runs more queries for each row of a model formset: one that finds the row of
+the posted primary key, one for each many-to-many field that the form shows, and two for
+each foreign key: one in the form field that finds the posted row, and one in the
+model's own check that the row exists. A Formwork formset runs each of them once for all
+rows. These keep Django's own query and its error:
+
+- a primary key that the formset cannot read from the post, for example through a
+  custom widget;
+- a posted value that no row of the batch matches, or that the key cannot take;
+- a choice field whose rows can get choices of their own, through one of the hooks in
+  [Shared choices](admin.md#shared-choices), or a `ModelChoiceField` subclass that
+  changes `to_python()`;
+- a foreign key with a callable `limit_choices_to`, or a subclass that changes
+  `clean()` or `validate()`.
 
 ## Editable tables
 

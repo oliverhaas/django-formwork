@@ -194,9 +194,10 @@
 ### Changed
 
 - Saving a model formset ran one query per row to find the row of its posted primary
-  key, and one per row and many-to-many field for the values the form starts from. A
-  Formwork formset now runs each of them once for all rows. See
-  [Formsets](formsets.md#loading-the-rows).
+  key, one per row and many-to-many field for the values the form starts from, and two
+  per row and foreign key to find and check the posted row. A Formwork formset now runs
+  each of them once for all rows: an admin list of 100 rows with two relation columns
+  saves with 8 queries instead of 404. See [Formsets](formsets.md#loading-the-rows).
 - A select whose option labels read a relation, such as
   `f"{city.name} in {city.region}"` in `label_from_instance`, ran one query per option.
   `Select`, `SelectMultiple` and the server search of every dropdown now load the rows

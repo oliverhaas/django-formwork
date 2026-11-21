@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from django import forms
 from django.db import DatabaseError, connection, models
 from django.db.models import QuerySet
 from django.db.models.functions import Upper
@@ -25,6 +26,7 @@ from django.forms import BaseModelFormSet, inlineformset_factory, modelformset_f
 from django.test.utils import CaptureQueriesContext
 from e2e.models import (
     CheckThenUnique,
+    City,
     ConditionalUnique,
     ConstraintPair,
     CustomMessageUnique,
@@ -38,6 +40,7 @@ from e2e.models import (
     UniquePair,
 )
 
+from django_formwork.forms import FormworkModelForm
 from django_formwork.formsets import (
     FormworkBaseModelFormSet,
     formwork_inlineformset_factory,
@@ -751,3 +754,75 @@ def test_meta_unique_prefetch_database_error_falls_back_to_constraint_validate(m
     ours = our_cls(data, queryset=ConstraintPair.objects.all())
     assert ours.is_valid() is False
     assert _errors_repr(ours) == _errors_repr(stock)
+
+
+# ---------------------------------------------------------------------------
+# The rows that the forms post for a relation
+# ---------------------------------------------------------------------------
+
+
+class _NorthernCityForm(FormworkModelForm):
+    region = forms.ModelChoiceField(queryset=Region.objects.filter(name__startswith="North"))
+
+    class Meta:
+        model = City
+        fields = ["name", "region"]
+
+
+class _AnyRegionCityForm(FormworkModelForm):
+    region = forms.ModelChoiceField(queryset=Region.objects.all())
+
+    class Meta:
+        model = City
+        fields = ["name", "region"]
+
+
+def _cities(rows: list[str], *, stock: bool = False, **factory_kw: Any) -> Any:
+    factory = modelformset_factory if stock else formwork_modelformset_factory
+    cls = factory(City, fields=["name", "region"], extra=0, **factory_kw)
+    return cls(
+        _data([{"name": f"City {i}", "region": region} for i, region in enumerate(rows)]), queryset=City.objects.none()
+    )
+
+
+def test_relation_lookups_are_constant_in_form_count():
+    north, south = Region.objects.create(name="North"), Region.objects.create(name="South")
+    regions = [str(north.pk), str(south.pk)]
+
+    with CaptureQueriesContext(connection) as q_small:
+        assert not _cities([*regions[:1], "abc"]).is_valid()
+    with CaptureQueriesContext(connection) as q_big:
+        assert not _cities([*regions * 6, "abc"]).is_valid()
+
+    assert len(q_small.captured_queries) == len(q_big.captured_queries)
+
+
+@pytest.mark.parametrize(
+    ("form", "model_limit"),
+    [(None, None), (_NorthernCityForm, None), (_AnyRegionCityForm, {"name__startswith": "North"})],
+    ids=["model-field", "limited-form-queryset", "limited-model-field"],
+)
+def test_relation_values_clean_as_in_stock(form, model_limit, monkeypatch):
+    if model_limit:
+        monkeypatch.setattr(City._meta.get_field("region").remote_field, "limit_choices_to", model_limit)
+    north, south = Region.objects.create(name="North"), Region.objects.create(name="South")
+    rows = [
+        *[str(north.pk), str(south.pk), str(north.pk), "", "999", "abc", f" {north.pk}", f"0{south.pk}", "1\x00"],
+        *["9" * 20, "-" + "9" * 20],
+    ]
+    factory_kw = {"form": form} if form else {}
+
+    stock, ours = _cities(rows, stock=True, **factory_kw), _cities(rows, **factory_kw)
+
+    assert stock.is_valid() == ours.is_valid()
+    assert _errors_repr(stock) == _errors_repr(ours)
+    assert [f.cleaned_data.get("region") for f in stock] == [f.cleaned_data.get("region") for f in ours]
+
+
+def test_each_form_gets_its_own_instance_of_a_posted_row():
+    north = Region.objects.create(name="North")
+
+    formset = _cities([str(north.pk), str(north.pk)])
+
+    assert formset.is_valid()
+    assert formset.forms[0].cleaned_data["region"] is not formset.forms[1].cleaned_data["region"]
