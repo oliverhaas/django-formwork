@@ -6,10 +6,10 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from django import forms
-from django.utils.html import conditional_escape, format_html
+from django.utils.html import conditional_escape, format_html, format_html_join
 from django.utils.translation import ngettext
 
-from ._base import _ModuleScript, _plural_forms, _StubMixin
+from ._base import _PLURAL_SAMPLES, _ModuleScript, _plural_forms, _StubMixin
 from .select import SearchableSelectMixin, _trigger_context, label_extras
 
 if TYPE_CHECKING:
@@ -67,14 +67,13 @@ class SelectMultiple(_StubMixin, SearchableSelectMixin, forms.SelectMultiple):
             ]
         )
         widget["count_text"] = _plural_forms(_selected_text)
+        widget["autowidth_copy"] = self.autowidth_copy(widget)
         return context
 
     def get_stub_context(self, name: str, value: Any, attrs: dict[str, Any] | None) -> dict[str, Any]:  # noqa: ANN401
         if self.stub_copy is None:
             # A row with choices of its own loads them to size its stub, as the full select does.
-            context = self.get_context(name, value, attrs)
-            context["widget"]["autowidth_copy"] = self.autowidth_copy(context["widget"])
-            return context
+            return self.get_context(name, value, attrs)
         # forms.SelectMultiple's own context builds every option; the stub shows the selected ones alone.
         context = forms.Widget.get_context(self, name, value, attrs)
         widget = context["widget"]
@@ -91,7 +90,13 @@ class SelectMultiple(_StubMixin, SearchableSelectMixin, forms.SelectMultiple):
 
     def autowidth_copy(self, widget: Mapping[str, Any]) -> str:
         # The toggle of the full select sizes itself by the label text, also with badges.
-        return super().autowidth_copy({**widget, "badges": False})
+        labels = super().autowidth_copy({**widget, "badges": False})
+        count = len(widget["options"])
+        if not labels or count <= self.summary_threshold:
+            return labels
+        # Past the threshold the toggle shows the count: each plural form, with the most digits the count can have.
+        counts = dict.fromkeys(_selected_text(sample) % {"count": count} for sample in _PLURAL_SAMPLES.values())
+        return format_html_join("\n", "{}", ((line,) for line in (labels, *counts)))
 
     def _toggle_context(self, widget: dict[str, Any]) -> None:
         """What the closed toggle shows: the selected options, or their count past ``summary_threshold``."""

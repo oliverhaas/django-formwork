@@ -506,6 +506,15 @@ def test_select_multiple_summary_server_renders_count_above_cutoff():
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(("options", "room_for_count"), [(3, False), (4, True)])
+def test_select_multiple_toggle_makes_room_for_the_count_it_can_show(options, room_for_count):
+    widget = SelectMultiple(choices=[(str(i), "A") for i in range(options)])
+    soup = render_widget(widget, name="test")
+    lines = soup.select_one("summary .formwork-autowidth").get_text().split("\n")
+    assert (f"{options} selected" in lines) is room_for_count
+
+
+@pytest.mark.unit
 @pytest.mark.usefixtures("pseudo_catalog")
 def test_select_multiple_count_is_translated_on_server_and_client():
     """The server count and the plural forms the component counts with share the active language."""
