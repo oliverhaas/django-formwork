@@ -1291,8 +1291,8 @@ the focus, a typed date and the press. After a failed save, a field with an erro
 the full widget next to its error, and the other fields stay stubs.
 
 The stubs load from `cells/<field>/` under the admin's URLs, named
-`<app_label>_<model_name>_cell`. The query names the row's `pk`, its form `prefix` and
-the `value` that the stub holds, so a changed value stays changed. The view builds the
+`<app_label>_<model_name>_cell`. The query names the row's `pk` and its form `prefix`,
+and holds the stub's inputs under their names, so a changed value stays changed. The view builds the
 row with the list's formset, so the row gets the choices that a hook of the form or of
 the formset gives it, and it checks the change permission for the row.
 

@@ -258,8 +258,10 @@ if (typeof document !== "undefined") {
   };
   const load = (stub) => {
     if (!loading.has(stub)) {
-      const value = stub.querySelector("[name]")?.value ?? "";
-      const url = `${stub.dataset.formworkStub}&value=${encodeURIComponent(value)}`;
+      // The stub's inputs, which hold the value that the full widget shows.
+      const query = new URLSearchParams();
+      for (const input of stub.querySelectorAll("[name]")) query.append(input.name, input.value);
+      const url = `${stub.dataset.formworkStub}&${query}`;
       const done = fetch(url, { credentials: "same-origin" })
         .then((response) => (response.ok ? response.text() : Promise.reject(new Error(response.statusText))))
         .then((html) => swapIn(stub, html))

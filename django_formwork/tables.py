@@ -404,7 +404,8 @@ class FormworkCellMixin(_RowsViewMixin):
         form = formset_row(
             self.formset_class,
             request.GET.get("prefix", ""),
-            value_of={name: request.GET["value"]} if "value" in request.GET else {},
+            name,
+            request.GET,
             **{**self.get_formset_kwargs(request), "queryset": queryset.filter(pk=pk)},
         )
         if form is None:

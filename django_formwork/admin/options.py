@@ -1137,7 +1137,7 @@ class ModelAdmin(BaseModelAdmin):
     def cell_view(self, request: HttpRequest, field: str) -> HttpResponse:
         """The full widget of an editable cell, for the stub that the list rendered in its place.
 
-        The query names the row's ``pk`` and form ``prefix``, and the ``value`` that the stub holds.
+        The query names the row's ``pk`` and form ``prefix``, and holds the stub's inputs under their names.
         """
         if not self.has_change_permission(request):
             raise PermissionDenied
@@ -1151,7 +1151,8 @@ class ModelAdmin(BaseModelAdmin):
         form = formset_row(
             self.get_changelist_formset(request),
             request.GET.get("prefix", ""),
-            value_of={field: request.GET["value"]} if "value" in request.GET else {},
+            field,
+            request.GET,
             queryset=self.get_queryset(request).filter(pk=pk),
         )
         if form is None:
@@ -1164,7 +1165,7 @@ class ModelAdmin(BaseModelAdmin):
     def change_cell_view(self, request: HttpRequest, object_id: str, field: str) -> HttpResponse:
         """The full widget of a cell of a tabular inline, for the stub that the change form rendered in its place.
 
-        The query names the row's ``pk`` and form ``prefix``, and the ``value`` that the stub holds.
+        The query names the row's ``pk`` and form ``prefix``, and holds the stub's inputs under their names.
         """
         obj = self.get_object(request, unquote(object_id))
         if obj is None:
@@ -1188,7 +1189,8 @@ class ModelAdmin(BaseModelAdmin):
         form = formset_row(
             FormSet,
             row_prefix,
-            value_of={field: request.GET["value"]} if "value" in request.GET else {},
+            field,
+            request.GET,
             **{**kwargs, "queryset": kwargs["queryset"].filter(pk=pk)},
         )
         if form is None or field not in form.fields or form.fields[field].disabled:

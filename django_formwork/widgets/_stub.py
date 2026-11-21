@@ -10,7 +10,7 @@ from ._base import _StubMixin
 from .select import Select, autowidth_copy, rows_share_choices
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
     from django import forms
     from django.forms.formsets import BaseFormSet
@@ -29,7 +29,7 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
     """Render the widgets of a formset's saved rows as stubs; call it after ``share_choices``.
 
     A field with an error renders in full, next to its error. ``url_of(name)`` answers with a field's
-    full widget for the query ``pk``, ``prefix`` and ``value``."""
+    full widget for the query ``pk`` and ``prefix``, and the stub's inputs under their names."""
     # Built when the first stub renders, where the selects of the page share their queries.
     copies: dict[str, Callable[[], str]] = {}
     urls: dict[str, str] = {}
@@ -53,14 +53,19 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
 
 
 def formset_row(
-    formset_class: type[BaseFormSet[Any]], prefix: str, /, *, value_of: dict[str, str], **kwargs: Any
+    formset_class: type[BaseFormSet[Any]], prefix: str, field: str, data: Mapping[str, Any], /, **kwargs: Any
 ) -> Any:  # noqa: ANN401
     """The form of the first row of ``formset_class(**kwargs)``, as the formset builds it, under the form ``prefix``.
 
-    ``value_of`` sets the value of a field over the row's saved one. None when the formset has no saved row.
+    The inputs of ``field`` in ``data`` set its value over the row's saved one. None when the formset has no
+    saved row.
     """
     kwargs.setdefault("prefix", prefix.rpartition("-")[0] or None)
     form_kwargs = kwargs.pop("form_kwargs", None) or {}
-    initial = {**form_kwargs.get("initial", {}), **value_of}
-    formset = formset_class(form_kwargs={**form_kwargs, "prefix": prefix, "initial": initial}, **kwargs)
-    return next(iter(formset.initial_forms), None)
+    formset = formset_class(form_kwargs={**form_kwargs, "prefix": prefix}, **kwargs)
+    form = next(iter(formset.initial_forms), None)
+    if form is not None and field in form.fields:
+        widget, html_name = form.fields[field].widget, form.add_prefix(field)
+        if not widget.value_omitted_from_data(data, {}, html_name):
+            form.initial[field] = widget.value_from_datadict(data, {}, html_name)
+    return form

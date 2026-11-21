@@ -382,7 +382,7 @@ def test_as_rows_with_stubs_runs_the_same_queries_for_more_rows(cities):
 def test_a_cell_answers_with_the_full_select_for_the_value_its_stub_holds(cities):
     south = cities[1].region
 
-    soup = _cell(CityCell, field="region", pk=cities[0].pk, prefix="form-0", value=south.pk)
+    soup = _cell(CityCell, field="region", pk=cities[0].pk, prefix="form-0", **{"form-0-region": south.pk})
 
     value = soup.select_one("[x-data=formworkSelect] input[type=hidden]")
     assert (value["name"], value["value"]) == ("form-0-region", str(south.pk))

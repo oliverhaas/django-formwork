@@ -170,8 +170,8 @@ place with the focus, a typed date and the press. The stubs of a select load the
 of their rows with one query for all rows. A field with an error renders the full widget.
 
 `FormworkCellMixin` is the view behind `cell_url`. The query names the `field`, the
-row's `pk`, its form `prefix` and the `value` that the stub holds, so a changed value
-stays changed. The view builds the row with `formset_class`, so the row gets the
+row's `pk` and its form `prefix`, and holds the stub's inputs under their names, so a
+changed value stays changed. The view builds the row with `formset_class`, so the row gets the
 choices that a hook of the form or of the formset gives it.
 
 ```python

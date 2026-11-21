@@ -2945,7 +2945,7 @@ def test_the_stub_of_a_row_with_its_own_choices_sizes_its_trigger_with_the_rows_
 
 
 def test_a_cell_answers_with_the_full_widget_for_the_value_its_stub_holds(admin_client, stub_list):
-    query = {"pk": stub_list.alpha.pk, "prefix": "form-0", "value": stub_list.office.pk}
+    query = {"pk": stub_list.alpha.pk, "prefix": "form-0", "form-0-category": stub_list.office.pk}
 
     soup = BeautifulSoup(admin_client.get(url(Item, "cell", "category"), query).content, "html.parser")
 
@@ -3023,7 +3023,7 @@ def test_the_saved_rows_of_a_tabular_inline_render_their_selects_and_date_picker
 
 
 def test_an_inline_cell_answers_with_the_full_widget_for_the_value_its_stub_holds(admin_client, stub_inline):
-    query = {"pk": stub_inline.alpha.pk, "prefix": "items-0", "value": Item.Status.ACTIVE}
+    query = {"pk": stub_inline.alpha.pk, "prefix": "items-0", "items-0-status": Item.Status.ACTIVE}
 
     response = admin_client.get(url(Category, "change_cell", stub_inline.kitchen.pk, "status"), query)
 
