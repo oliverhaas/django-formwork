@@ -1440,12 +1440,12 @@
   value when the page renders it, so an annotation that the view adds after the post
   shows. A post that names the field changes nothing, because formwork's forms leave it
   out of <code>cleaned_data</code>. See <a href="../forms/#displayfield">DisplayField</a>.</li>
-<li>An admin list renders the <code>Select</code>, <code>SelectMultiple</code>, <code>DatePicker</code>, <code>DateTimePicker</code>,
-  <code>DateRangePicker</code> and <code>DateTimeRangePicker</code> of each saved row of its editable columns
-  as a stub: the closed widget with its value. When the pointer rests on a stub, or the
-  stub takes the focus or a press, the full widget loads from the new <code>cells/&lt;field&gt;/</code>
-  view (URL name <code>&lt;app_label&gt;_&lt;model_name&gt;_cell</code>) and takes over the focus, the typed
-  dates and the press. The view builds the row with the list's formset, so the row keeps
+<li>An admin list renders the <code>Select</code>, <code>SelectMultiple</code>, <code>ComboBox</code>, <code>ComboBoxMultiple</code>,
+  <code>DatePicker</code>, <code>DateTimePicker</code>, <code>DateRangePicker</code> and <code>DateTimeRangePicker</code> of each
+  saved row of its editable columns as a stub: the closed widget with its value. When the
+  pointer rests on a stub, or the stub takes the focus or a press, the full widget loads
+  from the new <code>cells/&lt;field&gt;/</code> view (URL name <code>&lt;app_label&gt;_&lt;model_name&gt;_cell</code>) and takes
+  over the focus, the typed text and the press. The view builds the row with the list's formset, so the row keeps
   the choices that a hook gives it. After a failed save, only the fields with an error
   render in full. <code>list_editable_stubs = False</code> on the <code>ModelAdmin</code> renders the full
   widgets. The saved rows of a <code>TabularInline</code> render the same stubs on a change form,

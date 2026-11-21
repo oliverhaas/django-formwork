@@ -1242,13 +1242,14 @@ the moment it changes, so this table has no Add another, Remove or Delete.
 way, as one <code>&lt;tbody&gt;</code>. <a href="#saving-a-row">Saving a row</a> describes the view behind
 <code>save_url</code>.</p>
 <h3 id="widgets-that-load-on-use">Widgets that load on use<a class="headerlink" href="#widgets-that-load-on-use" title="Permanent link">&para;</a></h3>
-<p><code>formset.as_rows(cell_url=...)</code> renders each <code>Select</code>, <code>SelectMultiple</code>, <code>DatePicker</code>,
-<code>DateTimePicker</code>, <code>DateRangePicker</code> and <code>DateTimeRangePicker</code> of the saved rows as a
-stub: the closed widget with its value, and inputs that post the value as the full
-widget does. When the pointer rests on a stub, or the stub takes the focus or a press,
-the full widget loads from <code>cell_url</code> and takes its place with the focus, the typed
-dates and the press. The stubs of a select load the labels of their rows with one query
-for all rows. A field with an error renders the full widget.</p>
+<p><code>formset.as_rows(cell_url=...)</code> renders each <code>Select</code>, <code>SelectMultiple</code>, <code>ComboBox</code>,
+<code>ComboBoxMultiple</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>DateRangePicker</code> and
+<code>DateTimeRangePicker</code> of the saved rows as a stub: the closed widget with its value, and
+inputs that post the value as the full widget does. When the pointer rests on a stub, or
+the stub takes the focus or a press, the full widget loads from <code>cell_url</code> and takes its
+place with the focus, the typed text and the press. The stubs of a select load the
+labels of their rows with one query for all rows. A field with an error renders the full
+widget.</p>
 <p><code>FormworkCellMixin</code> is the view behind <code>cell_url</code>. The query names the <code>field</code>, the
 row's <code>pk</code> and its form <code>prefix</code>, and holds the stub's inputs under their names, so a
 changed value stays changed. The view builds the row with <code>formset_class</code>, so the row
