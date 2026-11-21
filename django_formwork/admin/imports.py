@@ -26,6 +26,7 @@ from django.utils.translation import gettext_lazy, ngettext
 
 from django_formwork.admin.cells import Cell, cell_for_field, cell_for_value
 from django_formwork.admin.formats import MISSING, FileError, FileFormat, Table
+from django_formwork.fields import DisplayField
 from django_formwork.forms import FormworkForm
 from django_formwork.formsets import FormworkBaseModelFormSet, formwork_modelformset_factory, initial_many_to_many
 from django_formwork.widgets import ClearableFileInput
@@ -156,7 +157,7 @@ def map_columns(headers: Sequence[str], form: forms.BaseForm, opts: Any, id_fiel
     """Match each header to a form field by its name or label, ignoring case."""
     names: dict[str, str] = {}
     for name, form_field in form.fields.items():
-        if isinstance(form_field, forms.FileField):
+        if isinstance(form_field, forms.FileField | DisplayField):
             continue
         model_field = _model_field(opts, name)
         for alias in (form_field.label, getattr(model_field, "verbose_name", None)):
@@ -164,7 +165,11 @@ def map_columns(headers: Sequence[str], form: forms.BaseForm, opts: Any, id_fiel
                 names.setdefault(_fold(str(alias)), name)
     # A field's own name wins over another field's label.
     names.update(
-        {_fold(name): name for name, form_field in form.fields.items() if not isinstance(form_field, forms.FileField)}
+        {
+            _fold(name): name
+            for name, form_field in form.fields.items()
+            if not isinstance(form_field, forms.FileField | DisplayField)
+        }
     )
 
     key_fields = [opts.get_field(name) for name in id_fields]
@@ -937,7 +942,7 @@ def column_guide(model_admin: Any, request: HttpRequest) -> list[GuideEntry]:
             label = capfirst(str(key_field.verbose_name))
             entries.append(GuideEntry(name, label, required=False, key=True, hint=_("Finds the record to update")))
     for name, form_field in form.fields.items():
-        if isinstance(form_field, forms.FileField):
+        if isinstance(form_field, forms.FileField | DisplayField):
             continue
         label = str(form_field.label or capfirst(name))
         entries.append(GuideEntry(name, label, form_field.required, name in id_fields, _hint(name, form_field)))

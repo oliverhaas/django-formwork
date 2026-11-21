@@ -24,6 +24,7 @@ from django.utils.text import capfirst
 
 from django_formwork.admin.cells import annotate_rows, cell_for_field, cell_for_value, display_annotations, html
 from django_formwork.admin.paginator import page_links
+from django_formwork.fields import DisplayField
 from django_formwork.tables import Table, TableCell, TableRow
 
 if TYPE_CHECKING:
@@ -48,6 +49,8 @@ __all__ = [
     "InlinePager",
     "ReadonlyField",
     "deleted_groups",
+    "display_field",
+    "field_name",
 ]
 
 # The action and delete pages name this many objects of a kind and count the rest.
@@ -168,14 +171,43 @@ def _related_link(obj: models.Model, model_admin: Any) -> SafeString:
     return format_html('<a class="link link-primary" href="{}">{}</a>', url, obj)
 
 
-def readonly_field(name: Any, obj: models.Model | None, model_admin: Any, model: type[models.Model]) -> ReadonlyField:
+def field_name(name: Any) -> str:
+    """The form field name of a ``fields`` or ``readonly_fields`` entry, which can be a function."""
+    return name if isinstance(name, str) else name.__name__
+
+
+def _label_and_help(name: Any, model_admin: Any, model: type[models.Model]) -> tuple[str, str]:
     label = label_for_field(name, model, model_admin, return_attr=False, form=None)
     try:
         help_text = help_text_for_field(name, model) if isinstance(name, str) else ""
     except AttributeError:
         help_text = ""
-    key = name if isinstance(name, str) else name.__name__
-    return ReadonlyField(key, str(capfirst(label)), readonly_contents(name, obj, model_admin), str(help_text))
+    return str(capfirst(label)), str(help_text)
+
+
+def readonly_field(name: Any, obj: models.Model | None, model_admin: Any, model: type[models.Model]) -> ReadonlyField:
+    label, help_text = _label_and_help(name, model_admin, model)
+    return ReadonlyField(field_name(name), label, readonly_contents(name, obj, model_admin), help_text)
+
+
+def display_field(name: Any, model_admin: Any, model: type[models.Model], *, saved_only: bool = False) -> DisplayField:
+    """A ``readonly_fields`` entry as a form field, showing what ``readonly_contents()`` shows.
+
+    With ``saved_only``, an unsaved instance shows the empty value, as the blank rows of an inline do.
+    """
+    label, help_text = _label_and_help(name, model_admin, model)
+
+    def contents(obj: models.Model) -> SafeString:
+        return readonly_contents(name, None if saved_only and obj.pk is None else obj, model_admin)
+
+    return DisplayField(label=label, help_text=help_text, source=contents)
+
+
+def _shown(bound_field: BoundField, model_admin: Any) -> ReadonlyField:
+    """A ``DisplayField`` as the change form shows a read-only value."""
+    cell = cell_for_value(bound_field.value(), model_admin.get_empty_value_display())
+    contents = mark_safe(cell["text"] if cell["kind"] == "html" else html(cell))  # noqa: S308
+    return ReadonlyField(bound_field.name, str(bound_field.label), contents, str(bound_field.help_text))
 
 
 def _rows(
@@ -190,7 +222,9 @@ def _rows(
         names = line if isinstance(line, list | tuple) else (line,)
         row = []
         for name in names:
-            if name in readonly or name not in form.fields:
+            if isinstance(form.fields.get(field_name(name)), DisplayField):
+                row.append(AdminField(readonly=_shown(form[field_name(name)], model_admin)))
+            elif name in readonly or name not in form.fields:
                 row.append(AdminField(readonly=readonly_field(name, obj, model_admin, form._meta.model)))
             else:
                 row.append(AdminField(field=form[name]))
@@ -371,7 +405,12 @@ class InlineAdminFormSet:
             for name, options in self.fieldsets_spec
         ]
         shown = {cell.name for fieldset in fieldsets for row in fieldset.rows for cell in row}
-        hidden = [bf for bf in form if bf.is_hidden or (bf.name not in shown and bf.name != DELETION_FIELD_NAME)]
+        hidden = [
+            bf
+            for bf in form
+            if bf.is_hidden
+            or (bf.name not in shown and bf.name != DELETION_FIELD_NAME and not isinstance(bf.field, DisplayField))
+        ]
         change_url = ""
         if (
             original is not None

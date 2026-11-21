@@ -15,8 +15,10 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from openpyxl import Workbook
 
+from django_formwork import DisplayField
 from django_formwork.admin import site
 from django_formwork.admin.models import HistoryEntry
+from django_formwork.forms import FormworkModelForm
 
 pytestmark = pytest.mark.django_db
 
@@ -238,6 +240,24 @@ def test_rows_cannot_change_read_only_fields(admin_client, items, monkeypatch):
 
     assert result["rows"] == ["Error"]
     assert any("This field can’t be changed." in cell for cell in result["invalid"])
+
+
+class SummaryForm(FormworkModelForm):
+    summary = DisplayField(label="Short name", source=lambda item: item.name.upper())
+
+
+@pytest.mark.parametrize("header", ["summary", "Short name"])
+def test_a_display_field_of_the_admin_form_is_no_import_column(admin_client, items, monkeypatch, header):
+    kettle, _lamp = items
+    monkeypatch.setattr(site.get_model_admin(Item), "fieldsets", None)
+    monkeypatch.setattr(site.get_model_admin(Item), "form", SummaryForm)
+
+    guide = BeautifulSoup(admin_client.get(reverse(IMPORT_URL)).content, "html.parser").get_text()
+    response = check(admin_client, f"id,{header}\n{kettle.pk},Other\n")
+
+    assert "Short name" not in guide
+    ignored = BeautifulSoup(response.content, "html.parser").select("section[id^=import-preview] code")
+    assert [code.get_text() for code in ignored] == [header]
 
 
 @pytest.mark.parametrize("export_format", ["csv", "xlsx", "json"])

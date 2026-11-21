@@ -57,7 +57,15 @@ from django_formwork.admin import exports, formats, history, imports
 from django_formwork.admin.cells import badge_color, list_cell
 from django_formwork.admin.changelist import ERROR_FLAG, PRESERVED_FILTERS_VAR, ChangeList
 from django_formwork.admin.filters import build_filterset, list_filter_path
-from django_formwork.admin.helpers import FIRST_OBJECTS, AdminForm, DeletedObject, InlineAdminFormSet, InlinePager
+from django_formwork.admin.helpers import (
+    FIRST_OBJECTS,
+    AdminForm,
+    DeletedObject,
+    InlineAdminFormSet,
+    InlinePager,
+    display_field,
+    field_name,
+)
 from django_formwork.admin.info import describe_fields, describe_search, describe_table
 from django_formwork.admin.jinja import AdminTemplateResponse
 from django_formwork.admin.paginator import EstimatedCountPaginator
@@ -73,6 +81,7 @@ from django_formwork.admin.widgets import (
     relation_widget,
     use_formwork_widgets,
 )
+from django_formwork.fields import DisplayField
 from django_formwork.forms import FormworkModelForm
 from django_formwork.formsets import (
     FormworkBaseInlineFormSet,
@@ -391,7 +400,10 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
         if self.fields:
             return self.fields
         form = self._get_form_for_get_fields(request, obj)
-        return [*form.base_fields, *self.get_readonly_fields(request, obj)]
+        readonly = self.get_readonly_fields(request, obj)
+        # The form holds each read-only entry as a DisplayField; the entry itself keeps its place at the end.
+        names = {field_name(name) for name in readonly}
+        return [*(name for name in form.base_fields if name not in names), *readonly]
 
     def get_fieldsets(
         self, request: HttpRequest, obj: models.Model | None = None
@@ -459,6 +471,17 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
 
     def _get_form_for_get_fields(self, request: HttpRequest, obj: models.Model | None) -> Any:
         return self.get_form(request, obj, fields=None)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+
+    def _display_fields(
+        self, names: Sequence[Any], fields: Sequence[Any] | None, *, saved_only: bool = False
+    ) -> dict[str, forms.Field]:
+        """A DisplayField for each read-only entry the form shows, unless the form declares one by that name."""
+        declared = getattr(self.form, "declared_fields", {})
+        return {
+            field_name(name): display_field(name, self, self.model, saved_only=saved_only)
+            for name in names
+            if (fields is None or name in fields) and not isinstance(declared.get(field_name(name)), DisplayField)
+        }
 
 
 class ModelAdmin(BaseModelAdmin):
@@ -618,11 +641,17 @@ class ModelAdmin(BaseModelAdmin):
         exclude: list[Any] = [] if excluded is None else list(excluded)
         readonly_fields = self.get_readonly_fields(request, obj)
         exclude.extend(readonly_fields)
+        declared = getattr(self.form, "declared_fields", {})
+        shown = list(readonly_fields)
         if change and hasattr(request, "user") and not self.has_change_permission(request, obj):
             exclude.extend(fields or ())
+            shown.extend(name for name in fields or () if name not in readonly_fields and name not in declared)
         if excluded is None and hasattr(self.form, "_meta") and self.form._meta.exclude:
             exclude.extend(self.form._meta.exclude)
-        new_attrs = dict.fromkeys(name for name in readonly_fields if name in getattr(self.form, "declared_fields", {}))
+        new_attrs: dict[str, forms.Field | None] = {
+            name: None for name in readonly_fields if name in declared and not isinstance(declared[name], DisplayField)
+        }
+        new_attrs.update(self._display_fields(shown, fields))
         form = type(self.form.__name__, (self.form,), new_attrs)
         defaults: dict[str, Any] = {
             "form": form,
@@ -2228,12 +2257,14 @@ class InlineModelAdmin(BaseModelAdmin):
         )
         excluded = self.get_exclude(request, obj)
         exclude: list[Any] = [] if excluded is None else list(excluded)
-        exclude.extend(self.get_readonly_fields(request, obj))
+        readonly_fields = self.get_readonly_fields(request, obj)
+        exclude.extend(readonly_fields)
         if excluded is None and hasattr(self.form, "_meta") and self.form._meta.exclude:
             exclude.extend(self.form._meta.exclude)
         can_delete = self.can_delete and self.has_delete_permission(request, obj)
+        display_fields = self._display_fields(readonly_fields, fields, saved_only=True)
         defaults: dict[str, Any] = {
-            "form": self.form,
+            "form": type(self.form.__name__, (self.form,), display_fields),
             "formset": self.formset,
             "fk_name": self.fk_name,
             "fields": fields,

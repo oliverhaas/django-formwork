@@ -262,6 +262,23 @@ filter writes its dates the same way. A datetime is typed in the first format of
 time with seconds keeps them while its minute stays the same. Lists and read-only fields
 show `DATE_FORMAT` and `DATETIME_FORMAT`.
 
+Each entry of `readonly_fields` is a [`DisplayField`](forms.md#displayfield) of the
+forms that `get_form()` and `get_formset()` return, and shows what Django's admin shows
+for it. A view-only change page holds each model field that way. A `DisplayField` that
+`form` declares shows with the read-only fields, without an entry in `readonly_fields`.
+With `fields` or `fieldsets`, name it there as any other field:
+
+```python
+class EventAdminForm(FormworkModelForm):
+    seats = DisplayField(source=lambda event: event.capacity or "No limit")
+
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    form = EventAdminForm
+    fieldsets = [(None, {"fields": ["title", "seats", ("starts_at", "ends_at")]})]
+```
+
 After a failed save, each field error shows under its field, as in Django's admin. A
 `form` whose `Meta.error_display` is set keeps that display.
 

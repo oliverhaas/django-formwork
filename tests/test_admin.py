@@ -31,7 +31,7 @@ from django.utils import timezone, translation
 from django.utils.html import format_html
 from django_nplus1.exceptions import NPlus1Error
 
-from django_formwork import __version__, admin
+from django_formwork import DisplayField, __version__, admin
 from django_formwork.admin import ActionLocation, site
 from django_formwork.admin.checks import check_model_admin
 from django_formwork.admin.contenttypes import GenericStackedInline
@@ -774,6 +774,75 @@ def test_display_annotation_shows_in_the_read_only_fields_of_the_form_and_its_in
     legend = soup.find("span", class_="fieldset-legend", string="Parts")
     assert legend.find_next_sibling("div").get_text(strip=True) == "2"
     assert {"LID", "HANDLE"} <= set(soup.select_one("#parts-group").get_text(" ", strip=True).split())
+
+
+class ItemSummaryForm(FormworkModelForm):
+    summary = DisplayField(source=lambda item: f"{item.name} in {item.category}")
+
+
+@pytest.mark.parametrize("readonly_fields", [["created"], ["created", "summary"]], ids=["declared", "listed"])
+def test_a_display_field_of_the_admin_form_shows_with_the_read_only_fields(
+    admin_client, catalog, monkeypatch, readonly_fields
+):
+    monkeypatch.setattr(site.get_model_admin(Item), "fieldsets", None)
+    monkeypatch.setattr(site.get_model_admin(Item), "readonly_fields", readonly_fields)
+    monkeypatch.setattr(site.get_model_admin(Item), "form", ItemSummaryForm)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
+
+    legend = soup.find("span", class_="fieldset-legend", string="Summary")
+    assert legend.find_next_sibling("div").get_text(strip=True) == "Alpha kettle in Kitchen"
+    assert len(soup.find_all("span", class_="fieldset-legend", string="Created")) == 1
+
+
+@pytest.mark.parametrize(
+    ("codenames", "name"), [(("view_item", "change_item"), "created"), (("view_item",), "name")], ids=["read", "view"]
+)
+def test_change_form_holds_each_read_only_value_as_a_display_field(rf, django_user_model, catalog, codenames, name):
+    user = django_user_model.objects.create_user("staff", is_staff=True)
+    user.user_permissions.add(*Permission.objects.filter(codename__in=codenames))
+    request = rf.get("/")
+    request.user = user
+
+    form = site.get_model_admin(Item).get_form(request, catalog.alpha, change=True)
+
+    assert isinstance(form.base_fields[name], DisplayField)
+
+
+@admin.display(description="Number")
+def part_number(obj):
+    return f"#{obj.pk}"
+
+
+def test_a_blank_inline_row_shows_no_value_for_a_read_only_field(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(PartInline, "readonly_fields", [part_number])
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
+
+    parts = soup.select_one("#parts-group").get_text(" ", strip=True)
+    assert f"#{catalog.lid.pk}" in parts
+    assert "#None" not in parts
+
+
+def test_inline_form_holds_each_read_only_value_as_a_display_field(admin_request, catalog, monkeypatch):
+    monkeypatch.setattr(PartInline, "readonly_fields", [part_number])
+
+    formset = PartInline(Item, site).get_formset(admin_request, catalog.alpha)
+
+    assert isinstance(formset.form.base_fields["part_number"], DisplayField)
+
+
+class PartNoteForm(FormworkModelForm):
+    note = DisplayField(source=lambda part: f"Note on {part.name}")
+
+
+def test_an_inline_leaves_out_a_display_field_that_its_fields_leave_out(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(PartInline, "form", PartNoteForm)
+    monkeypatch.setattr(PartInline, "fields", ["name", "quantity"])
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
+
+    assert "Note on" not in soup.select_one("#parts-group").get_text()
 
 
 def test_changelist_shows_the_choice_label_in_a_column_that_follows_a_relation(admin_client, catalog, monkeypatch):
