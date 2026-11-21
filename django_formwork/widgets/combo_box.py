@@ -10,11 +10,11 @@ from django.core.exceptions import ImproperlyConfigured
 
 from django_formwork.search import check_search_params, search_url
 
-from ._base import _FormworkTemplatesMixin, _ModuleScript
+from ._base import _ModuleScript, _StubMixin
 from .select import _UNSET_DECORATOR, label_extras
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
+    from collections.abc import Callable, Iterator, Mapping, Sequence
 
     from django.db.models import Model, QuerySet
     from django.http import HttpRequest
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     Suggestions = Sequence[Suggestion] | Sequence[tuple[str, Sequence[Suggestion]]]
 
 
-class ComboBox(_FormworkTemplatesMixin, forms.TextInput):
+class ComboBox(_StubMixin, forms.TextInput):
     """Text input with a suggestion dropdown; the submitted value is free text.
 
     ``suggestions`` are hints, flat or grouped as ``[(group, [...])]``.
@@ -34,6 +34,7 @@ class ComboBox(_FormworkTemplatesMixin, forms.TextInput):
     template_name = "formwork/widgets/combo_box.html"
     #: The option rows alone, which a server search answers with.
     option_list_template_name = "formwork/widgets/partials/combo_box_options.html"
+    stub_template_name = "formwork/widgets/combo_box_stub.html"
     search_variant = "combo_box"
     multiple = False
 
@@ -73,23 +74,29 @@ class ComboBox(_FormworkTemplatesMixin, forms.TextInput):
         self.search_ranked = search_ranked
         self.label_from_instance = label_from_instance
 
-    def _options(self) -> list[dict[str, Any]]:
-        """The suggestions as option rows; a pick fills the input with the label."""
-        options: list[dict[str, Any]] = []
+    def _suggestions(self) -> Iterator[tuple[str, Suggestion]]:
+        """Each suggestion with the name of its group, blank outside a group."""
         for entry in self.suggestions:
             group, items = (str(entry[0]), entry[1]) if isinstance(entry, (tuple, list)) else ("", [entry])
-            options.extend(
-                {"value": str(item), "label": str(item), "group": group, **label_extras(item)} for item in items
-            )
-        return options
+            for item in items:
+                yield group, item
 
-    def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
+    def _input_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
         # The template merges `class` into its own class attribute.
         widget["input_attrs"] = {key: val for key, val in widget["attrs"].items() if key != "class"}
-        widget["options"] = self._options()
         widget["multiple"] = self.multiple
+        return context
+
+    def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = self._input_context(name, value, attrs)
+        widget = context["widget"]
+        # The suggestions as option rows; a pick fills the input with the label.
+        widget["options"] = [
+            {"value": str(item), "label": str(item), "group": group, **label_extras(item)}
+            for group, item in self._suggestions()
+        ]
         widget["show_spinner"] = self.show_spinner
         # A server search fills the list on first focus.
         widget["search_url"] = (
@@ -103,6 +110,24 @@ class ComboBox(_FormworkTemplatesMixin, forms.TextInput):
         icons = {option["label"]: str(option["icon"]) for option in widget["options"] if option["icon"]}
         widget["icons_json"] = json.dumps(icons)
         return context
+
+    def get_stub_context(self, name: str, value: Any, attrs: dict[str, Any] | None) -> dict[str, Any]:  # noqa: ANN401
+        context = self._input_context(name, value, attrs)
+        widget = context["widget"]
+        suggestions = [item for _group, item in self._suggestions()]
+        # The full combo box sizes its input by the labels of its suggestions; a server search has none.
+        widget["suggestion_labels"] = [] if self.search_key is not None else [str(item) for item in suggestions]
+        widget["display_parts"] = self._display_parts(widget["value"] or "", suggestions)
+        return context
+
+    def _display_parts(self, value: str, suggestions: Sequence[Suggestion]) -> list[dict[str, Any]]:
+        """What the closed input shows over its text, as ``displayParts`` of combo_box.js works it out."""
+        icons = {str(item): icon for item in suggestions if (icon := getattr(item, "icon", ""))}
+        if self.multiple:
+            texts = [text.strip() for text in value.split(",") if text.strip()]
+            return [{"text": text, "icon": icons.get(text, "")} for text in texts]
+        text = value.strip()
+        return [{"text": text, "icon": icons[text]}] if text in icons else []
 
 
 class ComboBoxMultiple(ComboBox):

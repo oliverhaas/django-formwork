@@ -190,12 +190,12 @@
   value when the page renders it, so an annotation that the view adds after the post
   shows. A post that names the field changes nothing, because formwork's forms leave it
   out of `cleaned_data`. See [DisplayField](forms.md#displayfield).
-- An admin list renders the `Select`, `SelectMultiple`, `DatePicker`, `DateTimePicker`,
-  `DateRangePicker` and `DateTimeRangePicker` of each saved row of its editable columns
-  as a stub: the closed widget with its value. When the pointer rests on a stub, or the
-  stub takes the focus or a press, the full widget loads from the new `cells/<field>/`
-  view (URL name `<app_label>_<model_name>_cell`) and takes over the focus, the typed
-  dates and the press. The view builds the row with the list's formset, so the row keeps
+- An admin list renders the `Select`, `SelectMultiple`, `ComboBox`, `ComboBoxMultiple`,
+  `DatePicker`, `DateTimePicker`, `DateRangePicker` and `DateTimeRangePicker` of each
+  saved row of its editable columns as a stub: the closed widget with its value. When the
+  pointer rests on a stub, or the stub takes the focus or a press, the full widget loads
+  from the new `cells/<field>/` view (URL name `<app_label>_<model_name>_cell`) and takes
+  over the focus, the typed text and the press. The view builds the row with the list's formset, so the row keeps
   the choices that a hook gives it. After a failed save, only the fields with an error
   render in full. `list_editable_stubs = False` on the `ModelAdmin` renders the full
   widgets. The saved rows of a `TabularInline` render the same stubs on a change form,

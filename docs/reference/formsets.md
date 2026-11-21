@@ -165,13 +165,14 @@ way, as one `<tbody>`. [Saving a row](#saving-a-row) describes the view behind
 
 ### Widgets that load on use
 
-`formset.as_rows(cell_url=...)` renders each `Select`, `SelectMultiple`, `DatePicker`,
-`DateTimePicker`, `DateRangePicker` and `DateTimeRangePicker` of the saved rows as a
-stub: the closed widget with its value, and inputs that post the value as the full
-widget does. When the pointer rests on a stub, or the stub takes the focus or a press,
-the full widget loads from `cell_url` and takes its place with the focus, the typed
-dates and the press. The stubs of a select load the labels of their rows with one query
-for all rows. A field with an error renders the full widget.
+`formset.as_rows(cell_url=...)` renders each `Select`, `SelectMultiple`, `ComboBox`,
+`ComboBoxMultiple`, `DatePicker`, `DateTimePicker`, `DateRangePicker` and
+`DateTimeRangePicker` of the saved rows as a stub: the closed widget with its value, and
+inputs that post the value as the full widget does. When the pointer rests on a stub, or
+the stub takes the focus or a press, the full widget loads from `cell_url` and takes its
+place with the focus, the typed text and the press. The stubs of a select load the
+labels of their rows with one query for all rows. A field with an error renders the full
+widget.
 
 `FormworkCellMixin` is the view behind `cell_url`. The query names the `field`, the
 row's `pk` and its form `prefix`, and holds the stub's inputs under their names, so a

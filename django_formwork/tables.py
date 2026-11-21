@@ -224,7 +224,7 @@ class Table:
     ) -> Table:
         """The table of a Django formset, with rows to add unless it saves row by row.
 
-        With ``cell_url``, the selects and date pickers of the saved rows render as stubs that load from it.
+        With ``cell_url``, the selects, combo boxes and date pickers of saved rows render as stubs that load from it.
         ``fields`` names the columns, ``display`` shows a field that posts nothing, ``link`` gives a row's own page.
         """
         # The rows load the choices of a relation once, whether they render in full or as stubs.

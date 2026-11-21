@@ -30,7 +30,7 @@ from django_formwork import (
     formwork_modelformset_factory,
 )
 from django_formwork.tables import PREFIX_INPUT_NAME, Table
-from django_formwork.widgets import Select, SelectMultiple
+from django_formwork.widgets import ChoiceLabel, ComboBox, ComboBoxMultiple, Select, SelectMultiple
 
 pytestmark = pytest.mark.django_db
 
@@ -607,3 +607,59 @@ def test_a_date_range_cell_answers_with_the_full_picker_for_the_range_its_stub_h
 
     picker = soup.select_one("[x-data=formworkDateRangePicker]")
     assert (picker["data-start"], picker["data-end"]) == ("2026-05-01", "2026-05-09")
+
+
+_NAMES = [ChoiceLabel("Lamp", icon="\U0001f4a1"), "Kettle", "Toaster"]
+
+
+class NamedRowForm(FormworkModelForm):
+    class Meta:
+        model = Item
+        fields = ["name", "notes"]
+        widgets = {"name": ComboBox(suggestions=_NAMES), "notes": ComboBoxMultiple(suggestions=_NAMES)}
+
+
+NamedFormSet = formwork_modelformset_factory(Item, form=NamedRowForm, extra=0)
+
+
+@pytest.fixture
+def named():
+    kitchen = Category.objects.create(name="Kitchen", slug="kitchen")
+    for name, notes in [("Kettle", ""), ("Lamp", "Lamp, Kettle"), ("Sink", "Sink")]:
+        Item.objects.create(name=name, category=kitchen, notes=notes)
+
+
+def _named(*, cell_url=""):
+    return BeautifulSoup(NamedFormSet(queryset=Item.objects.order_by("pk")).as_rows(cell_url=cell_url), "html.parser")
+
+
+def test_the_combo_box_stubs_of_as_rows_size_their_inputs_by_the_suggestions_of_the_full_combo_boxes(named):
+    stubs = _named(cell_url="/cells/")
+
+    assert len(stubs.select("[data-formwork-stub].formwork-combobox")) == 6
+    copies = ".formwork-combobox > .formwork-autowidth"
+    assert _closed(stubs, copies) == _closed(_named(), copies)
+
+
+def test_the_combo_box_stubs_of_as_rows_post_the_values_of_their_rows(named):
+    stubs = _named(cell_url="/cells/").select("input[name]")
+
+    formset = NamedFormSet(
+        {stub["name"]: stub.get("value", "") for stub in stubs}, queryset=Item.objects.order_by("pk")
+    )
+
+    assert formset.is_valid()
+    assert not formset.has_changed()
+
+
+@pytest.mark.parametrize(
+    ("field", "shown"),
+    [("name", ["", "\U0001f4a1Lamp", ""]), ("notes", ["", "\U0001f4a1Lamp,\xa0Kettle", "Sink"])],
+)
+def test_a_combo_box_stub_shows_its_value_with_the_icons_of_its_suggestions(named, field, shown):
+    stubs = _named(cell_url="/cells/").select(f".formwork-combobox:has([name$=-{field}])")
+
+    displays = [stub.select_one(".combobox-display") for stub in stubs]
+
+    assert [display.get_text() if display else "" for display in displays] == shown
+    assert [bool(stub.select(".text-transparent")) for stub in stubs] == [bool(text) for text in shown]

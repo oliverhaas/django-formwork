@@ -220,11 +220,11 @@ if (typeof document !== "undefined") {
 }
 
 // --- Widgets that the server sent as a stub ----------------------------
-// An editable list renders its selects and date pickers as stubs: the closed
-// widget, and the value in an input that posts as the full widget's would. A
-// hover that rests on a stub, a focus or a press loads the full widget from
-// the stub's URL and puts it in the stub's place, started, so that the focus,
-// the typed text and the press move over to it.
+// An editable list renders its selects, combo boxes and date pickers as stubs:
+// the closed widget, and the value in an input that posts as the full widget's
+// would. A hover that rests on a stub, a focus or a press loads the full widget
+// from the stub's URL and puts it in the stub's place, started, so that the
+// focus, the typed text and the press move over to it.
 const STUB_HOVER_DELAY = 80;
 
 if (typeof document !== "undefined") {
@@ -312,7 +312,7 @@ if (typeof document !== "undefined") {
       if (!stub) return;
       // The stub's <details> must not open empty. The full widget gets the press.
       event.preventDefault();
-      stub._formworkPress = event.target.closest('summary, input, button, [role="group"]');
+      stub._formworkPress = event.target.closest('summary, input, button, [role="group"], .combobox-display');
       load(stub);
     },
     true,

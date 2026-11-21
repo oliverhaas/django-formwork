@@ -762,8 +762,8 @@ counts the saved rows of all pages. A collapsed inline starts open at a page tha
 URL names. Save as new copies only the rows of the page on screen. With
 `per_page = None`, the inline shows all its rows, as Django's does.
 
-The saved rows of a `TabularInline` render their selects and date pickers as stubs that
-load the full widget on use, as the rows of the list do. See
+The saved rows of a `TabularInline` render their selects, combo boxes and date pickers as
+stubs that load the full widget on use, as the rows of the list do. See
 [Widgets that load on use](#widgets-that-load-on-use).
 
 For a model that points at its parent through a `GenericForeignKey`, import
@@ -1161,8 +1161,9 @@ pages, override `formwork_admin/skeletons.html` and add a
   The change form no longer loads the whole related table into a `<select>`.
 - The rows of [editable columns](#editable-columns) and of an [inline](#inlines) load the
   choices of a relation once for all rows. See [Shared choices](#shared-choices).
-- The selects and date pickers of editable columns render as stubs and load the full
-  widget when they are first used. See [Widgets that load on use](#widgets-that-load-on-use).
+- The selects, combo boxes and date pickers of editable columns render as stubs and load
+  the full widget when they are first used. See
+  [Widgets that load on use](#widgets-that-load-on-use).
 - Without filters, the list counts a PostgreSQL table of more than 10,000 rows from the
   planner's estimate instead of `COUNT(*)`. Any filter or search counts exactly.
   `EstimatedCountPaginator.estimate_threshold` sets the limit.
@@ -1284,12 +1285,12 @@ class EventAdmin(admin.ModelAdmin):
 ### Widgets that load on use
 
 The saved rows of [editable columns](#editable-columns) render each `Select`,
-`SelectMultiple`, `DatePicker`, `DateTimePicker`, `DateRangePicker` and
-`DateTimeRangePicker` as a stub: the closed widget with its value, and inputs that post
-the value as the full widget does. When the pointer rests on the stub, or the stub takes
-the focus or a press, the full widget loads and takes its place with the focus, the
-typed dates and the press. After a failed save, a field with an error renders the full
-widget next to its error, and the other fields stay stubs.
+`SelectMultiple`, `ComboBox`, `ComboBoxMultiple`, `DatePicker`, `DateTimePicker`,
+`DateRangePicker` and `DateTimeRangePicker` as a stub: the closed widget with its value,
+and inputs that post the value as the full widget does. When the pointer rests on the
+stub, or the stub takes the focus or a press, the full widget loads and takes its place
+with the focus, the typed text and the press. After a failed save, a field with an error
+renders the full widget next to its error, and the other fields stay stubs.
 
 The stubs load from `cells/<field>/` under the admin's URLs, named
 `<app_label>_<model_name>_cell`. The query names the row's `pk` and its form `prefix`,

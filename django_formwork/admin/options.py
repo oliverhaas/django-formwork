@@ -498,7 +498,8 @@ class ModelAdmin(BaseModelAdmin):
     list_per_page_options: Sequence[int] = (25, 50, 100, 250)
     list_max_show_all = 200
     list_editable: Sequence[str] = ()
-    #: Render the selects and date pickers of editable cells as stubs that load the full widget on first use.
+    #: Render the selects, combo boxes and date pickers of editable cells as stubs that load the full widget on
+    #: first use.
     list_editable_stubs = True
     #: Load only these columns on the changelist (opt-in: a ``__str__`` that reads a deferred field queries per row).
     list_only_fields: Sequence[str] | None = None
@@ -2263,7 +2264,7 @@ class InlineModelAdmin(BaseModelAdmin):
     layout = "stacked"
     #: The saved rows a change form shows at a time, with links to the other pages; ``None`` shows all.
     per_page: int | None = 5
-    #: The saved rows of a tabular inline render their selects and date pickers as stubs.
+    #: The saved rows of a tabular inline render their selects, combo boxes and date pickers as stubs.
     #: A stub loads the full widget on use. False renders the full widgets.
     stubs = True
 
