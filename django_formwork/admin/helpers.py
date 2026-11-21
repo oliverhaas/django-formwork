@@ -25,7 +25,7 @@ from django.utils.text import capfirst
 from django_formwork.admin.cells import annotate_rows, cell_for_field, cell_for_value, display_annotations, html
 from django_formwork.admin.paginator import page_links
 from django_formwork.fields import DisplayField
-from django_formwork.tables import Table, TableCell, TableRow
+from django_formwork.tables import Table
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -391,10 +391,12 @@ class InlineAdminFormSet:
         _show_errors_inline(form)
         readonly = self.readonly_fields
         if original is not None and not self.has_change_permission:
-            readonly = [
-                *readonly,
-                *(name for name in form.fields if name not in {DELETION_FIELD_NAME, form._meta.model._meta.pk.name}),
-            ]
+            locked = [name for name in form.fields if name not in {DELETION_FIELD_NAME, form._meta.model._meta.pk.name}]
+            readonly = [*readonly, *locked]
+            # The row's fields show their values, and a table shows a disabled field as its value.
+            for name in locked:
+                if not form[name].is_hidden:
+                    form.fields[name].disabled = True
         fieldsets = [
             Fieldset(
                 name=name,
@@ -411,18 +413,19 @@ class InlineAdminFormSet:
             if bf.is_hidden
             or (bf.name not in shown and bf.name != DELETION_FIELD_NAME and not isinstance(bf.field, DisplayField))
         ]
-        change_url = ""
-        if (
-            original is not None
-            and self.opts.show_change_link
-            and self.opts.admin_site.is_registered(original.__class__)
-        ):
-            opts = original._meta
-            change_url = reverse(
-                f"{self.opts.admin_site.name}:{opts.app_label}_{opts.model_name}_change",
-                args=(quote(original.pk),),
-            )
-        return InlineAdminForm(form, fieldsets, original, change_url=change_url, hidden=hidden)
+        return InlineAdminForm(form, fieldsets, original, change_url=self._change_url(form), hidden=hidden)
+
+    def _change_url(self, form: BaseForm) -> str:
+        """The page of the row's saved object, where the inline links it."""
+        original = getattr(form, "instance", None)
+        if original is None or original.pk is None or not self.opts.show_change_link:
+            return ""
+        if not self.opts.admin_site.is_registered(original.__class__):
+            return ""
+        opts = original._meta
+        return reverse(
+            f"{self.opts.admin_site.name}:{opts.app_label}_{opts.model_name}_change", args=(quote(original.pk),)
+        )
 
     @cached_property
     def forms(self) -> list[InlineAdminForm]:
@@ -439,24 +442,6 @@ class InlineAdminFormSet:
     @cached_property
     def empty_form(self) -> InlineAdminForm:
         return self._admin_form(self.formset.empty_form, None)
-
-    @cached_property
-    def headers(self) -> list[dict[str, Any]]:
-        """The tabular inline's column headers, read from the empty row."""
-        headers = []
-        for cell in self.empty_form.cells:
-            if cell.field is not None:
-                headers.append(
-                    {
-                        "label": cell.field.label,
-                        "required": cell.field.field.required,
-                        "help_text": cell.field.help_text,
-                        "indent": TableCell(cell.name, field=cell.field).boxed,
-                    }
-                )
-            elif cell.readonly is not None:
-                headers.append({"label": cell.readonly.label, "required": False, "help_text": cell.readonly.help_text})
-        return headers
 
     @property
     def prefix(self) -> str:
@@ -485,40 +470,30 @@ class InlineAdminFormSet:
     def can_add(self) -> bool:
         return self.has_add_permission and self.formset.max_num > len(self.formset.forms)
 
-    def _table_row(self, admin_form: InlineAdminForm, *, can_delete: bool) -> TableRow:
-        new = admin_form.original is None
-        form = admin_form.form
-        return TableRow(
-            form=form,
-            cells=[
-                TableCell(cell.name, field=cell.field)
-                if cell.field is not None
-                else TableCell(cell.name, display=cast("ReadonlyField", cell.readonly).contents)
-                for cell in admin_form.cells
-            ],
-            hidden=mark_safe("".join(str(bf) for bf in admin_form.hidden)),  # noqa: S308
-            new=new,
-            deletion_field=admin_form.deletion_field if can_delete and not new else None,
-            link=admin_form.change_url,
-            actions=True,
-        )
+    def _cell_display(self, bound_field: BoundField) -> SafeString:
+        """A cell that posts nothing, as the change form shows a read-only value."""
+        if isinstance(bound_field.field, DisplayField):
+            return _shown(bound_field, self.opts).contents
+        original = cast("ModelForm[Any]", bound_field.form).instance
+        return readonly_contents(bound_field.name, original if original.pk is not None else None, self.opts)
 
     def table(self, footer: str = "") -> SafeString:
         """The tabular layout: formwork's formset table, flush in the inline's card.
 
         ``footer`` goes at the right end of the Add another row: the pager, for a paged inline.
         """
-        can_delete = self.formset.can_delete and self.has_delete_permission
-        return Table(
-            formset=self.formset,
-            headers=self.headers,
-            rows=[self._table_row(admin_form, can_delete=can_delete) for admin_form in self.forms],
-            empty_row=self._table_row(self.empty_form, can_delete=can_delete) if self.has_add_permission else None,
+        self.forms  # noqa: B018 (the rows take their error display and their read-only fields)
+        table = Table.for_formset(
+            self.formset,
             flush=True,
-            verbose_name=self.verbose_name,
-            verbose_name_plural=self.group_name,
-            footer=footer,
-        ).render()
+            fields=[field_name(name) for name in flatten_fieldsets(cast("_FieldsetSpec", self.fieldsets_spec))],
+            display=self._cell_display,
+            link=self._change_url,
+        )
+        table.verbose_name = self.verbose_name
+        table.verbose_name_plural = self.group_name
+        table.footer = footer
+        return table.render()
 
     @property
     def non_form_errors(self) -> Any:

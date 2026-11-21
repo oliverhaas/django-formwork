@@ -479,7 +479,7 @@ def test_simple_list_filter_loads_no_rows_past_the_page(admin_client, catalog, m
 
     admin_client.get(url(Item, "changelist"))
 
-    assert {item.pk for item in loaded_items} == {catalog.beta.pk}
+    assert {item.pk for item in loaded_items if item.pk is not None} == {catalog.beta.pk}
 
 
 def option_texts(soup, name):

@@ -24,7 +24,7 @@ from django_formwork import (
     FormworkRowSaveMixin,
     formwork_modelformset_factory,
 )
-from django_formwork.tables import PREFIX_INPUT_NAME
+from django_formwork.tables import PREFIX_INPUT_NAME, Table
 from django_formwork.widgets import Select
 
 pytestmark = pytest.mark.django_db
@@ -91,6 +91,42 @@ def test_a_display_column_shows_the_value_of_its_source_as_text():
 
     assert cell.get_text(strip=True) == "A, alpha"
     assert cell.find("input") is None
+
+
+def test_for_formset_fields_name_and_order_the_columns():
+    UniqueCode.objects.create(code="A", label="alpha")
+    formset = formwork_modelformset_factory(UniqueCode, form=CodeRowForm, extra=0)(queryset=UniqueCode.objects.all())
+
+    soup = BeautifulSoup(Table.for_formset(formset, fields=["label", "missing", "code"]).render(), "html.parser")
+
+    row = soup.select_one("table > tbody")
+    assert [cell["data-field"] for cell in row.find_all("td", attrs={"data-field": True})] == ["label", "code"]
+
+
+def test_for_formset_display_shows_a_field_that_posts_nothing():
+    UniqueCode.objects.create(code="A", label="alpha")
+    formset = formwork_modelformset_factory(UniqueCode, form=CodeRowForm, extra=0)(queryset=UniqueCode.objects.all())
+
+    table = Table.for_formset(formset, display=lambda bound_field: bound_field.form.instance.label.upper())
+
+    cell = BeautifulSoup(table.render(), "html.parser").find("td", attrs={"data-field": "label"})
+    assert cell.get_text(strip=True) == "ALPHA"
+
+
+def test_for_formset_link_gives_a_row_an_open_link():
+    first = UniqueCode.objects.create(code="A")
+    UniqueCode.objects.create(code="B")
+    formset = type("Rows", (CodeFormSet,), {"can_add": False, "can_delete": False})(
+        queryset=UniqueCode.objects.order_by("code")
+    )
+
+    table = Table.for_formset(
+        formset, link=lambda form: f"/codes/{form.instance.pk}/" if form.instance == first else ""
+    )
+
+    linked, plain = BeautifulSoup(table.render(), "html.parser").select("table > tbody")
+    assert linked.find("a", attrs={"aria-label": "Open"})["href"] == f"/codes/{first.pk}/"
+    assert plain.find("a", attrs={"aria-label": "Open"}) is None
 
 
 def test_an_app_listed_first_overrides_the_row_template(settings, tmp_path, monkeypatch):

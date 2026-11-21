@@ -141,8 +141,9 @@
           </tr>
         </thead>
         <tbody>
-          {% for row in cl.rows %}
-          {% set row_errors = row.form.non_field_errors() if row.form is not none else () %}
+          {% for row in cl.table.rows %}
+          {% set obj, index = row.form.instance, loop.index0 %}
+          {% set row_errors = row.form.non_field_errors() if editable else () %}
           {% if row_errors %}
           {#- An error of the whole row, as Django shows it: on a line of its own, right above the row. #}
           <tr data-row-errors class="border-b-0">
@@ -151,27 +152,29 @@
             </td>
           </tr>
           {% endif %}
-          <tr data-pk="{{ row.value }}" class="transition-colors {{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)">
+          <tr data-pk="{{ obj.pk }}" class="transition-colors {{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)">
             {% if actions %}
             <td>
-              <input type="checkbox" class="{{ checkbox }}" name="{{ action_checkbox_name }}" value="{{ row.value }}"
-                     form="changelist-actions" x-model="selected" @click="range($event)" @mousedown.shift.prevent data-index="{{ row.index }}"
+              <input type="checkbox" class="{{ checkbox }}" name="{{ action_checkbox_name }}" value="{{ obj.pk }}"
+                     form="changelist-actions" x-model="selected" @click="range($event)" @mousedown.shift.prevent data-index="{{ index }}"
                      aria-label="{{ _("Select row") }}">
             </td>
             {% endif %}
             {% for c in row.cells %}
-            <td class="{{ "min-w-48" if c.wrap else "whitespace-nowrap" }}{{ " text-right" if c.numeric }}"{% if c.field is not none %} data-editable data-formwork-field{% if c.indent %} data-indent{% endif %}{% if c.changed %} data-formwork-changed{% if c.field.initial_checked %} data-formwork-initial="{{ c.field.initial_checked }}"{% endif %}{% endif %}{% endif %}{% if c.field is not none and c.field.errors %} data-invalid{% endif %}>
+            {% set column = cl.columns[loop.index0] %}
+            <td class="{{ "min-w-48" if column.wrap else "whitespace-nowrap" }}{{ " text-right" if column.numeric }}"{% if c.field is not none %} data-editable data-formwork-field{% if column.indent %} data-indent{% endif %}{% if c.changed %} data-formwork-changed{% if c.field.initial_checked %} data-formwork-initial="{{ c.field.initial_checked }}"{% endif %}{% endif %}{% if c.field.errors %} data-invalid{% endif %}{% endif %}>
               {% if c.field is not none %}
-              {{ c.field.as_widget(attrs={"aria-label": c.field.label}) }}{{ m.cell_notes(c.field) }}
-              {% elif c.link %}
-              <a {% if cl.is_popup %}href="{{ c.link }}"{% else %}{{ m.page_link(c.link, "change") }}{% endif %} class="link link-primary font-medium"{% if row.pick %} data-popup-pick="{{ row.pick|tojson_attr }}"{% endif %}>{{ m.cell(c) }}</a>
+              {{ c.widget }}{{ m.cell_notes(c.field) }}
+              {% elif column.linked and row.link %}
+              {% set pick = cl.pick(obj) %}
+              <a {% if cl.is_popup %}href="{{ row.link }}"{% else %}{{ m.page_link(row.link, "change") }}{% endif %} class="link link-primary font-medium"{% if pick %} data-popup-pick="{{ pick|tojson_attr }}"{% endif %}>{{ m.cell(c.display) }}</a>
               {% else %}
-              {{ m.cell(c) }}
+              {{ m.cell(c.display) }}
               {% endif %}
             </td>
             {% endfor %}
-            {% if row.form is not none %}
-            <td class="hidden">{% for hidden in row.form.hidden_fields() %}{{ hidden }}{% endfor %}</td>
+            {% if editable and row.hidden %}
+            <td class="hidden">{{ row.hidden }}</td>
             {% endif %}
             {% if collapsible %}<td data-col-toggle></td>{% endif %}
           </tr>

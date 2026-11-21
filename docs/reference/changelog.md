@@ -181,6 +181,9 @@
   `as_rows(flush=True)` lays the table out to the edges of a card. The rows need
   `tables.js`, which `{% formwork_js %}` and `{{ formset.media }}` load. With a
   `save_url`, each row still saves by itself, without Add another, Remove or Delete.
+  For a template of your own, `Table.for_formset()` builds the table, and its `fields`,
+  `display` and `link` arguments pick the columns, show the values and link the rows.
+  See [Templates](formsets.md#templates).
 - `DisplayField` shows a value that a form never posts: a field, a method, a property or
   an annotation of the form's instance, or a function of the instance. It renders with
   the `Display` widget, and as text in a cell of `formset.as_rows()`. The field reads its

@@ -211,6 +211,18 @@ another row, where the admin puts the pager of an inline. Each row is a `TableRo
 `cells` and its `hidden` inputs; each cell is a `TableCell`, with the bound `field` or
 the `display` text of a disabled one.
 
+For a template of your own, `Table.for_formset(formset)` builds the table that
+`as_rows()` renders. Its keyword arguments change what the table shows:
+
+- `fields`: the names of the columns, in their order. A name that the forms do not
+  have gets no column.
+- `display`: a function of a bound field that returns what the cell of a
+  `DisplayField` or a disabled field shows, in place of the text above.
+- `link`: a function of a form that returns the URL of the row's own page, or `""`.
+  A row with a URL has an Open link in its last column.
+
+The admin builds its tabular inlines and its lists this way.
+
 Both are Jinja2 templates. To override one for the whole project, put a template
 at the same path in the `jinja2/` directory of an app listed before `django_formwork`.
 

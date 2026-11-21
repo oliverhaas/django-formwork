@@ -14,7 +14,6 @@ from django.contrib.admin.exceptions import DisallowedModelAdminLookup, Disallow
 from django.contrib.admin.options import IS_FACETS_VAR, IncorrectLookupParameters, ShowFacets
 from django.contrib.admin.utils import (
     build_q_object_from_lookup_parameters,
-    label_for_field,
     lookup_field,
     lookup_spawns_duplicates,
     prepare_lookup_value,
@@ -38,6 +37,7 @@ from django_formwork.admin.cells import annotate_rows, display_annotations, disp
 from django_formwork.admin.filters import SEARCH_VAR
 from django_formwork.admin.paginator import EstimatedCountPaginator, PageLink, page_links
 from django_formwork.admin.widgets import IS_POPUP_VAR, TO_FIELD_VAR
+from django_formwork.tables import Table, TableRow
 from django_formwork.widgets import Select
 
 if TYPE_CHECKING:
@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from django.forms import BoundField
     from django.http import HttpRequest
 
+    from django_formwork.admin.cells import Cell
     from django_formwork.admin.filters import AdminFilterSet
 
 __all__ = [
@@ -574,32 +575,40 @@ class ChangeList:
             return set()
         return set(self.list_display_links)
 
-    def header_label(self, entry: str | Callable[..., Any]) -> str:
-        if entry == "action_checkbox":
-            return ""
-        return str(capfirst(label_for_field(entry, self.model, self.model_admin, return_attr=False)))
-
     @cached_property
     def columns(self) -> list[dict[str, Any]]:
-        """One header per ``list_display`` entry, with its sort link and direction.
+        """One header per column of the table, with its sort link and direction.
 
         Like Django's header, a click sorts by the column first and keeps the other sorted columns after it.
         A sorted column also links to the order without it, Django's "Remove from sorting"."""
         sorted_columns = self.sorted_columns
+        positions = {key: position for position, key in enumerate(self.column_names)}
+        # Only a column with long text on this page wraps; names, dates and badges keep one line.
+        wrapping = {
+            cell.name
+            for row in self.table.rows
+            for cell in row.cells
+            if cell.field is None
+            and cell.display["kind"] in {"text", "html"}
+            and len(strip_tags(cell.display["text"])) > WRAP_AFTER
+        }
         columns = []
-        for position, (key, entry) in enumerate(self.column_names.items()):
+        for header in self.table.headers:
+            key = header["name"]
+            entry = self.column_names[key]
             column: dict[str, Any] = {
                 "name": key,
-                "label": self.header_label(entry),
+                "label": header["label"],
                 "sort_url": "",
                 "remove_url": "",
                 "direction": "",
                 "priority": None,
                 "numeric": self.is_numeric(entry),
                 "linked": entry in self.links,
-                "indent": key in self.boxed_fields,
+                "indent": header["indent"],
+                "wrap": key in wrapping,
             }
-            index = position + self.column_offset
+            index = positions[key] + self.column_offset
             if self.order_field(entry) is not None:
                 direction = sorted_columns.get(index, "")
                 first = f"-{index}" if direction == "asc" else str(index)
@@ -639,61 +648,47 @@ class ChangeList:
         return f"{url}?{self.preserved_filters}" if self.preserved_filters else url
 
     @cached_property
-    def boxed_fields(self) -> set[str]:
-        """The editable columns whose field draws a box, which sets the value in from the cell's edge."""
-        if self.formset is None:
-            return set()
-        fields = self.formset.form.base_fields
-        return {
-            key
-            for key in self.list_editable
-            if key in fields and getattr(fields[key].widget, "input_type", None) not in {"checkbox", "radio"}
-        }
+    def table(self) -> Table:
+        """The page as a table of the list's formset, a row per object: the editable formset, else one that shows."""
+        objects = {obj.pk: obj for obj in self.result_list}
+        formset = self.formset
+        if formset is None:
+            formset = self.model_admin.get_changelist_formset(self.request, fields=())(queryset=self.page.object_list)
 
-    @cached_property
-    def editable_forms(self) -> dict[Any, Any]:
-        if self.formset is None:
-            return {}
-        return {form.instance.pk: form for form in self.formset.forms}
+        def shown(form: Any) -> models.Model:
+            # A failed save binds rows of its own; the page's objects carry the annotations the cells read.
+            return objects.get(form.instance.pk, form.instance)
 
-    @cached_property
-    def rows(self) -> list[dict[str, Any]]:
-        """The page, one entry per object with its cells and its link."""
-        rows: list[dict[str, Any]] = []
-        can_link = self.model_admin.has_view_or_change_permission(self.request)
-        for index, obj in enumerate(self.result_list):
-            url = self.change_url(obj) if can_link else ""
-            form = self.editable_forms.get(obj.pk)
-            cells: list[dict[str, Any]] = []
-            for key, entry in self.column_names.items():
-                linked = bool(url) and entry in self.links
-                cell: dict[str, Any] = {"name": key, "link": url if linked else "", "field": None}
-                if form is not None and key in self.list_editable and not linked:
-                    cell["field"] = form[key]
-                    # After a failed save, a value the user changed still counts as changed, valid or not.
-                    cell["changed"] = form.is_bound and key in form.changed_data
-                else:
-                    cell.update(list_cell(entry, obj, self.model_admin))
-                cell["numeric"] = self.is_numeric(entry)
-                cell["indent"] = cell["field"] is not None and key in self.boxed_fields
-                cells.append(cell)
-            row = {"pk": obj.pk, "value": str(obj.pk), "index": index, "cells": cells, "form": form, "pick": None}
-            if self.is_popup:
-                # What a click on the row's link hands to the relation: the value it posts and the row's name.
-                value = obj.serializable_value(self.to_field or self.pk_attname)
-                row["pick"] = {"value": str(value), "obj": str(obj)}
+        def display(bound_field: BoundField) -> Cell:
+            return list_cell(self.column_names[bound_field.name], shown(bound_field.form), self.model_admin)
+
+        def link(form: Any) -> str:
+            return self.change_url(shown(form))
+
+        linked = self.links and self.model_admin.has_view_or_change_permission(self.request)
+        fields = list(self.column_names)
+        table = Table.for_formset(formset, fields=fields, display=display, link=link if linked else None)
+        posted = {row.form.instance.pk: row for row in table.rows}
+        rows: list[TableRow] = []
+        for obj in self.result_list:
+            row = posted.get(obj.pk)
+            if row is None:
+                # A row that a failed save did not post shows its values.
+                form = self.display_form(instance=obj)
+                row = TableRow.for_form(form, fields=fields, display=display, link=link(form) if linked else "")
             rows.append(row)
-        # Only a column with long text on this page wraps; names, dates and badges keep one line.
-        wrapping = {
-            cell["name"]
-            for row in rows
-            for cell in row["cells"]
-            if cell.get("kind") in {"text", "html"} and len(strip_tags(cell["text"])) > WRAP_AFTER
-        }
-        for row in rows:
-            for cell in row["cells"]:
-                cell["wrap"] = cell["name"] in wrapping
-        return rows
+        table.rows = rows
+        return table
+
+    @cached_property
+    def display_form(self) -> type[Any]:
+        return self.model_admin.get_changelist_formset(self.request, fields=()).form
+
+    def pick(self, obj: models.Model) -> dict[str, str] | None:
+        """What a click on the row's link hands to the relation of a popup: the value it posts and the row's name."""
+        if not self.is_popup:
+            return None
+        return {"value": str(obj.serializable_value(self.to_field or self.pk_attname)), "obj": str(obj)}
 
     @cached_property
     def pk_attname(self) -> str:

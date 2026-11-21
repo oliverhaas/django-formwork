@@ -21,11 +21,14 @@ from django_formwork.widgets._stub import formset_row, stub_formset, with_query
 from django_formwork.widgets.select import share_choices
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator, Sequence
 
     from django.db.models import QuerySet
     from django.forms import BoundField
     from django.http import HttpRequest
+
+    #: What a cell shows for a field that posts nothing.
+    CellDisplay = Callable[[BoundField], Any]
 
 __all__ = [
     "FormworkCellMixin",
@@ -45,6 +48,33 @@ ROW_TEMPLATE = "formwork/tables/row.html"
 TABLE_TEMPLATE = "formwork/tables/table.html"
 
 
+def _value_text(bound_field: BoundField) -> Any:  # noqa: ANN401
+    """A field's value as a cell shows it: a ``DisplayField``'s value, or a disabled field's value as text."""
+    form = bound_field.form
+    instance = getattr(form, "instance", None)
+    display_getter = getattr(instance, f"get_{bound_field.name}_display", None) if instance is not None else None
+    if isinstance(bound_field.field, DisplayField):
+        display = bound_field.value()
+        if isinstance(display, list | tuple):
+            display = format_html_join(", ", "{}", ((item,) for item in display))
+    elif callable(display_getter):
+        display = display_getter()
+    elif instance is not None:
+        value = getattr(instance, bound_field.name, None)
+        related = getattr(value, "all", None)  # related manager (M2M / reverse FK)
+        if related is not None:
+            display = ", ".join(str(obj) for obj in related())
+        else:
+            display = value if value is None else str(value)
+    else:
+        choices: Iterator[tuple[Any, Any]] = flatten_choices(getattr(bound_field.field, "choices", ()))
+        labels = {str(key): label for key, label in choices}
+        value = bound_field.value()
+        values = value if isinstance(value, (list, tuple)) else [value]
+        display = ", ".join(str(labels.get(str(v), v)) for v in values if v is not None)
+    return "" if display is None else display
+
+
 @dataclass
 class TableCell:
     """One cell of a row: a field's widget, or ``display`` content for a value the row does not post."""
@@ -60,36 +90,17 @@ class TableCell:
             return False
         return getattr(self.field.field.widget, "input_type", None) not in {"checkbox", "radio"}
 
+    @staticmethod
+    def shows_value(bound_field: BoundField) -> bool:
+        """The field posts nothing, a ``DisplayField`` or a disabled field, so its cell shows its value."""
+        return isinstance(bound_field.field, DisplayField) or bound_field.field.disabled
+
     @classmethod
-    def for_field(cls, bound_field: BoundField) -> TableCell:
-        """A widget cell, or for a disabled field its value as text."""
-        if isinstance(bound_field.field, DisplayField):
-            value = bound_field.value()
-            if isinstance(value, list | tuple):
-                value = format_html_join(", ", "{}", ((item,) for item in value))
-            return cls(bound_field.name, display="" if value is None else value)
-        if not bound_field.field.disabled:
+    def for_field(cls, bound_field: BoundField, display: CellDisplay | None = None) -> TableCell:
+        """A widget cell, or for a field that posts nothing its value, as ``display`` shows it."""
+        if not cls.shows_value(bound_field):
             return cls(bound_field.name, field=bound_field)
-        form = bound_field.form
-        instance = getattr(form, "instance", None)
-        display_getter = getattr(instance, f"get_{bound_field.name}_display", None) if instance is not None else None
-        if callable(display_getter):
-            display = display_getter()
-        elif instance is not None:
-            value = getattr(instance, bound_field.name, None)
-            if value is None:
-                display = ""
-            elif hasattr(value, "all"):  # related manager (M2M / reverse FK)
-                display = ", ".join(str(obj) for obj in value.all())
-            else:
-                display = str(value)
-        else:
-            choices: Iterator[tuple[Any, Any]] = flatten_choices(getattr(bound_field.field, "choices", ()))
-            labels = {str(key): label for key, label in choices}
-            value = bound_field.value()
-            values = value if isinstance(value, (list, tuple)) else [value]
-            display = ", ".join(str(labels.get(str(v), v)) for v in values if v is not None)
-        return cls(bound_field.name, display=display)
+        return cls(bound_field.name, display=(display or _value_text)(bound_field))
 
     @cached_property
     def widget(self) -> SafeString:
@@ -133,7 +144,7 @@ class TableRow:
     template_name: str = ROW_TEMPLATE
 
     @classmethod
-    def for_form(
+    def for_form(  # noqa: PLR0913
         cls,
         form: Any,  # noqa: ANN401
         *,
@@ -141,7 +152,11 @@ class TableRow:
         can_delete: bool = False,
         save_url: str = "",
         actions: bool = False,
+        fields: Sequence[str] | None = None,
+        display: CellDisplay | None = None,
+        link: str = "",
     ) -> TableRow:
+        """The row of ``form``, a cell for each of ``fields`` that shows, by default each visible field."""
         hidden_inputs = getattr(form, "row_hidden_inputs", None) if save_url else None
         if hidden_inputs is None:
             hidden_inputs = mark_safe("".join(str(bound_field) for bound_field in form.hidden_fields()))  # noqa: S308
@@ -150,10 +165,11 @@ class TableRow:
             deletion_field = form[DELETION_FIELD_NAME]
         return cls(
             form=form,
-            cells=[TableCell.for_field(bf) for bf in form.visible_fields() if bf.name != DELETION_FIELD_NAME],
+            cells=[TableCell.for_field(bound_field, display) for bound_field in _columns(form, fields)],
             hidden=hidden_inputs,
             new=new,
             deletion_field=deletion_field,
+            link=link,
             save_url=save_url,
             actions=actions,
             template_name=getattr(form, "template_name_row", ROW_TEMPLATE),
@@ -195,10 +211,21 @@ class Table:
     template_name: str = TABLE_TEMPLATE
 
     @classmethod
-    def for_formset(cls, formset: Any, *, save_url: str = "", flush: bool = False, cell_url: str = "") -> Table:  # noqa: ANN401
+    def for_formset(  # noqa: PLR0913
+        cls,
+        formset: Any,  # noqa: ANN401
+        *,
+        save_url: str = "",
+        flush: bool = False,
+        cell_url: str = "",
+        fields: Sequence[str] | None = None,
+        display: CellDisplay | None = None,
+        link: Callable[[Any], str] | None = None,
+    ) -> Table:
         """The table of a Django formset, with rows to add unless it saves row by row.
 
         With ``cell_url``, the selects and date pickers of the saved rows render as stubs that load from it.
+        ``fields`` names the columns, ``display`` shows a field that posts nothing, ``link`` gives a row's own page.
         """
         if cell_url:
             share_choices(formset)
@@ -206,12 +233,25 @@ class Table:
         can_add = not save_url and getattr(formset, "can_add", True) and not getattr(formset, "edit_only", False)
         can_delete = not save_url and formset.can_delete
         initial = formset.initial_form_count()
+        links = [link(form) if link is not None else "" for form in formset.forms]
         new_rows = len(formset.forms) > initial
-        actions = not save_url and (can_add or can_delete or new_rows)
+        actions = not save_url and (can_add or can_delete or new_rows or any(links))
         rows = [
-            TableRow.for_form(form, new=index >= initial, can_delete=can_delete, save_url=save_url, actions=actions)
+            TableRow.for_form(
+                form,
+                new=index >= initial,
+                can_delete=can_delete,
+                save_url=save_url,
+                actions=actions,
+                fields=fields,
+                display=display,
+                link=links[index],
+            )
             for index, form in enumerate(formset.forms)
         ]
+        empty_row = None
+        if can_add:
+            empty_row = TableRow.for_form(formset.empty_form, new=True, actions=actions, fields=fields, display=display)
         model = getattr(formset, "model", None)
         opts = model._meta if model is not None else None  # noqa: SLF001
         return cls(
@@ -223,12 +263,14 @@ class Table:
                     "required": getattr(bound_field, "is_mandatory", bound_field.field.required)
                     and not bound_field.field.disabled,
                     "help_text": bound_field.help_text,
+                    # A boxed widget sets its value in from the cell's edge, and the header lines up with the value.
+                    "indent": not TableCell.shows_value(bound_field)
+                    and TableCell(bound_field.name, field=bound_field).boxed,
                 }
-                for bound_field in formset.empty_form.visible_fields()
-                if bound_field.name != DELETION_FIELD_NAME
+                for bound_field in _columns(formset.empty_form, fields)
             ],
             rows=rows,
-            empty_row=TableRow.for_form(formset.empty_form, new=True, actions=actions) if can_add else None,
+            empty_row=empty_row,
             save_url=save_url,
             flush=flush,
             verbose_name=opts.verbose_name if opts is not None else _("row"),
@@ -252,6 +294,12 @@ class Table:
     def render(self) -> SafeString:
         renderer = formwork_renderer(self.formset.renderer)
         return mark_safe(self.formset.render(self.template_name, {"table": self, "formset": self.formset}, renderer))  # noqa: S308
+
+
+def _columns(form: Any, fields: Sequence[str] | None) -> list[BoundField]:  # noqa: ANN401
+    """The fields of ``form`` that take a column: each of ``fields`` the form has, shown and not the Delete toggle."""
+    names = form.fields if fields is None else [name for name in fields if name in form.fields]
+    return [form[name] for name in names if name != DELETION_FIELD_NAME and not form[name].is_hidden]
 
 
 class RowRenderMixin:

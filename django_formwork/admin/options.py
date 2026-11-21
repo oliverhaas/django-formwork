@@ -716,14 +716,20 @@ class ModelAdmin(BaseModelAdmin):
         return form_class
 
     def get_changelist_formset(self, request: HttpRequest, **kwargs: Any) -> type[FormworkBaseModelFormSet]:
-        return formwork_modelformset_factory(
-            self.model,
-            form=self.get_changelist_form(request),
-            extra=0,
-            fields=self.list_editable,
-            formfield_callback=partial(self._changelist_formfield, request=request),
+        """The rows of the list: a field per ``list_editable`` entry, a ``DisplayField`` per other column."""
+        defaults: dict[str, Any] = {
+            "extra": 0,
+            "fields": self.list_editable,
+            "formfield_callback": partial(self._changelist_formfield, request=request),
             **kwargs,
-        )
+        }
+        formset = formwork_modelformset_factory(self.model, form=self.get_changelist_form(request), **defaults)
+        editable = set(defaults["fields"])
+        columns = [name for name in self.get_list_display(request) if field_name(name) not in editable]
+        formset.form = type(formset.form.__name__, (formset.form,), self._display_fields(columns, None))
+        # A new row has no values for the columns to show.
+        formset.can_add = False
+        return formset
 
     def get_formsets_with_inlines(self, request: HttpRequest, obj: models.Model | None = None) -> Any:
         for inline in self.get_inline_instances(request, obj):
@@ -1871,6 +1877,7 @@ class ModelAdmin(BaseModelAdmin):
                     ("has_add_permission", "has_change_permission", "has_delete_permission"), False
                 )
                 formset.extra = formset.max_num = 0
+                formset.can_add = formset.can_delete = False
             wrapped.append(
                 InlineAdminFormSet(
                     inline,
@@ -2348,6 +2355,7 @@ class InlineModelAdmin(BaseModelAdmin):
         if defaults["fields"] is None and not modelform_defines_fields(defaults["form"]):
             defaults["fields"] = forms.ALL_FIELDS
         formset = self._formset_factory(defaults)
+        formset.can_add = can_add  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         use_formwork_widgets(formset.form, self.admin_site)
         return formset
 
