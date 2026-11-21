@@ -2846,12 +2846,15 @@ the focus, a typed date and the press. After a failed save, the rows render the 
 widgets.</p>
 <p>The stubs load from <code>cells/&lt;field&gt;/</code> under the admin's URLs, named
 <code>&lt;app_label&gt;_&lt;model_name&gt;_cell</code>. The query names the row's <code>pk</code>, its form <code>prefix</code> and
-the <code>value</code> that the stub holds, so a changed value stays changed. The view checks the
-change permission for the row.</p>
+the <code>value</code> that the stub holds, so a changed value stays changed. The view builds the
+row with the list's formset, so the row gets the choices that a hook of the form or of
+the formset gives it, and it checks the change permission for the row.</p>
+<p>A select is as wide as its longest option, so a stub holds the labels of the options.
+The rows of a select that <a href="#shared-choices">share their choices</a> share the labels too. A
+row with choices of its own loads them for its stub, with the queries of the full
+select.</p>
 <p>These keep the full widget in every row:</p>
 <ul>
-<li>a select whose rows can get choices of their own (see <a href="#shared-choices">Shared choices</a>),
-  so that its width fits the row's options,</li>
 <li>a select with a floating label,</li>
 <li>a disabled field.</li>
 </ul>
