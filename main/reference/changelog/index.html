@@ -1430,7 +1430,10 @@
   <code>data-formwork-dirty</code>. <code>can_add = False</code> on the formset class removes Add another, and
   <code>as_rows(flush=True)</code> lays the table out to the edges of a card. The rows need
   <code>tables.js</code>, which <code>{% formwork_js %}</code> and <code>{{ formset.media }}</code> load. With a
-  <code>save_url</code>, each row still saves by itself, without Add another, Remove or Delete.</li>
+  <code>save_url</code>, each row still saves by itself, without Add another, Remove or Delete.
+  For a template of your own, <code>Table.for_formset()</code> builds the table, and its <code>fields</code>,
+  <code>display</code> and <code>link</code> arguments pick the columns, show the values and link the rows.
+  See <a href="../formsets/#templates">Templates</a>.</li>
 <li><code>DisplayField</code> shows a value that a form never posts: a field, a method, a property or
   an annotation of the form's instance, or a function of the instance. It renders with
   the <code>Display</code> widget, and as text in a cell of <code>formset.as_rows()</code>. The field reads its
