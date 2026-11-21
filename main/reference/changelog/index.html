@@ -1443,10 +1443,13 @@
   new <code>cells/&lt;field&gt;/</code> view (URL name <code>&lt;app_label&gt;_&lt;model_name&gt;_cell</code>) and takes over the
   focus, a typed date and the press. The view builds the row with the list's formset, so
   the row keeps the choices that a hook gives it. After a failed save, only the fields
-  with an error render in full. <code>list_editable_stubs = False</code> on the
-  <code>ModelAdmin</code> renders the full widgets. Tests that read the options of a list's select from the rendered page
-  request the cell instead, or set <code>list_editable_stubs = False</code>. See
-  <a href="../admin/#widgets-that-load-on-use">Widgets that load on use</a>.</li>
+  with an error render in full. <code>list_editable_stubs = False</code> on the <code>ModelAdmin</code> renders
+  the full widgets. Outside the admin, <code>formset.as_rows(cell_url=...)</code> renders the same
+  stubs, with the new <code>FormworkCellMixin</code> as the view behind <code>cell_url</code>. Tests that read
+  the options of a list's select from the rendered page request the cell instead, or set
+  <code>list_editable_stubs = False</code>. See
+  <a href="../admin/#widgets-that-load-on-use">Widgets that load on use</a> and, for <code>as_rows()</code>,
+  <a href="../formsets/#widgets-that-load-on-use">Widgets that load on use</a>.</li>
 <li><code>makemessages</code> reads a template in a <code>jinja2</code> directory with Jinja's parser, so it
   collects the text of the admin's pages and of your own Jinja2 templates. Django's
   command reads every template with the Django template lexer, which finds no text in a
