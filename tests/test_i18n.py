@@ -8,10 +8,12 @@ import shutil
 from html.parser import HTMLParser
 from typing import TYPE_CHECKING
 
+import jinja2
 import pytest
 from django import forms
 from django.utils import translation
 from django.utils.dates import MONTHS, MONTHS_3, MONTHS_ALT, MONTHS_AP, WEEKDAYS, WEEKDAYS_ABBR
+from jinja2.ext import extract_from_ast
 
 from django_formwork.fields import DateRangeField, DateTimeRangeField
 from django_formwork.forms import FormworkForm
@@ -48,6 +50,7 @@ from django_formwork.widgets import (
 from .conftest import PACKAGE, extract_messages
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 TEMPLATES = sorted((PACKAGE / "jinja2").rglob("*.html"))
@@ -187,6 +190,33 @@ def test_translated_text_and_values_pass(source):
 @pytest.mark.skipif(not shutil.which("xgettext"), reason="gettext is not installed")
 def test_makemessages_extracts_without_warnings(tmp_path):
     assert "warning" not in extract_messages(tmp_path / "django_formwork").lower()
+
+
+_GETTEXT: dict[str, Callable[..., str]] = {
+    "_": translation.gettext,
+    "gettext": translation.gettext,
+    "ngettext": lambda singular, plural: translation.ngettext(singular, plural, 1),
+    "pgettext": translation.pgettext,
+    "npgettext": lambda context, singular, plural: translation.npgettext(context, singular, plural, 1),
+}
+_JINJA = jinja2.Environment(extensions=["jinja2.ext.i18n", "jinja2.ext.do", "jinja2.ext.loopcontrols"])  # noqa: S701
+
+
+@pytest.mark.unit
+@pytest.mark.usefixtures("pseudo_catalog")
+@pytest.mark.parametrize(
+    "path", sorted(PACKAGE.rglob("jinja2/**/*.html")), ids=lambda path: str(path.relative_to(PACKAGE))
+)
+def test_makemessages_extracts_every_jinja_message(path):
+    found = extract_from_ast(_JINJA.parse(path.read_text()), tuple(_GETTEXT))
+    with translation.override("de"):
+        untranslated = [
+            (lineno, strings)
+            for lineno, name, message in found
+            if (strings := [text for text in (message if isinstance(message, tuple) else (message,)) if text])
+            and not _GETTEXT[name](*strings).startswith("⟦")
+        ]
+    assert untranslated == []
 
 
 _CHOICES = [("a", "1"), ("b", "2")]

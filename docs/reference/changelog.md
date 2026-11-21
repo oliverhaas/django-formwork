@@ -190,6 +190,11 @@
   full widgets. Tests that read the options of a list's select from the rendered page
   request the cell instead, or set `list_editable_stubs = False`. See
   [Widgets that load on use](admin.md#widgets-that-load-on-use).
+- `makemessages` reads a template in a `jinja2` directory with Jinja's parser, so it
+  collects the text of the admin's pages and of your own Jinja2 templates. Django's
+  command reads every template with the Django template lexer, which finds no text in a
+  Jinja2 `{% trans %}` block or in a `_()` call with arguments. See
+  [Translations](../getting-started/installation.md#translations).
 
 ### Changed
 
