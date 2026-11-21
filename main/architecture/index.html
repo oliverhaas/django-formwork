@@ -939,10 +939,14 @@
 <h2 id="rendering">Rendering<a class="headerlink" href="#rendering" title="Permanent link">&para;</a></h2>
 <p><code>FormworkRenderer</code> is a <code>TemplatesSetting</code> renderer. It renders <code>{{ form }}</code>
 with <code>formwork/forms/div.html</code> and each field group with
-<code>formwork/forms/field.html</code>, and it loads every template through the project's
-<code>TEMPLATES</code>. A full render and an htmx swap of the search results therefore
-resolve the same template, and a project overrides any formwork template from
-its own template directories. Formwork uses its own template paths: shadowing
+<code>formwork/forms/field.html</code>. Formwork's templates are Jinja2. The renderer
+loads them and Django's built-in widget templates from a Jinja2 engine of its
+own, which reads <code>django/forms/jinja2/</code> and the <code>jinja2/</code> directory of each
+installed app. A template that engine does not find, such as a widget template of another
+package, loads through the project's <code>TEMPLATES</code>. A full render and an htmx
+swap of the search results therefore resolve the same template, and an app
+listed before <code>django_formwork</code> overrides any formwork template from its
+<code>jinja2/</code> directory. Formwork uses its own template paths: shadowing
 <code>django/forms/div.html</code> from inside an app would change every form in every
 project that installs formwork.</p>
 <h2 id="widget-design-rules">Widget design rules<a class="headerlink" href="#widget-design-rules" title="Permanent link">&para;</a></h2>
@@ -1004,7 +1008,7 @@ them for a new widget and for a change to an existing one.</p>
 </tr>
 <tr>
 <td>R10</td>
-<td>Keep server concerns in Python. A template builds no URL and no query parameter. Option markup goes through the <code>#option_list</code> partial.</td>
+<td>Keep server concerns in Python. A template builds no URL and no query parameter. Option markup goes through the widget's <code>option_list_template_name</code>.</td>
 <td>htmx swaps and full renders then use one code path.</td>
 </tr>
 <tr>

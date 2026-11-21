@@ -1066,6 +1066,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#widgets-that-load-on-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Widgets that load on use
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1552,6 +1563,17 @@
     <span class="md-ellipsis">
       
         Shared choices
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#widgets-that-load-on-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Widgets that load on use
       
     </span>
   </a>
@@ -2685,6 +2707,8 @@ pages, override <code>formwork_admin/skeletons.html</code> and add a
   The change form no longer loads the whole related table into a <code>&lt;select&gt;</code>.</li>
 <li>The rows of <a href="#editable-columns">editable columns</a> and of an <a href="#inlines">inline</a> load the
   choices of a relation once for all rows. See <a href="#shared-choices">Shared choices</a>.</li>
+<li>The selects and date pickers of editable columns render as stubs and load the full
+  widget when they are first used. See <a href="#widgets-that-load-on-use">Widgets that load on use</a>.</li>
 <li>Without filters, the list counts a PostgreSQL table of more than 10,000 rows from the
   planner's estimate instead of <code>COUNT(*)</code>. Any filter or search counts exactly.
   <code>EstimatedCountPaginator.estimate_threshold</code> sets the limit.</li>
@@ -2797,6 +2821,25 @@ asks you to set <code>share_choices</code> on the <code>ModelAdmin</code> or the
 </tr>
 </tbody>
 </table>
+<h3 id="widgets-that-load-on-use">Widgets that load on use<a class="headerlink" href="#widgets-that-load-on-use" title="Permanent link">&para;</a></h3>
+<p>The saved rows of <a href="#editable-columns">editable columns</a> render each <code>Select</code>,
+<code>DatePicker</code> and <code>DateTimePicker</code> as a stub: the closed widget with its value, and an
+input that posts the value as the full widget does. When the pointer rests on the stub,
+or the stub takes the focus or a press, the full widget loads and takes its place with
+the focus, a typed date and the press. After a failed save, the rows render the full
+widgets.</p>
+<p>The stubs load from <code>cells/&lt;field&gt;/</code> under the admin's URLs, named
+<code>&lt;app_label&gt;_&lt;model_name&gt;_cell</code>. The query names the row's <code>pk</code>, its form <code>prefix</code> and
+the <code>value</code> that the stub holds, so a changed value stays changed. The view checks the
+change permission for the row.</p>
+<p>These keep the full widget in every row:</p>
+<ul>
+<li>a select whose rows can get choices of their own (see <a href="#shared-choices">Shared choices</a>),
+  so that its width fits the row's options,</li>
+<li>a select with a floating label,</li>
+<li>a disabled field.</li>
+</ul>
+<p><code>list_editable_stubs = False</code> on the <code>ModelAdmin</code> renders the full widgets in every row.</p>
 <h2 id="keyboard">Keyboard<a class="headerlink" href="#keyboard" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

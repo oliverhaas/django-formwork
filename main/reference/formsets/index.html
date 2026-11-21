@@ -1235,8 +1235,8 @@ way, as one <code>&lt;tbody&gt;</code>. <a href="#saving-a-row">Saving a row</a>
 another row, where the admin puts the pager of an inline. Each row is a <code>TableRow</code>, with the <code>form</code>, its
 <code>cells</code> and its <code>hidden</code> inputs; each cell is a <code>TableCell</code>, with the bound <code>field</code> or
 the <code>display</code> text of a disabled one.</p>
-<p>To override one for the whole project, put a template at the same path in a
-directory of your <code>TEMPLATES</code> setting.</p>
+<p>Both are Jinja2 templates. To override one for the whole project, put a template
+at the same path in the <code>jinja2/</code> directory of an app listed before <code>django_formwork</code>.</p>
 <h2 id="saving-a-row">Saving a row<a class="headerlink" href="#saving-a-row" title="Permanent link">&para;</a></h2>
 <p><code>FormworkRowSaveMixin</code> is the view behind <code>save_url</code>. It saves the posted row and
 answers with the row rendered again.</p>

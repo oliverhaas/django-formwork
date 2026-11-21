@@ -1292,6 +1292,22 @@
 <li><code>form.as_row()</code> without an argument renders a row that does not save. It no longer
   reads a <code>save_url</code> that an earlier <code>as_rows(save_url)</code> set on the form, so pass the URL:
   <code>form.as_row(save_url)</code>.</li>
+<li>A project template under <code>templates/formwork/</code> or <code>templates/django/forms/</code> no longer
+  overrides formwork's or Django's form templates. Formwork's form, field, widget and
+  table templates, and the admin's <code>formwork_admin/widgets/</code> templates, are Jinja2
+  templates now, and <code>FormworkRenderer</code> renders them and Django's built-in widget
+  templates with a Jinja2 engine of its own. To keep an override of a formwork template,
+  convert a fresh copy of the package's template to Jinja2 and put it at the same path in
+  the <code>jinja2/</code> directory of an app listed before <code>django_formwork</code>. Django's built-in
+  widget templates cannot be overridden this way. The fresh copy has new context names,
+  such as <code>widget.max_size_text</code> and <code>table.empty_text</code>, because <code>makemessages</code> finds no
+  text in a Jinja2 <code>{% trans %}</code> block. <code>TEMPLATES</code> needs no <code>DjangoTemplates</code> entry for
+  formwork, and <code>jinja2</code> moves from the <code>admin</code> extra to the package's dependencies.</li>
+<li>Code that rendered the option rows of a select with
+  <code>formwork/widgets/select.html#option_list</code> fails with <code>TemplateDoesNotExist</code>. The rows
+  are templates of their own, <code>formwork/widgets/partials/select_options.html</code>,
+  <code>select_multiple_options.html</code> and <code>combo_box_options.html</code>, which each widget names in
+  <code>option_list_template_name</code>.</li>
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1415,6 +1431,15 @@
   <code>as_rows(flush=True)</code> lays the table out to the edges of a card. The rows need
   <code>tables.js</code>, which <code>{% formwork_js %}</code> and <code>{{ formset.media }}</code> load. With a
   <code>save_url</code>, each row still saves by itself, without Add another, Remove or Delete.</li>
+<li>An admin list renders the <code>Select</code>, <code>DatePicker</code> and <code>DateTimePicker</code> of each saved row
+  of its editable columns as a stub: the closed widget with its value. When the pointer
+  rests on a stub, or the stub takes the focus or a press, the full widget loads from the
+  new <code>cells/&lt;field&gt;/</code> view (URL name <code>&lt;app_label&gt;_&lt;model_name&gt;_cell</code>) and takes over the
+  focus, a typed date and the press. A select whose rows can get choices of their own
+  keeps the full widget. <code>list_editable_stubs = False</code> on the <code>ModelAdmin</code> renders the
+  full widgets. Tests that read the options of a list's select from the rendered page
+  request the cell instead, or set <code>list_editable_stubs = False</code>. See
+  <a href="../admin/#widgets-that-load-on-use">Widgets that load on use</a>.</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1486,6 +1511,10 @@
   when the list is longer than one page. The widget labels only its selected rows,
   because the browser loads the first page when the list opens. A
   <code>label_from_instance()</code> that counts its calls sees fewer of them.</li>
+<li>An admin list with editable columns was slow to render: the example Event list, 100
+  rows with six editable columns, took about 390 ms on the server and sent 3.0 MB of
+  HTML. The Jinja2 templates bring it to 240 ms. With the stubs from Added it takes
+  125 ms and sends 0.65 MB, with the same seven queries.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
