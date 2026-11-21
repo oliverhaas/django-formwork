@@ -7,6 +7,7 @@ narrows the rows, as in Django's changelist."""
 from __future__ import annotations
 
 import hashlib
+import json
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, NamedTuple
 
@@ -658,9 +659,18 @@ class ChangeList:
         posted = {form.instance.pk: form for form in self.formset.forms} if self.formset is not None else {}
         linked = bool(self.links) and self.model_admin.has_view_or_change_permission(self.request)
         rows = []
-        for obj in self.result_list:
+        for index, obj in enumerate(self.result_list):
             form = posted.get(obj.pk) or self.display_form(instance=obj)
+            form.template_name_row = "formwork_admin/change_list_row.html"
             row = form.get_row_context(link=self.change_url(obj) if linked else "")
+            pick = self.pick(obj)
+            # The forms that only show values share no prefix, so the page numbers the rows' ids.
+            row.update(
+                row_id=f"changelist-row-{index}",
+                index=index,
+                popup=self.is_popup,
+                pick=json.dumps(pick, ensure_ascii=False) if pick else "",
+            )
             # A cell that posts nothing shows the list's cell of the page's object, which carries the annotations.
             # A failed save binds rows of its own, and a form can disable a field.
             if any(

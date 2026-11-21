@@ -31,6 +31,7 @@ from django_formwork.admin.cells import (
     display_annotations,
     html,
     list_cell,
+    list_html,
 )
 from django_formwork.admin.paginator import page_links
 from django_formwork.fields import DisplayField, _DisplayBoundField
@@ -213,10 +214,20 @@ def display_field(name: Any, model_admin: Any, model: type[models.Model], *, sav
     return DisplayField(label=label, help_text=help_text, source=contents)
 
 
+class _ListBoundField(_DisplayBoundField):
+    """A ``list_display`` column of one row: its value is the ``Cell``, its display value the cell's markup."""
+
+    @property
+    def display_value(self) -> SafeString:
+        return list_html(self.value())
+
+
 def list_display_field(entry: Any, model_admin: Any, model: type[models.Model]) -> DisplayField:
     """A ``list_display`` entry as a form field, its value the cell the list shows."""
     label, help_text = _label_and_help(entry, model_admin, model)
-    return DisplayField(label=label, help_text=help_text, source=lambda obj: list_cell(entry, obj, model_admin))
+    field = DisplayField(label=label, help_text=help_text, source=lambda obj: list_cell(entry, obj, model_admin))
+    field.bound_field_class = _ListBoundField
+    return field
 
 
 def _contents(value: Any, empty: str) -> SafeString:

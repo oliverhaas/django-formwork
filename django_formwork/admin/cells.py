@@ -12,7 +12,7 @@ from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import models
 from django.utils import formats, timezone
 from django.utils.html import conditional_escape, format_html
-from django.utils.safestring import SafeData
+from django.utils.safestring import SafeData, SafeString, mark_safe
 from django.utils.translation import gettext
 
 if TYPE_CHECKING:
@@ -28,6 +28,7 @@ __all__ = [
     "display_attr",
     "list_cell",
     "list_field",
+    "list_html",
 ]
 
 # Choices without a colour of their own take these in turn, by their place in the choices.
@@ -175,11 +176,13 @@ def list_cell(name: str | Callable[..., Any], obj: models.Model, model_admin: An
     return cell_for_field(value, field, empty, obj=obj, colors=colors)
 
 
-def html(cell: Cell) -> str:
-    """A cell as markup, for a read-only field outside a template."""
-    text = conditional_escape(cell["text"])
+def list_html(cell: Cell) -> SafeString:
+    """A cell as markup, as the list and the import preview show it."""
+    text = cell["text"]
     match cell["kind"]:
-        case "boolean" if cell["text"]:
+        case "empty":
+            return format_html('<span class="text-base-content/35">{}</span>', text)
+        case "boolean" if text:
             return format_html(
                 '<span class="inline-flex align-middle text-[color:color-mix(in_oklab,var(--color-success)_75%,var(--color-base-content))]" title="{}"><i class="icon icon-circle-check size-[1.125rem]"'
                 ' aria-hidden="true"></i><span class="sr-only">{}</span></span>',
@@ -195,6 +198,34 @@ def html(cell: Cell) -> str:
             )
         case "badge":
             color = "badge-ghost" if cell["color"] == "neutral" else f"badge-soft badge-{cell['color']}"
-            return format_html('<span class="badge {}">{}</span>', color, text)
+            return format_html('<span class="badge badge-sm whitespace-nowrap {}">{}</span>', color, text)
+        case "number":
+            return format_html('<span class="tabular-nums">{}</span>', text)
+        case "date":
+            return format_html('<span class="whitespace-nowrap tabular-nums">{}</span>', text)
+        case "html":
+            return mark_safe(text)  # noqa: S308 (an "html" cell holds markup the project returned as safe)
+        case "file" if cell["url"]:
+            return format_html(
+                '<a class="link link-primary inline-flex items-center gap-1" href="{}"><i class="icon icon-paperclip size-3.5" aria-hidden="true"></i>{}</a>',
+                cell["url"],
+                text.rsplit("/", 1)[-1],
+            )
+        case "json":
+            return format_html(
+                '<code class="block max-w-xs truncate font-mono text-xs text-base-content/70">{}</code>', text
+            )
         case _:
-            return str(text)
+            return conditional_escape(text)
+
+
+def html(cell: Cell) -> str:
+    """A cell as markup, for a read-only field outside a template."""
+    match cell["kind"]:
+        case "boolean":
+            return list_html(cell)
+        case "badge":
+            color = "badge-ghost" if cell["color"] == "neutral" else f"badge-soft badge-{cell['color']}"
+            return format_html('<span class="badge {}">{}</span>', color, cell["text"])
+        case _:
+            return str(conditional_escape(cell["text"]))

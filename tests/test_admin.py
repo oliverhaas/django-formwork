@@ -1000,6 +1000,17 @@ def test_changelist_adds_the_column_toggle_to_lists_of_several_columns(admin_cli
     assert soup.find(id="changelist-scroll").has_attr("data-columns") is toggle
 
 
+@pytest.mark.parametrize("editable", [["quantity"], []])
+def test_changelist_gives_each_row_a_body_with_its_own_id(admin_client, catalog, monkeypatch, editable):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable", editable)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    ids = [row.find_parent("tbody").get("id") for row in soup.select("#changelist-table tr[data-pk]")]
+    assert None not in ids
+    assert len(set(ids)) == len(ids) > 1
+
+
 @pytest.mark.parametrize(
     ("links", "pinned"), [(("name",), ["Name"]), (("price",), ["Name", "Price"]), (None, ["Name"])]
 )

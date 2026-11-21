@@ -227,6 +227,23 @@ the formset.
 Both are Jinja2 templates. To override one for the whole project, put a template
 at the same path in the `jinja2/` directory of an app listed before `django_formwork`.
 
+To change part of a row, extend `formwork/tables/row.html` and override its blocks,
+then set `template_name_row` to your template. A field's widget, its changed and
+invalid marks and its errors stay the same.
+
+| Block                          | Holds                                                    |
+|--------------------------------|----------------------------------------------------------|
+| `row_attrs`                    | the attributes of the row's `<tbody>` after its `id`     |
+| `errors_attrs`, `errors_span`  | the attributes and the `colspan` of the row's error line |
+| `cells_attrs`                  | the attributes of the `<tr>` of the cells                |
+| `leading_cells`                | cells before the fields' cells, empty by default         |
+| `cell_attrs`                   | a field cell's `class` and `data-field`                  |
+| `display_cell`                 | what a cell shows for a field that posts nothing         |
+| `trailing_cells`               | the actions cell                                         |
+
+`cell_attrs` and `display_cell` see the cell's bound field as `bf` and Jinja's `loop`.
+The admin's changelist rows extend the template this way.
+
 ## Saving a row
 
 `FormworkRowSaveMixin` is the view behind `save_url`. It saves the posted row and

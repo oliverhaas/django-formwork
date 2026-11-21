@@ -1,17 +1,20 @@
-<tbody id="{{ row_id }}" class="not-first-of-type:border-t not-first-of-type:border-base-content/5" data-formset-row="{{ form.prefix if form.prefix is not none else '' }}"{% if new %} data-formset-new{% endif %}{% if save_url %} hx-post="{{ save_url }}" hx-trigger="change delay:400ms" hx-target="this" hx-swap="outerMorph" hx-include="closest tbody"{% endif %}>
+{#- A template that extends this one can change the attributes of the row and its cells, a value's cell,
+    and the cells before and after the fields. -#}
+<tbody id="{{ row_id }}"{% block row_attrs %} class="not-first-of-type:border-t not-first-of-type:border-base-content/5" data-formset-row="{{ form.prefix if form.prefix is not none else '' }}"{% if new %} data-formset-new{% endif %}{% if save_url %} hx-post="{{ save_url }}" hx-trigger="change delay:400ms" hx-target="this" hx-swap="outerMorph" hx-include="closest tbody"{% endif %}{% endblock %}>
   {% if form.non_field_errors() %}
-  <tr>
-    <td colspan="{{ cells|length + actions }}" class="pb-0">
+  <tr{% block errors_attrs %}{% endblock %}>
+    <td colspan="{% block errors_span %}{{ cells|length + actions }}{% endblock %}" class="pb-0">
       <p class="flex items-center gap-1.5 text-xs text-error"><i class="icon icon-circle-exclamation-point size-3.5" aria-hidden="true"></i> {{ form.non_field_errors()|join(" ") }}</p>
     </td>
   </tr>
   {% endif %}
-  <tr class="align-top">
+  <tr{% block cells_attrs %} class="align-top"{% endblock %}>
+    {% block leading_cells %}{% endblock %}
     {% for bf in cells %}
     {# A field that posts nothing, a DisplayField or a disabled field, shows its value. #}
     {% set editable = not bf.field.disabled %}
     {% set boxed = editable and bf.field.widget.input_type not in ("checkbox", "radio") %}
-    <td class="min-w-32" data-field="{{ bf.name }}"{% if boxed %} data-boxed{% endif %}{% if editable %} data-formwork-field{% if form.is_bound and bf.name in form.changed_data %} data-formwork-changed{% if bf.initial_checked %} data-formwork-initial="{{ bf.initial_checked }}"{% endif %}{% endif %}{% if bf.errors %} data-invalid{% endif %}{% endif %}>
+    <td{% block cell_attrs scoped %} class="min-w-32" data-field="{{ bf.name }}"{% if boxed %} data-boxed{% endif %}{% endblock %}{% if editable %} data-formwork-field{% if form.is_bound and bf.name in form.changed_data %} data-formwork-changed{% if bf.initial_checked %} data-formwork-initial="{{ bf.initial_checked }}"{% endif %}{% endif %}{% if bf.errors %} data-invalid{% endif %}{% endif %}>
       {% if loop.first and not actions %}{{ hidden }}{% endif %}
       {% if editable %}
       {# The cell has no <label>, so the field's label names the widget. #}
@@ -25,10 +28,11 @@
       {% if bf.auto_id %}<span id="{{ bf.auto_id }}_label" hidden>{{ bf.label }}</span>{% if bf.help_text %}<span id="{{ bf.auto_id }}_helptext" hidden>{{ bf.help_text|striptags }}</span>{% endif %}{% endif %}
       {% if bf.errors %}<div popover="manual" class="tooltip tooltip-error tooltip-bottom" data-cell-error><div class="tooltip-content formwork-errors" role="tooltip"{% if bf.auto_id %} id="{{ bf.auto_id }}_error"{% endif %}>{% for error in bf.errors %}<p>{{ error }}</p>{% endfor %}</div></div>{% endif %}
       {% else %}
-      <div class="min-h-10 py-2.5 text-sm">{{ bf.display_value|localize }}</div>
+      {% block display_cell scoped %}<div class="min-h-10 py-2.5 text-sm">{{ bf.display_value|localize }}</div>{% endblock %}
       {% endif %}
     </td>
     {% endfor %}
+    {% block trailing_cells %}
     {% if actions %}
     <td class="w-px whitespace-nowrap">
       {{ hidden }}
@@ -49,5 +53,6 @@
       </div>
     </td>
     {% endif %}
+    {% endblock %}
   </tr>
 </tbody>

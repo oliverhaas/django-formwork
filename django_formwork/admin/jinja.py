@@ -24,6 +24,7 @@ from django.utils.text import capfirst
 from django.utils.timesince import timesince
 from django.utils.translation import gettext, ngettext, npgettext, pgettext
 
+from django_formwork.admin.cells import list_html
 from django_formwork.admin.helpers import deleted_groups
 from django_formwork.widgets.select import shared_pages
 
@@ -138,6 +139,7 @@ def environment(**options: Any) -> jinja2.Environment:
             "url": url,
             "static": static,
             "icon": icon,
+            "list_html": list_html,
             "number": number,
             "deleted_groups": deleted_groups,
         },
