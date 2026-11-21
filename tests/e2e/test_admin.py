@@ -509,6 +509,24 @@ def test_list_actions_wait_until_the_changes_are_saved(admin_page, live_server, 
     assert admin_page.errors == []
 
 
+def test_the_page_size_select_works_after_a_search_adds_all_to_it(admin_page, live_server, kitchen, monkeypatch):
+    item_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(item_admin, "list_per_page", 1)
+    monkeypatch.setattr(item_admin, "list_per_page_options", (2,))
+    monkeypatch.setattr(item_admin, "list_max_show_all", 3)
+    for name in ("Kettle", "Toaster", "Kettle lid", "Kettle base"):
+        Item.objects.create(name=name, category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+
+    admin_page.locator("[data-search] input:not([type=hidden])").fill("kettle")
+    expect(admin_page).to_have_url(re.compile(r"\?q=kettle$"))
+    admin_page.get_by_label("Rows per page").click()
+    admin_page.get_by_role("option", name="All").click()
+
+    expect(admin_page.locator("#changelist tbody tr")).to_have_count(3)
+    assert admin_page.errors == []
+
+
 def test_selecting_rows_shows_the_controls_after_the_actions_and_moves_no_button(
     admin_page, live_server, kitchen, monkeypatch
 ):

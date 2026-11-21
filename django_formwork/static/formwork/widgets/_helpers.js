@@ -199,6 +199,12 @@ if (typeof document !== "undefined") {
     Alpine.interceptInit((el) => {
       if (el.hasAttribute("data-formwork-lazy") && !el._formworkStarted) el._x_ignore = true;
     });
+    // htmx's alpine-compat extension evaluates the server's copy of each node
+    // that a morph keeps, in the scope of the kept node. A node in a widget
+    // that has not started has no scope, so its copy is left alone too.
+    Alpine.interceptClone((from, to) => {
+      if (Alpine.findClosest(from, (el) => el._x_ignore)) to._x_ignore = true;
+    });
   });
   // On the way down to the widget, so the listeners it adds run for this event.
   const start = (event) => {
