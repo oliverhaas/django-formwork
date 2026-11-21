@@ -9,6 +9,7 @@ from django import forms
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
+from django.utils.html import format_html_join
 from django.utils.translation import gettext_lazy as _
 
 from django_formwork.boundfield import FormworkBoundField
@@ -162,6 +163,14 @@ class _DisplayBoundField(FormworkBoundField):
 
     def _has_changed(self) -> bool:
         return False
+
+    @property
+    def display_value(self) -> Any:  # noqa: ANN401
+        """The value, a list comma-separated."""
+        value = self.value()
+        if isinstance(value, list | tuple):
+            return format_html_join(", ", "{}", ((item,) for item in value))
+        return "" if value is None else value
 
 
 class DisplayField(forms.Field):

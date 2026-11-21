@@ -65,6 +65,9 @@ from django_formwork.admin.helpers import (
     InlinePager,
     display_field,
     field_name,
+    list_display_field,
+    readonly_contents,
+    show_display_fields,
 )
 from django_formwork.admin.info import describe_fields, describe_search, describe_table
 from django_formwork.admin.jinja import AdminTemplateResponse
@@ -89,7 +92,6 @@ from django_formwork.formsets import (
     formwork_inlineformset_factory,
     formwork_modelformset_factory,
 )
-from django_formwork.tables import TableCell
 from django_formwork.widgets import ChoiceLabel, Select
 from django_formwork.widgets._stub import formset_row, stub_formset
 from django_formwork.widgets.select import share_choices
@@ -726,8 +728,12 @@ class ModelAdmin(BaseModelAdmin):
         }
         formset = formwork_modelformset_factory(self.model, form=self.get_changelist_form(request), **defaults)
         editable = set(defaults["fields"])
-        columns = [name for name in self.get_list_display(request) if field_name(name) not in editable]
-        formset.form = type(formset.form.__name__, (formset.form,), self._display_fields(columns, None))
+        columns = {field_name(entry): entry for entry in self.get_list_display(request)}
+        shown = {
+            name: list_display_field(entry, self, self.model) for name, entry in columns.items() if name not in editable
+        }
+        formset.form = type(formset.form.__name__, (formset.form,), shown)
+        _lay_out(formset.form, list(columns))
         # A new row has no values for the columns to show.
         formset.can_add = False
         return formset
@@ -1202,7 +1208,8 @@ class ModelAdmin(BaseModelAdmin):
         )
         if form is None or field not in form.fields or form.fields[field].disabled:
             raise Http404
-        return HttpResponse(TableCell(field, field=form[field]).widget)
+        bound_field = form[field]
+        return HttpResponse(bound_field.as_widget(attrs={"aria-label": str(bound_field.label)}))
 
     # Actions
 
@@ -2357,6 +2364,9 @@ class InlineModelAdmin(BaseModelAdmin):
             defaults["fields"] = forms.ALL_FIELDS
         formset = self._formset_factory(defaults)
         formset.can_add = can_add  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        if isinstance(fields, list | tuple):
+            _lay_out(formset.form, [field_name(name) for name in fields])
+        show_display_fields(formset.form, self)
         use_formwork_widgets(formset.form, self.admin_site)
         return formset
 
@@ -2429,12 +2439,39 @@ def _posted_pks(model: type[models.Model], prefix: str, data: Any, limit: int) -
     return pks
 
 
+def _lay_out(form_class: type[forms.ModelForm[Any]], names: Sequence[str]) -> None:
+    """Keep the fields of ``form_class`` that ``names`` lay out, in that order, and its hidden fields.
+
+    A table has a column for each field it shows, so a field that the layout leaves out goes."""
+    fields = form_class.base_fields
+    form_class.base_fields = {
+        **{name: fields[name] for name in names if name in fields},
+        **{name: field for name, field in fields.items() if field.widget.is_hidden and name not in names},
+    }
+
+
 def _delete_protected_form(
     base: type[forms.ModelForm[Any]], inline: InlineModelAdmin, request: HttpRequest, *, can_change: bool, can_add: bool
 ) -> type[forms.ModelForm[Any]]:
-    """The inline's form, refusing a deletion that would cascade into protected rows."""
+    """The inline's form, refusing a deletion that would cascade into protected rows.
+
+    A saved row that the user cannot change shows its values."""
 
     class DeleteProtectedModelForm(base):  # type: ignore[valid-type, misc]  # ty: ignore[unsupported-base]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            if can_change or self.instance._state.adding:
+                return
+            pk_name = self._meta.model._meta.pk.name
+            for name, form_field in list(self.fields.items()):
+                if name == pk_name or form_field.widget.is_hidden or isinstance(form_field, DisplayField):
+                    continue
+                self.fields[name] = DisplayField(
+                    label=form_field.label,
+                    help_text=form_field.help_text,
+                    source=partial(readonly_contents, name, model_admin=inline),
+                )
+
         def hand_clean_DELETE(self) -> None:  # noqa: N802
             if not self.cleaned_data.get(DELETION_FIELD_NAME, False):
                 return

@@ -181,8 +181,7 @@
   `as_rows(flush=True)` lays the table out to the edges of a card. The rows need
   `tables.js`, which `{% formwork_js %}` and `{{ formset.media }}` load. With a
   `save_url`, each row still saves by itself, without Add another, Remove or Delete.
-  For a template of your own, `Table.for_formset()` builds the table, and its `fields`,
-  `display` and `link` arguments pick the columns, show the values and link the rows.
+  A formset method `row_url(form)` links each row to its own page.
   See [Templates](formsets.md#templates).
 - `DisplayField` shows a value that a form never posts: a field, a method, a property or
   an annotation of the form's instance, or a function of the instance. It renders with
@@ -294,7 +293,7 @@
   rows with six editable columns, took about 390 ms on the server and sent 3.0 MB of
   HTML. The Jinja2 templates bring it to 240 ms. With the stubs from Added it takes
   110 ms and sends 0.65 MB, with the same seven queries.
-- `formset.as_rows()` and `Table.for_formset()` ran one query per row for each `Select`
+- `formset.as_rows()` ran one query per row for each `Select`
   or `SelectMultiple` of a relation that lists all its choices: 100 rows with three such
   columns ran 203 queries. The rows now list the choices once, with 7 queries, and render
   in 207 ms instead of 282 ms. Rows whose form or formset defines a hook that can give a

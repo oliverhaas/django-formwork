@@ -29,7 +29,7 @@ from django_formwork import (
     FormworkRowSaveMixin,
     formwork_modelformset_factory,
 )
-from django_formwork.tables import PREFIX_INPUT_NAME, Table
+from django_formwork.forms import PREFIX_INPUT_NAME
 from django_formwork.widgets import ChoiceLabel, ComboBox, ComboBoxMultiple, Select, SelectMultiple
 
 pytestmark = pytest.mark.django_db
@@ -98,40 +98,36 @@ def test_a_display_column_shows_the_value_of_its_source_as_text():
     assert cell.find("input") is None
 
 
-def test_for_formset_fields_name_and_order_the_columns():
-    UniqueCode.objects.create(code="A", label="alpha")
-    formset = formwork_modelformset_factory(UniqueCode, form=CodeRowForm, extra=0)(queryset=UniqueCode.objects.all())
-
-    soup = BeautifulSoup(Table.for_formset(formset, fields=["label", "missing", "code"]).render(), "html.parser")
-
-    row = soup.select_one("table > tbody")
-    assert [cell["data-field"] for cell in row.find_all("td", attrs={"data-field": True})] == ["label", "code"]
-
-
-def test_for_formset_display_shows_a_field_that_posts_nothing():
-    UniqueCode.objects.create(code="A", label="alpha")
-    formset = formwork_modelformset_factory(UniqueCode, form=CodeRowForm, extra=0)(queryset=UniqueCode.objects.all())
-
-    table = Table.for_formset(formset, display=lambda bound_field: bound_field.form.instance.label.upper())
-
-    cell = BeautifulSoup(table.render(), "html.parser").find("td", attrs={"data-field": "label"})
-    assert cell.get_text(strip=True) == "ALPHA"
-
-
-def test_for_formset_link_gives_a_row_an_open_link():
+def test_row_url_gives_a_row_an_open_link():
     first = UniqueCode.objects.create(code="A")
     UniqueCode.objects.create(code="B")
-    formset = type("Rows", (CodeFormSet,), {"can_add": False, "can_delete": False})(
-        queryset=UniqueCode.objects.order_by("code")
-    )
 
-    table = Table.for_formset(
-        formset, link=lambda form: f"/codes/{form.instance.pk}/" if form.instance == first else ""
-    )
+    class LinkedRows(CodeFormSet):
+        can_add = False
+        can_delete = False
 
-    linked, plain = BeautifulSoup(table.render(), "html.parser").select("table > tbody")
+        def row_url(self, form):
+            return f"/codes/{form.instance.pk}/" if form.instance == first else ""
+
+    html = LinkedRows(queryset=UniqueCode.objects.order_by("code")).as_rows()
+
+    linked, plain = BeautifulSoup(html, "html.parser").select("table > tbody")
     assert linked.find("a", attrs={"aria-label": "Open"})["href"] == f"/codes/{first.pk}/"
     assert plain.find("a", attrs={"aria-label": "Open"}) is None
+
+
+def test_as_rows_renders_a_plain_model_form():
+    class PlainForm(forms.ModelForm):
+        class Meta:
+            model = UniqueCode
+            fields = ["code"]
+
+    UniqueCode.objects.create(code="A")
+    formset = formwork_modelformset_factory(UniqueCode, form=PlainForm, extra=0)(queryset=UniqueCode.objects.all())
+
+    cell = BeautifulSoup(formset.as_rows(), "html.parser").find("td", attrs={"data-field": "code"})
+
+    assert cell.find("input")["value"] == "A"
 
 
 def test_an_app_listed_first_overrides_the_row_template(settings, tmp_path, monkeypatch):
@@ -150,7 +146,7 @@ def test_an_app_listed_first_overrides_the_row_template(settings, tmp_path, monk
 
 def test_a_django_template_renders_the_rows_of_a_form_that_names_one(settings, tmp_path):
     (tmp_path / "rows").mkdir()
-    (tmp_path / "rows" / "code.html").write_text("<tbody>{{ row.form.code.value }} in a project row</tbody>")
+    (tmp_path / "rows" / "code.html").write_text("<tbody>{{ form.code.value }} in a project row</tbody>")
     settings.TEMPLATES = [{**settings.TEMPLATES[0], "DIRS": [tmp_path]}]
 
     class ProjectRowForm(CodeRowForm):

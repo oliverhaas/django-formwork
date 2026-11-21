@@ -192,7 +192,7 @@ def share_choices(formset: BaseFormSet[Any], *, share: bool | None = None) -> No
     """Let the selects of a formset's rows load a relation's choices once for all rows.
 
     ``None`` leaves out the fields whose rows can get choices of their own, ``True`` shares those too.
-    The first call for a formset decides, so ``Table.for_formset`` keeps what the admin set before."""
+    The first call for a formset decides, so ``as_rows()`` keeps what the admin set before."""
     rows = formset.forms
     if not rows or getattr(formset, "_formwork_shared", False):
         return

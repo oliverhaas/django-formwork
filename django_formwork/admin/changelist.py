@@ -33,11 +33,11 @@ from django.utils.http import urlencode
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _
 
-from django_formwork.admin.cells import annotate_rows, display_annotations, display_attr, list_cell, list_field
+from django_formwork.admin.cells import annotate_rows, display_annotations, display_attr, list_field
 from django_formwork.admin.filters import SEARCH_VAR
 from django_formwork.admin.paginator import EstimatedCountPaginator, PageLink, page_links
 from django_formwork.admin.widgets import IS_POPUP_VAR, TO_FIELD_VAR
-from django_formwork.tables import Table, TableRow
+from django_formwork.fields import DisplayField
 from django_formwork.widgets import Select
 
 if TYPE_CHECKING:
@@ -47,7 +47,6 @@ if TYPE_CHECKING:
     from django.forms import BoundField
     from django.http import HttpRequest
 
-    from django_formwork.admin.cells import Cell
     from django_formwork.admin.filters import AdminFilterSet
 
 __all__ = [
@@ -586,26 +585,30 @@ class ChangeList:
         # Only a column with long text on this page wraps; names, dates and badges keep one line.
         wrapping = {
             cell.name
-            for row in self.table.rows
-            for cell in row.cells
-            if cell.field is None
-            and cell.display["kind"] in {"text", "html"}
-            and len(strip_tags(cell.display["text"])) > WRAP_AFTER
+            for row in self.rows
+            for cell in row["cells"]
+            if cell.field.disabled
+            and cell.value()["kind"] in {"text", "html"}
+            and len(strip_tags(cell.value()["text"])) > WRAP_AFTER
         }
+        form = self.formset.empty_form if self.formset is not None else self.display_form()
         columns = []
-        for header in self.table.headers:
-            key = header["name"]
+        for bound_field in form.visible_fields():
+            key = bound_field.name
             entry = self.column_names[key]
+            editable = not bound_field.field.disabled
             column: dict[str, Any] = {
                 "name": key,
-                "label": header["label"],
+                "label": bound_field.label,
                 "sort_url": "",
                 "remove_url": "",
                 "direction": "",
                 "priority": None,
                 "numeric": self.is_numeric(entry),
                 "linked": entry in self.links,
-                "indent": header["indent"],
+                # A boxed widget sets its value in from the cell's edge, and the header lines up with the value.
+                "indent": editable
+                and getattr(bound_field.field.widget, "input_type", None) not in {"checkbox", "radio"},
                 "wrap": key in wrapping,
             }
             index = positions[key] + self.column_offset
@@ -648,37 +651,24 @@ class ChangeList:
         return f"{url}?{self.preserved_filters}" if self.preserved_filters else url
 
     @cached_property
-    def table(self) -> Table:
-        """The page as a table of the list's formset, a row per object: the editable formset, else one that shows."""
-        objects = {obj.pk: obj for obj in self.result_list}
-        formset = self.formset
-        if formset is None:
-            formset = self.model_admin.get_changelist_formset(self.request, fields=())(queryset=self.page.object_list)
-
-        def shown(form: Any) -> models.Model:
-            # A failed save binds rows of its own; the page's objects carry the annotations the cells read.
-            return objects.get(form.instance.pk, form.instance)
-
-        def display(bound_field: BoundField) -> Cell:
-            return list_cell(self.column_names[bound_field.name], shown(bound_field.form), self.model_admin)
-
-        def link(form: Any) -> str:
-            return self.change_url(shown(form))
-
-        linked = self.links and self.model_admin.has_view_or_change_permission(self.request)
-        fields = list(self.column_names)
-        table = Table.for_formset(formset, fields=fields, display=display, link=link if linked else None)
-        posted = {row.form.instance.pk: row for row in table.rows}
-        rows: list[TableRow] = []
+    def rows(self) -> list[dict[str, Any]]:
+        """A row per object of the page: its form of the editable formset, else a form that shows its values."""
+        posted = {form.instance.pk: form for form in self.formset.forms} if self.formset is not None else {}
+        linked = bool(self.links) and self.model_admin.has_view_or_change_permission(self.request)
+        rows = []
         for obj in self.result_list:
-            row = posted.get(obj.pk)
-            if row is None:
-                # A row that a failed save did not post shows its values.
-                form = self.display_form(instance=obj)
-                row = TableRow.for_form(form, fields=fields, display=display, link=link(form) if linked else "")
+            form = posted.get(obj.pk) or self.display_form(instance=obj)
+            row = form.get_row_context(link=self.change_url(obj) if linked else "")
+            # A cell that posts nothing shows the list's cell of the page's object, which carries the annotations.
+            # A failed save binds rows of its own, and a form can disable a field.
+            if any(
+                cell.field.disabled and (form.instance is not obj or not isinstance(cell.field, DisplayField))
+                for cell in row["cells"]
+            ):
+                shown = self.display_form(instance=obj)
+                row["cells"] = [shown[cell.name] if cell.field.disabled else cell for cell in row["cells"]]
             rows.append(row)
-        table.rows = rows
-        return table
+        return rows
 
     @cached_property
     def display_form(self) -> type[Any]:

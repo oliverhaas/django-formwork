@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from django import forms
 from django.forms.widgets import ChoiceWidget
+from django.utils.choices import flatten_choices
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from django.forms import Widget
 
 __all__ = ["FormworkBoundField"]
@@ -59,6 +62,27 @@ class FormworkBoundField(forms.BoundField):
         if links is None or self.is_hidden:
             return ""
         return links(self.html_name, self.value(), renderer=self.form.renderer)
+
+    @property
+    def display_value(self) -> Any:  # noqa: ANN401
+        """The value as text, as a table cell shows a field that posts nothing.
+
+        The instance's ``get_<name>_display()``, else its value, else the labels of the chosen values."""
+        instance = getattr(self.form, "instance", None)
+        if instance is not None:
+            display = getattr(instance, f"get_{self.name}_display", None)
+            if callable(display):
+                return display()
+            value = getattr(instance, self.name, None)
+            related = getattr(value, "all", None)  # related manager (M2M / reverse FK)
+            if related is not None:
+                return ", ".join(str(obj) for obj in related())
+            return "" if value is None else str(value)
+        choices: Iterator[tuple[Any, Any]] = flatten_choices(getattr(self.field, "choices", ()))
+        labels = {str(key): label for key, label in choices}
+        value = self.value()
+        values = value if isinstance(value, list | tuple) else [value]
+        return ", ".join(str(labels.get(str(item), item)) for item in values if item is not None)
 
     def value(self) -> object:
         """The posted value, or the initial one for a field a dirty-only post left out.

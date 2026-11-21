@@ -1,7 +1,8 @@
-"""Server-side views for formwork widgets.
+"""Server-side views for formwork widgets and tables.
 
 :class:`FormworkSearchView` serves every registered field search.
 :class:`FormworkValidateView` is the base class for textarea validation endpoints.
+:class:`FormworkRowSaveMixin` and :class:`FormworkCellMixin` serve the rows of ``formset.as_rows()``.
 """
 
 from __future__ import annotations
@@ -11,16 +12,18 @@ from html import escape as html_escape
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from django.apps import apps
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db.models import Q
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+from django_formwork.forms import PREFIX_INPUT_NAME
 from django_formwork.renderers import FormworkRenderer
 from django_formwork.search import SEARCH_PAGE_SIZE, declared_params, get_field, ranked_search
 from django_formwork.widgets import ComboBox, Select, SelectMultiple
+from django_formwork.widgets._stub import formset_row
 from django_formwork.widgets.select import SearchableSelectMixin, label_extras, with_peers
 
 if TYPE_CHECKING:
@@ -30,6 +33,8 @@ if TYPE_CHECKING:
     from django.db.models import QuerySet
 
 __all__ = [
+    "FormworkCellMixin",
+    "FormworkRowSaveMixin",
     "FormworkSearchView",
     "FormworkValidateView",
 ]
@@ -290,3 +295,109 @@ class FormworkValidateView(View):
             return f'<div id="{escaped_id}" hx-swap-oob="innerHTML"></div>'
         msg_html = "".join(f"<p>{html_escape(m)}</p>" for m in messages)
         return f'<div id="{escaped_id}" hx-swap-oob="innerHTML">{msg_html}</div>'
+
+
+class _RowsViewMixin:
+    """The rows a view can reach: ``queryset`` or ``get_queryset()``."""
+
+    queryset: QuerySet[Any] | None = None
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Any]:  # noqa: ARG002
+        """The rows this endpoint can change, e.g. ``Task.objects.filter(owner=request.user)``."""
+        if self.queryset is None:
+            msg = (
+                f"{type(self).__name__} needs a queryset (or get_queryset()) of the rows a user can "
+                "change, e.g. Task.objects.filter(owner=request.user), or Task.objects.all() for every row."
+            )
+            raise ImproperlyConfigured(msg)
+        return self.queryset.all()
+
+
+class FormworkRowSaveMixin(_RowsViewMixin):
+    """View mixin: save one row's changes (keyed on the posted pk) and re-render it.
+
+    ``queryset`` (or ``get_queryset()``) holds the rows a post can change; a pk
+    outside it gets a 404.
+    """
+
+    form_class: type[Any]
+
+    def get_save_url(self, request: HttpRequest) -> str:
+        """URL the re-rendered row keeps posting to (the save endpoint itself)."""
+        return request.path
+
+    def get_prefix(self, request: HttpRequest) -> str | None:
+        return request.POST.get(PREFIX_INPUT_NAME) or None
+
+    def get_object(self, request: HttpRequest, prefix: str | None) -> Any:  # noqa: ANN401
+        queryset = self.get_queryset(request)
+        pk_name = queryset.model._meta.pk.name  # noqa: SLF001
+        field = f"{prefix}-{pk_name}" if prefix else pk_name
+        pk = request.POST.get(field)
+        if pk is None:
+            raise Http404("Row primary key missing from the request")
+        try:
+            return queryset.get(pk=pk)
+        except queryset.model.DoesNotExist as exc:
+            # Row deleted between render and autosave, or outside the queryset: a clean 404 beats a 500.
+            raise Http404("Row no longer exists") from exc
+        except (ValueError, ValidationError) as exc:
+            # A malformed pk (wrong type for the key field) is a bad request,
+            # not a server error; 404 it like a missing row.
+            raise Http404("Row primary key is malformed") from exc
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        """Extra kwargs for the row form's constructor."""
+        return {}
+
+    def get_form(self, request: HttpRequest, instance: Any, prefix: str | None) -> Any:  # noqa: ANN401
+        return self.form_class(request.POST, request.FILES, instance=instance, prefix=prefix, **self.get_form_kwargs())
+
+    def render_row(self, request: HttpRequest, form: Any) -> str:  # noqa: ANN401
+        """HTML for the re-rendered row. Override to render a hand-authored row partial."""
+        return form.as_row(self.get_save_url(request))
+
+    def post(self, request: HttpRequest, *_args: Any, **_kwargs: Any) -> HttpResponse:
+        prefix = self.get_prefix(request)
+        instance = self.get_object(request, prefix)
+        form = self.get_form(request, instance, prefix)
+        if form.is_valid():
+            form.save()
+            # The saved row starts over from what it saved, without the marks of changed fields.
+            form = self.form_class(instance=instance, prefix=prefix, **self.get_form_kwargs())
+        return HttpResponse(self.render_row(request, form))
+
+
+class FormworkCellMixin(_RowsViewMixin):
+    """View mixin: answer a stub of ``as_rows(cell_url=...)`` with its field's full widget.
+
+    ``queryset`` (or ``get_queryset()``) holds the rows a user can change; a pk outside it gets a 404.
+    """
+
+    formset_class: type[Any]
+
+    def get_formset_kwargs(self, request: HttpRequest) -> dict[str, Any]:  # noqa: ARG002
+        """Extra kwargs for ``formset_class``, as the page passes them, such as ``form_kwargs``."""
+        return {}
+
+    def get(self, request: HttpRequest, *_args: Any, **_kwargs: Any) -> HttpResponse:
+        queryset = self.get_queryset(request)
+        try:
+            pk = queryset.model._meta.pk.to_python(request.GET.get("pk"))  # noqa: SLF001
+        except ValidationError as exc:
+            raise Http404("Row primary key is malformed") from exc
+        name = request.GET.get("field", "")
+        # Built by the formset, so that a hook of the formset gives the row its choices.
+        form = formset_row(
+            self.formset_class,
+            request.GET.get("prefix", ""),
+            name,
+            request.GET,
+            **{**self.get_formset_kwargs(request), "queryset": queryset.filter(pk=pk)},
+        )
+        if form is None:
+            raise Http404("Row no longer exists")
+        if name not in form.fields or form.fields[name].disabled:
+            raise Http404("No such field")
+        bound_field = form[name]
+        return HttpResponse(bound_field.as_widget(attrs={"aria-label": str(bound_field.label)}))
