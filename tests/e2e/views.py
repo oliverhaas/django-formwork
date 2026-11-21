@@ -1441,13 +1441,13 @@ def _card_body(title, inner_html, standalone_url=None, description=None):
     return f'<div class="card-body">\n  <h2 class="card-title">{title}{link}</h2>{desc}\n  {inner_html}\n</div>'
 
 
-def _page_html(title, card_body_html):
+def _page_html(title, card_body_html, *, width="max-w-2xl"):
     return (
         '<!DOCTYPE html>\n<html lang="en" data-theme="light">\n<head>\n  '
         + _HEAD
         + f"\n  <title>{title}</title>\n</head>\n"
         '<body class="min-h-screen p-8 bg-base-200">\n' + _THEME_SWITCHER + "\n"
-        '<div class="max-w-2xl mx-auto">\n'
+        f'<div class="{width} mx-auto">\n'
         '  <div class="card bg-base-100 shadow-sm">\n'
         f"    {card_body_html}\n"
         "  </div>\n"
