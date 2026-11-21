@@ -1252,6 +1252,8 @@
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="breaking-changes">Breaking changes<a class="headerlink" href="#breaking-changes" title="Permanent link">&para;</a></h3>
 <ul>
+<li>formwork needs Django 6.1. Projects on Django 6.0 can keep <code>django-formwork==0.1.0a3</code>
+  until they upgrade Django.</li>
 <li><code>DateRangeInput</code> and its <code>formwork/widgets/date_range.html</code> template are removed, so a
   form that uses <code>widgets.DateRangeInput</code> fails at import. <code>DateRangeField</code> takes
   Django's own <code>MultiWidget</code>, and two <code>DateInput</code>s in one show the same native inputs
@@ -1367,17 +1369,28 @@
   <code>form</code> must subclass <code>FormworkModelForm</code>, and a system check names one that does not.
   Django's admin widgets on a <code>form</code> render as formwork's. An inline shows its saved
   rows in pages of <code>per_page</code>, 10 in a table and 5 in a stack by default, with a pager
-  next to Add another. Generic inlines come from <code>django_formwork.admin.contenttypes</code>.
+  next to Add another. The rows of a list or an inline load the choices of a relation
+  once for all rows. A form or formset that can change them per row needs
+  <code>share_choices</code>, which system check <code>formwork_admin.E504</code> reports. The rows of a page
+  load a relation that they read with one query for all rows, through Django's
+  <code>FETCH_PEERS</code> fetch mode, which <code>fetch_mode</code> on an admin or an inline changes.
+  <code>list_select_related</code> is not needed and not read. <code>annotate</code> on <code>@admin.display</code>
+  computes a column's count or sum for the rows of the page only, where an annotation
+  in <code>get_queryset()</code> computes it for every row that the filters keep. Generic inlines
+  come from <code>django_formwork.admin.contenttypes</code>.
   A <code>class Media</code> on an admin or an inline loads its files, without Django's jQuery. <code>@admin.action</code> takes Django 6.1's <code>location</code> and
-  <code>description_plural</code>, also on Django 6.0, and the change form shows its actions in an
+  <code>description_plural</code>, and the change form shows its actions in an
   Actions menu. The other ways to save sit in a menu next to Save, and the way an add or
   change form of a model was last saved becomes its main button. The delete pages group
-  the related objects per model and list the first few of each. A list that the search
+  the related objects per model and list the first few of each, and they build the name
+  and link of the listed objects only. A list that the search
   or the filters leave empty offers to clear them. The change form shows the history of
   the object next to its fields, with the values before and after each change. The admin
   keeps that history in its own table, so it does not need <code>django.contrib.admin</code>, and
   with <code>history = PghistoryHistory()</code> on the site it reads the events of
-  django-pghistory. The recent actions on the dashboard list each object once, with what
+  django-pghistory. Each model also gets a history list of all changes of its rows,
+  with filters and the export, which <code>history_admin</code> sets up with a <code>HistoryAdmin</code>
+  subclass. The recent actions on the dashboard list each object once, with what
   its saves changed. The toolbar above a list's table holds the selected count, the
   actions and the save, and stays in view while the list scrolls. <code>list_top</code> and <code>list_bottom</code> methods
   show HTML of their own above and under a list, such as counts or a chart, and
@@ -1405,6 +1418,10 @@
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>Saving a model formset ran one query per row to find the row of its posted primary
+  key, and one per row and many-to-many field for the values the form starts from. A
+  Formwork formset now runs each of them once for all rows. See
+  <a href="../formsets/#loading-the-rows">Formsets</a>.</li>
 <li><code>DateRangeField</code> shows one control with a range calendar instead of two native date
   inputs. It posts the same <code>&lt;name&gt;_0</code> and <code>&lt;name&gt;_1</code> ISO dates, so views and tests that
   post the form need no change. Browser tests that fill the two inputs do. To keep the
