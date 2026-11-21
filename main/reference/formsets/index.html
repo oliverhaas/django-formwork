@@ -1211,7 +1211,8 @@ add a row. Put it in a <code>&lt;form&gt;</code> and save it as any other formse
   the instance's <code>get_&lt;field&gt;_display()</code>, else the instance's value (a
   comma-separated list for a many-to-many field), else the labels of the chosen
   values. A <a href="../forms/#displayfield"><code>DisplayField</code></a> shows its value as text, a list
-  comma-separated.</li>
+  comma-separated. The text is the bound field's <code>display_value</code>, so a field with a
+  <code>bound_field_class</code> of its own can change it.</li>
 <li><strong>Errors.</strong> A cell keeps its errors in a tooltip under the widget. The tooltip shows
   while the pointer is on the cell or the focus is in it, so the row keeps its
   height. The errors of a whole row show above the row, the formset's own errors
@@ -1223,7 +1224,9 @@ add a row. Put it in a <code>&lt;form&gt;</code> and save it as any other formse
   has Remove. With <code>can_delete</code>, a saved row has a Delete toggle instead: the row
   fades and is struck through until the save deletes it. Add another hides at
   <code>max_num</code>, Remove at <code>min_num</code>, and the indexes of the rows stay contiguous.
-  <code>can_add = False</code> on the formset class, or <code>edit_only=True</code>, removes Add another.</li>
+  <code>can_add = False</code> on the formset class, or <code>edit_only=True</code>, removes Add another.
+  A formset method <code>row_url(form)</code> that returns a URL gives the row an Open link in
+  its last column.</li>
 <li><strong>Empty table.</strong> Without rows, the table shows "No <em>tasks</em> yet.", with the model's
   <code>verbose_name_plural</code>.</li>
 <li><strong>Choices.</strong> A <code>Select</code> or <code>SelectMultiple</code> of a relation loads its choices with one
@@ -1289,33 +1292,25 @@ view as you protect the page.</p>
 <tr>
 <td><code>formwork/tables/table.html</code></td>
 <td><code>as_rows()</code>: the <code>&lt;table&gt;</code></td>
-<td><code>table</code>, <code>formset</code></td>
+<td><code>formset.get_table_context()</code></td>
 <td>the formset, <code>template_name_table</code></td>
 </tr>
 <tr>
 <td><code>formwork/tables/row.html</code></td>
 <td><code>as_row()</code>: one <code>&lt;tbody&gt;</code></td>
-<td><code>row</code>, <code>form</code></td>
+<td><code>form.get_row_context()</code></td>
 <td>the form, <code>template_name_row</code></td>
 </tr>
 </tbody>
 </table>
-<p><code>table</code> is a <code>django_formwork.tables.Table</code>, with the <code>headers</code>, the <code>rows</code>, the
-<code>empty_row</code> that Add another copies and the <code>footer</code> markup at the right end of the Add
-another row, where the admin puts the pager of an inline. Each row is a <code>TableRow</code>, with the <code>form</code>, its
-<code>cells</code> and its <code>hidden</code> inputs; each cell is a <code>TableCell</code>, with the bound <code>field</code> or
-the <code>display</code> text of a disabled one.</p>
-<p>For a template of your own, <code>Table.for_formset(formset)</code> builds the table that
-<code>as_rows()</code> renders. Its keyword arguments change what the table shows:</p>
-<ul>
-<li><code>fields</code>: the names of the columns, in their order. A name that the forms do not
-  have gets no column.</li>
-<li><code>display</code>: a function of a bound field that returns what the cell of a
-  <code>DisplayField</code> or a disabled field shows, in place of the text above.</li>
-<li><code>link</code>: a function of a form that returns the URL of the row's own page, or <code>""</code>.
-  A row with a URL has an Open link in its last column.</li>
-</ul>
-<p>The admin builds its tabular inlines and its lists this way.</p>
+<p>The table context has the <code>headers</code>, the <code>rows</code>, the <code>empty_row</code> that Add another
+copies and the <code>footer</code> markup at the right end of the Add another row, where the
+admin puts the pager of an inline. Each row is the context of a row: the <code>form</code>, its
+<code>cells</code> (the visible bound fields) and its <code>hidden</code> inputs. To change what a table
+shows, override <code>get_table_context()</code> on the formset or <code>get_row_context()</code> on the
+form. <code>render_table(context)</code> and <code>render_row(context)</code> render a context that you
+changed. A form without these methods, such as a plain <code>ModelForm</code>, gets them from
+the formset.</p>
 <p>Both are Jinja2 templates. To override one for the whole project, put a template
 at the same path in the <code>jinja2/</code> directory of an app listed before <code>django_formwork</code>.</p>
 <h2 id="saving-a-row">Saving a row<a class="headerlink" href="#saving-a-row" title="Permanent link">&para;</a></h2>
