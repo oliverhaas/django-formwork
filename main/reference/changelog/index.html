@@ -1444,9 +1444,10 @@
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Saving a model formset ran one query per row to find the row of its posted primary
-  key, and one per row and many-to-many field for the values the form starts from. A
-  Formwork formset now runs each of them once for all rows. See
-  <a href="../formsets/#loading-the-rows">Formsets</a>.</li>
+  key, one per row and many-to-many field for the values the form starts from, and two
+  per row and foreign key to find and check the posted row. A Formwork formset now runs
+  each of them once for all rows: an admin list of 100 rows with two relation columns
+  saves with 8 queries instead of 404. See <a href="../formsets/#loading-the-rows">Formsets</a>.</li>
 <li>A select whose option labels read a relation, such as
   <code>f"{city.name} in {city.region}"</code> in <code>label_from_instance</code>, ran one query per option.
   <code>Select</code>, <code>SelectMultiple</code> and the server search of every dropdown now load the rows
@@ -1520,7 +1521,13 @@
 <li>An admin list with editable columns was slow to render: the example Event list, 100
   rows with six editable columns, took about 390 ms on the server and sent 3.0 MB of
   HTML. The Jinja2 templates bring it to 240 ms. With the stubs from Added it takes
-  125 ms and sends 0.65 MB, with the same seven queries.</li>
+  110 ms and sends 0.65 MB, with the same seven queries.</li>
+<li>The hidden copy of the option labels that sizes a <code>Select</code>, <code>SelectMultiple</code> or
+  <code>ComboBox</code> is one line of text per label, where it was one element per label. The
+  widths stay the same, and the example Event list has 12% fewer elements for the
+  browser to lay out. A badge select keeps one element per label. Overrides of
+  <code>formwork/widgets/select.html</code>, <code>select_multiple.html</code> and <code>combo_box.html</code> keep
+  working.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>

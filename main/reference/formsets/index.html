@@ -1150,11 +1150,21 @@ Django does.</p>
   local date, so a row near midnight can miss its duplicate.</li>
 </ul>
 <h2 id="loading-the-rows">Loading the rows<a class="headerlink" href="#loading-the-rows" title="Permanent link">&para;</a></h2>
-<p>Django runs two more queries for each row of a model formset: one that finds the row
-of the posted primary key, and one for each many-to-many field that the form shows.
-A Formwork formset runs each of them once for all rows. A primary key that the formset
-cannot read from the post, for example through a custom widget, gets Django's own
-query.</p>
+<p>Django runs more queries for each row of a model formset: one that finds the row of
+the posted primary key, one for each many-to-many field that the form shows, and two for
+each foreign key: one in the form field that finds the posted row, and one in the
+model's own check that the row exists. A Formwork formset runs each of them once for all
+rows. These keep Django's own query and its error:</p>
+<ul>
+<li>a primary key that the formset cannot read from the post, for example through a
+  custom widget;</li>
+<li>a posted value that no row of the batch matches, or that the key cannot take;</li>
+<li>a choice field whose rows can get choices of their own, through one of the hooks in
+  <a href="../admin/#shared-choices">Shared choices</a>, or a <code>ModelChoiceField</code> subclass that
+  changes <code>to_python()</code>;</li>
+<li>a foreign key with a callable <code>limit_choices_to</code>, or a subclass that changes
+  <code>clean()</code> or <code>validate()</code>.</li>
+</ul>
 <h2 id="editable-tables">Editable tables<a class="headerlink" href="#editable-tables" title="Permanent link">&para;</a></h2>
 <p><code>formset.as_rows()</code> renders a formset as one editable <code>&lt;table&gt;</code>: the management form,
 a header row from the formset's <code>empty_form</code>, one <code>&lt;tbody&gt;</code> per form, and a button to
