@@ -2355,6 +2355,9 @@ same page. The blank rows of <code>extra</code> and <code>min_num</code> go on t
 counts the saved rows of all pages. A collapsed inline starts open at a page that the
 URL names. Save as new copies only the rows of the page on screen. With
 <code>per_page = None</code>, the inline shows all its rows, as Django's does.</p>
+<p>The saved rows of a <code>TabularInline</code> render their selects and date pickers as stubs that
+load the full widget on use, as the rows of the list do. See
+<a href="#widgets-that-load-on-use">Widgets that load on use</a>.</p>
 <p>For a model that points at its parent through a <code>GenericForeignKey</code>, import
 <code>GenericTabularInline</code> or <code>GenericStackedInline</code> from <code>django_formwork.admin.contenttypes</code>.
 They take <code>ct_field</code> and <code>ct_fk_field</code> as Django's do. An inline class from
@@ -2859,6 +2862,13 @@ select.</p>
 <li>a disabled field.</li>
 </ul>
 <p><code>list_editable_stubs = False</code> on the <code>ModelAdmin</code> renders the full widgets in every row.</p>
+<p>The saved rows of a <code>TabularInline</code> on a change form render the same stubs. They load
+from <code>&lt;object_id&gt;/cells/&lt;field&gt;/</code>, named <code>&lt;app_label&gt;_&lt;model_name&gt;_change_cell</code>, with the
+same query. The view finds the inline by the row's prefix and builds the row with the
+inline's formset, from <code>get_formset_kwargs()</code>, so a row of another object gets a 404. It
+checks the change permission for the object and for the inline's rows. A
+<code>StackedInline</code> renders the full widgets. <code>stubs = False</code> on the inline does the same
+for a <code>TabularInline</code>.</p>
 <h2 id="keyboard">Keyboard<a class="headerlink" href="#keyboard" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
