@@ -6,8 +6,10 @@ We override Django settings for e2e-specific URL routing and templates.
 
 import io
 import os
+import re
 import threading
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import numpy as np
 import pytest
@@ -247,22 +249,58 @@ _CSS_IMAGES_LOADED = r"""() => [...document.querySelectorAll("*")]
 _NEXT_FRAME = "new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))"
 
 
-class MorphPage:
-    """A page with one form whose save the test answers.
-
-    The answer renders the form bound to the posted data, like a view that validates on save."""
+class _ScreenPage:
+    """A page that the test answers, which records the errors of its scripts and requests."""
 
     def __init__(self, page, live_server, output):
         self.page = page
         self.live_server = live_server
         self.output = output
-        self.form = page.locator("#morph_form")
-        self.revision = 0
-        self.reply = None
         self.errors = []
         page.on("pageerror", lambda error: self.errors.append(str(error)))
         page.on("console", self._on_console)
         page.on("response", self._on_response)
+
+    def screenshot(self):
+        """With the mouse off every control, after each visible icon, a CSS mask image, has loaded."""
+        self.page.mouse.move(0, 0)
+        self.page.wait_for_function(_CSS_IMAGES_LOADED)
+        self.page.evaluate(_NEXT_FRAME)
+        return self.page.screenshot(
+            animations="disabled",
+            caret="hide",
+            style="*, *::before, *::after { transition: none !important; }",
+        )
+
+    def assert_same_screens(self, first, second, *names):
+        """Allows a few stray pixels: under parallel load, two loads of one page can differ on a glyph edge."""
+        a, b = (np.asarray(Image.open(io.BytesIO(png)).convert("RGB"), dtype=np.int16) for png in (first, second))
+        if a.shape == b.shape and (np.abs(a - b) > _CHANNEL_TOLERANCE).any(axis=2).sum() <= _STRAY_PIXELS:
+            return
+        self.output.mkdir(parents=True, exist_ok=True)
+        for name, png in zip(names, (first, second), strict=True):
+            (self.output / f"{name}.png").write_bytes(png)
+        pytest.fail(f"The screens differ, see {self.output}")
+
+    def _on_console(self, message):
+        if message.type == "error" and not message.text.startswith("Failed to load resource"):
+            self.errors.append(message.text)
+
+    def _on_response(self, response):
+        if response.status >= 400:
+            self.errors.append(f"{response.status} {response.url}")
+
+
+class MorphPage(_ScreenPage):
+    """A page with one form whose save the test answers.
+
+    The answer renders the form bound to the posted data, like a view that validates on save."""
+
+    def __init__(self, page, live_server, output):
+        super().__init__(page, live_server, output)
+        self.form = page.locator("#morph_form")
+        self.revision = 0
+        self.reply = None
 
     def open(self, form_class, data=None):
         """Load the page with the form, bound to ``data`` if given."""
@@ -282,59 +320,30 @@ class MorphPage:
     def assert_morph_keeps_state(self):
         """A save answered with what the user entered changes no pixel and replaces no node."""
         self.form.evaluate("form => form.querySelectorAll('*').forEach(el => el.morphProbe = true)")
-        before = self._screenshot()
+        before = self.screenshot()
         self.morph()
-        after = self._screenshot()
+        after = self.screenshot()
         replaced = self.form.evaluate(
             "form => [...form.querySelectorAll('*')].filter(el => !el.morphProbe).map(el => el.outerHTML.slice(0, 200))"
         )
         assert not self.errors
         assert not replaced, "The morph replaced nodes"
-        self._assert_same(before, after, "before", "after")
+        self.assert_same_screens(before, after, "before", "after")
 
     def assert_morph_shows(self, data):
         """A save answered with other data looks like a fresh load of that data, after the user left the field."""
         self.page.evaluate("document.activeElement?.blur()")
         self.morph(data)
-        morphed = self._screenshot()
+        morphed = self.screenshot()
         self.data = data
         self._load()
-        loaded = self._screenshot()
+        loaded = self.screenshot()
         assert not self.errors
-        self._assert_same(morphed, loaded, "morphed", "loaded")
-
-    def _on_console(self, message):
-        if message.type == "error" and not message.text.startswith("Failed to load resource"):
-            self.errors.append(message.text)
-
-    def _on_response(self, response):
-        if response.status >= 400:
-            self.errors.append(f"{response.status} {response.url}")
+        self.assert_same_screens(morphed, loaded, "morphed", "loaded")
 
     def _load(self):
         _navigate(self.page, self.live_server, "/morph/")
         self.page.evaluate("document.fonts.ready.then(() => true)")
-
-    def _screenshot(self):
-        """With the mouse off every control, after each visible icon, a CSS mask image, has loaded."""
-        self.page.mouse.move(0, 0)
-        self.page.wait_for_function(_CSS_IMAGES_LOADED)
-        self.page.evaluate(_NEXT_FRAME)
-        return self.page.screenshot(
-            animations="disabled",
-            caret="hide",
-            style="*, *::before, *::after { transition: none !important; }",
-        )
-
-    def _assert_same(self, first, second, *names):
-        """Allows a few stray pixels: under parallel load, two loads of one page can differ on a glyph edge."""
-        a, b = (np.asarray(Image.open(io.BytesIO(png)).convert("RGB"), dtype=np.int16) for png in (first, second))
-        if a.shape == b.shape and (np.abs(a - b) > _CHANNEL_TOLERANCE).any(axis=2).sum() <= _STRAY_PIXELS:
-            return
-        self.output.mkdir(parents=True, exist_ok=True)
-        for name, png in zip(names, (first, second), strict=True):
-            (self.output / f"{name}.png").write_bytes(png)
-        pytest.fail(f"The screens differ, see {self.output}")
 
     def _respond(self, route):
         data, files = self.data, None
@@ -359,3 +368,33 @@ class MorphPage:
 def morph_page(page, live_server, output_path):
     """A page whose one form the test defines, saved with a morph."""
     return MorphPage(page, live_server, Path(output_path))
+
+
+class RowsPage(_ScreenPage):
+    """A page with the rows of a formset, whose stubs the test's cell view answers."""
+
+    def __init__(self, page, live_server, output):
+        super().__init__(page, live_server, output)
+        page.route(re.compile(rf"^{re.escape(live_server.url)}/rows/"), self._respond)
+
+    def open(self, formset, cell_view=None):
+        """Load the rows of ``formset()``, as stubs that ``cell_view`` answers if given."""
+        self.formset = formset
+        self.cell_view = cell_view
+        _navigate(self.page, self.live_server, "/rows/")
+        self.page.evaluate("document.fonts.ready.then(() => true)")
+
+    def _respond(self, route):
+        url = urlsplit(route.request.url)
+        if url.path == "/rows/cell/":
+            body = self.cell_view().get(RequestFactory().get(f"{url.path}?{url.query}")).content
+        else:
+            rows = self.formset().as_rows(cell_url="/rows/cell/" if self.cell_view else "")
+            body = _page_html("Rows", f'<div class="card-body">{rows}</div>')
+        route.fulfill(content_type="text/html", body=body)
+
+
+@pytest.fixture
+def rows_page(page, live_server, output_path):
+    """A page with the rows of a formset that the test defines."""
+    return RowsPage(page, live_server, Path(output_path))
