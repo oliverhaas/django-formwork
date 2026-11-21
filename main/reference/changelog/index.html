@@ -1309,6 +1309,12 @@
   are templates of their own, <code>formwork/widgets/partials/select_options.html</code>,
   <code>select_multiple_options.html</code> and <code>combo_box_options.html</code>, which each widget names in
   <code>option_list_template_name</code>.</li>
+<li>In a table, the selects of a column with the same choices in every row open empty if
+  your project overrides <code>formwork/tables/table.html</code>, the admin's
+  <code>formwork_admin/change_list_results.html</code>, <code>formwork/widgets/select.html</code> or
+  <code>select_multiple.html</code>. Copy them again from the package: the table templates render
+  <code>{{ option_lists }}</code> and <code>{{ cl.option_lists }}</code>, and the select templates leave out
+  their option rows when <code>widget.options_template_id</code> is set.</li>
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1554,6 +1560,14 @@
   decides as before.</li>
 <li>A <code>DatePicker</code>, <code>DateTimePicker</code> or range picker translates its month and weekday names
   once per language, not once per widget, which saves about 12 ms on 100 rows.</li>
+<li>The selects of <code>formset.as_rows()</code>, of a tabular admin inline and of an editable admin
+  list repeated every option in every row. A column whose rows list the same choices now
+  renders them once, in a <code>&lt;template&gt;</code>, and each row's list copies them when it first
+  opens. 100 rows with three such columns render in 122 ms instead of 205 ms and send
+  2.0 MB of HTML instead of 5.3 MB. A column of a relation qualifies when its rows share
+  their choices, as in the entry above. A column of fixed choices qualifies unless the
+  form or formset has a hook that can change them. A list longer than one page, which
+  loads from the server search, a stub and the row of Add another keep their own options.</li>
 <li>The hidden copy of the option labels that sizes a <code>Select</code>, <code>SelectMultiple</code> or
   <code>ComboBox</code> is one line of text per label, where it was one element per label. The
   widths stay the same, and the example Event list has 12% fewer elements for the
