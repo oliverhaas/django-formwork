@@ -1313,6 +1313,49 @@ changed. A form without these methods, such as a plain <code>ModelForm</code>, g
 the formset.</p>
 <p>Both are Jinja2 templates. To override one for the whole project, put a template
 at the same path in the <code>jinja2/</code> directory of an app listed before <code>django_formwork</code>.</p>
+<p>To change part of a row, extend <code>formwork/tables/row.html</code> and override its blocks,
+then set <code>template_name_row</code> to your template. A field's widget, its changed and
+invalid marks and its errors stay the same.</p>
+<table>
+<thead>
+<tr>
+<th>Block</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>row_attrs</code></td>
+<td>the attributes of the row's <code>&lt;tbody&gt;</code> after its <code>id</code></td>
+</tr>
+<tr>
+<td><code>errors_attrs</code>, <code>errors_span</code></td>
+<td>the attributes and the <code>colspan</code> of the row's error line</td>
+</tr>
+<tr>
+<td><code>cells_attrs</code></td>
+<td>the attributes of the <code>&lt;tr&gt;</code> of the cells</td>
+</tr>
+<tr>
+<td><code>leading_cells</code></td>
+<td>cells before the fields' cells, empty by default</td>
+</tr>
+<tr>
+<td><code>cell_attrs</code></td>
+<td>a field cell's <code>class</code> and <code>data-field</code></td>
+</tr>
+<tr>
+<td><code>display_cell</code></td>
+<td>what a cell shows for a field that posts nothing</td>
+</tr>
+<tr>
+<td><code>trailing_cells</code></td>
+<td>the actions cell</td>
+</tr>
+</tbody>
+</table>
+<p><code>cell_attrs</code> and <code>display_cell</code> see the cell's bound field as <code>bf</code> and Jinja's <code>loop</code>.
+The admin's changelist rows extend the template this way.</p>
 <h2 id="saving-a-row">Saving a row<a class="headerlink" href="#saving-a-row" title="Permanent link">&para;</a></h2>
 <p><code>FormworkRowSaveMixin</code> is the view behind <code>save_url</code>. It saves the posted row and
 answers with the row rendered again.</p>

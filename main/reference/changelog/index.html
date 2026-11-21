@@ -1285,10 +1285,11 @@
   counts would post twice, and Add another changes only the table's own.</p>
 </li>
 <li>An overridden <code>formwork/tables/table.html</code> or <code>formwork/tables/row.html</code> gets a new
-  context: <code>table</code> and <code>formset</code> for the table, <code>row</code> and <code>form</code> for a row.
-  <code>header_fields</code>, <code>cells</code>, <code>save_url</code> and <code>row_id</code> are no longer in it, and the forms
-  no longer have <code>get_row_context()</code> and <code>row_cells()</code>. Copy the templates again from
-  the package. <code>form.row_id</code> and <code>form.row_hidden_inputs</code> stay for hand-authored rows.</li>
+  context: <code>headers</code> and <code>rows</code> in place of <code>header_fields</code> for the table, and for a
+  row its <code>cells</code> are the bound fields and <code>hidden</code> holds the hidden inputs.
+  <code>form.row_cells()</code> is removed, and <code>form.get_row_context()</code> takes keyword arguments.
+  Copy the templates again from the package, or extend <code>row.html</code> and override its
+  blocks. <code>form.row_id</code> and <code>form.row_hidden_inputs</code> stay for hand-authored rows.</li>
 <li><code>form.as_row()</code> without an argument renders a row that does not save. It no longer
   reads a <code>save_url</code> that an earlier <code>as_rows(save_url)</code> set on the form, so pass the URL:
   <code>form.as_row(save_url)</code>.</li>
