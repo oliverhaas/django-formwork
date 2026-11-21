@@ -23,7 +23,7 @@ from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search
 from ._base import _FormworkTemplatesMixin, _ModuleScript, _StubMixin
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Collection, Generator, Iterable, Iterator, Mapping, Sequence
 
     from django.db.models import QuerySet
     from django.forms.formsets import BaseFormSet
@@ -227,18 +227,6 @@ _TEMPLATE_ATTRS = frozenset(
 )
 
 
-def autowidth_copy(widget: dict[str, Any]) -> str:
-    """The option labels that size a select's trigger, from the context of the full select."""
-    # A list that loads its options from the server has no copy in the full select either.
-    if widget["search_url"]:
-        return ""
-    if widget["badges"]:
-        return format_html_join(
-            "", "<span>{}</span>", ((option.get("label_html") or option["label"],) for option in widget["options"])
-        )
-    return format_html_join("\n", "{}", ((option["label"],) for option in widget["options"]))
-
-
 def _trigger_context(widget: dict[str, Any]) -> None:
     """Spread the widget's attrs over the trigger and the hidden input."""
     attrs = widget["attrs"]
@@ -335,6 +323,8 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
     search_threshold = 10
     # Names the option markup the dispatch view renders for this widget.
     search_variant: ClassVar[str]
+    #: The option labels that size the stubs of rows that share their choices, set with ``stub_url``.
+    stub_copy: Callable[[], str] | None = None
 
     def id_for_label(self, id_: str, index: str = "0") -> str:  # noqa: ARG002
         # The trigger is a <summary>, which `<label for>` cannot target.
@@ -439,6 +429,29 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
         )
         self._floating_context(widget, clear)
         return context
+
+    def autowidth_copy(self, widget: Mapping[str, Any]) -> str:
+        """The option labels that size the trigger, from the context of the full select."""
+        # A list that loads its options from the server has no copy in the full select either.
+        if widget["search_url"]:
+            return ""
+        if widget["badges"]:
+            return format_html_join(
+                "", "<span>{}</span>", ((option.get("label_html") or option["label"],) for option in widget["options"])
+            )
+        return format_html_join("\n", "{}", ((option["label"],) for option in widget["options"]))
+
+    def _labels_of(self, values: Collection[str]) -> list[tuple[str, object]]:
+        """The value and the label of each choice that holds one of ``values``, in the order of the choices."""
+        choices = self.choices
+        if not isinstance(choices, ModelChoiceIterator):
+            flat: Iterator[tuple[Any, object]] = flatten_choices(choices)
+            return [(str(choice), label) for choice, label in flat if str(choice) in values]
+        if self.shared is not None:
+            rows = [obj for value, obj in self.shared.chosen.items() if value in values]
+        else:
+            rows = _rows_of(choices.queryset, choices.field.to_field_name or "pk", values)
+        return [(str(value), label) for value, label in map(choices.choice, rows)]
 
     def clear_row(self, option: dict[str, Any], attrs: Mapping[str, Any]) -> dict[str, Any]:
         """The row that clears the value. Django's default blank label gives way to the placeholder, muted."""
@@ -561,8 +574,6 @@ class Select(_StubMixin, SearchableSelectMixin, forms.Select):
     #: The option rows alone, which a server search answers with.
     option_list_template_name = "formwork/widgets/partials/select_options.html"
     stub_template_name = "formwork/widgets/select_stub.html"
-    #: The option labels that size the stubs of rows that share their choices, set with ``stub_url``.
-    stub_copy: Callable[[], str] | None = None
     search_variant = "select"
 
     class Media:
@@ -592,7 +603,7 @@ class Select(_StubMixin, SearchableSelectMixin, forms.Select):
             context = self.get_context(name, value, attrs)
             widget = context["widget"]
             widget["trigger_placeholder"] = widget["attrs"].get("placeholder", "")
-            widget["autowidth_copy"] = autowidth_copy(widget)
+            widget["autowidth_copy"] = self.autowidth_copy(widget)
             return context
         # forms.Select's own context builds every option; the stub shows the selected one alone.
         context = forms.Widget.get_context(self, name, value, attrs)
@@ -601,7 +612,8 @@ class Select(_StubMixin, SearchableSelectMixin, forms.Select):
         if isinstance(current, (list, tuple)):
             current = current[0] if current else ""
         current = "" if current is None else str(current)
-        label = self._label_of(current) if current else None
+        labels = self._labels_of({current}) if current else []
+        label = labels[0][1] if labels else None
         extras = label_extras(label, badges=self.badges) if label is not None else {}
         _trigger_context(widget)
         widget.update(
@@ -616,18 +628,3 @@ class Select(_StubMixin, SearchableSelectMixin, forms.Select):
             }
         )
         return context
-
-    def _label_of(self, value: str) -> object | None:
-        """The label of the choice that holds ``value``, or None."""
-        choices = self.choices
-        if not isinstance(choices, ModelChoiceIterator):
-            label: object
-            for choice, label in flatten_choices(choices):
-                if str(choice) == value:
-                    return label
-            return None
-        if self.shared is not None:
-            obj = self.shared.chosen.get(value)
-        else:
-            obj = next(iter(_rows_of(choices.queryset, choices.field.to_field_name or "pk", [value])), None)
-        return None if obj is None else choices.choice(obj)[1]

@@ -2263,8 +2263,8 @@ class InlineModelAdmin(BaseModelAdmin):
     layout = "stacked"
     #: The saved rows a change form shows at a time, with links to the other pages; ``None`` shows all.
     per_page: int | None = 5
-    #: The saved rows of a tabular inline render each ``Select``, ``DatePicker`` and ``DateTimePicker``
-    #: as a stub, which loads the full widget on use. False renders the full widgets.
+    #: The saved rows of a tabular inline render each ``Select``, ``SelectMultiple``, ``DatePicker`` and
+    #: ``DateTimePicker`` as a stub. A stub loads the full widget on use. False renders the full widgets.
     stubs = True
 
     def __init__(self, parent_model: type[models.Model], admin_site: Any) -> None:

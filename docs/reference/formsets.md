@@ -162,17 +162,17 @@ way, as one `<tbody>`. [Saving a row](#saving-a-row) describes the view behind
 
 ### Widgets that load on use
 
-`formset.as_rows(cell_url=...)` renders each `Select`, `DatePicker` and
-`DateTimePicker` of the saved rows as a stub: the closed widget with its value, and an
-input that posts the value as the full widget does. When the pointer rests on a stub, or
+`formset.as_rows(cell_url=...)` renders each `Select`, `SelectMultiple`, `DatePicker`
+and `DateTimePicker` of the saved rows as a stub: the closed widget with its value, and
+inputs that post the value as the full widget does. When the pointer rests on a stub, or
 the stub takes the focus or a press, the full widget loads from `cell_url` and takes its
 place with the focus, a typed date and the press. The stubs of a select load the labels
 of their rows with one query for all rows. A field with an error renders the full widget.
 
 `FormworkCellMixin` is the view behind `cell_url`. The query names the `field`, the
 row's `pk` and its form `prefix`, and holds the stub's inputs under their names, so a
-changed value stays changed. The view builds the row with `formset_class`, so the row gets the
-choices that a hook of the form or of the formset gives it.
+changed value stays changed. The view builds the row with `formset_class`, so the row
+gets the choices that a hook of the form or of the formset gives it.
 
 ```python
 from django_formwork import FormworkCellMixin

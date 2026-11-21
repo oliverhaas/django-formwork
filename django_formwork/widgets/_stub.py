@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
 
 from ._base import _StubMixin
-from .select import Select, autowidth_copy, rows_share_choices
+from .select import SearchableSelectMixin, rows_share_choices
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -16,8 +16,10 @@ if TYPE_CHECKING:
     from django.forms.formsets import BaseFormSet
 
 
-def _shared_copy(bound: forms.BoundField, select: Select) -> str:
-    return autowidth_copy(select.get_context(bound.html_name, bound.value(), bound.build_widget_attrs({}))["widget"])
+def _shared_copy(bound: forms.BoundField, select: SearchableSelectMixin) -> str:
+    return select.autowidth_copy(
+        select.get_context(bound.html_name, bound.value(), bound.build_widget_attrs({}))["widget"]
+    )
 
 
 def with_query(url: str, **query: Any) -> str:
@@ -41,7 +43,7 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
             widget = field.widget
             if field.disabled or not isinstance(widget, _StubMixin) or name in form.errors:
                 continue
-            if isinstance(widget, Select):
+            if isinstance(widget, SearchableSelectMixin):
                 if widget.floating:
                     continue
                 # Rows that share their choices share the labels that size their stubs.

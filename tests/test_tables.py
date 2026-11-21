@@ -5,6 +5,7 @@ from __future__ import annotations
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
+from admin_app.models import Category, Item, Tag
 from bs4 import BeautifulSoup
 from django import forms
 from django.core.exceptions import ImproperlyConfigured
@@ -13,6 +14,7 @@ from django.db import connection
 from django.http import Http404
 from django.test import RequestFactory
 from django.test.utils import CaptureQueriesContext
+from django.utils.datastructures import MultiValueDict
 from e2e.models import City, Region, UniqueCode
 
 from django_formwork import (
@@ -25,7 +27,7 @@ from django_formwork import (
     formwork_modelformset_factory,
 )
 from django_formwork.tables import PREFIX_INPUT_NAME, Table
-from django_formwork.widgets import Select
+from django_formwork.widgets import Select, SelectMultiple
 
 pytestmark = pytest.mark.django_db
 
@@ -445,3 +447,82 @@ def test_a_cell_gives_its_row_the_choices_that_a_hook_of_the_formset_gives_it(ci
 def test_a_cell_of_an_unknown_field_or_of_a_row_outside_the_queryset_is_not_found(cities, field, pk):
     with pytest.raises(Http404):
         _cell(CityCell, field=field, pk=cities[0].pk if pk is None else pk, prefix="form-0")
+
+
+class TagsRowForm(FormworkModelForm):
+    class Meta:
+        model = Item
+        fields = ["name", "tags"]
+        widgets = {"tags": SelectMultiple()}
+
+
+TagsFormSet = formwork_modelformset_factory(Item, form=TagsRowForm, extra=0)
+
+
+class TagsCell(FormworkCellMixin):
+    formset_class = TagsFormSet
+    queryset = Item.objects.all()
+
+
+@pytest.fixture
+def tagged():
+    kitchen = Category.objects.create(name="Kitchen", slug="kitchen")
+    tags = [Tag.objects.create(name=name) for name in ("eco", "new", "sale", "used")]
+    for name, count in [("Kettle", 0), ("Lamp", 2), ("Toaster", 4)]:
+        Item.objects.create(name=name, category=kitchen).tags.set(tags[:count])
+    return tags
+
+
+def _rows(*, cell_url=""):
+    formset = TagsFormSet(queryset=Item.objects.order_by("pk").prefetch_related("tags"))
+    return BeautifulSoup(formset.as_rows(cell_url=cell_url), "html.parser")
+
+
+def _toggles(soup):
+    toggles = soup.select("details:has([name$=-tags]) > summary")
+    for tag in [*toggles, *(child for toggle in toggles for child in toggle.find_all())]:
+        tag.attrs = {name: value for name, value in tag.attrs.items() if not name.startswith((":", "x-"))}
+    return [str(toggle) for toggle in toggles]
+
+
+def test_the_select_multiple_stubs_of_as_rows_show_the_closed_toggles_of_the_full_selects(tagged):
+    stubs = _rows(cell_url="/cells/")
+
+    assert len(stubs.select("[data-formwork-stub]:has([name$=-tags])")) == 3
+    assert len(set(_toggles(stubs))) == 3
+    assert _toggles(stubs) == _toggles(_rows())
+
+
+def test_the_select_multiple_stubs_of_as_rows_post_the_values_of_their_rows(tagged):
+    data = MultiValueDict()
+    for element in _rows(cell_url="/cells/").select("input[name]"):
+        data.appendlist(element["name"], element.get("value", ""))
+
+    formset = TagsFormSet(data, queryset=Item.objects.order_by("pk"))
+
+    assert formset.is_valid()
+    assert not formset.has_changed()
+
+
+def test_select_multiple_stubs_run_the_same_queries_for_more_rows(tagged):
+    def queries():
+        with CaptureQueriesContext(connection) as captured:
+            _rows(cell_url="/cells/")
+        return len(captured)
+
+    three_rows = queries()
+    for name in ["Grill", "Iron"]:
+        Item.objects.create(name=name, category=Category.objects.get()).tags.set(tagged[1:])
+
+    assert queries() == three_rows
+
+
+def test_a_select_multiple_cell_answers_with_the_full_select_for_the_values_its_stub_holds(tagged):
+    lamp = Item.objects.get(name="Lamp")
+    eco, _new, sale, used = tagged
+
+    soup = _cell(TagsCell, field="tags", pk=lamp.pk, prefix="form-1", **{"form-1-tags": ["", sale.pk, used.pk]})
+
+    checked = soup.select("[x-data=formworkSelectMultiple] input[type=checkbox][checked]")
+    assert [box["value"] for box in checked] == [str(sale.pk), str(used.pk)]
+    assert eco.name in soup.select_one(".formwork-autowidth").get_text()

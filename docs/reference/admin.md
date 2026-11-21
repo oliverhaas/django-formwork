@@ -1284,17 +1284,18 @@ class EventAdmin(admin.ModelAdmin):
 ### Widgets that load on use
 
 The saved rows of [editable columns](#editable-columns) render each `Select`,
-`DatePicker` and `DateTimePicker` as a stub: the closed widget with its value, and an
-input that posts the value as the full widget does. When the pointer rests on the stub,
-or the stub takes the focus or a press, the full widget loads and takes its place with
-the focus, a typed date and the press. After a failed save, a field with an error renders
-the full widget next to its error, and the other fields stay stubs.
+`SelectMultiple`, `DatePicker` and `DateTimePicker` as a stub: the closed widget with
+its value, and inputs that post the value as the full widget does. When the pointer
+rests on the stub, or the stub takes the focus or a press, the full widget loads and
+takes its place with the focus, a typed date and the press. After a failed save, a field
+with an error renders the full widget next to its error, and the other fields stay
+stubs.
 
 The stubs load from `cells/<field>/` under the admin's URLs, named
 `<app_label>_<model_name>_cell`. The query names the row's `pk` and its form `prefix`,
-and holds the stub's inputs under their names, so a changed value stays changed. The view builds the
-row with the list's formset, so the row gets the choices that a hook of the form or of
-the formset gives it, and it checks the change permission for the row.
+and holds the stub's inputs under their names, so a changed value stays changed. The
+view builds the row with the list's formset, so the row gets the choices that a hook of
+the form or of the formset gives it, and it checks the change permission for the row.
 
 A select is as wide as its longest option, so a stub holds the labels of the options.
 The rows of a select that [share their choices](#shared-choices) share the labels too. A
@@ -1312,9 +1313,10 @@ The saved rows of a `TabularInline` on a change form render the same stubs. They
 from `<object_id>/cells/<field>/`, named `<app_label>_<model_name>_change_cell`, with the
 same query. The view finds the inline by the row's prefix and builds the row with the
 inline's formset, from `get_formset_kwargs()`, so a row of another object gets a 404. It
-checks the change permission for the object and for the inline's rows. A
-`StackedInline` renders the full widgets. `stubs = False` on the inline does the same
-for a `TabularInline`.
+checks the change permission for the object and for the inline's rows. A relation field
+with the buttons that add or change a related object, such as a `ForeignKey` of the
+inline's model, keeps its full widget. A `StackedInline` renders the full widgets.
+`stubs = False` on the inline does the same for a `TabularInline`.
 
 ## Keyboard
 
