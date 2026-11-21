@@ -317,13 +317,17 @@ if (typeof document !== "undefined") {
   // full widget where the page shows a stub (a save with errors renders the
   // rows in full), puts the new one in plainly first. A morph would keep the
   // full widget's Alpine bindings on the stub, or leave the full widget unbound.
+  // The focus stays: a save sent with Enter from a loaded date picker leaves
+  // it on the stub, which loads the full widget again.
   document.addEventListener("htmx:before:swap", (e) => {
     for (const task of e.detail.tasks ?? []) {
       for (const root of task.fragment?.querySelectorAll("[data-formwork-stub], [data-formwork-lazy]") ?? []) {
         const old = root.id && document.getElementById(root.id);
-        if (old && old.hasAttribute("data-formwork-stub") !== root.hasAttribute("data-formwork-stub")) {
-          old.replaceWith(root.cloneNode(true));
-        }
+        if (!old || old.hasAttribute("data-formwork-stub") === root.hasAttribute("data-formwork-stub")) continue;
+        const active = old.contains(document.activeElement) ? document.activeElement : null;
+        const fresh = root.cloneNode(true);
+        old.replaceWith(fresh);
+        if (active) (twin(fresh, active) ?? fresh.querySelector('summary, input:not([type="hidden"])'))?.focus();
       }
     }
   });

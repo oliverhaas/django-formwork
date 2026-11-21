@@ -728,6 +728,22 @@ def test_a_failed_list_save_brings_the_full_selects_and_a_saved_one_the_stubs(ad
     assert admin_page.errors == []
 
 
+def test_a_list_saved_with_enter_in_a_date_picker_keeps_the_focus_in_it(admin_page, live_server, kitchen, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable", ["released"])
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    released = admin_page.locator("#changelist-table [name$=-released]")
+    released.press_sequentially("2026-02-03")
+    expect(admin_page.locator("#changelist-table [x-data=formworkDatePicker]")).to_be_attached()
+
+    released.press("Enter")
+
+    expect(admin_page.get_by_role("status").filter(has_text="was changed successfully")).to_be_visible()
+    expect(released).to_be_focused()
+    expect(released).to_have_value("2026-02-03")
+    assert admin_page.errors == []
+
+
 def test_a_tabular_inline_shows_the_fields_of_the_hovered_row_and_of_a_new_row(admin_page, live_server, kitchen):
     item = Item.objects.create(name="Kettle", category=kitchen)
     Part.objects.create(item=item, name="Lid")
