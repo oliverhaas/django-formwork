@@ -160,6 +160,44 @@ the moment it changes, so this table has no Add another, Remove or Delete.
 way, as one `<tbody>`. [Saving a row](#saving-a-row) describes the view behind
 `save_url`.
 
+### Widgets that load on use
+
+`formset.as_rows(cell_url=...)` renders each `Select`, `DatePicker` and
+`DateTimePicker` of the saved rows as a stub: the closed widget with its value, and an
+input that posts the value as the full widget does. When the pointer rests on a stub, or
+the stub takes the focus or a press, the full widget loads from `cell_url` and takes its
+place with the focus, a typed date and the press. The stubs of a select load the labels
+of their rows with one query for all rows. A field with an error renders the full widget.
+
+`FormworkCellMixin` is the view behind `cell_url`. The query names the `field`, the
+row's `pk`, its form `prefix` and the `value` that the stub holds, so a changed value
+stays changed. The view builds the row with `formset_class`, so the row gets the
+choices that a hook of the form or of the formset gives it.
+
+```python
+from django_formwork import FormworkCellMixin
+
+
+class TaskCell(FormworkCellMixin, View):
+    formset_class = TaskFormSet
+    http_method_names = ["get"]
+
+    def get_queryset(self, request):
+        return Task.objects.filter(owner=request.user)
+
+
+def task_list(request):
+    formset = TaskFormSet(queryset=Task.objects.filter(owner=request.user))
+    table = formset.as_rows(reverse("task_row_save"), cell_url=reverse("task_cell"))
+    return render(request, "tasks/list.html", {"table": table})
+```
+
+As for [saving a row](#saving-a-row), `queryset` or `get_queryset()` is required. A
+row outside it, a malformed key, an unknown field or a disabled one gets a 404.
+`get_formset_kwargs(request)` returns extra arguments for `formset_class`, such as the
+`form_kwargs` that the page passes. The mixin does no other access check: protect the
+view as you protect the page.
+
 ### Templates
 
 | Template                     | Renders                    | Context           | Set per class on                   |

@@ -2,23 +2,30 @@
 
 from __future__ import annotations
 
+from urllib.parse import parse_qs, urlsplit
+
 import pytest
 from bs4 import BeautifulSoup
 from django import forms
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.http import Http404
 from django.test import RequestFactory
-from e2e.models import UniqueCode
+from django.test.utils import CaptureQueriesContext
+from e2e.models import City, Region, UniqueCode
 
 from django_formwork import (
     DisplayField,
+    FormworkBaseModelFormSet,
+    FormworkCellMixin,
     FormworkForm,
     FormworkModelForm,
     FormworkRowSaveMixin,
     formwork_modelformset_factory,
 )
 from django_formwork.tables import PREFIX_INPUT_NAME
+from django_formwork.widgets import Select
 
 pytestmark = pytest.mark.django_db
 
@@ -319,3 +326,86 @@ def test_formset_media_loads_the_table_script():
     formset = CodeFormSet(queryset=UniqueCode.objects.none())
 
     assert "formwork/tables.js" in str(formset.media)
+
+
+class CityRowForm(FormworkModelForm):
+    class Meta:
+        model = City
+        fields = ["name", "region"]
+        widgets = {"region": Select()}
+
+
+CityFormSet = formwork_modelformset_factory(City, form=CityRowForm, extra=1)
+
+
+class CityCell(FormworkCellMixin):
+    formset_class = CityFormSet
+    queryset = City.objects.all()
+
+
+@pytest.fixture
+def cities():
+    north, south = Region.objects.create(name="North"), Region.objects.create(name="South")
+    return [City.objects.create(name="Aberdeen", region=north), City.objects.create(name="Brighton", region=south)]
+
+
+def _cell(view, **query):
+    return BeautifulSoup(view().get(RequestFactory().get("/cells/", query)).content, "html.parser")
+
+
+def test_as_rows_with_a_cell_url_renders_the_selects_of_the_saved_rows_as_stubs(cities):
+    html = CityFormSet(queryset=City.objects.all()).as_rows(cell_url="/cells/?table=cities")
+
+    soup = BeautifulSoup(html, "html.parser")
+    stubs = [parse_qs(urlsplit(stub["data-formwork-stub"]).query) for stub in soup.select("[data-formwork-stub]")]
+    assert stubs == [
+        {"table": ["cities"], "field": ["region"], "pk": [str(city.pk)], "prefix": [f"form-{index}"]}
+        for index, city in enumerate(cities)
+    ]
+    assert soup.select_one("[x-data=formworkSelect] [name=form-2-region]") is not None
+
+
+def test_as_rows_with_stubs_runs_the_same_queries_for_more_rows(cities):
+    def queries():
+        formset = CityFormSet(queryset=City.objects.all())
+        with CaptureQueriesContext(connection) as captured:
+            formset.as_rows(cell_url="/cells/")
+        return len(captured)
+
+    two_rows = queries()
+    for name in ["Cardiff", "Dover", "Exeter"]:
+        City.objects.create(name=name, region=Region.objects.create(name=f"{name} region"))
+
+    assert queries() == two_rows
+
+
+def test_a_cell_answers_with_the_full_select_for_the_value_its_stub_holds(cities):
+    south = cities[1].region
+
+    soup = _cell(CityCell, field="region", pk=cities[0].pk, prefix="form-0", value=south.pk)
+
+    value = soup.select_one("[x-data=formworkSelect] input[type=hidden]")
+    assert (value["name"], value["value"]) == ("form-0-region", str(south.pk))
+
+
+class NorthOnlyFormSet(FormworkBaseModelFormSet):
+    def add_fields(self, form, index):
+        super().add_fields(form, index)
+        form.fields["region"].queryset = Region.objects.filter(name="North")
+
+
+def test_a_cell_gives_its_row_the_choices_that_a_hook_of_the_formset_gives_it(cities):
+    class Cell(CityCell):
+        formset_class = formwork_modelformset_factory(City, form=CityRowForm, formset=NorthOnlyFormSet, extra=0)
+
+    soup = _cell(Cell, field="region", pk=cities[1].pk, prefix="form-1")
+
+    labels = {option.get_text(strip=True) for option in soup.select("[role=option]")}
+    assert "North" in labels
+    assert "South" not in labels
+
+
+@pytest.mark.parametrize(("field", "pk"), [("country", None), ("region", "not-a-number"), ("region", 0)])
+def test_a_cell_of_an_unknown_field_or_of_a_row_outside_the_queryset_is_not_found(cities, field, pk):
+    with pytest.raises(Http404):
+        _cell(CityCell, field=field, pk=cities[0].pk if pk is None else pk, prefix="form-0")

@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from django_formwork.models import FormworkModel
     from django_formwork.renderers import FormworkRenderer
     from django_formwork.sections import section_forms
-    from django_formwork.tables import FormworkRowSaveMixin
+    from django_formwork.tables import FormworkCellMixin, FormworkRowSaveMixin
     from django_formwork.views import (
         FormworkSearchView,
         FormworkValidateView,
@@ -58,6 +58,7 @@ _EXPORTS = {
     "FormworkBaseInlineFormSet": "django_formwork.formsets",
     "FormworkBaseModelFormSet": "django_formwork.formsets",
     "FormworkBoundField": "django_formwork.boundfield",
+    "FormworkCellMixin": "django_formwork.tables",
     "FormworkForm": "django_formwork.forms",
     "FormworkFormMetaclass": "django_formwork.forms",
     "FormworkModel": "django_formwork.models",
@@ -85,6 +86,7 @@ __all__ = [
     "FormworkBaseInlineFormSet",
     "FormworkBaseModelFormSet",
     "FormworkBoundField",
+    "FormworkCellMixin",
     "FormworkForm",
     "FormworkFormMetaclass",
     "FormworkModel",

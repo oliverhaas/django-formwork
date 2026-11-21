@@ -20,6 +20,11 @@ def _shared_copy(bound: forms.BoundField, select: Select) -> str:
     return autowidth_copy(select.get_context(bound.html_name, bound.value(), bound.build_widget_attrs({}))["widget"])
 
 
+def with_query(url: str, **query: Any) -> str:
+    """``url`` with ``query`` added to its query string."""
+    return f"{url}{'&' if '?' in url else '?'}{urlencode(query)}"
+
+
 def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, share: bool | None = None) -> None:
     """Render the widgets of a formset's saved rows as stubs; call it after ``share_choices``.
 
@@ -44,7 +49,7 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
                     widget.stub_copy = copies.setdefault(name, cache(partial(_shared_copy, form[name], widget)))
             if name not in urls:
                 urls[name] = url_of(name)
-            widget.stub_url = f"{urls[name]}?{urlencode({'pk': pk, 'prefix': form.prefix})}"
+            widget.stub_url = with_query(urls[name], pk=pk, prefix=form.prefix)
 
 
 def formset_row(formset_class: type[BaseFormSet[Any]], prefix: str, *, value_of: dict[str, str], **kwargs: Any) -> Any:  # noqa: ANN401

@@ -6,9 +6,10 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, Any
 
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.forms import Media
 from django.forms.formsets import DELETION_FIELD_NAME
+from django.http import Http404, HttpResponse
 from django.utils.choices import flatten_choices
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import SafeString, mark_safe
@@ -16,15 +17,25 @@ from django.utils.translation import gettext_lazy as _
 
 from django_formwork.fields import DisplayField
 from django_formwork.renderers import formwork_renderer
+from django_formwork.widgets._stub import formset_row, stub_formset, with_query
+from django_formwork.widgets.select import share_choices
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from django.db.models import QuerySet
     from django.forms import BoundField
-    from django.http import HttpRequest, HttpResponse
+    from django.http import HttpRequest
 
-__all__ = ["FormworkRowSaveMixin", "RowRenderMixin", "Table", "TableCell", "TableRenderMixin", "TableRow"]
+__all__ = [
+    "FormworkCellMixin",
+    "FormworkRowSaveMixin",
+    "RowRenderMixin",
+    "Table",
+    "TableCell",
+    "TableRenderMixin",
+    "TableRow",
+]
 
 #: Hidden input carrying the form prefix so the save endpoint can rebind the
 #: same field namespace the row was rendered with.
@@ -184,8 +195,14 @@ class Table:
     template_name: str = TABLE_TEMPLATE
 
     @classmethod
-    def for_formset(cls, formset: Any, *, save_url: str = "", flush: bool = False) -> Table:  # noqa: ANN401
-        """The table of a Django formset, with rows to add unless it saves row by row."""
+    def for_formset(cls, formset: Any, *, save_url: str = "", flush: bool = False, cell_url: str = "") -> Table:  # noqa: ANN401
+        """The table of a Django formset, with rows to add unless it saves row by row.
+
+        With ``cell_url``, the selects and date pickers of the saved rows render as stubs that load from it.
+        """
+        if cell_url:
+            share_choices(formset)
+            stub_formset(formset, lambda name: with_query(cell_url, field=name))
         can_add = not save_url and getattr(formset, "can_add", True) and not getattr(formset, "edit_only", False)
         can_delete = not save_url and formset.can_delete
         initial = formset.initial_form_count()
@@ -283,8 +300,8 @@ class TableRenderMixin:
     #: Add another appends a row. A model formset with ``edit_only=True`` has none either way.
     can_add = True
 
-    def as_rows(self, save_url: str = "", *, flush: bool = False) -> SafeString:
-        return Table.for_formset(self, save_url=save_url, flush=flush).render()
+    def as_rows(self, save_url: str = "", *, flush: bool = False, cell_url: str = "") -> SafeString:
+        return Table.for_formset(self, save_url=save_url, flush=flush, cell_url=cell_url).render()
 
     @property
     def media(self) -> Media:
@@ -293,7 +310,23 @@ class TableRenderMixin:
         return super().media + Media(js=[_ModuleScript("formwork/tables.js")])  # type: ignore[misc]  # ty: ignore[unresolved-attribute]
 
 
-class FormworkRowSaveMixin:
+class _RowsViewMixin:
+    """The rows a view can reach: ``queryset`` or ``get_queryset()``."""
+
+    queryset: QuerySet[Any] | None = None
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Any]:  # noqa: ARG002
+        """The rows this endpoint can change, e.g. ``Task.objects.filter(owner=request.user)``."""
+        if self.queryset is None:
+            msg = (
+                f"{type(self).__name__} needs a queryset (or get_queryset()) of the rows a user can "
+                "change, e.g. Task.objects.filter(owner=request.user), or Task.objects.all() for every row."
+            )
+            raise ImproperlyConfigured(msg)
+        return self.queryset.all()
+
+
+class FormworkRowSaveMixin(_RowsViewMixin):
     """View mixin: save one row's changes (keyed on the posted pk) and re-render it.
 
     ``queryset`` (or ``get_queryset()``) holds the rows a post can change; a pk
@@ -301,7 +334,6 @@ class FormworkRowSaveMixin:
     """
 
     form_class: type[Any]
-    queryset: QuerySet[Any] | None = None
 
     def get_save_url(self, request: HttpRequest) -> str:
         """URL the re-rendered row keeps posting to (the save endpoint itself)."""
@@ -310,22 +342,7 @@ class FormworkRowSaveMixin:
     def get_prefix(self, request: HttpRequest) -> str | None:
         return request.POST.get(PREFIX_INPUT_NAME) or None
 
-    def get_queryset(self, request: HttpRequest) -> QuerySet[Any]:  # noqa: ARG002
-        """The rows this endpoint can change, e.g. ``Task.objects.filter(owner=request.user)``."""
-        if self.queryset is None:
-            model_name = self.form_class._meta.model.__name__  # noqa: SLF001
-            msg = (
-                f"{type(self).__name__} needs a queryset (or get_queryset()) of the rows a user can "
-                f"change, e.g. {model_name}.objects.filter(owner=request.user), or "
-                f"{model_name}.objects.all() for every row."
-            )
-            raise ImproperlyConfigured(msg)
-        return self.queryset.all()
-
     def get_object(self, request: HttpRequest, prefix: str | None) -> Any:  # noqa: ANN401
-        from django.core.exceptions import ValidationError
-        from django.http import Http404
-
         queryset = self.get_queryset(request)
         pk_name = queryset.model._meta.pk.name  # noqa: SLF001
         field = f"{prefix}-{pk_name}" if prefix else pk_name
@@ -354,8 +371,6 @@ class FormworkRowSaveMixin:
         return form.as_row(self.get_save_url(request))
 
     def post(self, request: HttpRequest, *_args: Any, **_kwargs: Any) -> HttpResponse:
-        from django.http import HttpResponse
-
         prefix = self.get_prefix(request)
         instance = self.get_object(request, prefix)
         form = self.get_form(request, instance, prefix)
@@ -364,3 +379,36 @@ class FormworkRowSaveMixin:
             # The saved row starts over from what it saved, without the marks of changed fields.
             form = self.form_class(instance=instance, prefix=prefix, **self.get_form_kwargs())
         return HttpResponse(self.render_row(request, form))
+
+
+class FormworkCellMixin(_RowsViewMixin):
+    """View mixin: answer a stub of ``as_rows(cell_url=...)`` with its field's full widget.
+
+    ``queryset`` (or ``get_queryset()``) holds the rows a user can change; a pk outside it gets a 404.
+    """
+
+    formset_class: type[Any]
+
+    def get_formset_kwargs(self, request: HttpRequest) -> dict[str, Any]:  # noqa: ARG002
+        """Extra kwargs for ``formset_class``, as the page passes them, such as ``form_kwargs``."""
+        return {}
+
+    def get(self, request: HttpRequest, *_args: Any, **_kwargs: Any) -> HttpResponse:
+        queryset = self.get_queryset(request)
+        try:
+            pk = queryset.model._meta.pk.to_python(request.GET.get("pk"))  # noqa: SLF001
+        except ValidationError as exc:
+            raise Http404("Row primary key is malformed") from exc
+        name = request.GET.get("field", "")
+        # Built by the formset, so that a hook of the formset gives the row its choices.
+        form = formset_row(
+            self.formset_class,
+            request.GET.get("prefix", ""),
+            value_of={name: request.GET["value"]} if "value" in request.GET else {},
+            **{**self.get_formset_kwargs(request), "queryset": queryset.filter(pk=pk)},
+        )
+        if form is None:
+            raise Http404("Row no longer exists")
+        if name not in form.fields or form.fields[name].disabled:
+            raise Http404("No such field")
+        return HttpResponse(TableCell(name, field=form[name]).widget)
