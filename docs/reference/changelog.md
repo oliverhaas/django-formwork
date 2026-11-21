@@ -293,6 +293,13 @@
   rows with six editable columns, took about 390 ms on the server and sent 3.0 MB of
   HTML. The Jinja2 templates bring it to 240 ms. With the stubs from Added it takes
   110 ms and sends 0.65 MB, with the same seven queries.
+- `formset.as_rows()` and `Table.for_formset()` ran one query per row for each `Select`
+  or `SelectMultiple` of a relation that lists all its choices: 100 rows with three such
+  columns ran 203 queries. The rows now list the choices once, with 7 queries, and render
+  in 207 ms instead of 282 ms. Rows whose form or formset defines a hook that can give a
+  row choices of its own, such as `__init__` or `get_form_kwargs`, or whose field has a
+  callable `limit_choices_to`, keep their query per row. In the admin, `share_choices`
+  decides as before.
 - A `DatePicker`, `DateTimePicker` or range picker translates its month and weekday names
   once per language, not once per widget, which saves about 12 ms on 100 rows.
 - The hidden copy of the option labels that sizes a `Select`, `SelectMultiple` or

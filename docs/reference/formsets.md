@@ -144,6 +144,9 @@ def task_edit_all(request):
   `can_add = False` on the formset class, or `edit_only=True`, removes Add another.
 - **Empty table.** Without rows, the table shows "No *tasks* yet.", with the model's
   `verbose_name_plural`.
+- **Choices.** A `Select` or `SelectMultiple` of a relation loads its choices with one
+  query for all rows. A row loads its own when the form or the formset can give it
+  other choices, as [Shared choices](admin.md#shared-choices) lists.
 
 `as_rows(flush=True)` is for a table in a card: the table runs to the card's edges,
 and its first and last columns take the card's padding.

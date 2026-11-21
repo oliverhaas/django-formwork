@@ -227,8 +227,9 @@ class Table:
         With ``cell_url``, the selects and date pickers of the saved rows render as stubs that load from it.
         ``fields`` names the columns, ``display`` shows a field that posts nothing, ``link`` gives a row's own page.
         """
+        # The rows load the choices of a relation once, whether they render in full or as stubs.
+        share_choices(formset)
         if cell_url:
-            share_choices(formset)
             stub_formset(formset, lambda name: with_query(cell_url, field=name))
         can_add = not save_url and getattr(formset, "can_add", True) and not getattr(formset, "edit_only", False)
         can_delete = not save_url and formset.can_delete

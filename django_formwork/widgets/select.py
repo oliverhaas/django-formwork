@@ -133,6 +133,14 @@ class _SharedChoices:
         self.queryset = queryset
         self.key = key
         self.rows = rows
+        self._every: list[tuple[Any, Any]] | None = None
+
+    def every(self, choices: ModelChoiceIterator) -> list[tuple[Any, Any]]:
+        """Every choice of a select without a server search, listed by the first row that renders for all rows."""
+        if self._every is None:
+            choices.queryset = with_peers(choices.queryset)
+            self._every = list(choices)
+        return self._every
 
     @cached_property
     def page(self) -> list[Any]:
@@ -181,12 +189,14 @@ def rows_share_choices(formset: BaseFormSet[Any], field: forms.Field, *, share: 
 
 
 def share_choices(formset: BaseFormSet[Any], *, share: bool | None = None) -> None:
-    """Let the selects of a formset's rows load a relation's first page and their selected rows once for all rows.
+    """Let the selects of a formset's rows load a relation's choices once for all rows.
 
-    ``None`` leaves out the fields whose rows can get choices of their own, ``True`` shares those too."""
+    ``None`` leaves out the fields whose rows can get choices of their own, ``True`` shares those too.
+    The first call for a formset decides, so ``Table.for_formset`` keeps what the admin set before."""
     rows = formset.forms
-    if not rows:
+    if not rows or getattr(formset, "_formwork_shared", False):
         return
+    formset._formwork_shared = True  # type: ignore[attr-defined]  # noqa: SLF001
     for name, field in rows[0].fields.items():
         if not isinstance(field, forms.ModelChoiceField) or field.queryset is None:
             continue
@@ -482,14 +492,12 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
         first = {"page_only": 1, "exclude": self.selected_past_page}
         return {"pending_url": f"{page}&{urlencode(first, doseq=True)}", "group": ""}
 
-    def optgroups(  # noqa: C901
+    def optgroups(
         self, name: str, value: list[str], attrs: dict[str, Any] | None = None
     ) -> list[tuple[str | None, list[dict[str, Any]], int | None]]:
         """Every choice without a server search, else one page plus the selected ones."""
         if self.search_key is None:
-            if isinstance(self.choices, ModelChoiceIterator):
-                self.choices.queryset = with_peers(self.choices.queryset)
-            return super().optgroups(name, value, attrs)
+            return self._every_optgroups(name, value, attrs)
         chosen = {str(subvalue) for subvalue in value if subvalue}
         limit = SEARCH_PAGE_SIZE
         choices = self.choices
@@ -540,6 +548,25 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
         for option in options[len(blank) : len(blank) + rows]:
             option["page_row"] = True
         return [(None, options, 0)] if options else []
+
+    def _every_optgroups(
+        self, name: str, value: list[str], attrs: dict[str, Any] | None
+    ) -> list[tuple[str | None, list[dict[str, Any]], int | None]]:
+        """Django's optgroups(). The rows of a formset list the choices of a relation once, from ``shared``."""
+        choices = self.choices
+        if not isinstance(choices, ModelChoiceIterator):
+            return super().optgroups(name, value, attrs)
+        if self.shared is None:
+            choices.queryset = with_peers(choices.queryset)
+            return super().optgroups(name, value, attrs)
+        groups: list[tuple[str | None, list[dict[str, Any]], int | None]] = []
+        has_selected = False
+        # Django's loop, without its groups: a relation has none.
+        for index, (choice, label) in enumerate(self.shared.every(choices)):
+            selected = (not has_selected or self.allow_multiple_selected) and str(choice) in value
+            has_selected |= selected
+            groups.append((None, [self.create_option(name, choice, label, selected, index, attrs=attrs)], index))
+        return groups
 
     def _floating_context(self, widget: dict[str, Any], clear: Mapping[str, Any] | None) -> None:
         """The floating label's id, the trigger's name and its empty text."""
