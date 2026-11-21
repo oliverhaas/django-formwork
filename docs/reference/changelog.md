@@ -35,10 +35,11 @@
   `{{ formset.management_form }}` that a template adds next to the table: the form
   counts would post twice, and Add another changes only the table's own.
 - An overridden `formwork/tables/table.html` or `formwork/tables/row.html` gets a new
-  context: `table` and `formset` for the table, `row` and `form` for a row.
-  `header_fields`, `cells`, `save_url` and `row_id` are no longer in it, and the forms
-  no longer have `get_row_context()` and `row_cells()`. Copy the templates again from
-  the package. `form.row_id` and `form.row_hidden_inputs` stay for hand-authored rows.
+  context: `headers` and `rows` in place of `header_fields` for the table, and for a
+  row its `cells` are the bound fields and `hidden` holds the hidden inputs.
+  `form.row_cells()` is removed, and `form.get_row_context()` takes keyword arguments.
+  Copy the templates again from the package, or extend `row.html` and override its
+  blocks. `form.row_id` and `form.row_hidden_inputs` stay for hand-authored rows.
 - `form.as_row()` without an argument renders a row that does not save. It no longer
   reads a `save_url` that an earlier `as_rows(save_url)` set on the form, so pass the URL:
   `form.as_row(save_url)`.

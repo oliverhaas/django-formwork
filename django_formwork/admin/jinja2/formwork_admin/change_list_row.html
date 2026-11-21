@@ -1,0 +1,42 @@
+{% extends "formwork/tables/row.html" %}
+{#- A row of the changelist. formwork's engine renders it, so the admin's globals and macros are not available.
+    The context adds "columns", "select" (the checkbox's name, empty without actions), "index", "popup" and
+    "pick" to the row's. -#}
+{#- Opaque row colors, so a pinned column takes its row's color over the columns that scroll under it.
+    The server renders them, so the rows keep their markup when Alpine starts. -#}
+{% set row_bg = "bg-base-100 hover:bg-[color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100))]" %}
+{% set selected_bg = "data-selected:bg-[color-mix(in_srgb,var(--color-primary)_7%,var(--color-base-100))] data-selected:hover:bg-[color-mix(in_oklab,var(--color-primary)_7%,color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100)))]" %}
+{% set collapsible = columns|length > 1 %}
+
+{% block row_attrs %}{% endblock %}
+
+{#- An error of the whole row, as Django shows it: on a line of its own, right above the row. -#}
+{% block errors_attrs %} data-row-errors class="border-b-0"{% endblock %}
+{% block errors_span %}{{ cells|length + (1 if select else 0) + (1 if collapsible else 0) }}{% endblock %}
+
+{% block cells_attrs %} data-pk="{{ form.instance.pk }}" class="transition-colors {{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)"{% endblock %}
+
+{% block leading_cells %}
+    {%- if select %}
+    <td>
+      <input type="checkbox" class="checkbox checkbox-sm" name="{{ select }}" value="{{ form.instance.pk }}"
+             form="changelist-actions" x-model="selected" @click="range($event)" @mousedown.shift.prevent data-index="{{ index }}"
+             aria-label="{{ _("Select row") }}">
+    </td>
+    {%- endif %}
+{%- endblock %}
+
+{#- A boxed field sets its value in from the cell's edge, as its header does. -#}
+{% block cell_attrs %}{% set column = columns[loop.index0] %} class="{{ "min-w-48" if column.wrap else "whitespace-nowrap" }}{{ " text-right" if column.numeric }}" data-field="{{ bf.name }}"{% if editable %} data-editable{% if boxed %} data-indent{% endif %}{% endif %}{% endblock %}
+
+{#- The link loads the change page as the admin's page links do (the page_link macro). In a popup it is a plain
+    link, and a click picks the row for the relation that opened the popup. -#}
+{% block display_cell %}
+      {%- if columns[loop.index0].linked and link %}
+      <a href="{{ link }}"{% if not popup %} hx-get="{{ link }}" hx-target="body" hx-swap="outerMorph scroll:top scrollTarget:window" hx-push-url="true" hx-sync="body:replace" hx-preload="formwork-admin:intent, mousedown, touchstart" data-page-link="change"{% endif %} class="link link-primary font-medium"{% if pick %} data-popup-pick="{{ pick }}"{% endif %}>{{ bf.display_value }}</a>
+      {%- else %}
+      {{ bf.display_value }}
+      {%- endif %}
+{%- endblock %}
+
+{% block trailing_cells %}{% if collapsible %}<td data-col-toggle></td>{% endif %}{% endblock %}

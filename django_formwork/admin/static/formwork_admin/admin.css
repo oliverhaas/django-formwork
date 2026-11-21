@@ -62,6 +62,12 @@
   padding-block: 0.1875rem;
 }
 
+/* Each row is a <tbody> of its own. DaisyUI draws the line under every row of a body but its last,
+   so the line between two bodies comes from here, in DaisyUI's color. */
+#changelist-table > tbody:not(:last-child) > tr:last-child > td {
+  border-bottom: var(--border) solid color-mix(in oklch, var(--color-base-content) 5%, #0000);
+}
+
 /* list_editable cells: the widget renders the control, the cell fits it to the row. */
 [data-editable] :is(input:not([type="hidden"], [type="checkbox"], [type="radio"]), select, summary, .date-picker-label) {
   @apply w-full max-w-64 min-w-24 text-sm [--size:2rem];

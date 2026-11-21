@@ -15,18 +15,7 @@
 </div>
 {% endmacro %}
 
-{% macro cell(c) %}
-{% if c.kind == "empty" %}<span class="text-base-content/35">{{ c.text }}</span>
-{% elif c.kind == "boolean" %}{% if c.text %}<span class="inline-flex align-middle text-[color:color-mix(in_oklab,var(--color-success)_75%,var(--color-base-content))]" title="{{ _("Yes") }}">{{ icon("circle-check", "size-[1.125rem]") }}<span class="sr-only">{{ _("Yes") }}</span></span>{% else %}<span class="inline-flex align-middle text-base-content/50" title="{{ _("No") }}">{{ icon("circle-x", "size-[1.125rem]") }}<span class="sr-only">{{ _("No") }}</span></span>{% endif %}
-{% elif c.kind == "badge" %}<span class="badge badge-sm whitespace-nowrap {{ "badge-ghost" if c.color == "neutral" else "badge-soft badge-" ~ c.color }}">{{ c.text }}</span>
-{% elif c.kind == "number" %}<span class="tabular-nums">{{ c.text }}</span>
-{% elif c.kind == "date" %}<span class="whitespace-nowrap tabular-nums">{{ c.text }}</span>
-{% elif c.kind == "html" %}{{ c.text|safe }}
-{% elif c.kind == "file" %}{% if c.url %}<a class="link link-primary inline-flex items-center gap-1" href="{{ c.url }}">{{ icon("paperclip", "size-3.5") }}{{ c.text.rsplit("/", 1)[-1] }}</a>{% else %}{{ c.text }}{% endif %}
-{% elif c.kind == "json" %}<code class="block max-w-xs truncate font-mono text-xs text-base-content/70">{{ c.text }}</code>
-{% else %}{{ c.text }}
-{% endif %}
-{% endmacro %}
+{% macro cell(c) %}{{ list_html(c) }}{% endmacro %}
 
 {% macro admin_field(cell) %}
 {% if cell.field is not none %}

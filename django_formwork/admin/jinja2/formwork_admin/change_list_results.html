@@ -6,11 +6,9 @@
 {% set filtered = cl.is_filtered %}
 {# A neutral box; admin.css turns it primary when checked, like the rest of the selection. #}
 {% set checkbox = "checkbox checkbox-sm" %}
-{# Opaque row colors, so a pinned column takes its row's color over the columns that scroll under it.
-   The server renders them, so the rows keep their markup when Alpine starts. #}
+{# An opaque header color, so a pinned column covers the columns that scroll under it. change_list_row.html
+   colors the rows. #}
 {% set head_bg = "bg-[color-mix(in_srgb,var(--color-base-200)_50%,var(--color-base-100))]" %}
-{% set row_bg = "bg-base-100 hover:bg-[color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100))]" %}
-{% set selected_bg = "data-selected:bg-[color-mix(in_srgb,var(--color-primary)_7%,var(--color-base-100))] data-selected:hover:bg-[color-mix(in_oklab,var(--color-primary)_7%,color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100)))]" %}
 <div id="changelist">
 <div id="changelist-{{ cl.state_key }}" x-init="reset($el)" data-total="{{ cl.result_count }}">
   {% if cl.current_order is not none %}<input type="hidden" name="o" value="{{ cl.current_order }}" form="changelist-filters">{% endif %}
@@ -140,46 +138,10 @@
             {% endif %}
           </tr>
         </thead>
+        {% for row in cl.rows %}
+        {{ row.form.render_row(dict(row, columns=cl.columns, select=action_checkbox_name if actions else "")) }}
+        {% else %}
         <tbody>
-          {% for row in cl.rows %}
-          {% set obj, index = row.form.instance, loop.index0 %}
-          {% set row_errors = row.form.non_field_errors() if editable else () %}
-          {% if row_errors %}
-          {#- An error of the whole row, as Django shows it: on a line of its own, right above the row. #}
-          <tr data-row-errors class="border-b-0">
-            <td colspan="{{ columns }}" class="pb-0">
-              <p class="flex items-center gap-1.5 text-xs text-error">{{ icon("circle-exclamation-point", "size-3.5") }} {{ row_errors|join(" ") }}</p>
-            </td>
-          </tr>
-          {% endif %}
-          <tr data-pk="{{ obj.pk }}" class="transition-colors {{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)">
-            {% if actions %}
-            <td>
-              <input type="checkbox" class="{{ checkbox }}" name="{{ action_checkbox_name }}" value="{{ obj.pk }}"
-                     form="changelist-actions" x-model="selected" @click="range($event)" @mousedown.shift.prevent data-index="{{ index }}"
-                     aria-label="{{ _("Select row") }}">
-            </td>
-            {% endif %}
-            {% for c in row.cells %}
-            {% set column = cl.columns[loop.index0] %}
-            {% set field_editable = not c.field.disabled %}
-            <td class="{{ "min-w-48" if column.wrap else "whitespace-nowrap" }}{{ " text-right" if column.numeric }}"{% if field_editable %} data-editable data-formwork-field{% if column.indent %} data-indent{% endif %}{% if row.form.is_bound and c.name in row.form.changed_data %} data-formwork-changed{% if c.initial_checked %} data-formwork-initial="{{ c.initial_checked }}"{% endif %}{% endif %}{% if c.errors %} data-invalid{% endif %}{% endif %}>
-              {% if field_editable %}
-              {{ c.as_widget(attrs={"aria-label": c.label|string}) }}{{ m.cell_notes(c) }}
-              {% elif column.linked and row.link %}
-              {% set pick = cl.pick(obj) %}
-              <a {% if cl.is_popup %}href="{{ row.link }}"{% else %}{{ m.page_link(row.link, "change") }}{% endif %} class="link link-primary font-medium"{% if pick %} data-popup-pick="{{ pick|tojson_attr }}"{% endif %}>{{ m.cell(c.value()) }}</a>
-              {% else %}
-              {{ m.cell(c.value()) }}
-              {% endif %}
-            </td>
-            {% endfor %}
-            {% if editable and row.hidden %}
-            <td class="hidden">{{ row.hidden }}</td>
-            {% endif %}
-            {% if collapsible %}<td data-col-toggle></td>{% endif %}
-          </tr>
-          {% else %}
           <tr data-empty>
             <td colspan="{{ columns }}">
               <div class="flex flex-col items-center gap-3 py-16 text-center">
@@ -207,8 +169,8 @@
               </div>
             </td>
           </tr>
-          {% endfor %}
         </tbody>
+        {% endfor %}
       </table>
     </div>
     {% if editable %}</form>{% endif %}
