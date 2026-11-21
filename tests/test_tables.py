@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -18,6 +19,8 @@ from django.utils.datastructures import MultiValueDict
 from e2e.models import City, Region, UniqueCode
 
 from django_formwork import (
+    DateRange,
+    DateRangeField,
     DisplayField,
     FormworkBaseModelFormSet,
     FormworkCellMixin,
@@ -491,19 +494,22 @@ def _rows(*, cell_url=""):
     return BeautifulSoup(formset.as_rows(cell_url=cell_url), "html.parser")
 
 
-def _toggles(soup):
-    toggles = soup.select("details:has([name$=-tags]) > summary")
-    for tag in [*toggles, *(child for toggle in toggles for child in toggle.find_all())]:
-        tag.attrs = {name: value for name, value in tag.attrs.items() if not name.startswith((":", "x-"))}
-    return [str(toggle) for toggle in toggles]
+def _closed(soup, selector):
+    elements = soup.select(selector)
+    for tag in [*elements, *(child for element in elements for child in element.find_all())]:
+        tag.attrs = {
+            name: value for name, value in tag.attrs.items() if not name.startswith((":", "x-", "@", "aria-controls"))
+        }
+    return [str(element) for element in elements]
 
 
 def test_the_select_multiple_stubs_of_as_rows_show_the_closed_toggles_of_the_full_selects(tagged):
     stubs = _rows(cell_url="/cells/")
 
     assert len(stubs.select("[data-formwork-stub]:has([name$=-tags])")) == 3
-    assert len(set(_toggles(stubs))) == 3
-    assert _toggles(stubs) == _toggles(_rows())
+    toggles = "details:has([name$=-tags]) > summary"
+    assert len(set(_closed(stubs, toggles))) == 3
+    assert _closed(stubs, toggles) == _closed(_rows(), toggles)
 
 
 def test_the_select_multiple_stubs_of_as_rows_post_the_values_of_their_rows(tagged):
@@ -540,3 +546,64 @@ def test_a_select_multiple_cell_answers_with_the_full_select_for_the_values_its_
     checked = soup.select("[x-data=formworkSelectMultiple] input[type=checkbox][checked]")
     assert [box["value"] for box in checked] == [str(sale.pk), str(used.pk)]
     assert eco.name in soup.select_one(".formwork-autowidth").get_text()
+
+
+class PeriodRowForm(FormworkModelForm):
+    period = DateRangeField(required=False)
+
+    class Meta:
+        model = Item
+        fields = ["name"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        released = self.instance.released
+        self.initial["period"] = DateRange(released, released and released + dt.timedelta(days=6))
+
+
+PeriodFormSet = formwork_modelformset_factory(Item, form=PeriodRowForm, extra=0)
+
+
+class PeriodCell(FormworkCellMixin):
+    formset_class = PeriodFormSet
+    queryset = Item.objects.all()
+
+
+@pytest.fixture
+def released():
+    kitchen = Category.objects.create(name="Kitchen", slug="kitchen")
+    return [
+        Item.objects.create(name=name, category=kitchen, released=day)
+        for name, day in [("Kettle", None), ("Lamp", dt.date(2026, 3, 4))]
+    ]
+
+
+def _periods(*, cell_url=""):
+    return BeautifulSoup(PeriodFormSet(queryset=Item.objects.order_by("pk")).as_rows(cell_url=cell_url), "html.parser")
+
+
+def test_the_date_range_stubs_of_as_rows_show_the_closed_fields_of_the_full_pickers(released):
+    stubs = _periods(cell_url="/cells/")
+
+    assert len(stubs.select("[data-formwork-stub] [role=group]")) == 2
+    assert _closed(stubs, ".date-range-picker [role=group]") == _closed(_periods(), ".date-range-picker [role=group]")
+
+
+def test_the_date_range_stubs_of_as_rows_post_the_ranges_of_their_rows(released):
+    stubs = _periods(cell_url="/cells/").select("input[name]")
+
+    formset = PeriodFormSet(
+        {stub["name"]: stub.get("value", "") for stub in stubs}, queryset=Item.objects.order_by("pk")
+    )
+
+    assert formset.is_valid()
+    assert not formset.has_changed()
+
+
+def test_a_date_range_cell_answers_with_the_full_picker_for_the_range_its_stub_holds(released):
+    query = {"form-1-period_0": "2026-05-01", "form-1-period_1": "2026-05-09"}
+
+    soup = _cell(PeriodCell, field="period", pk=released[1].pk, prefix="form-1", **query)
+
+    picker = soup.select_one("[x-data=formworkDateRangePicker]")
+    assert (picker["data-start"], picker["data-end"]) == ("2026-05-01", "2026-05-09")

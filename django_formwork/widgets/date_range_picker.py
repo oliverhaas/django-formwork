@@ -14,7 +14,7 @@ from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.formats import get_format
 from django.utils.translation import gettext, ngettext
 
-from ._base import _FormworkTemplatesMixin, _ModuleScript, _plural_forms
+from ._base import _ModuleScript, _plural_forms, _StubMixin
 from ._calendar import calendar_context, format_date
 
 if TYPE_CHECKING:
@@ -49,7 +49,7 @@ def _sizing_texts(date_format: str, *placeholders: str) -> list[str]:
     return list(dict.fromkeys(re.sub(r"\d", "0", text) for text in texts))
 
 
-class DateRangePicker(_FormworkTemplatesMixin, forms.MultiWidget):
+class DateRangePicker(_StubMixin, forms.MultiWidget):
     """A start and an end date, typed or picked in a two-month calendar, and posted as ISO.
 
     ``format`` is how the inputs show each date: a Django format setting name or a format string.
@@ -58,6 +58,7 @@ class DateRangePicker(_FormworkTemplatesMixin, forms.MultiWidget):
     """
 
     template_name = "formwork/widgets/date_range_picker.html"
+    stub_template_name = "formwork/widgets/date_range_picker_stub.html"
     # MultiWidget counts a widget of hidden inputs as hidden, and a form then
     # renders it without its label, help text and errors.
     is_hidden = False
@@ -111,13 +112,28 @@ class DateRangePicker(_FormworkTemplatesMixin, forms.MultiWidget):
         return False
 
     def get_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
+        context = self.get_stub_context(name, value, attrs)
+        widget = context["widget"]
+        input_formats = dict.fromkeys(str(fmt) for setting in self.input_format_settings for fmt in get_format(setting))
+        widget["calendar"] = calendar_context(months=2, value=self.format, input_formats=list(input_formats))
+        widget["count_text"] = _plural_forms(_days_text)
+        presets = self.default_presets if self.presets is True else self.presets
+        widget["presets"] = (
+            [
+                {"label": label, "start": start.isoformat(), "end": end.isoformat()}
+                for label, start, end in presets(_today())
+            ]
+            if callable(presets)
+            else []
+        )
+        return context
+
+    def get_stub_context(self, name: str, value: object, attrs: dict[str, Any] | None) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
         widget["with_time"] = self.with_time
-        input_formats = dict.fromkeys(str(fmt) for setting in self.input_format_settings for fmt in get_format(setting))
-        calendar = calendar_context(months=2, value=self.format, input_formats=list(input_formats))
-        widget["calendar"] = calendar
-        value_format = calendar["formats"]["value"]
+        # As calendar_context resolves it.
+        value_format = str(get_format(self.format))
         for part, subwidget in zip(("start", "end"), widget["subwidgets"][:2], strict=True):
             text = subwidget["value"] or ""
             parsed = self._parse(text)
@@ -133,16 +149,6 @@ class DateRangePicker(_FormworkTemplatesMixin, forms.MultiWidget):
         # The field shows the choice's label while neither input names a day.
         widget["choice_label"] = "" if widget["start"] or widget["end"] else labels.get(widget["choice"], "")
         widget["sizing_texts"] = _sizing_texts(value_format, start_placeholder, end_placeholder, *labels.values())
-        widget["count_text"] = _plural_forms(_days_text)
-        presets = self.default_presets if self.presets is True else self.presets
-        widget["presets"] = (
-            [
-                {"label": label, "start": start.isoformat(), "end": end.isoformat()}
-                for label, start, end in presets(_today())
-            ]
-            if callable(presets)
-            else []
-        )
         attrs = widget["attrs"]
         widget["disabled"] = bool(attrs.get("disabled"))
         # boundfield.py names the label and the control; the group takes the label.

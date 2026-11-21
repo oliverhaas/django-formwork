@@ -1284,12 +1284,12 @@ class EventAdmin(admin.ModelAdmin):
 ### Widgets that load on use
 
 The saved rows of [editable columns](#editable-columns) render each `Select`,
-`SelectMultiple`, `DatePicker` and `DateTimePicker` as a stub: the closed widget with
-its value, and inputs that post the value as the full widget does. When the pointer
-rests on the stub, or the stub takes the focus or a press, the full widget loads and
-takes its place with the focus, a typed date and the press. After a failed save, a field
-with an error renders the full widget next to its error, and the other fields stay
-stubs.
+`SelectMultiple`, `DatePicker`, `DateTimePicker`, `DateRangePicker` and
+`DateTimeRangePicker` as a stub: the closed widget with its value, and inputs that post
+the value as the full widget does. When the pointer rests on the stub, or the stub takes
+the focus or a press, the full widget loads and takes its place with the focus, the
+typed dates and the press. After a failed save, a field with an error renders the full
+widget next to its error, and the other fields stay stubs.
 
 The stubs load from `cells/<field>/` under the admin's URLs, named
 `<app_label>_<model_name>_cell`. The query names the row's `pk` and its form `prefix`,

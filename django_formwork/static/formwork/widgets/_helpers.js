@@ -241,17 +241,19 @@ if (typeof document !== "undefined") {
     const widget = template.content.firstElementChild;
     if (!widget || !stub.isConnected) return;
     const active = stub.contains(document.activeElement) ? document.activeElement : null;
-    const typed = stub.querySelector('input:not([type="hidden"])');
+    const typed = stub.querySelectorAll('input:not([type="hidden"])');
     // Started at once: the focus and the press below need its listeners, and
     // Alpine's own observer would only see it after them.
     widget._formworkStarted = true;
     Alpine.mutateDom(() => stub.replaceWith(widget));
     Alpine.initTree(widget);
     window.htmx?.process?.(widget);
-    const input = typed && twin(widget, typed);
-    if (input && typed.value !== typed.defaultValue) {
-      input.value = typed.value;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+    for (const part of typed) {
+      const input = twin(widget, part);
+      if (input && part.value !== part.defaultValue) {
+        input.value = part.value;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
     }
     if (active) twin(widget, active)?.focus();
     if (stub._formworkPress) twin(widget, stub._formworkPress)?.click();
@@ -310,7 +312,7 @@ if (typeof document !== "undefined") {
       if (!stub) return;
       // The stub's <details> must not open empty. The full widget gets the press.
       event.preventDefault();
-      stub._formworkPress = event.target.closest("summary, input, button");
+      stub._formworkPress = event.target.closest('summary, input, button, [role="group"]');
       load(stub);
     },
     true,
