@@ -1282,6 +1282,10 @@ class EventAdmin(admin.ModelAdmin):
 | `True` | share the choices of the first row |
 | `False` | load their choices one by one |
 
+When the rows of a column share choices that fit on one page, the page renders their
+option rows once, and the list of a row copies them when it first opens. A longer list
+loads its rows from the search, page by page.
+
 ### Widgets that load on use
 
 The saved rows of [editable columns](#editable-columns) render each `Select`,

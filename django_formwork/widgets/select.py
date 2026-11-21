@@ -215,7 +215,7 @@ def column_options(formset: BaseFormSet[Any]) -> SafeString:
     lists = []
     for bound in rows[0].visible_fields() if rows else ():
         select = widget_of(bound.field, SearchableSelectMixin)
-        if select is None or select.search_key is not None or bound.field.disabled:
+        if select is None or bound.field.disabled:
             continue
         # A relation's rows share their choices where share_choices() said so, other choices where no hook changes them.
         if isinstance(bound.field, forms.ModelChoiceField):
@@ -228,10 +228,13 @@ def column_options(formset: BaseFormSet[Any]) -> SafeString:
         ]
         if all(getattr(row_select, "stub_url", None) is not None for row_select in selects):
             continue
+        options = select.option_list(bound.html_name, bound.build_widget_attrs({}), bound.form.renderer)
+        # A list longer than one page loads its rows from the server search.
+        if select.truncated:
+            continue
         template_id = f"{formset.prefix}-{bound.name}-options"
         for row_select in selects:
             row_select.options_template_id = template_id
-        options = select.option_list(bound.html_name, bound.build_widget_attrs({}), formset.renderer)
         lists.append(format_html('<template id="{}">{}</template>', template_id, options))
     return mark_safe("".join(lists))  # noqa: S308
 

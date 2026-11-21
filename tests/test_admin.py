@@ -2874,7 +2874,7 @@ def test_a_failed_list_save_renders_stubs_for_the_fields_without_errors(admin_cl
 
 
 @pytest.mark.parametrize("stubs", [True, False])
-def test_a_list_select_shows_its_rows_choice_and_renders_the_options_only_without_stubs(
+def test_a_list_select_shows_its_rows_choice_and_its_column_lists_the_options_once_without_stubs(
     admin_client, stub_list, monkeypatch, stubs
 ):
     monkeypatch.setattr(site.get_model_admin(Item), "list_editable_stubs", stubs)
@@ -2882,9 +2882,23 @@ def test_a_list_select_shows_its_rows_choice_and_renders_the_options_only_withou
     soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
 
     cell = _cell(soup, stub_list.alpha, "category")
+    column = [template.get_text(" ") for template in soup.find_all("template", id="form-category-options")]
     assert cell.select_one("[name$=-category]")["value"] == str(stub_list.kitchen.pk)
     assert "Kitchen" in cell.summary.get_text()
-    assert (cell.select("[role=option]") == []) is stubs
+    assert cell.select("[role=option]") == []
+    assert [("Kitchen" in text, "Office" in text) for text in column] == ([] if stubs else [(True, True)])
+
+
+def test_a_list_select_longer_than_one_page_loads_its_rows_from_the_search(admin_client, stub_list, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable_stubs", False)
+    Category.objects.bulk_create(Category(name=f"Shelf {n}", slug=f"shelf-{n}") for n in range(SEARCH_PAGE_SIZE))
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    cell = _cell(soup, stub_list.alpha, "category")
+    assert cell.select_one("[data-has-search-url]")["data-has-search-url"] == "true"
+    assert cell.select("[data-options]") == []
+    assert soup.find_all("template", id="form-category-options") == []
 
 
 class _OwnCategoryForm(FormworkModelForm):

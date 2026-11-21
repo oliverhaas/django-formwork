@@ -315,8 +315,8 @@
   opens. 100 rows with three such columns render in 122 ms instead of 205 ms and send
   2.0 MB of HTML instead of 5.3 MB. A column of a relation qualifies when its rows share
   their choices, as in the entry above. A column of fixed choices qualifies unless the
-  form or formset has a hook that can change them. Searched lists, stubs and the row of
-  Add another keep their own options.
+  form or formset has a hook that can change them. A list longer than one page, which
+  loads from the server search, a stub and the row of Add another keep their own options.
 - The hidden copy of the option labels that sizes a `Select`, `SelectMultiple` or
   `ComboBox` is one line of text per label, where it was one element per label. The
   widths stay the same, and the example Event list has 12% fewer elements for the

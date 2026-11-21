@@ -907,8 +907,6 @@ class TableRenderMixin:
     def get_table_context(self, *, save_url: str = "", flush: bool = False, cell_url: str = "") -> dict[str, Any]:
         """The table template's context: the headers, a row context per form, and the row that Add another copies.
 
-        ``option_lists`` holds the option rows of each select column once, which the rows' selects copy.
-
         With ``save_url``, each row saves by itself and the table has no Add another, Remove or Delete.
         With ``cell_url``, the selects, combo boxes and date pickers of saved rows render as stubs that load from it.
         """
