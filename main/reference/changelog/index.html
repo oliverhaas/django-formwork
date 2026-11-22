@@ -1315,6 +1315,16 @@
   <code>select_multiple.html</code>. Copy them again from the package: the table templates render
   <code>{{ option_lists }}</code> and <code>{{ cl.option_lists }}</code>, and the select templates leave out
   their option rows when <code>widget.options_template_id</code> is set.</li>
+<li>A button gave no sign that its request was on the way unless it had the <code>btn-loading</code>
+  class. Now every <code>.btn</code> that sends a request shows a spinner until the response is in,
+  and <code>btn-loading</code> is gone: remove it from your templates. The spinner takes the place
+  of the button's icon; a button without one keeps its size and shows the spinner over
+  its label. This covers htmx requests and form submits, htmx or native, and a menu item
+  in a <code>.dropdown</code> spins the dropdown's trigger. The button carries <code>aria-busy="true"</code>
+  meanwhile. A native submit that answers with a download leaves the page in place, so
+  the spinner would never stop: give that button <code>btn-loading-none</code>, which keeps any
+  button still. <code>btn-loading-dots</code>, <code>-ring</code>, <code>-ball</code>, <code>-bars</code> and <code>-infinity</code> still
+  pick the animation.</li>
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1574,6 +1584,8 @@
   browser to lay out. A badge select keeps one element per label. Overrides of
   <code>formwork/widgets/select.html</code>, <code>select_multiple.html</code> and <code>combo_box.html</code> keep
   working.</li>
+<li>The admin list's save button says Save, as on the change form, where a wide list said
+  Save changes.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
