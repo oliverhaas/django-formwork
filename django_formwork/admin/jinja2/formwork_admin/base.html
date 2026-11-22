@@ -23,6 +23,9 @@
       } catch (e) {}
     })();
   </script>
+  {#- The admin's typeface. The body's text waits for its Latin file, so the file loads with the page. #}
+  <link rel="preload" href="{{ static("formwork_admin/fonts/ibm-plex-sans-var-roman-latin1.woff2") }}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ static("formwork_admin/fonts/ibm-plex-sans.css") }}">
   {% for href in stylesheets %}
   <link rel="stylesheet" href="{{ href if "//" in href else static(href) }}">
   {% endfor %}

@@ -19,6 +19,13 @@
 
 @source "../../";
 
+/* The admin's typeface, IBM Plex Sans (fonts/ibm-plex-sans.css). Its figures share one width,
+   so the numbers in a column line up. On the body, so a site's own body font does not reach
+   the admin. Set --formwork-admin-font on .formwork-admin to use another face. */
+.formwork-admin body {
+  font-family: var(--formwork-admin-font, "IBM Plex Sans", var(--font-sans));
+}
+
 /* Links in HTML the admin does not render itself (format_html() cells,
    read-only values, fieldset descriptions) are underlined like its own. */
 #content a:not([class]) {

@@ -91,3 +91,6 @@ https://oliverhaas.github.io/django-formwork/
 ## License
 
 BSD 3-Clause. See [LICENSE](LICENSE).
+
+The admin ships IBM Plex Sans, © IBM Corp., under the SIL Open Font License 1.1. See
+[its license](django_formwork/admin/static/formwork_admin/fonts/LICENSE.txt).

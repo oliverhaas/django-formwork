@@ -124,6 +124,17 @@ the old build lacks. `admin.css` marks the build with its version, and the syste
 The navigation and the actions use Lucide icons, so run `manage.py formwork install`
 once, as for the widgets.
 
+The admin sets its text in IBM Plex Sans, which ships with django-formwork under the SIL
+Open Font License, so no page loads a font from another server. Its figures share one
+width, so the numbers in a column line up. To use another face, set
+`--formwork-admin-font` in your CSS:
+
+```css
+.formwork-admin {
+  --formwork-admin-font: "Your Font", sans-serif;
+}
+```
+
 ### 5. Scripts
 
 The site loads htmx 4, its Alpine bridge, its preload extension and Alpine.js from a
