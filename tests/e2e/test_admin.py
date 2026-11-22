@@ -853,9 +853,13 @@ def test_a_long_list_scrolls_with_the_page_and_its_toolbar_and_header_stick_unde
 
     expect(admin_page.locator("#changelist-table tbody tr", has_text="Kettle 0")).not_to_be_in_viewport()
     assert admin_page.evaluate("window.scrollY") > 0
-    toolbar = admin_page.locator("#changelist-toolbar").bounding_box()
+    strip = admin_page.locator("#changelist-toolbar")
+    toolbar = strip.bounding_box()
     assert toolbar["y"] == bar["y"] + bar["height"]
+    assert strip.locator("> div").bounding_box()["y"] > toolbar["y"]
     assert header.bounding_box()["y"] == toolbar["y"] + toolbar["height"]
+    covers = "el => getComputedStyle(el).backgroundColor === getComputedStyle(document.body).backgroundColor"
+    assert strip.evaluate(covers)
     assert admin_page.errors == []
 
 

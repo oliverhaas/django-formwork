@@ -24,8 +24,12 @@
         the top bar with them (columns.js), so both stay in reach on a long list. Every control keeps its
         place: one with nothing to work on is dim and has no fill, and the two after the actions are invisible
         until rows are selected. The labels follow the bar's own width, which the sidebar narrows: a narrower
-        bar drops the labels of Clear and the change count first, then shows icons and bare numbers. #}
-    <div id="changelist-toolbar" class="@container sticky top-[var(--formwork-admin-top,0px)] z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 rounded-t-[calc(var(--radius-box)-1px)] border-b border-base-300 bg-base-100 px-3 py-1.5 max-sm:gap-x-2">
+        bar drops the labels of Clear and the change count first, then shows icons and bare numbers.
+        The bar draws the card's top edge, so it keeps its rounded corners while it sticks, a little below the
+        top bar. The strip around it reaches into that room and over the card's sides and shadow, and takes the page color
+        while the bar sticks (columns.js sets data-stuck), so the rows pass under it out of sight. #}
+    <div id="changelist-toolbar" class="pointer-events-none sticky top-[var(--formwork-admin-top,0px)] z-10 -mx-1 -mt-[calc(var(--spacing)*3+1px)] px-[3px] pt-3 data-stuck:pointer-events-auto data-stuck:bg-base-200">
+    <div class="@container pointer-events-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 rounded-t-box border border-base-300 bg-base-100 px-3 py-1.5 inset-shadow-2xs inset-shadow-white/5 max-sm:gap-x-2">
       {% if actions %}
       <form id="changelist-actions" method="post" class="flex items-center gap-x-3 @max-2xl:gap-x-1">
         {{ csrf_input }}
@@ -80,6 +84,7 @@
         </span>
       </div>
       {% endif %}
+    </div>
     </div>
     {% endif %}
     {% if editable %}

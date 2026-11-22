@@ -196,8 +196,14 @@
     const head = table.tHead?.getBoundingClientRect().top ?? 0;
     state.below = head - table.getBoundingClientRect().top > 0.5;
     // The list's toolbar sticks first, and the header under it. A table that scrolls sideways in its
-    // box keeps its header at the top of that box.
-    const bar = document.getElementById("changelist-toolbar")?.offsetHeight ?? 0;
+    // box keeps its header at the top of that box. The toolbar's height takes in the room it keeps
+    // under the top bar, and it is stuck while its bar has left the card's top edge.
+    const toolbar = document.getElementById("changelist-toolbar");
+    const bar = toolbar?.offsetHeight ?? 0;
+    if (toolbar?.firstElementChild) {
+      const edge = toolbar.parentElement.getBoundingClientRect().top;
+      toolbar.toggleAttribute("data-stuck", toolbar.firstElementChild.getBoundingClientRect().top - edge > 0.5);
+    }
     const top = state.hidden.length && open() ? "0px" : `calc(var(--formwork-admin-top, 0px) + ${bar}px)`;
     const rules = [`${HEAD} > ${CELL} { position: sticky; top: ${top}; z-index: 2; background-color: inherit }`];
     // Each cell draws its part of the shadow, edge to edge, so the shadow has no gaps.

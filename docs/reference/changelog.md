@@ -336,6 +336,9 @@
   working.
 - The admin list's save button says Save, as on the change form, where a wide list said
   Save changes.
+- The admin list's toolbar lost its rounded corners while it stuck under the top bar, and
+  sat flush against it. It now keeps its corners and a small gap under the top bar, and
+  the rows pass out of sight in that gap.
 
 ### Fixed
 
