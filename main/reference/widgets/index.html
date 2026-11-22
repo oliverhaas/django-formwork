@@ -2804,7 +2804,9 @@ size on the server as well.</p>
 <p>A value the user cannot change, in the box of a filled field. It posts nothing.
 <a href="../forms/#displayfield"><code>DisplayField</code></a> uses it and reads the value from the form's
 instance. On another field, set <code>disabled=True</code>. Each item is a string or a
-<code>ChoiceLabel</code>; with <code>badges=True</code>, each item is a badge in its <code>color</code>.</p>
+<code>ChoiceLabel</code>; with <code>badges=True</code>, each item is a badge in its <code>color</code>. With
+<code>max_lines</code>, from 1 to 10, the items run as text cut to that many lines, with a
+<code>[more]</code> toggle for the rest.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">event_kind</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
 </span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>    <span class="k">return</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">get_kind_display</span><span class="p">(),</span> <span class="n">color</span><span class="o">=</span><span class="n">Event</span><span class="o">.</span><span class="n">KIND_COLORS</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">kind</span><span class="p">])]</span>
 </span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>

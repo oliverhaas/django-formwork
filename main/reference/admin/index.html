@@ -1881,6 +1881,9 @@ With <code>fields</code> or <code>fieldsets</code>, name it there as any other f
 </span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="n">form</span> <span class="o">=</span> <span class="n">EventAdminForm</span>
 </span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    <span class="n">fieldsets</span> <span class="o">=</span> <span class="p">[(</span><span class="kc">None</span><span class="p">,</span> <span class="p">{</span><span class="s2">"fields"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"title"</span><span class="p">,</span> <span class="s2">"seats"</span><span class="p">,</span> <span class="p">(</span><span class="s2">"starts_at"</span><span class="p">,</span> <span class="s2">"ends_at"</span><span class="p">)]})]</span>
 </span></code></pre></div>
+<p><code>@admin.display(max_lines=3)</code> cuts a long value to three lines, with a <code>[more]</code> toggle
+for the rest, in its list column and as a read-only field. The column wraps its text up
+to those lines. The history list cuts its Changes column this way.</p>
 <p>After a failed save, each field error shows under its field, as in Django's admin. A
 <code>form</code> whose <code>Meta.error_display</code> is set keeps that display.</p>
 <p>On the change page, a field whose value differs from the saved object gets the accent

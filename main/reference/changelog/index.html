@@ -1328,6 +1328,12 @@
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
+<li><code>max_lines</code> on <code>DisplayField</code>, the <code>Display</code> widget and <code>@admin.display</code> cuts a long
+  value to that many lines, from 1 to 10, with a <code>[more]</code> toggle for the rest, as help
+  texts have. It applies in the field's box, in a cell of <code>formset.as_rows()</code>, in an
+  admin list column and in a read-only field of the change form. The toggle shows only
+  when the value overflows. The admin's history list cuts its Changes column to three
+  lines.</li>
 <li><code>MultipleFileField</code> for several uploads in one field. A plain <code>FileField</code> with a
   <code>multiple</code> <code>FileDropzoneInput</code> failed validation with "No file was submitted" as soon
   as a file was picked. <code>MultipleFileField</code> uses that drop area by default and cleans to
