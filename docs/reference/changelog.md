@@ -342,6 +342,9 @@
 
 ### Fixed
 
+- An admin list without a toolbar, such as the history list, drew its header row's color
+  in square corners over the card's rounded ones. The rows' box now clips to its rounded
+  corners.
 - An input inside a DaisyUI `<label class="input">` wrapper, such as a search field with
   an icon, drew a second border and padding inside the wrapper. Formwork's input styles
   now skip inputs inside the wrapper, and the wrapper takes the error border when its

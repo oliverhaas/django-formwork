@@ -169,7 +169,9 @@
     if (state.hidden.length) corners.push("[data-col-toggle]");
     rules.push(`${HEAD} > ${CELL}:is(${corners.join(", ")}) { z-index: 3 }`);
     // A table wider than its box scrolls sideways in it; any other box clips, so its header can stick to the page.
-    if (!(state.hidden.length && open())) rules.push("#changelist-scroll { overflow-x: clip }");
+    // It clips both ways, as only then does it clip to its rounded corners. The menus and error tips in the
+    // cells open in the top layer, so the clip doesn't cut them.
+    if (!(state.hidden.length && open())) rules.push("#changelist-scroll { overflow: clip }");
     const text = rules.join("\n");
     if (text !== state.rules) {
       sheet.replaceSync(text);

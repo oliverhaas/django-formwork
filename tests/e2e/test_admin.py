@@ -1,5 +1,6 @@
 """E2e tests for the admin's changelist filters, selection, columns and imports, and its inline rows."""
 
+import io
 import re
 
 import django_filters
@@ -12,6 +13,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import ForeignKey
 from django.utils import timezone
 from django.utils.html import format_html
+from PIL import Image
 from playwright.sync_api import expect
 
 from django_formwork.admin import VERTICAL, ActionLocation, TabularInline, action, site, slot
@@ -860,6 +862,25 @@ def test_a_long_list_scrolls_with_the_page_and_its_toolbar_and_header_stick_unde
     assert header.bounding_box()["y"] == toolbar["y"] + toolbar["height"]
     covers = "el => getComputedStyle(el).backgroundColor === getComputedStyle(document.body).backgroundColor"
     assert strip.evaluate(covers)
+    assert admin_page.errors == []
+
+
+def test_a_list_without_a_toolbar_keeps_its_header_color_inside_the_rounded_corners(
+    admin_page, live_server, kitchen, monkeypatch
+):
+    monkeypatch.setattr(ItemAdmin, "actions", None)
+    monkeypatch.setattr(ItemAdmin, "list_editable", [])
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    expect(admin_page.locator("#changelist-toolbar")).not_to_be_attached()
+    box = admin_page.locator("#changelist-scroll").bounding_box()
+    header = admin_page.locator("#changelist-table thead tr").bounding_box()
+
+    def pixel(x, y):
+        png = admin_page.screenshot(clip={"x": x, "y": y, "width": 1, "height": 1})
+        return Image.open(io.BytesIO(png)).convert("RGB").getpixel((0, 0))
+
+    assert pixel(box["x"], box["y"]) != pixel(box["x"] + 2, box["y"] + header["height"] / 2)
     assert admin_page.errors == []
 
 
