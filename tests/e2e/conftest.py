@@ -238,7 +238,6 @@ _MORPH_PAGE = engines["django"].from_string(
     )
 )
 _CHANNEL_TOLERANCE = 8
-_STRAY_PIXELS = 6
 _CSS_IMAGES_LOADED = r"""() => [...document.querySelectorAll("*")]
     .filter((el) => el.checkVisibility())
     .flatMap((el) => {
@@ -273,9 +272,9 @@ class _ScreenPage:
         )
 
     def assert_same_screens(self, first, second, *names):
-        """Allows a few stray pixels: under parallel load, two loads of one page can differ on a glyph edge."""
+        """Saves both screens to the test's output directory if they differ."""
         a, b = (np.asarray(Image.open(io.BytesIO(png)).convert("RGB"), dtype=np.int16) for png in (first, second))
-        if a.shape == b.shape and (np.abs(a - b) > _CHANNEL_TOLERANCE).any(axis=2).sum() <= _STRAY_PIXELS:
+        if a.shape == b.shape and not (np.abs(a - b) > _CHANNEL_TOLERANCE).any():
             return
         self.output.mkdir(parents=True, exist_ok=True)
         for name, png in zip(names, (first, second), strict=True):
