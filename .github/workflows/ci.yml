@@ -66,6 +66,8 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: settings.base
           PYTHONPATH: tests
+          # iconx asks the GitHub API for the latest icon release, which limits calls without a token.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run python -m django formwork install
 
       - name: Build CSS bundle for e2e
