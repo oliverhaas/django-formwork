@@ -6,6 +6,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from django_formwork.admin.options import ActionLocation, ModelAdmin
+from django_formwork.widgets.display import check_max_lines
 
 if TYPE_CHECKING:
     from django import forms
@@ -45,10 +46,12 @@ def display[F: Callable[..., Any]](
     description: str | StrPromise | None = None,
     empty_value: str | None = None,
     annotate: Mapping[str, BaseExpression | Combinable] | None = None,
+    max_lines: int | None = None,
 ) -> Any:
     """``django.contrib.admin.display``, with the same attributes.
 
     ``annotate`` names expressions that the admin computes for the rows it shows, as ``QuerySet.annotate()`` does.
+    ``max_lines`` cuts the value to that many lines, with a [more] toggle for the rest, in the list and the form.
     """
 
     def decorator(func: F) -> F:
@@ -65,6 +68,9 @@ def display[F: Callable[..., Any]](
             func.empty_value_display = empty_value  # type: ignore[attr-defined]
         if annotate is not None:
             func.admin_annotations = dict(annotate)  # type: ignore[attr-defined]
+        if max_lines is not None:
+            check_max_lines(max_lines)
+            func.max_lines = max_lines  # type: ignore[attr-defined]
         return func
 
     return decorator if function is None else decorator(function)

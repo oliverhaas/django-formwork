@@ -415,6 +415,16 @@ never changes the value: `FormworkForm` and `FormworkModelForm` leave the field 
 `DisplayField` with the name of a model field keeps that field out of `save()`. A plain
 Django form puts `None` in `cleaned_data` for it, so use a formwork form.
 
+`max_lines` cuts a long value to that many lines, from 1 to 10, in its box and in a
+table cell. A `[more]` toggle under the last line shows the rest. The toggle shows only
+when the value has more lines, and keeps its room either way, so the column keeps its
+width:
+
+```python
+class EventForm(FormworkModelForm):
+    notes = DisplayField(max_lines=3)
+```
+
 ## FormworkModel
 
 `FormworkModel` is an abstract model base that mixes in

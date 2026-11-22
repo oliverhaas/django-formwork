@@ -210,6 +210,8 @@ class HistoryAdmin(ModelAdmin):
             column.short_description = label  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
             if order:
                 column.admin_order_field = order  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
+        # An entry can change many fields; its row shows the first few.
+        changes.max_lines = 3  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         return {column.__name__: column for column in labels}
 
     @cached_property

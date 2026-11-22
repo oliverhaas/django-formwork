@@ -29,12 +29,14 @@ from django_formwork.admin.cells import (
     cell_for_field,
     cell_for_value,
     display_annotations,
+    display_attr,
     html,
     list_cell,
     list_html,
 )
 from django_formwork.admin.paginator import page_links
 from django_formwork.fields import DisplayField, _DisplayBoundField
+from django_formwork.widgets.display import clamp
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -198,7 +200,10 @@ def _label_and_help(name: Any, model_admin: Any, model: type[models.Model]) -> t
 
 def readonly_field(name: Any, obj: models.Model | None, model_admin: Any, model: type[models.Model]) -> ReadonlyField:
     label, help_text = _label_and_help(name, model_admin, model)
-    return ReadonlyField(field_name(name), label, readonly_contents(name, obj, model_admin), help_text)
+    contents = clamp(
+        readonly_contents(name, obj, model_admin), getattr(display_attr(name, model_admin), "max_lines", None)
+    )
+    return ReadonlyField(field_name(name), label, contents, help_text)
 
 
 def display_field(name: Any, model_admin: Any, model: type[models.Model], *, saved_only: bool = False) -> DisplayField:
@@ -211,7 +216,8 @@ def display_field(name: Any, model_admin: Any, model: type[models.Model], *, sav
     def contents(obj: models.Model) -> SafeString:
         return readonly_contents(name, None if saved_only and obj.pk is None else obj, model_admin)
 
-    return DisplayField(label=label, help_text=help_text, source=contents)
+    max_lines = getattr(display_attr(name, model_admin), "max_lines", None)
+    return DisplayField(label=label, help_text=help_text, source=contents, max_lines=max_lines)
 
 
 class _ListBoundField(_DisplayBoundField):
@@ -219,13 +225,18 @@ class _ListBoundField(_DisplayBoundField):
 
     @property
     def display_value(self) -> SafeString:
-        return list_html(self.value())
+        return clamp(list_html(self.value()), cast("DisplayField", self.field).max_lines)
 
 
 def list_display_field(entry: Any, model_admin: Any, model: type[models.Model]) -> DisplayField:
     """A ``list_display`` entry as a form field, its value the cell the list shows."""
     label, help_text = _label_and_help(entry, model_admin, model)
-    field = DisplayField(label=label, help_text=help_text, source=lambda obj: list_cell(entry, obj, model_admin))
+    field = DisplayField(
+        label=label,
+        help_text=help_text,
+        source=lambda obj: list_cell(entry, obj, model_admin),
+        max_lines=getattr(display_attr(entry, model_admin), "max_lines", None),
+    )
     field.bound_field_class = _ListBoundField
     return field
 
@@ -239,6 +250,7 @@ def _contents(value: Any, empty: str) -> SafeString:
 def _shown(bound_field: BoundField, model_admin: Any) -> ReadonlyField:
     """A ``DisplayField`` as the change form shows a read-only value."""
     contents = _contents(bound_field.value(), model_admin.get_empty_value_display())
+    contents = clamp(contents, cast("DisplayField", bound_field.field).max_lines)
     return ReadonlyField(bound_field.name, str(bound_field.label), contents, str(bound_field.help_text))
 
 
@@ -247,7 +259,8 @@ class _AdminDisplayBoundField(_DisplayBoundField):
 
     @property
     def display_value(self) -> SafeString:
-        return _contents(self.value(), self.field.empty_value_display)  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
+        contents = _contents(self.value(), self.field.empty_value_display)  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
+        return clamp(contents, cast("DisplayField", self.field).max_lines)
 
 
 def show_display_fields(form_class: type[ModelForm[Any]], model_admin: Any) -> None:

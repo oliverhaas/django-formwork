@@ -1,3 +1,9 @@
-<div role="group" class="flex w-full min-h-10 flex-wrap items-center {% if widget.badges %}gap-1.5{% else %}gap-x-3 gap-y-1.5{% endif %} rounded-field bg-base-200 px-3 py-2 text-sm font-medium text-base-content"{% if widget.attrs.id %} id="{{ widget.attrs.id }}"{% endif %}{% if widget.aria_labelledby %} aria-labelledby="{{ widget.aria_labelledby }}"{% endif %}{% if widget.aria_describedby %} aria-describedby="{{ widget.aria_describedby }}"{% endif %}>{% for item in widget["items"] %}
+<div role="group" class="{% if widget.max_lines %}w-full min-h-10{% else %}flex w-full min-h-10 flex-wrap items-center {% if widget.badges %}gap-1.5{% else %}gap-x-3 gap-y-1.5{% endif %}{% endif %} rounded-field bg-base-200 px-3 py-2 text-sm font-medium text-base-content"{% if widget.attrs.id %} id="{{ widget.attrs.id }}"{% endif %}{% if widget.aria_labelledby %} aria-labelledby="{{ widget.aria_labelledby }}"{% endif %}{% if widget.aria_describedby %} aria-describedby="{{ widget.aria_describedby }}"{% endif %}>
+{%- if widget.max_lines %}
+  {#- The lines are cut between words, so the items run as text, not as boxes. #}
+  {%- set items %}{% for item in widget["items"] %}<span class="{% if widget.badges %}badge badge-soft badge-{{ item.color }} me-1.5{% else %}me-3{% endif %}">{% if item.icon %}<span class="me-1.5 inline-flex align-middle">{{ item.icon }}</span>{% endif %}{% if item.label_html %}{{ item.label_html }}{% else %}{{ item.label }}{% endif %}</span>{% else %}—{% endfor %}{% endset %}
+  {{ items|clamp(widget.max_lines) }}
+{%- else %}{% for item in widget["items"] %}
   <span class="inline-flex items-center gap-1.5{% if widget.badges %} badge badge-soft badge-{{ item.color }}{% endif %}">{% if item.icon %}<span class="flex shrink-0">{{ item.icon }}</span>{% endif %}{% if item.label_html %}{{ item.label_html }}{% else %}{{ item.label }}{% endif %}</span>{% else %}—{% endfor %}
+{%- endif %}
 </div>

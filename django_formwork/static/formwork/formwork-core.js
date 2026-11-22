@@ -292,12 +292,38 @@ const measureDisclosures = (target) => {
   }
 };
 
+// --- Clamped values ---
+// clamp() in widgets/display.py cuts a value to line-clamp-N lines.  Whether
+// the lines overflow moves with the box's width and the fonts, as a
+// disclosure's text does, so the same observers re-measure it.  An overflowing
+// body shows the [more] toggle; an open one shows every line and stays
+// expandable.
+
+const CLAMP = ".formwork-clamp";
+
+const measureClamps = (target) => {
+  const root = target instanceof Element ? target : document;
+  const list = [...root.querySelectorAll(CLAMP)];
+  if (target instanceof Element && target.matches(CLAMP)) list.push(target);
+  for (const clamp of list) {
+    const body = clamp.querySelector(":scope > .formwork-clamp-body");
+    const toggle = clamp.querySelector(":scope > details");
+    if (!body || !toggle || toggle.open) continue;
+    clamp.toggleAttribute("data-expandable", body.scrollHeight > body.clientHeight);
+  }
+};
+
+const measure = (target) => {
+  measureDisclosures(target);
+  measureClamps(target);
+};
+
 // The first callback for a newly observed row runs after layout and before
 // the first paint, so a new row is painted with its measured state.
 const disclosureSizes = new ResizeObserver((entries) => {
   for (const { target } of entries) {
     if (target.isConnected) {
-      measureDisclosures(target);
+      measure(target);
     } else {
       disclosureSizes.unobserve(target);
       delete target._formworkObserved;
@@ -308,16 +334,17 @@ const disclosureTexts = new MutationObserver((records) => {
   const changed = new Set();
   for (const record of records) {
     const node = record.target instanceof Element ? record.target : record.target.parentElement;
-    const d = node && node.closest("details.formwork-disclosure");
+    const d = node && node.closest(`details.formwork-disclosure, ${CLAMP}`);
     if (d) changed.add(d);
   }
-  for (const d of changed) measureDisclosures(d);
+  for (const d of changed) measure(d);
 });
 
 const observeDisclosures = (target) => {
   const root = target instanceof Element ? target : document;
-  const list = [...root.querySelectorAll("details.formwork-disclosure")];
-  if (target instanceof Element && target.matches("details.formwork-disclosure")) list.push(target);
+  const selector = `details.formwork-disclosure, ${CLAMP}`;
+  const list = [...root.querySelectorAll(selector)];
+  if (target instanceof Element && target.matches(selector)) list.push(target);
   for (const d of list) {
     if (d._formworkObserved) continue;
     d._formworkObserved = true;
@@ -328,7 +355,7 @@ const observeDisclosures = (target) => {
 
 // Defer to the next frame so layout is settled before measuring.
 const scheduleMeasureDisclosures = (target) =>
-  requestAnimationFrame(() => measureDisclosures(target));
+  requestAnimationFrame(() => measure(target));
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
@@ -341,7 +368,7 @@ if (document.readyState === "loading") {
 }
 // Web fonts change glyph widths without resizing any box, so no observer fires.
 if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(() => measureDisclosures(document));
+  document.fonts.ready.then(() => measure(document));
 }
 // htmx fires after:settle on the swap target.  The rows already observed
 // re-measure themselves, so only the swapped subtree needs a pass.

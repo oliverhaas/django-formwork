@@ -78,6 +78,12 @@
 
 ### Added
 
+- `max_lines` on `DisplayField`, the `Display` widget and `@admin.display` cuts a long
+  value to that many lines, from 1 to 10, with a `[more]` toggle for the rest, as help
+  texts have. It applies in the field's box, in a cell of `formset.as_rows()`, in an
+  admin list column and in a read-only field of the change form. The toggle shows only
+  when the value overflows. The admin's history list cuts its Changes column to three
+  lines.
 - `MultipleFileField` for several uploads in one field. A plain `FileField` with a
   `multiple` `FileDropzoneInput` failed validation with "No file was submitted" as soon
   as a file was picked. `MultipleFileField` uses that drop area by default and cleans to

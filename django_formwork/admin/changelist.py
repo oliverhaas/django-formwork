@@ -613,7 +613,8 @@ class ChangeList:
                 # A boxed widget sets its value in from the cell's edge, and the header lines up with the value.
                 "indent": editable
                 and getattr(bound_field.field.widget, "input_type", None) not in {"checkbox", "radio"},
-                "wrap": key in wrapping,
+                # A column cut to a few lines wraps up to them.
+                "wrap": key in wrapping or getattr(bound_field.field, "max_lines", None) is not None,
             }
             index = positions[key] + self.column_offset
             if self.order_field(entry) is not None:

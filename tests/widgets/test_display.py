@@ -146,3 +146,30 @@ def test_display_field_named_after_a_model_field_leaves_that_field_alone_on_save
 
     item.refresh_from_db()
     assert (item.name, item.status) == ("Pot", Item.Status.ACTIVE)
+
+
+@pytest.mark.unit
+def test_display_with_max_lines_runs_its_items_in_a_body_cut_to_that_many_lines():
+    soup = render_widget(Display(max_lines=2), name="owner", value=["Ada", "Bob"])
+    body = soup.select_one("div[role=group] > .formwork-clamp > .formwork-clamp-body")
+    assert "line-clamp-2" in body["class"]
+    assert [span.get_text() for span in body.select(":scope > span")] == ["Ada", "Bob"]
+    assert soup.select_one(".formwork-clamp > details > summary") is not None
+
+
+@pytest.mark.unit
+def test_display_field_with_max_lines_cuts_its_value_in_the_box_and_in_a_table():
+    form = type("NoteForm", (FormworkForm,), {"author": DisplayField(max_lines=3)})(initial={"author": "Ada"})
+    box = BeautifulSoup(form["author"].as_field_group(), "html.parser")
+    cell = BeautifulSoup(form["author"].display_value, "html.parser")
+    assert "line-clamp-3" in box.select_one(".formwork-clamp-body")["class"]
+    assert "line-clamp-3" in cell.select_one(".formwork-clamp-body")["class"]
+    assert cell.get_text() == "Ada"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("max_lines", [0, 11])
+@pytest.mark.parametrize("make", [Display, DisplayField], ids=["widget", "field"])
+def test_max_lines_outside_the_clamped_counts_raises(make, max_lines):
+    with pytest.raises(ValueError, match="max_lines"):
+        make(max_lines=max_lines)

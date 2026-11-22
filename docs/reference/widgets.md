@@ -808,7 +808,9 @@ stored one.
 A value the user cannot change, in the box of a filled field. It posts nothing.
 [`DisplayField`](forms.md#displayfield) uses it and reads the value from the form's
 instance. On another field, set `disabled=True`. Each item is a string or a
-`ChoiceLabel`; with `badges=True`, each item is a badge in its `color`.
+`ChoiceLabel`; with `badges=True`, each item is a badge in its `color`. With
+`max_lines`, from 1 to 10, the items run as text cut to that many lines, with a
+`[more]` toggle for the rest.
 
 ```python
 def event_kind(event):

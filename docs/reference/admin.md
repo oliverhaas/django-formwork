@@ -290,6 +290,10 @@ class EventAdmin(admin.ModelAdmin):
     fieldsets = [(None, {"fields": ["title", "seats", ("starts_at", "ends_at")]})]
 ```
 
+`@admin.display(max_lines=3)` cuts a long value to three lines, with a `[more]` toggle
+for the rest, in its list column and as a read-only field. The column wraps its text up
+to those lines. The history list cuts its Changes column this way.
+
 After a failed save, each field error shows under its field, as in Django's admin. A
 `form` whose `Meta.error_display` is set keeps that display.
 

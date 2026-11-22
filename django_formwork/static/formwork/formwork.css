@@ -45,6 +45,9 @@
 /* Display(badges=True) renders badge-{{ item.color }}. */
 @source inline("badge-{neutral,primary,secondary,accent,info,success,warning,error}");
 
+/* clamp() renders line-clamp-{max_lines}, 1 to 10 (MAX_LINES in widgets/display.py). */
+@source inline("line-clamp-{1..10}");
+
 /* Focus ring in primary, like the floating label above a focused field.
    DaisyUI draws it in base-content.  Formwork's widget rules @apply it
    next to input/select/textarea, so it carries their specificity and the
@@ -269,6 +272,14 @@ details.formwork-disclosure:not([data-expandable]) > summary {
 fieldset.fieldset > details.formwork-disclosure {
     grid-column: 1 / -1;
     min-width: 0;
+}
+
+/* An open clamped value shows every line.  Unlayered to beat the body's
+   line-clamp-N utility. */
+.formwork-clamp:has(> details[open]) > .formwork-clamp-body {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
 }
 
 /* Error tooltip wrapper: when DaisyUI's tooltip wraps the label + widget,
@@ -1306,6 +1317,45 @@ details.formwork-disclosure[data-expandable][open] > summary::after {
    text line (matches mt-0.75 = 3px used by the other icon rows). */
 details.formwork-disclosure[open] > summary > .formwork-disclosure-row > .icon {
     margin-top: 0.1875rem;
+}
+
+
+/* ================================================================
+   Clamped value
+
+   clamp() in widgets/display.py cuts a value to a few lines: the body
+   carries line-clamp-N, and a native <details> after it is the
+   [more]/[less] toggle, by the last line.  measureClamps() in
+   formwork-core.js sets data-expandable when the lines overflow; the
+   toggle is invisible until then but keeps its room, so the value
+   keeps its width.
+   ================================================================ */
+.formwork-clamp {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: last baseline;
+    column-gap: 0.5rem;
+}
+
+.formwork-clamp:not([data-expandable]) > details {
+    visibility: hidden;
+}
+
+.formwork-clamp > details > summary {
+    @apply cursor-pointer text-xs font-normal whitespace-nowrap text-base-content/60 transition-colors select-none hover:text-base-content;
+    list-style: none;
+}
+
+.formwork-clamp > details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.formwork-clamp > details > summary::after {
+    content: attr(data-more);
+}
+
+.formwork-clamp > details[open] > summary::after {
+    content: attr(data-less);
 }
 
 

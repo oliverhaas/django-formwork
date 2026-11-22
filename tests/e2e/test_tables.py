@@ -10,6 +10,7 @@ from playwright.sync_api import expect
 from django_formwork import (
     DateRange,
     DateRangeField,
+    DisplayField,
     FormworkCellMixin,
     FormworkModelForm,
     formwork_modelformset_factory,
@@ -178,4 +179,31 @@ def test_a_select_multiple_of_a_full_row_posts_the_tags_picked_from_the_options_
 
     tagged = {item.name: sorted(tag.name for tag in item.tags.all()) for item in Item.objects.all()}
     assert tagged == {"Kettle": [], "Lamp": ["eco", "new", "used"], "Toaster": ["eco", "new", "sale", "used"]}
+    assert rows_page.errors == []
+
+
+class BlurbForm(FormworkModelForm):
+    blurb = DisplayField(max_lines=2, source=lambda item: " ".join([item.name] * (120 if item.name == "Lamp" else 1)))
+
+    class Meta:
+        model = Item
+        fields = ["name"]
+
+
+def blurbs():
+    return formwork_modelformset_factory(Item, form=BlurbForm, extra=0)(queryset=Item.objects.order_by("pk"))
+
+
+def test_a_value_cut_to_a_few_lines_opens_whole_on_more_and_a_short_one_offers_no_toggle(rows_page, items):
+    rows_page.open(blurbs)
+    lamp = _row(rows_page, "Lamp").locator(".formwork-clamp")
+    toggle = lamp.locator("summary")
+    cut = lamp.locator(".formwork-clamp-body").bounding_box()["height"]
+
+    expect(_row(rows_page, "Kettle").locator(".formwork-clamp summary")).to_be_hidden()
+    expect(toggle).to_be_visible()
+    toggle.click()
+
+    expect(lamp.locator("details")).to_have_attribute("open", "")
+    assert lamp.locator(".formwork-clamp-body").bounding_box()["height"] > 2 * cut
     assert rows_page.errors == []

@@ -842,6 +842,32 @@ def test_inline_form_holds_each_read_only_value_as_a_display_field(admin_request
     assert isinstance(formset.form.base_fields["part_number"], DisplayField)
 
 
+@admin.display(description="Blurb", max_lines=2)
+def blurb(obj):
+    return f"{obj.name} " * 40
+
+
+def test_a_value_with_max_lines_is_cut_in_the_list_and_on_the_change_form(admin_client, catalog, monkeypatch):
+    model_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(model_admin, "list_display", ["name", blurb])
+    monkeypatch.setattr(model_admin, "fieldsets", None)
+    monkeypatch.setattr(model_admin, "readonly_fields", ["created", blurb])
+
+    listed = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+    changed = BeautifulSoup(admin_client.get(url(Item, "change", catalog.alpha.pk)).content, "html.parser")
+
+    cells = listed.select("#changelist-table tbody td .formwork-clamp-body")
+    assert len(cells) == Item.objects.count()
+    assert all("line-clamp-2" in cell["class"] for cell in cells)
+    legend = changed.find("span", class_="fieldset-legend", string="Blurb")
+    assert "line-clamp-2" in legend.find_next_sibling("div").select_one(".formwork-clamp-body")["class"]
+
+
+def test_display_rejects_max_lines_outside_the_clamped_counts():
+    with pytest.raises(ValueError, match="max_lines"):
+        admin.display(max_lines=11)(lambda obj: obj)
+
+
 class PartNoteForm(FormworkModelForm):
     note = DisplayField(source=lambda part: f"Note on {part.name}")
 
