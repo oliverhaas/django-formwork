@@ -303,6 +303,25 @@ tr:not(:hover, :focus-within) > :is([data-editable], [data-tabular] tbody:not([d
   }
 }
 
+/* The top bar is clear while the page sits at the top, so the page's background runs under it.
+   Over the first 3rem of scrolling it fades into the frosted bar with its line, as its classes draw
+   it. A browser without scroll-driven animations shows the frosted bar all the time. */
+@keyframes formwork-admin-top-bar {
+  from {
+    border-bottom-color: #0000;
+    background-color: #0000;
+    backdrop-filter: blur(0);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  [data-top-bar] {
+    animation: formwork-admin-top-bar linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 3rem;
+  }
+}
+
 /* A page link crossfades the page into the next one (admin.js). The sidebar and the top bar look
    the same on both sides, so only the content fades. */
 ::view-transition-old(root),
