@@ -348,6 +348,9 @@
 
 ### Fixed
 
+- The rows of `formset.as_rows()` had no line between them, because a table with
+  separate borders paints no border of a `<tbody>`. The first cells of each row now
+  draw it. If you override `formwork/tables/row.html`, copy its `row_attrs` again.
 - An admin list without a toolbar, such as the history list, drew its header row's color
   in square corners over the card's rounded ones. The rows' box now clips to its rounded
   corners.

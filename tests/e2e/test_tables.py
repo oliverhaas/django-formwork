@@ -207,3 +207,13 @@ def test_a_value_cut_to_a_few_lines_opens_whole_on_more_and_a_short_one_offers_n
     expect(lamp.locator("details")).to_have_attribute("open", "")
     assert lamp.locator(".formwork-clamp-body").bounding_box()["height"] > 2 * cut
     assert rows_page.errors == []
+
+
+def test_a_line_separates_the_rows_of_a_table(rows_page, items):
+    rows_page.open(blurbs)
+
+    lines = rows_page.page.locator("tbody > tr:first-child > td:first-child").evaluate_all(
+        "cells => cells.map(cell => getComputedStyle(cell).borderTopWidth)"
+    )
+
+    assert lines == ["0px", "1px", "1px"]
