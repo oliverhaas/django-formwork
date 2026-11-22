@@ -82,7 +82,7 @@ MASK_JS = """([id, pseudo]) => {
 def held(icon_modifiers_page):
     """Requests to the busy buttons' URL, held until the test continues them."""
     routes = []
-    icon_modifiers_page.route(BUSY_REQUEST, lambda route: routes.append(route))
+    icon_modifiers_page.route(BUSY_REQUEST, lambda route: routes.append(route))  # noqa: PLW0108 (Playwright reads the handler's signature, which a builtin lacks)
     return routes
 
 
