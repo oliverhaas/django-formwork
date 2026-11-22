@@ -1295,9 +1295,7 @@ _HEAD = """\
   });
 </script>
 <meta charset="utf-8">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/e2e/inter/inter.css">
 <link rel="stylesheet" href="/static/formwork/formwork-dist.css">
 <script src="https://unpkg.com/htmx.org@4.0.1/dist/htmx.min.js"></script>
 <script src="https://unpkg.com/htmx.org@4.0.1/dist/ext/hx-alpine-compat.min.js"></script>

@@ -260,7 +260,6 @@ class _ScreenPage:
         page.on("pageerror", lambda error: self.errors.append(str(error)))
         page.on("console", self._on_console)
         page.on("response", self._on_response)
-        page.route("https://fonts.googleapis.com/**", lambda route: route.fulfill(content_type="text/css", body=""))
 
     def screenshot(self):
         """With the mouse off every control, after each visible icon, a CSS mask image, has loaded."""
