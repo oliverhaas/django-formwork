@@ -1,5 +1,5 @@
 {% set format_icons = {"csv": "file-text", "xlsx": "file-spreadsheet", "json": "file-braces"} %}
-<div id="exports" class="card border border-base-300 bg-base-100"{% if polling %} hx-get="{{ request.path }}" hx-trigger="every 2s" hx-target="this" hx-swap="outerMorph"{% endif %}>
+<div id="exports" class="card border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5"{% if polling %} hx-get="{{ request.path }}" hx-trigger="every 2s" hx-target="this" hx-swap="outerMorph"{% endif %}>
   {% if rows %}
   <ol class="divide-y divide-base-200">
     {% for row in rows %}

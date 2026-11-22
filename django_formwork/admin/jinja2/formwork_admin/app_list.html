@@ -1,6 +1,6 @@
 {% import "formwork_admin/macros.html" as m %}
 {% for app in app_list %}
-<section class="card h-fit border border-base-300 bg-base-100" aria-labelledby="app-{{ app.app_label }}">
+<section class="card h-fit border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5" aria-labelledby="app-{{ app.app_label }}">
   <div class="flex items-center justify-between gap-3 border-b border-base-300 px-5 py-3">
     <h2 id="app-{{ app.app_label }}" class="truncate font-semibold">
       <a {{ m.page_link(app.app_url, "app") }} class="hover:text-primary">{{ app.name }}</a>

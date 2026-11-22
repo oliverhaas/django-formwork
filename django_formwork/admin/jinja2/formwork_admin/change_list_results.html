@@ -18,7 +18,7 @@
       the rows' box round the top corners instead. #}
   {% set saving = editable and cl.result_list %}
   {% set toolbar = (actions or saving) and cl.result_list %}
-  <div class="card border border-base-300 bg-base-100">
+  <div class="card border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5">
     {% if toolbar %}
     {#- The selected rows' actions and the unsaved changes, on a line above the column names. It sticks under
         the top bar with them (columns.js), so both stay in reach on a long list. Every control keeps its

@@ -36,7 +36,7 @@
 
 {% macro cards(apps) %}
 {% for rows in apps %}
-<div class="card h-fit border border-base-300 bg-base-100">
+<div class="card h-fit border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5">
   <div class="flex items-center justify-between gap-3 border-b border-base-300 px-5 py-3.5">
     <span class="skeleton h-4 w-40"></span>
     <span class="skeleton h-5 w-6 rounded-full"></span>
@@ -60,7 +60,7 @@
       <span class="skeleton h-10 min-w-0 flex-1 rounded-field"></span>
       <span class="skeleton h-10 w-22 rounded-field sm:w-32"></span>
     </div>
-    <div class="overflow-hidden rounded-box border border-base-300 bg-base-100">
+    <div class="overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5">
       {% call row(["w-12", "w-16", "w-12", "w-14", "w-10"]) %}h-9 border-b border-base-300 bg-[color-mix(in_srgb,var(--color-base-200)_50%,var(--color-base-100))]{% endcall %}
       {#- The rows fit the window as the list's do (columns.js): its height less the boxes above them and
           the page's bottom padding. A phone shows them at their height. #}
@@ -81,14 +81,14 @@
     <div class="{{ "grid grid-cols-1 gap-6 @min-[68rem]:grid-cols-[minmax(0,1fr)_21rem] @min-[68rem]:items-start" if history }}">
       <div class="min-w-0">
         <div class="grid grid-cols-1 gap-6">
-          <div class="card border border-base-300 bg-base-100">
+          <div class="card border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5">
             <div class="px-6 pt-2 pb-5">
               {{ field() }}
               {{ field() }}
               <div class="grid gap-x-4 sm:grid-cols-2">{{ field() }}{{ field() }}</div>
             </div>
           </div>
-          <div class="card border border-base-300 bg-base-100">
+          <div class="card border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5">
             <div class="border-b border-base-300 px-6 py-4"><span class="skeleton my-1 block h-4 w-24"></span></div>
             <div class="px-6 pt-2 pb-5">
               <div class="grid gap-x-4 sm:grid-cols-2">{{ field() }}{{ field() }}</div>
@@ -102,7 +102,7 @@
         </div>
       </div>
       {% if history %}
-      <div class="card border border-base-300 bg-base-100">
+      <div class="card border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5">
         <div class="flex items-center gap-2 border-b border-base-300 px-4 py-3.5">
           <span class="skeleton size-4 rounded-full"></span>
           <span class="skeleton h-4 w-16"></span>
@@ -124,7 +124,7 @@
     {{ header(subtitle=true) }}
     <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem]">
       <div class="grid content-start gap-6">{{ cards([["w-24", "w-16"], ["w-28", "w-20", "w-16"]]) }}</div>
-      <div class="card h-fit border border-base-300 bg-base-100">
+      <div class="card h-fit border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5">
         <div class="flex items-center gap-2 border-b border-base-300 px-5 py-3.5">
           <span class="skeleton size-4 rounded-full"></span>
           <span class="skeleton h-4 w-28"></span>
@@ -152,7 +152,7 @@
 <template id="formwork-admin-skeleton-page">
   <div aria-hidden="true">
     {{ header() }}
-    <div class="card border border-base-300 bg-base-100 p-6">
+    <div class="card border border-base-300 bg-base-100 p-6 shadow-sm inset-shadow-2xs inset-shadow-white/5">
       <span class="skeleton block h-4 w-40"></span>
       {% for width in ["w-full", "w-11/12", "w-4/5", "w-full", "w-2/3"] %}
       <span class="skeleton mt-4 block h-3.5 {{ width }}"></span>

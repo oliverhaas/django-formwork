@@ -1,5 +1,5 @@
 {% comment %}The figures over an event's fields (EventAdmin.change_top).{% endcomment %}
-<dl class="card grid grid-cols-2 border border-base-300 bg-base-100 md:grid-cols-4">
+<dl class="card grid grid-cols-2 border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5 md:grid-cols-4">
   <div class="border-e border-b border-base-300 p-4 sm:p-5 md:border-b-0">
     <dt class="truncate text-sm text-base-content/60">Seats taken</dt>
     <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{{ taken }}{% if capacity %}<span class="text-lg font-medium text-base-content/50"> / {{ capacity }}</span>{% endif %}</dd>

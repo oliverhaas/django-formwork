@@ -21,7 +21,7 @@
   {{ csrf_input }}
 
   <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-    <div class="card border border-base-300 bg-base-100">
+    <div class="card border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5">
       <div class="card-body gap-4 p-6">
         {% if form.non_field_errors() %}
         <div role="alert" class="alert alert-error alert-soft items-start">{{ icon("circle-exclamation-point", "size-5") }}<span>{{ form.non_field_errors()|join(" ") }}</span></div>
@@ -39,7 +39,7 @@
     </div>
 
     {#- The morph keeps a details' open state, so the id changes with the first check to close the guide. #}
-    <details id="import-columns-{{ "checked" if result is not none else "open" }}" class="card border border-base-300 bg-base-100 [&[open]_[data-chevron]]:rotate-180"{% if result is none %} open{% endif %}>
+    <details id="import-columns-{{ "checked" if result is not none else "open" }}" class="card border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5 [&[open]_[data-chevron]]:rotate-180"{% if result is none %} open{% endif %}>
       <summary class="flex cursor-pointer list-none items-center gap-3 px-6 py-4 [&::-webkit-details-marker]:hidden">
         <span class="min-w-0 flex-1">
           <span class="block font-semibold">{{ _("Columns") }}</span>
@@ -102,7 +102,7 @@
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {% for status, label, icon_name, color in tiles %}
       {% set count = result.counts[status] %}
-      <button type="button" class="card cursor-pointer border border-base-300 bg-base-100 px-4 py-3 text-left transition-colors hover:border-base-content/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-50 disabled:hover:border-base-300"
+      <button type="button" class="card cursor-pointer border border-base-300 bg-base-100 px-4 py-3 text-left shadow-sm inset-shadow-2xs inset-shadow-white/5 transition-colors hover:border-base-content/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-50 disabled:hover:border-base-300"
               :class="show === '{{ status }}' && 'border-primary! ring-1 ring-primary'"
               aria-pressed="false" :aria-pressed="(show === '{{ status }}').toString()"
               @click="show = show === '{{ status }}' ? '' : '{{ status }}'"{% if not count %} disabled{% endif %}>
@@ -123,7 +123,7 @@
     </div>
     {% endif %}
 
-    <div class="card mt-4 overflow-hidden border border-base-300 bg-base-100">
+    <div class="card mt-4 overflow-hidden border border-base-300 bg-base-100 shadow-sm inset-shadow-2xs inset-shadow-white/5">
       <div class="max-h-[70vh] overflow-auto">
         <table class="table table-sm table-pin-rows">
           <thead class="text-xs">

@@ -78,8 +78,8 @@
       </div>
 
       {% block submit_buttons_bottom %}
-      {#- While the form has changes, the bar stays at the bottom of the window. #}
-      <div class="bottom-3 z-10 mt-6 rounded-box border border-base-300 bg-base-100 px-4 py-3" :class="{ 'sticky shadow-lg': dirty }" data-save-bar>
+      {#- While the form has changes, the bar stays at the bottom of the window, with a deeper shadow. #}
+      <div class="bottom-3 z-10 mt-6 rounded-box border border-base-300 bg-base-100 px-4 py-3 inset-shadow-2xs inset-shadow-white/5" :class="dirty ? 'sticky shadow-lg' : 'shadow-sm'" data-save-bar>
         {% include "formwork_admin/submit_line.html" %}
       </div>
       {% endblock %}
