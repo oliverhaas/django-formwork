@@ -311,13 +311,19 @@
 {# The card carries the page's weight, so the card sits in the middle of the window and the
    logo hangs above it. On a short window the top row keeps the logo's height and the card
    moves down. #}
+{# Behind the card, a glow in the primary color and a dot grid that fades out toward the
+   edges. Both are fixed to the window, and the frosted card blurs what lies under it. A dark
+   theme needs a stronger glow to show, hence light-dark(). Gradient sizes use vw and vh, as
+   Chromium drops a gradient whose size mixes a percentage into min(). #}
 {% macro auth_card(site_header) %}
-<main class="grid min-h-screen grid-rows-[1fr_auto_1fr] justify-items-center px-4 py-12">
+<div aria-hidden="true" class="pointer-events-none fixed inset-0 bg-radial-[min(80vw,44rem)_min(60vh,30rem)_at_50%_45%] from-[light-dark(color-mix(in_oklab,var(--color-primary)_12%,transparent),color-mix(in_oklab,var(--color-primary)_22%,transparent))] to-transparent to-70%"></div>
+<div aria-hidden="true" class="pointer-events-none fixed inset-0 bg-[radial-gradient(currentColor_1px,transparent_1.5px)] bg-size-[20px_20px] bg-center text-base-content/20 mask-radial-[min(80vw,44rem)_min(60vh,30rem)] mask-radial-at-[50%_45%] mask-radial-from-20% mask-radial-to-100%"></div>
+<main class="relative grid min-h-screen grid-rows-[1fr_auto_1fr] justify-items-center px-4 py-12">
   <div class="mb-6 flex flex-col items-center gap-3 self-end text-center">
-    <span class="grid size-12 place-items-center rounded-box bg-primary text-primary-content shadow-sm">{{ icon("layout-dashboard", "size-6") }}</span>
+    <span class="grid size-12 place-items-center rounded-box bg-primary bg-linear-to-b from-white/20 to-transparent text-primary-content shadow-md inset-shadow-2xs shadow-primary/30 inset-shadow-white/25">{{ icon("layout-dashboard", "size-6") }}</span>
     <p class="text-lg font-semibold tracking-tight">{{ site_header }}</p>
   </div>
-  <div class="card w-full max-w-sm border border-base-300 bg-base-100 shadow-sm">
+  <div class="card w-full max-w-sm border border-base-300 bg-base-100/80 shadow-xl inset-shadow-2xs shadow-black/5 inset-shadow-white/5 backdrop-blur-md">
     <div class="card-body gap-5 p-6 sm:p-8">{{ caller() }}</div>
   </div>
 </main>
