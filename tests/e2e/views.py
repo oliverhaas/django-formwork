@@ -1297,10 +1297,10 @@ _HEAD = """\
 <meta charset="utf-8">
 <link rel="stylesheet" href="/static/e2e/inter/inter.css">
 <link rel="stylesheet" href="/static/formwork/formwork-dist.css">
-<script src="https://unpkg.com/htmx.org@4.0.1/dist/htmx.min.js"></script>
-<script src="https://unpkg.com/htmx.org@4.0.1/dist/ext/hx-alpine-compat.min.js"></script>
+<script src="/static/e2e/htmx/4.0.1/htmx.min.js"></script>
+<script src="/static/e2e/htmx/4.0.1/ext/hx-alpine-compat.min.js"></script>
 <script type="module" src="/static/formwork/formwork.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>"""
+<script defer src="/static/e2e/alpinejs/3.17.5/cdn.min.js"></script>"""
 
 _THEMES = [
     "light", "dark", "cupcake", "bumblebee", "emerald", "corporate",
