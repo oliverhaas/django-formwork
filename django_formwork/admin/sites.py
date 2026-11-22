@@ -154,9 +154,9 @@ class AdminSite:
     stylesheets: Sequence[str] = ("formwork/formwork-dist.css",)
     #: Scripts loaded before formwork's own: htmx, its Alpine bridge and its preload extension.
     scripts: Sequence[str] = (
-        "https://unpkg.com/htmx.org@4.0.1/dist/htmx.min.js",
-        "https://unpkg.com/htmx.org@4.0.1/dist/ext/hx-alpine-compat.min.js",
-        "https://unpkg.com/htmx.org@4.0.1/dist/ext/hx-preload.min.js",
+        "https://unpkg.com/htmx.org@4.0.2/dist/htmx.min.js",
+        "https://unpkg.com/htmx.org@4.0.2/dist/ext/hx-alpine-compat.min.js",
+        "https://unpkg.com/htmx.org@4.0.2/dist/ext/hx-preload.min.js",
     )
     alpine_script = "https://cdn.jsdelivr.net/npm/alpinejs@3.17.5/dist/cdn.min.js"
     #: Static path or URL of the icon in the browser tab; ``None`` links none.
