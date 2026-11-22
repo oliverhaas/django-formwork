@@ -14,7 +14,7 @@ from django.utils.translation import gettext_lazy as _
 
 from django_formwork.boundfield import FormworkBoundField
 from django_formwork.widgets.date_range_picker import DateRangePicker, DateTimeRangePicker
-from django_formwork.widgets.display import Display
+from django_formwork.widgets.display import Display, check_max_lines, clamp
 from django_formwork.widgets.file_dropzone import FileDropzoneInput
 
 if TYPE_CHECKING:
@@ -166,11 +166,11 @@ class _DisplayBoundField(FormworkBoundField):
 
     @property
     def display_value(self) -> Any:  # noqa: ANN401
-        """The value, a list comma-separated."""
+        """The value, a list comma-separated, cut to the field's ``max_lines``."""
         value = self.value()
         if isinstance(value, list | tuple):
-            return format_html_join(", ", "{}", ((item,) for item in value))
-        return "" if value is None else value
+            value = format_html_join(", ", "{}", ((item,) for item in value))
+        return clamp("" if value is None else value, cast("DisplayField", self.field).max_lines)
 
 
 class DisplayField(forms.Field):
@@ -178,14 +178,21 @@ class DisplayField(forms.Field):
 
     ``source`` names the attribute, or is a function of the instance, and defaults to the field's name.
     A form without an instance shows its ``initial`` value. Formwork's forms leave the field out of ``cleaned_data``.
+    ``max_lines`` cuts a long value to that many lines, with a [more] toggle for the rest.
     """
 
     widget = Display
     bound_field_class = _DisplayBoundField
 
-    def __init__(self, *, source: str | Callable[[Any], Any] | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self, *, source: str | Callable[[Any], Any] | None = None, max_lines: int | None = None, **kwargs: Any
+    ) -> None:
         super().__init__(required=False, disabled=True, **kwargs)
+        check_max_lines(max_lines)
         self.source = source
+        self.max_lines = max_lines
+        if max_lines is not None and isinstance(self.widget, Display):
+            self.widget.max_lines = max_lines
 
     def value_for(self, form: forms.BaseForm, name: str) -> Any:  # noqa: ANN401
         """The value the field shows on ``form``: from its instance, else from its initial data."""
