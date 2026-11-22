@@ -347,6 +347,7 @@ Options this admin adds:
 | `list_per_page_options` | The page sizes the list offers next to its pages. Default `(25, 50, 100, 250)`. `list_per_page` is always one of them. |
 | `list_top`, `list_bottom` | Methods that return HTML for the list page, above the search row and under the list. See [Slots](#slots). |
 | `change_top`, `change_bottom` | Methods that return HTML for the change page, above the fields and under the save bar. See [Slots](#slots). |
+| `row_details` | A method that returns HTML for an object, which opens under its row of the list. See [Row details](#row-details). |
 
 `list_only_fields` is opt-in. A `__str__` that reads a field it leaves out costs one more
 query for the page.
@@ -672,6 +673,30 @@ leave the slot out for some rows or objects.
 
 The page shows what the method returns as HTML, so escape the values in it, with a
 template or `format_html()`.
+
+### Row details
+
+`row_details` gives each row of the list HTML that opens under it, such as the latest
+replies to a ticket. The method gets the request and the row's object. A click on the
+row's chevron, or anywhere on the row outside its links and inputs, opens it.
+
+```python
+@admin.register(Ticket)
+class TicketAdmin(admin.ModelAdmin):
+    @admin.slot(lazy=True)
+    def row_details(self, request, obj):
+        replies = obj.replies.order_by("-created_at")[:3]
+        return render_to_string("tickets/row_details.html", {"ticket": obj, "replies": replies}, request)
+```
+
+Without `@admin.slot`, the method runs for every row while the list renders, and a row
+whose method returns an empty string has no chevron. With `lazy=True`, every row has a
+chevron, and the HTML loads from `details/` under the object's URL when the row opens,
+with the skeleton until then. That URL needs the view permission for the object. A save
+of the list loads the open details again. The list in a dialog that picks a related row
+shows no details.
+
+As with the slots, the page shows the HTML as it is, so escape the values in it.
 
 ### Actions
 

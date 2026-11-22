@@ -561,6 +561,9 @@ class ModelAdmin(BaseModelAdmin):
     change_top: Callable[..., str] | None = None
     #: The same for the end of the change page, under the save bar.
     change_bottom: Callable[..., str] | None = None
+    #: A method ``(request, obj)`` whose HTML opens under the object's row of the list, on a click on the row.
+    #: A row whose method returns nothing has no details. ``@slot`` makes it load as the row opens.
+    row_details: Callable[..., str] | None = None
 
     actions: Sequence[Any] | None = ()
     actions_on_top = True
@@ -612,6 +615,7 @@ class ModelAdmin(BaseModelAdmin):
                 wrap(self.change_cell_view),
                 name="{}_{}_change_cell".format(*info),
             ),
+            path("<path:object_id>/details/", wrap(self.row_details_view), name="{}_{}_row_details".format(*info)),
             path("<path:object_id>/", wrap(self.redirect_to_change), name="{}_{}_redirect".format(*info)),
         ]
 
@@ -1079,14 +1083,21 @@ class ModelAdmin(BaseModelAdmin):
             if method is None:
                 continue
             if slot in closed or getattr(method, "slot_lazy", False):
-                skeleton = getattr(method, "slot_skeleton", None)
-                if skeleton is not None:
-                    context = {"model_admin": self, "opts": self.opts}
-                    skeleton = mark_safe(render_to_string(skeleton, context, request))  # noqa: S308
-                slots[slot] = {"skeleton": skeleton, "url": url(slot), "closed": slot in closed}
+                slots[slot] = {
+                    "skeleton": self.slot_skeleton(request, method),
+                    "url": url(slot),
+                    "closed": slot in closed,
+                }
             elif html := method(request, subject):
                 slots[slot] = {"html": mark_safe(html)}  # noqa: S308
         return slots
+
+    def slot_skeleton(self, request: HttpRequest, method: Callable[..., str]) -> str | None:
+        """The HTML of the skeleton that ``@slot`` gives ``method``, else ``None``."""
+        skeleton = getattr(method, "slot_skeleton", None)
+        if skeleton is None:
+            return None
+        return mark_safe(render_to_string(skeleton, {"model_admin": self, "opts": self.opts}, request))  # noqa: S308
 
     def get_slots(self, request: HttpRequest, cl: ChangeList) -> dict[str, dict[str, Any]]:
         """The list's filled slots by name. A slot that returns nothing has no entry."""
@@ -1146,6 +1157,17 @@ class ModelAdmin(BaseModelAdmin):
         if not self.has_view_or_change_permission(request, obj):
             raise PermissionDenied
         return HttpResponse(method(request, obj))
+
+    def row_details_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        """The HTML of a lazy ``row_details``, for the object's row of the list."""
+        if not self.has_view_or_change_permission(request):
+            raise PermissionDenied
+        obj = self.get_object(request, unquote(object_id))
+        if self.row_details is None or obj is None:
+            raise Http404
+        if not self.has_view_or_change_permission(request, obj):
+            raise PermissionDenied
+        return HttpResponse(self.row_details(request, obj))
 
     def cell_view(self, request: HttpRequest, field: str) -> HttpResponse:
         """The full widget of an editable cell, for the stub that the list rendered in its place.

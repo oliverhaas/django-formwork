@@ -2571,6 +2571,58 @@ def test_change_slot_view_of_a_missing_slot_or_object_is_not_found(admin_client,
     assert admin_client.get(url(Item, "change_slot", pk, slot)).status_code == 404
 
 
+def test_row_details_open_under_their_row_and_a_row_without_any_has_no_toggle(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "row_details", object_slot())
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    (toggle,) = soup.select("#changelist-table details[data-row-toggle] summary")
+    details = soup.find(id=toggle["aria-controls"])
+    assert details.select_one("[data-name]").get_text() == "Alpha kettle"
+    assert details.find_parent("tbody").find("a", string="Alpha kettle") is not None
+
+
+def test_lazy_row_details_show_a_placeholder_on_every_row_and_load_the_object(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "row_details", object_slot(lazy=True))
+    alpha = Item.objects.get(name="Alpha kettle")
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+    slots = soup.select("#changelist-table [data-row-details] [data-slot]")
+
+    assert len(slots) == Item.objects.count()
+    assert all(slot.select_one("[data-slot-skeleton] .skeleton") for slot in slots)
+    assert url(Item, "row_details", alpha.pk) in {slot["hx-get"] for slot in slots}
+    assert admin_client.get(url(Item, "row_details", alpha.pk)).content == b"<p data-name>Alpha kettle</p>"
+
+
+def test_popup_list_has_no_row_details(admin_client, catalog, monkeypatch):
+    monkeypatch.setattr(ItemAdmin, "row_details", object_slot())
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist") + "?_popup=1").content, "html.parser")
+
+    assert soup.select("[data-row-toggle], [data-row-details]") == []
+
+
+@pytest.mark.parametrize(("codenames", "status"), [((), 403), (("view_item",), 200)], ids=["none", "view"])
+def test_row_details_view_needs_view_permission(staff_client, catalog, monkeypatch, codenames, status):
+    monkeypatch.setattr(ItemAdmin, "row_details", object_slot(lazy=True))
+    alpha = Item.objects.get(name="Alpha kettle")
+
+    assert staff_client(*codenames).get(url(Item, "row_details", alpha.pk)).status_code == status
+
+
+@pytest.mark.parametrize(
+    ("details", "pk"), [(None, None), (object_slot(lazy=True), 0)], ids=["no-details", "no-object"]
+)
+def test_row_details_view_of_an_admin_without_them_or_a_missing_object_is_not_found(
+    admin_client, catalog, monkeypatch, details, pk
+):
+    monkeypatch.setattr(ItemAdmin, "row_details", details)
+    pk = Item.objects.get(name="Alpha kettle").pk if pk is None else pk
+
+    assert admin_client.get(url(Item, "row_details", pk)).status_code == 404
+
+
 @pytest.mark.parametrize(
     ("entry", "path", "lookup"),
     [

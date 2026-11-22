@@ -5,6 +5,7 @@ import datetime as dt
 import pytest
 from admin_app.models import Category, Item, Tag
 from django.utils.datastructures import MultiValueDict
+from django.utils.html import format_html
 from playwright.sync_api import expect
 
 from django_formwork import (
@@ -217,3 +218,33 @@ def test_a_line_separates_the_rows_of_a_table(rows_page, items):
     )
 
     assert lines == ["0px", "1px", "1px"]
+
+
+class DetailedBlurbs(formwork_modelformset_factory(Item, form=BlurbForm, extra=0)):
+    def row_details(self, form):
+        if form.instance.name == "Toaster":
+            return None
+        return format_html("<p>{}</p>", " ".join([f"{form.instance.name} notes"] * 80))
+
+
+def test_a_click_on_a_row_opens_its_details_under_it_and_a_click_on_its_own_controls_does_not(rows_page, items):
+    rows_page.open(lambda: DetailedBlurbs(queryset=Item.objects.order_by("pk")))
+    kettle, lamp = _row(rows_page, "Kettle"), _row(rows_page, "Lamp")
+    details = kettle.locator("tr[data-row-details]")
+    headers = rows_page.page.locator("thead th")
+    widths = headers.evaluate_all("cells => cells.map(cell => cell.getBoundingClientRect().width)")
+
+    kettle.locator("input[name$=-name]").click()
+    expect(details).to_be_hidden()
+    kettle.locator("td[data-field=blurb]").click()
+    expect(details).to_be_visible()
+    expect(details).to_contain_text("Kettle notes")
+    assert headers.evaluate_all("cells => cells.map(cell => cell.getBoundingClientRect().width)") == widths
+
+    lamp.locator(".formwork-clamp summary").click()
+    expect(lamp.locator(".formwork-clamp details")).to_have_attribute("open", "")
+    expect(lamp.locator("tr[data-row-details]")).to_be_hidden()
+    kettle.locator("summary[aria-controls]").click()
+    expect(details).to_be_hidden()
+    expect(_row(rows_page, "Toaster").locator("[data-row-toggle]")).to_have_count(0)
+    assert rows_page.errors == []

@@ -70,9 +70,15 @@
 }
 
 /* Each row is a <tbody> of its own. DaisyUI draws the line under every row of a body but its last,
-   so the line between two bodies comes from here, in DaisyUI's color. */
-#changelist-table > tbody:not(:last-child) > tr:last-child > td {
-  border-bottom: var(--border) solid color-mix(in oklch, var(--color-base-content) 5%, #0000);
+   so the line between two bodies comes from here, in DaisyUI's color. It runs over a body, as a row's
+   details under it show only while open. */
+#changelist-table > tbody:not(:first-of-type) > tr:first-child > td {
+  border-top: var(--border) solid color-mix(in oklch, var(--color-base-content) 5%, #0000);
+}
+
+/* A row's details sit close under it. */
+#changelist-table > tbody > tr[data-row-details] > td {
+  padding-block: 0 0.75rem;
 }
 
 /* list_editable cells: the widget renders the control, the cell fits it to the row. */

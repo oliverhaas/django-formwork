@@ -16,6 +16,7 @@ from django.http import Http404
 from django.test import RequestFactory
 from django.test.utils import CaptureQueriesContext
 from django.utils.datastructures import MultiValueDict
+from django.utils.html import format_html
 from e2e.models import City, Region, UniqueCode
 
 from django_formwork import (
@@ -114,6 +115,49 @@ def test_row_url_gives_a_row_an_open_link():
     linked, plain = BeautifulSoup(html, "html.parser").select("table > tbody")
     assert linked.find("a", attrs={"aria-label": "Open"})["href"] == f"/codes/{first.pk}/"
     assert plain.find("a", attrs={"aria-label": "Open"}) is None
+
+
+class DetailedRows(formwork_modelformset_factory(UniqueCode, form=CodeRowForm, extra=0)):
+    def row_details(self, form):
+        return form.instance.label or None
+
+
+def test_row_details_open_under_their_row_and_a_row_without_any_keeps_the_column():
+    UniqueCode.objects.create(code="A", label="alpha")
+    UniqueCode.objects.create(code="B")
+
+    soup = BeautifulSoup(DetailedRows(queryset=UniqueCode.objects.order_by("code")).as_rows(), "html.parser")
+
+    detailed, plain = soup.select("table > tbody")
+    toggle = detailed.select_one("details[data-row-toggle] summary")
+    assert detailed.find(id=toggle["aria-controls"]).get_text(strip=True) == "alpha"
+    assert plain.select("[data-row-toggle], [data-row-details]") == []
+    assert len(soup.thead.find_all("th")) == len(plain.tr.find_all("td"))
+
+
+@pytest.mark.parametrize(
+    ("label", "bold"), [("<b>alpha</b>", False), (format_html("<b>{}</b>", "alpha"), True)], ids=["text", "html"]
+)
+def test_row_details_show_as_text_unless_marked_safe(label, bold):
+    UniqueCode.objects.create(code="A")
+
+    class Rows(DetailedRows):
+        def row_details(self, form):
+            return label
+
+    details = BeautifulSoup(Rows(queryset=UniqueCode.objects.all()).as_rows(), "html.parser").select_one(
+        "[data-row-details]"
+    )
+
+    assert (details.find("b") is not None) is bold
+
+
+def test_an_autosaved_table_has_no_row_details():
+    UniqueCode.objects.create(code="A", label="alpha")
+
+    html = DetailedRows(queryset=UniqueCode.objects.all()).as_rows(save_url="/save/")
+
+    assert BeautifulSoup(html, "html.parser").select("[data-row-toggle], [data-row-details]") == []
 
 
 def test_as_rows_renders_a_plain_model_form():

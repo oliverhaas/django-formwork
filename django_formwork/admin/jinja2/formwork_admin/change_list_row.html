@@ -1,18 +1,19 @@
 {% extends "formwork/tables/row.html" %}
 {#- A row of the changelist. formwork's engine renders it, so the admin's globals and macros are not available.
-    The context adds "columns", "select" (the checkbox's name, empty without actions), "index", "popup" and
-    "pick" to the row's. -#}
+    The context adds "columns", "select" (the checkbox's name, empty without actions), "index", "popup", "pick"
+    and "details_url" (where lazy details load from) to the row's. -#}
 {#- Opaque row colors, so a pinned column takes its row's color over the columns that scroll under it.
-    The server renders them, so the rows keep their markup when Alpine starts. -#}
-{% set row_bg = "bg-base-100 hover:bg-[color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100))]" %}
-{% set selected_bg = "data-selected:bg-[color-mix(in_srgb,var(--color-primary)_7%,var(--color-base-100))] data-selected:hover:bg-[color-mix(in_oklab,var(--color-primary)_7%,color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100)))]" %}
+    The server renders them, so the rows keep their markup when Alpine starts. A row and its details light up
+    together. -#}
+{% set row_bg = "bg-base-100 group-hover/row:bg-[color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100))]" %}
+{% set selected_bg = "data-selected:bg-[color-mix(in_srgb,var(--color-primary)_7%,var(--color-base-100))] data-selected:group-hover/row:bg-[color-mix(in_oklab,var(--color-primary)_7%,color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100)))]" %}
 {% set collapsible = columns|length > 1 %}
 
-{% block row_attrs %}{% endblock %}
+{% block row_attrs %} class="group/row"{% endblock %}
 
 {#- An error of the whole row, as Django shows it: on a line of its own, right above the row. -#}
 {% block errors_attrs %} data-row-errors class="border-b-0"{% endblock %}
-{% block errors_span %}{{ cells|length + (1 if select else 0) + (1 if collapsible else 0) }}{% endblock %}
+{% block errors_span %}{{ cells|length + (1 if select else 0) + (1 if collapsible else 0) + (1 if expandable else 0) }}{% endblock %}
 
 {% block cells_attrs %} data-pk="{{ form.instance.pk }}" class="transition-colors {{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)"{% endblock %}
 
@@ -39,4 +40,38 @@
       {%- endif %}
 {%- endblock %}
 
-{% block trailing_cells %}{% if collapsible %}<td data-col-toggle></td>{% endif %}{% endblock %}
+{% block trailing_cells %}{{ self.details_toggle() }}{% if collapsible %}<td data-col-toggle></td>{% endif %}{% endblock %}
+
+{#- The list is dense, so its toggle is a size smaller and its cell keeps the row's height. -#}
+{% block details_toggle %}
+    {%- if expandable %}
+    <td class="w-px py-0">
+      {%- if details is not none %}
+      <div class="flex items-center justify-end">
+        <details id="{{ details_id }}-toggle" class="[&[open]_[data-chevron]]:rotate-180" data-row-toggle>
+          <summary class="btn btn-ghost btn-xs btn-square list-none text-base-content/60 [&::-webkit-details-marker]:hidden" aria-controls="{{ details_id }}" title="{{ _("Details") }}" aria-label="{{ _("Details") }}">
+            <i data-chevron class="icon icon-chevron-down size-4 transition-transform motion-reduce:transition-none" aria-hidden="true"></i>
+          </summary>
+        </details>
+      </div>
+      {%- endif %}
+    </td>
+    {%- endif %}
+{%- endblock %}
+
+{% block details_attrs %} data-pk="{{ form.instance.pk }}" class="{{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)"{% endblock %}
+
+{#- The details line up with the row's first column. #}
+{% block details_leading_cells %}{% if select %}<td></td>{% endif %}{% endblock %}
+{% block details_span %}{{ cells|length + (1 if collapsible else 0) + (1 if expandable else 0) }}{% endblock %}
+
+{#- Lazy details load as the row opens, as a lazy slot loads (macros.html slot), and again after a list save. #}
+{% block details_content %}
+      {%- if details_url %}
+      <div data-slot="details" hx-get="{{ details_url }}" hx-trigger="intersect once, formwork-admin:reload" hx-target="this" hx-swap="innerMorph" hx-sync="this:replace" hx-morph-skip-children>
+        <div data-slot-skeleton>{% if details %}{{ details }}{% else %}<div class="skeleton h-16 rounded-box"></div>{% endif %}</div>
+      </div>
+      {%- else %}
+      {{ details }}
+      {%- endif %}
+{%- endblock %}

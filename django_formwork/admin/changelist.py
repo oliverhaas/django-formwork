@@ -31,6 +31,7 @@ from django.urls import reverse
 from django.utils.formats import number_format
 from django.utils.html import strip_tags
 from django.utils.http import urlencode
+from django.utils.safestring import mark_safe
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _
 
@@ -664,18 +665,25 @@ class ChangeList:
         if self.formset is not None:
             self.option_lists = column_options(self.formset)
         linked = bool(self.links) and self.model_admin.has_view_or_change_permission(self.request)
+        lazy = getattr(self.model_admin.row_details, "slot_lazy", False)
         rows = []
         for index, obj in enumerate(self.result_list):
             form = posted.get(obj.pk) or self.display_form(instance=obj)
             form.template_name_row = "formwork_admin/change_list_row.html"
-            row = form.get_row_context(link=self.change_url(obj) if linked else "")
+            details = self.details[index]
+            row = form.get_row_context(
+                link=self.change_url(obj) if linked else "", details=details, expandable=self.expandable
+            )
             pick = self.pick(obj)
-            # The forms that only show values share no prefix, so the page numbers the rows' ids.
+            # The forms that only show values share no prefix, so the page numbers the rows' ids. The details
+            # keep the object's, so a morph keeps them open on the object's row.
             row.update(
                 row_id=f"changelist-row-{index}",
                 index=index,
                 popup=self.is_popup,
                 pick=json.dumps(pick, ensure_ascii=False) if pick else "",
+                details_id=f"changelist-details-{quote(obj.pk)}",
+                details_url=self.details_url(obj) if lazy and details is not None else "",
             )
             # A cell that posts nothing shows the list's cell of the page's object, which carries the annotations.
             # A failed save binds rows of its own, and a form can disable a field.
@@ -687,6 +695,30 @@ class ChangeList:
                 row["cells"] = [shown[cell.name] if cell.field.disabled else cell for cell in row["cells"]]
             rows.append(row)
         return rows
+
+    @cached_property
+    def details(self) -> list[str | None]:
+        """What opens under each row of the page, from the admin's ``row_details``: its HTML, or the skeleton of
+        a lazy one, which loads as the row opens. ``None`` gives a row no details, and a popup has none.
+        """
+        method = self.model_admin.row_details
+        if method is None or self.is_popup:
+            return [None] * len(self.result_list)
+        if getattr(method, "slot_lazy", False):
+            return [self.model_admin.slot_skeleton(self.request, method) or ""] * len(self.result_list)
+        return [mark_safe(html) if (html := method(self.request, obj)) else None for obj in self.result_list]  # noqa: S308
+
+    @cached_property
+    def expandable(self) -> bool:
+        """Whether a row of the page has details, so that the rows have a column for their toggle."""
+        return any(html is not None for html in self.details)
+
+    def details_url(self, obj: models.Model) -> str:
+        return reverse(
+            self.model_admin.url_name("row_details"),
+            args=(quote(obj.pk),),
+            current_app=self.model_admin.admin_site.name,
+        )
 
     @cached_property
     def display_form(self) -> type[Any]:

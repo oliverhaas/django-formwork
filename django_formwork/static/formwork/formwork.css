@@ -282,6 +282,12 @@ fieldset.fieldset > details.formwork-disclosure {
     -webkit-line-clamp: unset;
 }
 
+/* A table row and its details read as one.  DaisyUI draws a line under
+   each row of a body but its last; unlayered to beat it. */
+tbody > tr:has(+ tr[data-row-details]) > td {
+    border-bottom-width: 0;
+}
+
 /* Error tooltip wrapper: when DaisyUI's tooltip wraps the label + widget,
    it collapses two grid items into one, losing a row-gap (6px shift).
    Use display:grid with the same row-gap as .fieldset (gap-y-1.5 = 6px)
@@ -1356,6 +1362,30 @@ details.formwork-disclosure[open] > summary > .formwork-disclosure-row > .icon {
 
 .formwork-clamp > details[open] > summary::after {
     content: attr(data-less);
+}
+
+
+/* ================================================================
+   Row details
+
+   A table row with details (formwork/tables/row.html) has a native
+   <details> in its last cell, and the details in a row of their own
+   under it, which shows while that toggle is open.  A click elsewhere
+   on the row opens it too (formwork-core.js), so the row's cells,
+   except a field's, show the pointer.  The row and its details read
+   as one, with no line between them (the unlayered rule by the
+   clamped value's).
+   ================================================================ */
+tbody > tr[data-row-details] {
+    display: none;
+}
+
+tbody:has(> tr > td > div > details[data-row-toggle][open]) > tr[data-row-details] {
+    display: table-row;
+}
+
+tbody > tr:has(> td > div > details[data-row-toggle]) > td:not([data-formwork-field]) {
+    cursor: pointer;
 }
 
 

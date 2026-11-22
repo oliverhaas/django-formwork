@@ -904,6 +904,14 @@ class TableRenderMixin:
         """The page of the row of ``form``, which the row links in its last column; ``""`` for none."""
         return ""
 
+    def row_details(self, form: Any) -> str | None:  # noqa: ANN401, ARG002
+        """What opens under the row of ``form`` when the row is clicked; ``None`` for none.
+
+        A ``SafeString``, such as ``render_to_string()`` or ``format_html()`` returns, shows as HTML, any other as text.
+        A table with ``save_url`` has none: its rows re-render one by one, without the formset.
+        """
+        return None
+
     def get_table_context(self, *, save_url: str = "", flush: bool = False, cell_url: str = "") -> dict[str, Any]:
         """The table template's context: the headers, a row context per form, and the row that Add another copies.
 
@@ -920,16 +928,24 @@ class TableRenderMixin:
         can_delete = not save_url and self.can_delete
         initial = self.initial_form_count()
         links = [self.row_url(form) for form in self.forms]
+        details = [None if save_url else self.row_details(form) for form in self.forms]
+        expandable = any(html is not None for html in details)
         new_rows = len(self.forms) > initial
         actions = not save_url and (can_add or can_delete or new_rows or any(links))
         rows = [
             form.get_row_context(
-                new=index >= initial, can_delete=can_delete, save_url=save_url, actions=actions, link=links[index]
+                new=index >= initial,
+                can_delete=can_delete,
+                save_url=save_url,
+                actions=actions,
+                link=links[index],
+                details=details[index],
+                expandable=expandable,
             )
             for index, form in enumerate(self.forms)
         ]
         empty_form = self.empty_form
-        empty_row = empty_form.get_row_context(new=True, actions=actions) if can_add else None
+        empty_row = empty_form.get_row_context(new=True, actions=actions, expandable=expandable) if can_add else None
         model = getattr(self, "model", None)
         opts = model._meta if model is not None else None  # noqa: SLF001
         # The texts with a name are built here, not in the template: makemessages finds no Jinja trans block.
@@ -947,6 +963,7 @@ class TableRenderMixin:
             "rows": rows,
             "empty_row": empty_row,
             "actions": actions and (bool(rows) or empty_row is not None),
+            "expandable": expandable,
             "flush": flush,
             "footer": "",
             "option_lists": option_lists,

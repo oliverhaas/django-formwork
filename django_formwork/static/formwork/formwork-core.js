@@ -378,6 +378,22 @@ document.addEventListener("htmx:after:settle", (e) => {
   scheduleMeasureDisclosures(target);
 });
 
+// --- Row details ---
+// A table row with details opens or closes them on a click anywhere on it, except on what has a click or
+// an input of its own: a link, a control, a cell's field, the [more] of a value. A click that ends a text
+// selection leaves the row as it is. The toggle is the native <details> in the row's last cell, so the
+// keyboard reaches it and a morph keeps its state.
+const OWN_CLICK =
+  "a, button, input, select, textarea, label, summary, details, [contenteditable], [tabindex], [role=button], [data-formwork-field]";
+document.addEventListener("click", (e) => {
+  if (e.defaultPrevented || e.button !== 0 || !(e.target instanceof Element)) return;
+  const row = e.target.closest("tbody > tr:not([data-row-details])");
+  const toggle = row?.querySelector(":scope > td > div > details[data-row-toggle]");
+  if (!toggle || row.contains(e.target.closest(OWN_CLICK))) return;
+  if (!document.getSelection()?.isCollapsed) return;
+  toggle.open = !toggle.open;
+});
+
 // --- Busy buttons ---
 // A .btn that sends a request carries aria-busy="true" until the response is
 // in, and formwork.css turns its icon into a spinner.  Without a visible icon

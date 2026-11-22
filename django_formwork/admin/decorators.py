@@ -123,9 +123,9 @@ def action[F: Callable[..., Any]](
 
 
 def slot[F: Callable[..., Any]](function: F | None = None, *, lazy: bool = False, skeleton: str | None = None) -> Any:
-    """Options of a slot method of a ``ModelAdmin``: ``list_top``, ``list_bottom``, ``change_top``, ``change_bottom``.
+    """Options of a slot method of a ``ModelAdmin``, such as ``list_top``, ``change_bottom`` or ``row_details``.
 
-    A lazy slot loads after its page from a URL of its own and shows ``skeleton``, a template, until then.
+    A lazy slot loads from a URL of its own, after its page or as its row opens, and shows ``skeleton`` until then.
     """
 
     def decorator(func: F) -> F:

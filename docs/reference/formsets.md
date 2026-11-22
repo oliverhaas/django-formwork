@@ -145,6 +145,22 @@ def task_edit_all(request):
   `can_add = False` on the formset class, or `edit_only=True`, removes Add another.
   A formset method `row_url(form)` that returns a URL gives the row an Open link in
   its last column.
+- **Row details.** A formset method `row_details(form)` that returns HTML gives the
+  row a chevron in a last column of its own. A click on the chevron, or anywhere on the
+  row outside its inputs, links and buttons, opens the HTML under the row. The details
+  take the table's width, never the width of a column. `form.instance` holds the row's
+  object:
+
+  ```python
+  class TaskFormSet(FormworkBaseModelFormSet):
+      def row_details(self, form):
+          return render_to_string("tasks/row_details.html", {"task": form.instance})
+  ```
+
+  A `SafeString`, as `render_to_string()` and `format_html()` return, shows as HTML,
+  any other string as text. `None` gives the row no chevron. A table with a
+  `save_url` shows no details: a row that saves by itself renders again without the
+  formset.
 - **Empty table.** Without rows, the table shows "No *tasks* yet.", with the model's
   `verbose_name_plural`.
 - **Choices.** A `Select` or `SelectMultiple` of a relation loads its choices with one
@@ -231,15 +247,19 @@ To change part of a row, extend `formwork/tables/row.html` and override its bloc
 then set `template_name_row` to your template. A field's widget, its changed and
 invalid marks and its errors stay the same.
 
-| Block                          | Holds                                                    |
-|--------------------------------|----------------------------------------------------------|
-| `row_attrs`                    | the attributes of the row's `<tbody>` after its `id`     |
-| `errors_attrs`, `errors_span`  | the attributes and the `colspan` of the row's error line |
-| `cells_attrs`                  | the attributes of the `<tr>` of the cells                |
-| `leading_cells`                | cells before the fields' cells, empty by default         |
-| `cell_attrs`                   | a field cell's `class` and `data-field`                  |
-| `display_cell`                 | what a cell shows for a field that posts nothing         |
-| `trailing_cells`               | the actions cell                                         |
+| Block                                   | Holds                                                    |
+|-----------------------------------------|----------------------------------------------------------|
+| `row_attrs`                             | the attributes of the row's `<tbody>` after its `id`     |
+| `errors_attrs`, `errors_span`           | the attributes and the `colspan` of the row's error line |
+| `cells_attrs`                           | the attributes of the `<tr>` of the cells                |
+| `leading_cells`                         | cells before the fields' cells, empty by default         |
+| `cell_attrs`                            | a field cell's `class` and `data-field`                  |
+| `display_cell`                          | what a cell shows for a field that posts nothing         |
+| `trailing_cells`                        | the actions cell and the details toggle                  |
+| `details_toggle`                        | the cell of the details toggle                           |
+| `details_attrs`                         | the attributes of the details' `<tr>` after its `id`     |
+| `details_leading_cells`, `details_span` | cells before the details' cell, and its `colspan`        |
+| `details_content`                       | what the details show, `details` by default              |
 
 `cell_attrs` and `display_cell` see the cell's bound field as `bf` and Jinja's `loop`.
 The admin's changelist rows extend the template this way.

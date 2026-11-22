@@ -449,12 +449,21 @@ class RowRenderMixin:
         """The row template with ``context``, a dict from ``get_row_context()``."""
         return self.render(self.template_name_row, context, formwork_renderer(self.renderer))
 
-    def get_row_context(
-        self, *, save_url: str = "", new: bool = False, can_delete: bool = False, link: str = "", actions: bool = False
+    def get_row_context(  # noqa: PLR0913
+        self,
+        *,
+        save_url: str = "",
+        new: bool = False,
+        can_delete: bool = False,
+        link: str = "",
+        actions: bool = False,
+        details: str | None = None,
+        expandable: bool = False,
     ) -> dict[str, Any]:
-        """The row template's context: a cell per visible field, and what the last column holds.
+        """The row template's context: a cell per visible field, and what the last columns hold.
 
         ``new`` rows have Remove, saved ones with ``can_delete`` a Delete toggle, and ``link`` an Open link.
+        ``details`` is HTML that opens under the row; ``expandable`` gives a row without any the toggle's column.
         """
         hidden = self.row_hidden_inputs if save_url else mark_safe("".join(str(bf) for bf in self.hidden_fields()))  # noqa: S308
         deletion_field = None
@@ -470,6 +479,9 @@ class RowRenderMixin:
             "link": link,
             "save_url": save_url,
             "actions": actions,
+            "details": details,
+            "details_id": f"{self.row_id}-details",
+            "expandable": expandable or details is not None,
         }
 
     @property

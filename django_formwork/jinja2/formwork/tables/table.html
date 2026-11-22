@@ -15,6 +15,7 @@
           </th>
           {% endfor %}
           {% if actions %}<th class="w-px"><span class="sr-only">{{ _("Actions") }}</span></th>{% endif %}
+          {% if expandable %}<th class="w-px"><span class="sr-only">{{ _("Details") }}</span></th>{% endif %}
         </tr>
       </thead>
       {% for row in rows %}{{ row.form.render_row(row) }}{% endfor %}

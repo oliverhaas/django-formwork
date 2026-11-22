@@ -21,7 +21,8 @@
   const SHADOW = "light-dark(rgb(0 0 0 / 0.14), rgb(0 0 0 / 0.55))";
   const UNDER = "light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.3))";
   const TABLE = "#changelist-table";
-  const ROWS = `${TABLE} > :is(thead, tbody) > tr:not([data-empty])`;
+  // A row's details span every column, so no column rule applies to them.
+  const ROWS = `${TABLE} > :is(thead, tbody) > tr:not([data-empty], [data-row-details])`;
   const HEAD = `${TABLE} > thead > tr:not([data-empty])`;
   // A rule ends in tag names, so a change to the rules restyles the cells, not the page.
   const CELL = ":is(th, td)";

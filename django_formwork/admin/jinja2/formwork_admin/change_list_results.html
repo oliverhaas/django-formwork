@@ -2,7 +2,7 @@
 {% set editable = formset is not none %}
 {# Columns that don't fit hide from the right behind a toggle; the first and the link columns stay. #}
 {% set collapsible = cl.columns|length > 1 %}
-{% set columns = cl.columns|length + (1 if actions else 0) + (1 if collapsible else 0) %}
+{% set columns = cl.columns|length + (1 if actions else 0) + (1 if collapsible else 0) + (1 if cl.expandable else 0) %}
 {% set filtered = cl.is_filtered %}
 {# A neutral box; admin.css turns it primary when checked, like the rest of the selection. #}
 {% set checkbox = "checkbox checkbox-sm" %}
@@ -131,6 +131,8 @@
               {% endif %}
             </th>
             {% endfor %}
+            {#- columns.js keeps room for the details' toggles and never hides them. #}
+            {% if cl.expandable %}<th class="w-px" data-pin><span class="sr-only">{{ _("Details") }}</span></th>{% endif %}
             {% if collapsible %}
             <th class="w-px px-1 text-center" data-col-toggle>
               {% set more, less = _("Show all columns"), _("Show fewer columns") %}

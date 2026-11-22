@@ -1,9 +1,9 @@
 {#- A template that extends this one can change the attributes of the row and its cells, a value's cell,
-    and the cells before and after the fields. -#}
+    the cells before and after the fields, and the row's details. -#}
 <tbody id="{{ row_id }}"{% block row_attrs %} class="[&:not(:first-of-type)>tr:first-child>td]:border-t [&:not(:first-of-type)>tr:first-child>td]:border-base-content/5" data-formset-row="{{ form.prefix if form.prefix is not none else '' }}"{% if new %} data-formset-new{% endif %}{% if save_url %} hx-post="{{ save_url }}" hx-trigger="change delay:400ms" hx-target="this" hx-swap="outerMorph" hx-include="closest tbody"{% endif %}{% endblock %}>
   {% if form.non_field_errors() %}
   <tr{% block errors_attrs %}{% endblock %}>
-    <td colspan="{% block errors_span %}{{ cells|length + actions }}{% endblock %}" class="pb-0">
+    <td colspan="{% block errors_span %}{{ cells|length + actions + expandable }}{% endblock %}" class="pb-0">
       <p class="flex items-center gap-1.5 text-xs text-error"><i class="icon icon-circle-exclamation-point size-3.5" aria-hidden="true"></i> {{ form.non_field_errors()|join(" ") }}</p>
     </td>
   </tr>
@@ -53,6 +53,32 @@
       </div>
     </td>
     {% endif %}
+    {% block details_toggle %}
+    {% if expandable %}
+    <td class="w-px">
+      {% if details is not none %}
+      {#- The morph keeps a details' open state; the id holds the row's, so the state stays with its row. #}
+      <div class="flex h-10 items-center justify-end">
+        <details id="{{ details_id }}-toggle" class="[&[open]_[data-chevron]]:rotate-180" data-row-toggle>
+          <summary class="btn btn-ghost btn-sm btn-square list-none text-base-content/60 [&::-webkit-details-marker]:hidden" aria-controls="{{ details_id }}" title="{{ _("Details") }}" aria-label="{{ _("Details") }}">
+            <i data-chevron class="icon icon-chevron-down size-4 transition-transform motion-reduce:transition-none" aria-hidden="true"></i>
+          </summary>
+        </details>
+      </div>
+      {% endif %}
+    </td>
+    {% endif %}
+    {% endblock %}
     {% endblock %}
   </tr>
+  {% if details is not none %}
+  {#- Shown while the toggle is open (formwork.css). The content has no width of its own, so it never widens a
+      column, and fades in as it opens. #}
+  <tr id="{{ details_id }}" data-row-details{% block details_attrs %}{% endblock %}>
+    {%- block details_leading_cells %}{% endblock %}
+    <td colspan="{% block details_span %}{{ self.errors_span() }}{% endblock %}" class="pt-0 pb-4">
+      <div class="w-0 min-w-full motion-safe:transition-[opacity,translate] motion-safe:duration-200 starting:-translate-y-1 starting:opacity-0">{% block details_content %}{{ details }}{% endblock %}</div>
+    </td>
+  </tr>
+  {% endif %}
 </tbody>

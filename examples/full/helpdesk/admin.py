@@ -75,6 +75,12 @@ class TicketAdmin(admin.ModelAdmin):
     def change_top(self, request, obj):
         return render_to_string("charts/figures.html", ticket_figures(obj), request)
 
+    @admin.slot(lazy=True)
+    def row_details(self, request, obj):
+        replies = list(obj.replies.select_related("author").order_by("-created_at")[:3])
+        context = {"ticket": obj, "replies": replies[::-1], "earlier": max(obj.replies.count() - len(replies), 0)}
+        return render_to_string("helpdesk/ticket_details.html", context, request)
+
     @admin.display(
         description="Replies",
         ordering="num_replies",
