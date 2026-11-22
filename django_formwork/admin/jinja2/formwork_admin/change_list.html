@@ -18,7 +18,7 @@
 {% block content %}
 <div class="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
   <div class="flex min-w-0 items-center gap-3" x-data>
-    <span class="hidden size-11 shrink-0 place-items-center rounded-box bg-primary/10 text-primary sm:grid">{{ icon(model_admin.get_icon(), "size-5") }}</span>
+    <span class="hidden size-11 shrink-0 place-items-center rounded-box bg-linear-to-b from-primary/11 to-primary/4 text-primary inset-ring inset-ring-primary/9 sm:grid">{{ icon(model_admin.get_icon(), "size-5") }}</span>
     <h1 class="text-2xl font-semibold tracking-tight text-balance wrap-break-word">{{ cl.title }}</h1>
     {% block info %}
     {% set info_label = _("About %(name)s", name=opts.verbose_name_plural) %}
