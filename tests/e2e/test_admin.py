@@ -479,7 +479,7 @@ def test_changed_cells_are_counted_above_the_list_until_discarded(admin_page, li
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
     bar = admin_page.locator("[data-save-bar]")
     count = bar.locator("[data-change-count]")
-    save = bar.get_by_role("button", name="Save changes")
+    save = bar.get_by_role("button", name="Save", exact=True)
     discard = bar.get_by_role("button", name="Discard")
     quantities = admin_page.locator("#changelist-table [data-editable] input")
     expect(count).to_have_text("0")
@@ -519,7 +519,7 @@ def test_list_actions_wait_until_the_changes_are_saved(admin_page, live_server, 
     expect(delete).to_be_disabled()
     expect(menu).to_have_attribute("aria-disabled", "true")
 
-    admin_page.get_by_role("button", name="Save changes").click()
+    admin_page.get_by_role("button", name="Save", exact=True).click()
     expect(admin_page.get_by_role("status").filter(has_text="was changed successfully")).to_be_visible()
     item.refresh_from_db()
     assert item.quantity == 5
@@ -580,7 +580,7 @@ def test_a_list_save_that_failed_saves_after_the_fix(admin_page, live_server, ki
     item = Item.objects.create(name="Kettle", category=kitchen, quantity=3)
     admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
     quantity = admin_page.locator("#changelist-table [data-editable] input")
-    save = admin_page.get_by_role("button", name="Save changes")
+    save = admin_page.get_by_role("button", name="Save", exact=True)
     quantity.fill("-1")
     save.click()
     expect(quantity).to_have_attribute("aria-invalid", "true")
@@ -603,7 +603,7 @@ def test_a_list_cell_error_shows_in_a_tooltip_and_keeps_the_row_height(admin_pag
     quantity = row.locator("[data-editable] input")
     height = row.bounding_box()["height"]
     quantity.fill("-1")
-    admin_page.get_by_role("button", name="Save changes").click()
+    admin_page.get_by_role("button", name="Save", exact=True).click()
 
     tooltip = admin_page.get_by_role("tooltip")
     expect(quantity).to_be_focused()
@@ -729,7 +729,7 @@ def test_text_typed_into_a_date_stub_carries_over_to_the_full_picker(admin_page,
 
 def test_a_failed_list_save_keeps_the_stubs_of_the_fields_without_errors(admin_page, status_cell):
     quantity = admin_page.locator("#changelist-table [name$=-quantity]")
-    save = admin_page.get_by_role("button", name="Save changes")
+    save = admin_page.get_by_role("button", name="Save", exact=True)
     quantity.fill("-1")
     save.click()
     expect(quantity).to_have_attribute("aria-invalid", "true")
@@ -974,7 +974,7 @@ def test_a_list_save_keeps_the_top_slot_while_it_loads_the_saved_figures(admin_p
 
     admin_page.locator("#changelist-table [data-editable] input").fill("4")
     with admin_page.expect_request(re.compile(r"/slots/top/")):
-        admin_page.get_by_role("button", name="Save changes").click()
+        admin_page.get_by_role("button", name="Save", exact=True).click()
 
     expect(admin_page.get_by_role("status").filter(has_text="was changed successfully")).to_be_visible()
     expect(top.locator("[data-slot-skeleton]")).not_to_be_attached()

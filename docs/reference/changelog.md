@@ -324,6 +324,8 @@
   browser to lay out. A badge select keeps one element per label. Overrides of
   `formwork/widgets/select.html`, `select_multiple.html` and `combo_box.html` keep
   working.
+- The admin list's save button says Save, as on the change form, where a wide list said
+  Save changes.
 
 ### Fixed
 

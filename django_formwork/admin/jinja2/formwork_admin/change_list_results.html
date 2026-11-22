@@ -75,7 +75,7 @@
             {{- icon("undo-2", "size-4 @2xl:hidden") }}<span class="@max-2xl:sr-only">{{ _("Discard") }}</span>
           </button>
           <button type="submit" form="changelist-form" name="_save" value="1" class="btn btn-ghost btn-sm" :class="{ 'btn-ghost': !changes, 'btn-primary': changes > 0 }" :disabled="!changes" disabled data-save>
-            {{- icon("check") }}<span class="@4xl:hidden">{{ _("Save") }}</span><span class="@max-4xl:hidden">{{ _("Save changes") }}</span>
+            {{- icon("check") }}{{ _("Save") }}
           </button>
         </span>
       </div>

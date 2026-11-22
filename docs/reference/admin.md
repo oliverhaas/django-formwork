@@ -565,9 +565,9 @@ up with the column header, and the icons of a select or a date hide. A date and 
 share one line, so a row stays one field high.
 
 A cell whose value differs from the saved one gets the accent color, and the toolbar above
-the table counts the changed cells. Save changes saves the rows, and Discard loads the saved values
+the table counts the changed cells. Save saves the rows, and Discard loads the saved values
 again. Neither loads the page again: the list keeps its scroll position. Both stay disabled while no cell has a change. After a failed save, every changed
-cell stays marked and counted, so Save changes stays enabled.
+cell stays marked and counted, so Save stays enabled.
 
 A failed save counts the errors above the rows. A cell's error shows in a tooltip under
 the cell while the pointer is over the cell or the focus is in it, so the rows keep their
