@@ -25,7 +25,7 @@
     <button type="button" class="btn btn-ghost btn-sm btn-circle -ml-1 shrink-0 text-base-content/50 hover:text-base-content" aria-label="{{ info_label }}" title="{{ info_label }}"
             aria-haspopup="dialog" aria-controls="changelist-info" @click="$refs.info.showModal()"
             hx-get="{{ url(model_admin.url_name("info")) }}" hx-trigger="click once" hx-target="#changelist-info-body" hx-swap="innerHTML">{{ icon("info", "size-5") }}</button>
-    <dialog id="changelist-info" class="modal modal-bottom sm:modal-middle" x-ref="info" aria-labelledby="changelist-info-title">
+    <dialog id="changelist-info" class="modal modal-bottom backdrop-blur-[3px] sm:modal-middle" x-ref="info" aria-labelledby="changelist-info-title">
       <div class="modal-box max-w-3xl p-0">
         <div class="sticky top-0 z-10 flex items-start gap-3 border-b border-base-300 bg-base-100 px-6 py-4">
           <div class="min-w-0 flex-1">
