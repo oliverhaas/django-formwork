@@ -884,6 +884,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#row-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Row details
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#actions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1380,6 +1391,17 @@
     <span class="md-ellipsis">
       
         Slots
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#row-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Row details
       
     </span>
   </a>
@@ -1963,6 +1985,10 @@ admin does not, so a script that uses <code>django.jQuery</code> does not run he
 <td><code>change_top</code>, <code>change_bottom</code></td>
 <td>Methods that return HTML for the change page, above the fields and under the save bar. See <a href="#slots">Slots</a>.</td>
 </tr>
+<tr>
+<td><code>row_details</code></td>
+<td>A method that returns HTML for an object, which opens under its row of the list. See <a href="#row-details">Row details</a>.</td>
+</tr>
 </tbody>
 </table>
 <p><code>list_only_fields</code> is opt-in. A <code>__str__</code> that reads a field it leaves out costs one more
@@ -2254,6 +2280,24 @@ form of its own, and the page sends an input with a name in it along with the fi
 leave the slot out for some rows or objects.</p>
 <p>The page shows what the method returns as HTML, so escape the values in it, with a
 template or <code>format_html()</code>.</p>
+<h3 id="row-details">Row details<a class="headerlink" href="#row-details" title="Permanent link">&para;</a></h3>
+<p><code>row_details</code> gives each row of the list HTML that opens under it, such as the latest
+replies to a ticket. The method gets the request and the row's object. A click on the
+row's chevron, or anywhere on the row outside its links and inputs, opens it.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Ticket</span><span class="p">)</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="nd">@admin</span><span class="o">.</span><span class="n">slot</span><span class="p">(</span><span class="n">lazy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">row_details</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>        <span class="n">replies</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">replies</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">"-created_at"</span><span class="p">)[:</span><span class="mi">3</span><span class="p">]</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>        <span class="k">return</span> <span class="n">render_to_string</span><span class="p">(</span><span class="s2">"tickets/row_details.html"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"ticket"</span><span class="p">:</span> <span class="n">obj</span><span class="p">,</span> <span class="s2">"replies"</span><span class="p">:</span> <span class="n">replies</span><span class="p">},</span> <span class="n">request</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Without <code>@admin.slot</code>, the method runs for every row while the list renders, and a row
+whose method returns an empty string has no chevron. With <code>lazy=True</code>, every row has a
+chevron, and the HTML loads from <code>details/</code> under the object's URL when the row opens,
+with the skeleton until then. That URL needs the view permission for the object. A save
+of the list loads the open details again. The list in a dialog that picks a related row
+shows no details.</p>
+<p>As with the slots, the page shows the HTML as it is, so escape the values in it.</p>
 <h3 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h3>
 <p>Actions run as in Django: a function gets <code>(modeladmin, request, queryset)</code> and a name
 resolves to a method of the admin. The selected count, the Delete button and the Actions
@@ -2295,13 +2339,13 @@ Shift-click selects a range. <code>@admin.action</code> takes these arguments on
 </tr>
 </tbody>
 </table>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">action</span><span class="p">(</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">"Archive selected tickets"</span><span class="p">,</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="n">icon</span><span class="o">=</span><span class="s2">"archive"</span><span class="p">,</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    <span class="n">danger</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>    <span class="n">confirm</span><span class="o">=</span><span class="s2">"Archive </span><span class="si">%(count)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2">?"</span><span class="p">,</span>
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="p">)</span>
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">archive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">queryset</span><span class="p">):</span> <span class="o">...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">action</span><span class="p">(</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">"Archive selected tickets"</span><span class="p">,</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    <span class="n">icon</span><span class="o">=</span><span class="s2">"archive"</span><span class="p">,</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">danger</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="n">confirm</span><span class="o">=</span><span class="s2">"Archive </span><span class="si">%(count)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2">?"</span><span class="p">,</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="p">)</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">archive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">queryset</span><span class="p">):</span> <span class="o">...</span>
 </span></code></pre></div>
 <p>The page of an action with <code>confirm</code> or <code>form</code> names the selected rows and offers the
 action and Cancel. A question can use the model's names as Django's descriptions do
@@ -2309,14 +2353,14 @@ action and Cancel. A question can use the model's names as Django's descriptions
 the count. With <code>form</code>, the action gets the bound, valid form as <code>form</code>. An invalid form
 renders the page again with its errors. The form's fields post with the prefix
 <code>action-</code>, so they never clash with the list's own fields.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostponeForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    <span class="n">days</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">min_value</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="mi">365</span><span class="p">,</span> <span class="n">initial</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">action</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Postpone selected events"</span><span class="p">,</span> <span class="n">icon</span><span class="o">=</span><span class="s2">"calendar-clock"</span><span class="p">,</span> <span class="n">form</span><span class="o">=</span><span class="n">PostponeForm</span><span class="p">)</span>
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">postpone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">queryset</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>    <span class="n">delta</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s2">"days"</span><span class="p">])</span>
-</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>    <span class="n">queryset</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">starts_at</span><span class="o">=</span><span class="n">F</span><span class="p">(</span><span class="s2">"starts_at"</span><span class="p">)</span> <span class="o">+</span> <span class="n">delta</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostponeForm</span><span class="p">(</span><span class="n">FormworkForm</span><span class="p">):</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>    <span class="n">days</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">min_value</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="mi">365</span><span class="p">,</span> <span class="n">initial</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">action</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Postpone selected events"</span><span class="p">,</span> <span class="n">icon</span><span class="o">=</span><span class="s2">"calendar-clock"</span><span class="p">,</span> <span class="n">form</span><span class="o">=</span><span class="n">PostponeForm</span><span class="p">)</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">postpone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">queryset</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    <span class="n">delta</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s2">"days"</span><span class="p">])</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>    <span class="n">queryset</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">starts_at</span><span class="o">=</span><span class="n">F</span><span class="p">(</span><span class="s2">"starts_at"</span><span class="p">)</span> <span class="o">+</span> <span class="n">delta</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Override <code>action_confirmation_template</code> on the admin, or
 <code>formwork_admin/action_confirmation.html</code> per app or model, to change the page. The
@@ -2325,15 +2369,15 @@ its own page, which lists the related objects that the delete removes.</p>
 <p>The other arguments are Django 6.1's. <code>location</code>
 puts an action in the list, on the change form or both, and the list labels it with
 <code>description_plural</code> when given:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActionLocation</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">action</span><span class="p">(</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">"Close this ticket"</span><span class="p">,</span>
-</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>    <span class="n">description_plural</span><span class="o">=</span><span class="s2">"Close selected tickets"</span><span class="p">,</span>
-</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">ActionLocation</span><span class="o">.</span><span class="n">CHANGE_LIST</span><span class="p">,</span> <span class="n">ActionLocation</span><span class="o">.</span><span class="n">CHANGE_FORM</span><span class="p">],</span>
-</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="p">)</span>
-</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">queryset</span><span class="p">):</span> <span class="o">...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActionLocation</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">action</span><span class="p">(</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">"Close this ticket"</span><span class="p">,</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>    <span class="n">description_plural</span><span class="o">=</span><span class="s2">"Close selected tickets"</span><span class="p">,</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">ActionLocation</span><span class="o">.</span><span class="n">CHANGE_LIST</span><span class="p">,</span> <span class="n">ActionLocation</span><span class="o">.</span><span class="n">CHANGE_FORM</span><span class="p">],</span>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="p">)</span>
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">queryset</span><span class="p">):</span> <span class="o">...</span>
 </span></code></pre></div>
 <p>The change form lists its actions in an Actions menu next to its title. An action there
 runs on the saved row: the page reloads with the action's message, or shows the response
@@ -2378,10 +2422,10 @@ the error names the class to import instead.</p>
 <p>The Export menu in the search row, before the add button, writes the list as a CSV, Excel or JSON file. The
 file holds every row that the filters and the search let through, in the list's sort
 order, not only the current page.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Ticket</span><span class="p">)</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>    <span class="n">export_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"subject"</span><span class="p">,</span> <span class="s2">"requester__email"</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">,</span> <span class="s2">"opened_at"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">]</span>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>    <span class="n">export_formats</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"csv"</span><span class="p">,</span> <span class="s2">"xlsx"</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Ticket</span><span class="p">)</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">TicketAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>    <span class="n">export_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"subject"</span><span class="p">,</span> <span class="s2">"requester__email"</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">,</span> <span class="s2">"opened_at"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">]</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>    <span class="n">export_formats</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"csv"</span><span class="p">,</span> <span class="s2">"xlsx"</span><span class="p">)</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -2432,30 +2476,30 @@ download it.</p>
 <p>Django's default task backend, <code>ImmediateBackend</code>, runs the job inside the request, so
 the file is ready when the list loads again. For a real background run, set <code>TASKS</code> to
 a backend with a worker. To use another queue, override <code>enqueue_export()</code> on your site:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">celery</span><span class="w"> </span><span class="kn">import</span> <span class="n">shared_task</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdminSite</span>
-</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin.exports</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_export_job</span>
-</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>
-</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>
-</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="nd">@shared_task</span>
-</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">run_admin_export</span><span class="p">(</span><span class="n">job_id</span><span class="p">):</span>
-</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>    <span class="n">run_export_job</span><span class="p">(</span><span class="n">job_id</span><span class="p">)</span>
-</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>
-</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>
-</span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAdminSite</span><span class="p">(</span><span class="n">AdminSite</span><span class="p">):</span>
-</span><span id="__span-22-13"><a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">enqueue_export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job</span><span class="p">):</span>
-</span><span id="__span-22-14"><a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a>        <span class="n">run_admin_export</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">job</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">celery</span><span class="w"> </span><span class="kn">import</span> <span class="n">shared_task</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdminSite</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin.exports</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_export_job</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="nd">@shared_task</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">run_admin_export</span><span class="p">(</span><span class="n">job_id</span><span class="p">):</span>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>    <span class="n">run_export_job</span><span class="p">(</span><span class="n">job_id</span><span class="p">)</span>
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>
+</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>
+</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAdminSite</span><span class="p">(</span><span class="n">AdminSite</span><span class="p">):</span>
+</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">enqueue_export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job</span><span class="p">):</span>
+</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>        <span class="n">run_admin_export</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">job</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
 </span></code></pre></div>
 <p>The admin does not delete old exports. <code>ExportJob.delete()</code> deletes the row and its
 file.</p>
 <h3 id="import">Import<a class="headerlink" href="#import" title="Permanent link">&para;</a></h3>
 <p>Import is off by default. <code>import_formats</code> turns it on and adds an Import button next
 to the list's title:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Contact</span><span class="p">)</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ContactAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>    <span class="n">import_formats</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"csv"</span><span class="p">,</span> <span class="s2">"xlsx"</span><span class="p">)</span>
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>    <span class="n">import_id_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"email"</span><span class="p">]</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Contact</span><span class="p">)</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ContactAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>    <span class="n">import_formats</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"csv"</span><span class="p">,</span> <span class="s2">"xlsx"</span><span class="p">)</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>    <span class="n">import_id_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"email"</span><span class="p">]</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -2550,30 +2594,30 @@ as <code>django.contrib.auth.admin</code> does on Django's own site. They work a
 </ul>
 <p>When <code>AUTH_USER_MODEL</code> names another model, only <code>Group</code> is registered. For a model that
 extends <code>AbstractUser</code>, subclass <code>UserAdmin</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">admin</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserAdmin</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Account</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>
-</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>
-</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Account</span><span class="p">)</span>
-</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">AccountAdmin</span><span class="p">(</span><span class="n">UserAdmin</span><span class="p">):</span>
-</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>    <span class="n">list_display</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"username"</span><span class="p">,</span> <span class="s2">"email"</span><span class="p">,</span> <span class="s2">"is_staff"</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">admin</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserAdmin</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Account</span>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Account</span><span class="p">)</span>
+</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">AccountAdmin</span><span class="p">(</span><span class="n">UserAdmin</span><span class="p">):</span>
+</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>    <span class="n">list_display</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"username"</span><span class="p">,</span> <span class="s2">"email"</span><span class="p">,</span> <span class="s2">"is_staff"</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>User</code> and <code>Group</code> are registered before the <code>admin</code> modules of the apps are imported,
 so an app can replace them:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Group</span><span class="p">,</span> <span class="n">User</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">admin</span>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserAdmin</span>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>
-</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">unregister</span><span class="p">(</span><span class="n">Group</span><span class="p">)</span>
-</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">unregister</span><span class="p">(</span><span class="n">User</span><span class="p">)</span>
-</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>
-</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>
-</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">User</span><span class="p">)</span>
-</span><span id="__span-25-11"><a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a><span class="k">class</span><span class="w"> </span><span class="nc">StaffUserAdmin</span><span class="p">(</span><span class="n">UserAdmin</span><span class="p">):</span>
-</span><span id="__span-25-12"><a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a>    <span class="n">list_filter</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"is_active"</span><span class="p">,)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Group</span><span class="p">,</span> <span class="n">User</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">admin</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserAdmin</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">unregister</span><span class="p">(</span><span class="n">Group</span><span class="p">)</span>
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">unregister</span><span class="p">(</span><span class="n">User</span><span class="p">)</span>
+</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>
+</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>
+</span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">User</span><span class="p">)</span>
+</span><span id="__span-26-11"><a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a><span class="k">class</span><span class="w"> </span><span class="nc">StaffUserAdmin</span><span class="p">(</span><span class="n">UserAdmin</span><span class="p">):</span>
+</span><span id="__span-26-12"><a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a>    <span class="n">list_filter</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"is_active"</span><span class="p">,)</span>
 </span></code></pre></div>
 <p><code>django_formwork.admin.auth</code> also has <code>UserChangeForm</code>, <code>AdminUserCreationForm</code> and
 <code>AdminPasswordChangeForm</code> for <code>form</code>, <code>add_form</code> and <code>change_password_form</code>, and
@@ -2607,18 +2651,18 @@ object shows the name the object had, without a link. Each user who can view the
 can see its history list. Nobody can change it.</p>
 <p>A subclass of <code>HistoryAdmin</code> sets the columns and the filters, and <code>history_admin</code> on
 the model's admin names it. <code>history_admin = None</code> turns the list off.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">admin</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">CompanyHistory</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">HistoryAdmin</span><span class="p">):</span>
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>    <span class="n">list_display</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"object"</span><span class="p">,</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"changes"</span><span class="p">]</span>
-</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>    <span class="n">list_filter</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"user"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">]</span>
-</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>    <span class="n">list_per_page</span> <span class="o">=</span> <span class="mi">100</span>
-</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>
-</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>
-</span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Company</span><span class="p">)</span>
-</span><span id="__span-26-11"><a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a><span class="k">class</span><span class="w"> </span><span class="nc">CompanyAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
-</span><span id="__span-26-12"><a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a>    <span class="n">history_admin</span> <span class="o">=</span> <span class="n">CompanyHistory</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">admin</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">CompanyHistory</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">HistoryAdmin</span><span class="p">):</span>
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>    <span class="n">list_display</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"object"</span><span class="p">,</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"changes"</span><span class="p">]</span>
+</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>    <span class="n">list_filter</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"user"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">]</span>
+</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>    <span class="n">list_per_page</span> <span class="o">=</span> <span class="mi">100</span>
+</span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>
+</span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>
+</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Company</span><span class="p">)</span>
+</span><span id="__span-27-11"><a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a><span class="k">class</span><span class="w"> </span><span class="nc">CompanyAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a>    <span class="n">history_admin</span> <span class="o">=</span> <span class="n">CompanyHistory</span>
 </span></code></pre></div>
 <p><code>list_display</code>, <code>list_filter</code> and <code>export_fields</code> take <code>time</code>, <code>object</code>, <code>user</code>,
 <code>action</code> and <code>changes</code>, and also the fields of the history's table and the methods of
@@ -2637,12 +2681,12 @@ which returns rows of the history's table.</p>
 <p><a href="https://django-pghistory.readthedocs.io/">django-pghistory</a> records the changes of a
 model with database triggers, so it also sees the changes made outside the admin. To
 show its events in the panel, give the site the <code>PghistoryHistory</code> backend:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdminSite</span>
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin.history</span><span class="w"> </span><span class="kn">import</span> <span class="n">PghistoryHistory</span>
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>
-</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAdminSite</span><span class="p">(</span><span class="n">AdminSite</span><span class="p">):</span>
-</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>    <span class="n">history</span> <span class="o">=</span> <span class="n">PghistoryHistory</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdminSite</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork.admin.history</span><span class="w"> </span><span class="kn">import</span> <span class="n">PghistoryHistory</span>
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAdminSite</span><span class="p">(</span><span class="n">AdminSite</span><span class="p">):</span>
+</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>    <span class="n">history</span> <span class="o">=</span> <span class="n">PghistoryHistory</span><span class="p">()</span>
 </span></code></pre></div>
 <p>For a model that pghistory tracks, the panel then lists the model's events with the
 fields each event changed, as pghistory's <code>pgh_diff</code> has them. A foreign key shows the
@@ -2666,7 +2710,7 @@ whole table. A model without a source has no history list.</p>
 <p>Every page is a Jinja2 template under <code>formwork_admin/</code>, loaded from the <code>jinja2/</code>
 directory of each installed app. To override one, put a template with the same path in
 an app listed before <code>django_formwork.admin</code>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>myapp/jinja2/formwork_admin/change_list.html
+<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>myapp/jinja2/formwork_admin/change_list.html
 </span></code></pre></div>
 <p><code>change_list_template</code>, <code>change_form_template</code> and the other <code>*_template</code> options name
 Jinja2 templates of the same engine.</p>
@@ -2674,36 +2718,36 @@ Jinja2 templates of the same engine.</p>
 <p>A page of your own gets the admin's layout, navigation and login check. Add its URL in
 <code>get_urls()</code>, wrap the view in <code>admin_site.admin_view()</code>, and render a Jinja2 template
 that extends <code>formwork_admin/base.html</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.urls</span><span class="w"> </span><span class="kn">import</span> <span class="n">path</span>
-</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>
-</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">admin</span>
-</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>
-</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Author</span>
-</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>
-</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>
-</span><span id="__span-29-8"><a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Author</span><span class="p">)</span>
-</span><span id="__span-29-9"><a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a><span class="k">class</span><span class="w"> </span><span class="nc">AuthorAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
-</span><span id="__span-29-10"><a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_urls</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="__span-29-11"><a id="__codelineno-29-11" name="__codelineno-29-11" href="#__codelineno-29-11"></a>        <span class="n">stats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_site</span><span class="o">.</span><span class="n">admin_view</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stats_view</span><span class="p">)</span>
-</span><span id="__span-29-12"><a id="__codelineno-29-12" name="__codelineno-29-12" href="#__codelineno-29-12"></a>        <span class="k">return</span> <span class="p">[</span><span class="n">path</span><span class="p">(</span><span class="s2">"stats/"</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"myapp_author_stats"</span><span class="p">),</span> <span class="o">*</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_urls</span><span class="p">()]</span>
-</span><span id="__span-29-13"><a id="__codelineno-29-13" name="__codelineno-29-13" href="#__codelineno-29-13"></a>
-</span><span id="__span-29-14"><a id="__codelineno-29-14" name="__codelineno-29-14" href="#__codelineno-29-14"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">stats_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
-</span><span id="__span-29-15"><a id="__codelineno-29-15" name="__codelineno-29-15" href="#__codelineno-29-15"></a>        <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_context</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Author stats"</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">count</span><span class="p">())</span>
-</span><span id="__span-29-16"><a id="__codelineno-29-16" name="__codelineno-29-16" href="#__codelineno-29-16"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"myapp/author_stats.html"</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
-</span></code></pre></div>
-<div class="language-jinja highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c">{# myapp/jinja2/myapp/author_stats.html #}</span>
-</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="cp">{%</span> <span class="k">extends</span> <span class="s2">"formwork_admin/base.html"</span> <span class="cp">%}</span>
-</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="cp">{%</span> <span class="k">import</span> <span class="s2">"formwork_admin/macros.html"</span> <span class="k">as</span> <span class="nv">m</span> <span class="cp">%}</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.urls</span><span class="w"> </span><span class="kn">import</span> <span class="n">path</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">admin</span>
 </span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>
-</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="cp">{%</span> <span class="k">block</span> <span class="nv">breadcrumbs</span> <span class="cp">%}</span>
-</span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a><span class="cp">{{</span> <span class="nv">m.model_crumbs</span><span class="o">(</span><span class="nv">site</span><span class="o">,</span> <span class="nv">opts</span><span class="o">,</span> <span class="nv">changelist_url</span><span class="o">)</span> <span class="cp">}}</span>
-</span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="x">&lt;li class="font-medium"&gt;</span><span class="cp">{{</span> <span class="nv">title</span> <span class="cp">}}</span><span class="x">&lt;/li&gt;</span>
-</span><span id="__span-30-8"><a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a><span class="cp">{%</span> <span class="k">endblock</span> <span class="cp">%}</span>
-</span><span id="__span-30-9"><a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a>
-</span><span id="__span-30-10"><a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a><span class="cp">{%</span> <span class="k">block</span> <span class="nv">content</span> <span class="cp">%}</span>
-</span><span id="__span-30-11"><a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a><span class="cp">{{</span> <span class="nv">m.page_header</span><span class="o">(</span><span class="nv">title</span><span class="o">,</span> <span class="nv">icon_name</span><span class="o">=</span><span class="nv">model_admin.get_icon</span><span class="o">())</span> <span class="cp">}}</span>
-</span><span id="__span-30-12"><a id="__codelineno-30-12" name="__codelineno-30-12" href="#__codelineno-30-12"></a><span class="x">&lt;div class="card border border-base-300 bg-base-100 p-6"&gt;</span><span class="cp">{{</span> <span class="nv">count</span> <span class="cp">}}</span><span class="x"> authors&lt;/div&gt;</span>
-</span><span id="__span-30-13"><a id="__codelineno-30-13" name="__codelineno-30-13" href="#__codelineno-30-13"></a><span class="cp">{%</span> <span class="k">endblock</span> <span class="cp">%}</span>
+</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Author</span>
+</span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>
+</span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a>
+</span><span id="__span-30-8"><a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a><span class="nd">@admin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Author</span><span class="p">)</span>
+</span><span id="__span-30-9"><a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a><span class="k">class</span><span class="w"> </span><span class="nc">AuthorAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-30-10"><a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_urls</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-30-11"><a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a>        <span class="n">stats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">admin_site</span><span class="o">.</span><span class="n">admin_view</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stats_view</span><span class="p">)</span>
+</span><span id="__span-30-12"><a id="__codelineno-30-12" name="__codelineno-30-12" href="#__codelineno-30-12"></a>        <span class="k">return</span> <span class="p">[</span><span class="n">path</span><span class="p">(</span><span class="s2">"stats/"</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"myapp_author_stats"</span><span class="p">),</span> <span class="o">*</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_urls</span><span class="p">()]</span>
+</span><span id="__span-30-13"><a id="__codelineno-30-13" name="__codelineno-30-13" href="#__codelineno-30-13"></a>
+</span><span id="__span-30-14"><a id="__codelineno-30-14" name="__codelineno-30-14" href="#__codelineno-30-14"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">stats_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+</span><span id="__span-30-15"><a id="__codelineno-30-15" name="__codelineno-30-15" href="#__codelineno-30-15"></a>        <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_context</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Author stats"</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">count</span><span class="p">())</span>
+</span><span id="__span-30-16"><a id="__codelineno-30-16" name="__codelineno-30-16" href="#__codelineno-30-16"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"myapp/author_stats.html"</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+</span></code></pre></div>
+<div class="language-jinja highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c">{# myapp/jinja2/myapp/author_stats.html #}</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="cp">{%</span> <span class="k">extends</span> <span class="s2">"formwork_admin/base.html"</span> <span class="cp">%}</span>
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="cp">{%</span> <span class="k">import</span> <span class="s2">"formwork_admin/macros.html"</span> <span class="k">as</span> <span class="nv">m</span> <span class="cp">%}</span>
+</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>
+</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="cp">{%</span> <span class="k">block</span> <span class="nv">breadcrumbs</span> <span class="cp">%}</span>
+</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="cp">{{</span> <span class="nv">m.model_crumbs</span><span class="o">(</span><span class="nv">site</span><span class="o">,</span> <span class="nv">opts</span><span class="o">,</span> <span class="nv">changelist_url</span><span class="o">)</span> <span class="cp">}}</span>
+</span><span id="__span-31-7"><a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a><span class="x">&lt;li class="font-medium"&gt;</span><span class="cp">{{</span> <span class="nv">title</span> <span class="cp">}}</span><span class="x">&lt;/li&gt;</span>
+</span><span id="__span-31-8"><a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a><span class="cp">{%</span> <span class="k">endblock</span> <span class="cp">%}</span>
+</span><span id="__span-31-9"><a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a>
+</span><span id="__span-31-10"><a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a><span class="cp">{%</span> <span class="k">block</span> <span class="nv">content</span> <span class="cp">%}</span>
+</span><span id="__span-31-11"><a id="__codelineno-31-11" name="__codelineno-31-11" href="#__codelineno-31-11"></a><span class="cp">{{</span> <span class="nv">m.page_header</span><span class="o">(</span><span class="nv">title</span><span class="o">,</span> <span class="nv">icon_name</span><span class="o">=</span><span class="nv">model_admin.get_icon</span><span class="o">())</span> <span class="cp">}}</span>
+</span><span id="__span-31-12"><a id="__codelineno-31-12" name="__codelineno-31-12" href="#__codelineno-31-12"></a><span class="x">&lt;div class="card border border-base-300 bg-base-100 p-6"&gt;</span><span class="cp">{{</span> <span class="nv">count</span> <span class="cp">}}</span><span class="x"> authors&lt;/div&gt;</span>
+</span><span id="__span-31-13"><a id="__codelineno-31-13" name="__codelineno-31-13" href="#__codelineno-31-13"></a><span class="cp">{%</span> <span class="k">endblock</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <p><code>page_context()</code> returns the site's <code>each_context()</code>, the model's <code>opts</code>,
 <code>changelist_url</code> and permissions, and the keyword arguments. <code>render()</code> renders with
@@ -2713,7 +2757,7 @@ the admin's Jinja2 engine. The URL reverses under the site's name, for example
 <p>Put the page's markup in the <code>content</code> block. The links of the sidebar, the breadcrumbs,
 the list rows and the Add buttons replace that block and update the rest in place. To link
 to your page the same way, write the link with <code>m.page_link()</code>:</p>
-<div class="language-jinja highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="x">&lt;a </span><span class="cp">{{</span> <span class="nv">m.page_link</span><span class="o">(</span><span class="nv">url</span><span class="o">(</span><span class="s2">"admin:myapp_author_stats"</span><span class="o">))</span> <span class="cp">}}</span><span class="x">&gt;Author stats&lt;/a&gt;</span>
+<div class="language-jinja highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="x">&lt;a </span><span class="cp">{{</span> <span class="nv">m.page_link</span><span class="o">(</span><span class="nv">url</span><span class="o">(</span><span class="s2">"admin:myapp_author_stats"</span><span class="o">))</span> <span class="cp">}}</span><span class="x">&gt;Author stats&lt;/a&gt;</span>
 </span></code></pre></div>
 <p>When the page loads a script or a stylesheet that the page before it did not, for
 example from a <code>Media</code> class, the browser loads it as a whole instead.</p>
@@ -2758,15 +2802,15 @@ costs one query for the page and not one for each row.</p>
 options of a relation. A column that follows a relation needs no <code>select_related()</code>.
 Relations to many rows do not load this way: a column that reads <code>obj.tags.all()</code> needs
 <code>prefetch_related()</code> in <code>get_queryset()</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ArticleAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
-</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>    <span class="n">list_display</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"title"</span><span class="p">,</span> <span class="s2">"author"</span><span class="p">,</span> <span class="s2">"tag_names"</span><span class="p">]</span>
-</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>
-</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
-</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_queryset</span><span class="p">(</span><span class="n">request</span><span class="p">)</span><span class="o">.</span><span class="n">prefetch_related</span><span class="p">(</span><span class="s2">"tags"</span><span class="p">)</span>
-</span><span id="__span-32-6"><a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>
-</span><span id="__span-32-7"><a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a>    <span class="nd">@admin</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">_</span><span class="p">(</span><span class="s2">"Tags"</span><span class="p">))</span>
-</span><span id="__span-32-8"><a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">tag_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
-</span><span id="__span-32-9"><a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a>        <span class="k">return</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ArticleAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>    <span class="n">list_display</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"title"</span><span class="p">,</span> <span class="s2">"author"</span><span class="p">,</span> <span class="s2">"tag_names"</span><span class="p">]</span>
+</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>
+</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+</span><span id="__span-33-5"><a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a>        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_queryset</span><span class="p">(</span><span class="n">request</span><span class="p">)</span><span class="o">.</span><span class="n">prefetch_related</span><span class="p">(</span><span class="s2">"tags"</span><span class="p">)</span>
+</span><span id="__span-33-6"><a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a>
+</span><span id="__span-33-7"><a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a>    <span class="nd">@admin</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">_</span><span class="p">(</span><span class="s2">"Tags"</span><span class="p">))</span>
+</span><span id="__span-33-8"><a id="__codelineno-33-8" name="__codelineno-33-8" href="#__codelineno-33-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">tag_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+</span><span id="__span-33-9"><a id="__codelineno-33-9" name="__codelineno-33-9" href="#__codelineno-33-9"></a>        <span class="k">return</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
 </span></code></pre></div>
 <p><code>fetch_mode</code> on a <code>ModelAdmin</code> or an inline takes another of Django's fetch modes, for
 example <code>FETCH_ONE</code>, which loads a relation for each row with a query of its own, as
@@ -2780,10 +2824,10 @@ on a <code>select_related()</code> or a prefetch that the page never reads. For 
 manager that joins a relation for <code>__str__</code>, return
 <code>super().get_queryset().fetch_mode(FETCH_PEERS)</code> instead. formwork's own tests run
 this way.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="c1"># settings for the tests</span>
-</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">"django_nplus1"</span><span class="p">]</span>
-</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="n">MIDDLEWARE</span> <span class="o">=</span> <span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">"django_nplus1.NPlus1Middleware"</span><span class="p">]</span>
-</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a><span class="n">NPLUS1_RAISE</span> <span class="o">=</span> <span class="kc">True</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># settings for the tests</span>
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">"django_nplus1"</span><span class="p">]</span>
+</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="n">MIDDLEWARE</span> <span class="o">=</span> <span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">"django_nplus1.NPlus1Middleware"</span><span class="p">]</span>
+</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="n">NPLUS1_RAISE</span> <span class="o">=</span> <span class="kc">True</span>
 </span></code></pre></div>
 <h3 id="computed-columns">Computed columns<a class="headerlink" href="#computed-columns" title="Permanent link">&para;</a></h3>
 <p>In Django's admin, a column that shows a count annotates <code>get_queryset()</code>. The list
@@ -2792,15 +2836,15 @@ the value for each of them before it picks the page. In <code>@admin.display</co
 names the expressions of the column instead. The admin computes them for the rows of
 the page with one query for each column, and sets each value on its row under its
 name:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.db.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Count</span>
-</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>
-</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>
-</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">VenueAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
-</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>    <span class="n">list_display</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"city"</span><span class="p">,</span> <span class="s2">"event_count"</span><span class="p">]</span>
-</span><span id="__span-34-6"><a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a>
-</span><span id="__span-34-7"><a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a>    <span class="nd">@admin</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">_</span><span class="p">(</span><span class="s2">"Events"</span><span class="p">),</span> <span class="n">annotate</span><span class="o">=</span><span class="p">{</span><span class="s2">"num_events"</span><span class="p">:</span> <span class="n">Count</span><span class="p">(</span><span class="s2">"events"</span><span class="p">)})</span>
-</span><span id="__span-34-8"><a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">event_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
-</span><span id="__span-34-9"><a id="__codelineno-34-9" name="__codelineno-34-9" href="#__codelineno-34-9"></a>        <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">num_events</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.db.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Count</span>
+</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>
+</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>
+</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">VenueAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-35-5"><a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a>    <span class="n">list_display</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"city"</span><span class="p">,</span> <span class="s2">"event_count"</span><span class="p">]</span>
+</span><span id="__span-35-6"><a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>
+</span><span id="__span-35-7"><a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>    <span class="nd">@admin</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">_</span><span class="p">(</span><span class="s2">"Events"</span><span class="p">),</span> <span class="n">annotate</span><span class="o">=</span><span class="p">{</span><span class="s2">"num_events"</span><span class="p">:</span> <span class="n">Count</span><span class="p">(</span><span class="s2">"events"</span><span class="p">)})</span>
+</span><span id="__span-35-8"><a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">event_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+</span><span id="__span-35-9"><a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a>        <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">num_events</span>
 </span></code></pre></div>
 <p>The read-only fields of the change form and of the inline rows, and the columns of an
 export, get their values the same way. A name of <code>annotate</code> must not be a field of the
@@ -2825,10 +2869,10 @@ choices only where it sees no such hook:</p>
 <p>Only the methods of your own classes count, not the ones in Django or formwork. With a
 hook, the rows load their choices one by one, and system check <code>formwork_admin.E504</code>
 asks you to set <code>share_choices</code> on the <code>ModelAdmin</code> or the inline:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">EventAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
-</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>    <span class="n">list_editable</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"venue"</span><span class="p">,</span> <span class="s2">"host"</span><span class="p">]</span>
-</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>    <span class="n">form</span> <span class="o">=</span> <span class="n">EventForm</span>  <span class="c1"># its __init__() only sets widget attributes</span>
-</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>    <span class="n">share_choices</span> <span class="o">=</span> <span class="kc">True</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">EventAdmin</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">ModelAdmin</span><span class="p">):</span>
+</span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a>    <span class="n">list_editable</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"venue"</span><span class="p">,</span> <span class="s2">"host"</span><span class="p">]</span>
+</span><span id="__span-36-3"><a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a>    <span class="n">form</span> <span class="o">=</span> <span class="n">EventForm</span>  <span class="c1"># its __init__() only sets widget attributes</span>
+</span><span id="__span-36-4"><a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a>    <span class="n">share_choices</span> <span class="o">=</span> <span class="kc">True</span>
 </span></code></pre></div>
 <table>
 <thead>

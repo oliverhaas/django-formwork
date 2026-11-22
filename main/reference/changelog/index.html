@@ -1328,6 +1328,13 @@
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
+<li>A click on a table row can open details under it: HTML that the row's object gives,
+  such as the latest replies to a ticket. A formset method <code>row_details(form)</code> gives the
+  rows of <code>formset.as_rows()</code> their details, and an admin method <code>row_details(request,
+  obj)</code> those of the list. <code>@admin.slot(lazy=True)</code> loads the details as the row opens.
+  The row gets a chevron in a last column, and a click on its inputs, links or buttons
+  does not open it. The details never change the widths of the columns. See
+  <a href="../formsets/">Formsets</a> and <a href="../admin/#row-details">Row details</a>.</li>
 <li><code>max_lines</code> on <code>DisplayField</code>, the <code>Display</code> widget and <code>@admin.display</code> cuts a long
   value to that many lines, from 1 to 10, with a <code>[more]</code> toggle for the rest, as help
   texts have. It applies in the field's box, in a cell of <code>formset.as_rows()</code>, in an
@@ -1598,6 +1605,9 @@
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>The rows of <code>formset.as_rows()</code> had no line between them, because a table with
+  separate borders paints no border of a <code>&lt;tbody&gt;</code>. The first cells of each row now
+  draw it. If you override <code>formwork/tables/row.html</code>, copy its <code>row_attrs</code> again.</li>
 <li>An admin list without a toolbar, such as the history list, drew its header row's color
   in square corners over the card's rounded ones. The rows' box now clips to its rounded
   corners.</li>
