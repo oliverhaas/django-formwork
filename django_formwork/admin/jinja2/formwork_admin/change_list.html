@@ -21,8 +21,9 @@
     <span class="hidden size-11 shrink-0 place-items-center rounded-box bg-linear-to-b from-primary/11 to-primary/4 text-primary inset-ring inset-ring-primary/9 sm:grid">{{ icon(model_admin.get_icon(), "size-5") }}</span>
     <h1 class="text-2xl font-semibold tracking-tight text-balance wrap-break-word">{{ cl.title }}</h1>
     {% block info %}
+    {#- The dialog shows its own spinner while the info loads. #}
     {% set info_label = _("About %(name)s", name=opts.verbose_name_plural) %}
-    <button type="button" class="btn btn-ghost btn-sm btn-circle -ml-1 shrink-0 text-base-content/50 hover:text-base-content" aria-label="{{ info_label }}" title="{{ info_label }}"
+    <button type="button" class="btn btn-ghost btn-sm btn-circle btn-loading-none -ml-1 shrink-0 text-base-content/50 hover:text-base-content" aria-label="{{ info_label }}" title="{{ info_label }}"
             aria-haspopup="dialog" aria-controls="changelist-info" @click="$refs.info.showModal()"
             hx-get="{{ url(model_admin.url_name("info")) }}" hx-trigger="click once" hx-target="#changelist-info-body" hx-swap="innerHTML">{{ icon("info", "size-5") }}</button>
     <dialog id="changelist-info" class="modal modal-bottom backdrop-blur-[3px] sm:modal-middle" x-ref="info" aria-labelledby="changelist-info-title">
@@ -54,13 +55,13 @@
     {% endblock %}
     {% if "top" in slots %}
     {#- Hides the top slot, so the list starts under the title. admin.js hides and shows the slot at once,
-        and the session keeps the choice for this list. #}
+        and the session keeps the choice for this list, so the button shows no spinner. #}
     {% set shown = not slots["top"].get("closed") %}
     {% set slot_url = url(model_admin.url_name("slot"), "top") %}
     <form method="post" action="{{ slot_url }}" hx-post="{{ slot_url }}" hx-swap="none" data-slot-toggle>
       {{ csrf_input }}
       <input type="hidden" name="closed" value="{{ "" if shown else "1" }}">
-      <button class="group btn btn-ghost btn-square text-base-content/60 hover:text-base-content" aria-controls="changelist-top" aria-expanded="{{ "true" if shown else "false" }}"
+      <button class="group btn btn-ghost btn-square btn-loading-none text-base-content/60 hover:text-base-content" aria-controls="changelist-top" aria-expanded="{{ "true" if shown else "false" }}"
               aria-label="{{ _("Hide overview") if shown else _("Show overview") }}" title="{{ _("Hide overview") if shown else _("Show overview") }}"
               data-show="{{ _("Show overview") }}" data-hide="{{ _("Hide overview") }}">
         {{ icon("panel-top-close", "size-5 hidden group-aria-expanded:block") }}{{ icon("panel-top-open", "size-5 group-aria-expanded:hidden") }}

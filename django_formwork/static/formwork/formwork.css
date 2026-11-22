@@ -1730,86 +1730,67 @@ input.combobox-input[aria-invalid="true"] {
 
 
 /* ================================================================
-   Button loading state (btn-loading)
+   Busy buttons
 
-   Communicates htmx loading state on buttons.  Two auto-detected modes:
+   formwork-core.js marks a .btn that sends a request with aria-busy
+   until the response is in.  Its icon turns into DaisyUI's spinner: an
+   <i class="icon"> child, or the btn-icon / btn-icon-end pseudo-element.
+   A button without a visible icon also gets data-busy-overlay: the
+   label goes clear and the spinner sits in the middle, so the button
+   keeps its size.  -webkit-text-fill-color hides the text and leaves
+   currentColor to the spinner.
 
-   Mode 1 (with btn-icon/btn-icon-end): swap the icon pseudo's
-   mask-image to a DaisyUI loading animation.  Label stays visible.
-
-   Mode 2 (standalone): hide the label, overlay a centered loading
-   animation via ::before.
-
-   Unlayered so the mask-image override beats icon-* setters (also
-   unlayered, from iconx).  Default is loading-spinner; modifiers
-   swap to other DaisyUI loading variants.
+   @apply puts the spinner's mask-image in DaisyUI's layer, which comes
+   after the components layer of the icon-* classes.
+   btn-loading-dots, -ring, -ball, -bars and -infinity pick another of
+   DaisyUI's loading animations; btn-loading-none keeps a button still.
    ================================================================ */
 
-/* Mode 1: with btn-icon/btn-icon-end, swap the icon for the loading animation.
-   Explicit width/height beat @apply loading's oversized width (in
-   @layer utilities) and keep the spinner the same size as the icon slot. */
-.btn-loading.htmx-request::before,
-.btn-loading.htmx-request::after {
-    @apply loading loading-spinner;
-    width: 1em;
-    height: 1em;
+.btn[aria-busy="true"] > .icon,
+.btn-icon[aria-busy="true"]::before,
+.btn-icon-end[aria-busy="true"]::after {
+    @apply loading-spinner;
 }
 
-/* Mode 1 variant modifiers */
-.btn-loading-dots.htmx-request::before,
-.btn-loading-dots.htmx-request::after { @apply loading-dots; }
-.btn-loading-ring.htmx-request::before,
-.btn-loading-ring.htmx-request::after { @apply loading-ring; }
-.btn-loading-ball.htmx-request::before,
-.btn-loading-ball.htmx-request::after { @apply loading-ball; }
-.btn-loading-bars.htmx-request::before,
-.btn-loading-bars.htmx-request::after { @apply loading-bars; }
-.btn-loading-infinity.htmx-request::before,
-.btn-loading-infinity.htmx-request::after { @apply loading-infinity; }
-
-/* Mode 2: standalone, with the label hidden behind a centered loading overlay.
-   color:transparent hides the text while preserving button dimensions
-   and background/border/shadow.  text-shadow:none kills DaisyUI's
-   white text-shadow (drawn independently of color).
-   --btn-fg ensures the spinner uses the button's themed text color
-   (set by DaisyUI on every btn variant) instead of currentColor
-   (which is now transparent).
-   Opacity fade on the pseudo matches DaisyUI's .2s btn transition. */
-.btn-loading:not(.btn-icon, .btn-icon-end) {
-    position: relative;
+/* Positioning utilities on the button win over this. */
+@layer components {
+    .btn[data-busy-overlay] {
+        position: relative;
+    }
 }
-.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request {
-    color: transparent;
+.btn[data-busy-overlay] {
+    -webkit-text-fill-color: transparent;
     text-shadow: none;
 }
-.btn-loading:not(.btn-icon, .btn-icon-end)::before {
+.btn[data-busy-overlay]::before {
+    @apply loading-spinner;
     content: "";
     position: absolute;
     inset: 0;
     margin: auto;
-    width: 1em;
-    height: 1em;
-    opacity: 0;
-    transition: opacity 0.2s cubic-bezier(0, 0, 0.2, 1);
-}
-.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before {
-    @apply loading loading-spinner text-lg;
-    background-color: var(--btn-fg);
-    opacity: 1;
+    width: 1.2em;
+    height: 1.2em;
+    background-color: currentColor;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
-/* Standalone size ladder */
-.btn-xs.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply text-xs; }
-.btn-sm.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply text-sm; }
-.btn-lg.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply text-xl; }
-.btn-xl.btn-loading:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply text-2xl; }
-
-/* Standalone variant modifiers */
-.btn-loading-dots:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-dots; }
-.btn-loading-ring:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-ring; }
-.btn-loading-ball:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-ball; }
-.btn-loading-bars:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-bars; }
-.btn-loading-infinity:not(.btn-icon, .btn-icon-end).htmx-request::before { @apply loading-infinity; }
+.btn-loading-dots[aria-busy="true"] {
+    & > .icon, &::before, &::after { @apply loading-dots; }
+}
+.btn-loading-ring[aria-busy="true"] {
+    & > .icon, &::before, &::after { @apply loading-ring; }
+}
+.btn-loading-ball[aria-busy="true"] {
+    & > .icon, &::before, &::after { @apply loading-ball; }
+}
+.btn-loading-bars[aria-busy="true"] {
+    & > .icon, &::before, &::after { @apply loading-bars; }
+}
+.btn-loading-infinity[aria-busy="true"] {
+    & > .icon, &::before, &::after { @apply loading-infinity; }
+}
 
 /* SelectMultiple: show checkmark when option is selected.
    Outside @layer so it beats the opacity-0 utility class in HTML. */

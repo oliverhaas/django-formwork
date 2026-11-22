@@ -13,6 +13,8 @@
  *   3. Dirty-field highlighting (opt-in via data-formwork-dirty) that
  *      toggles a .formwork-dirty class on the containing fieldset, or on
  *      an element marked data-formwork-field.
+ *   4. Busy buttons: a .btn that sends a request carries aria-busy until
+ *      the response is in, and formwork.css shows a spinner on it.
  *
  * Load via {% formwork_core_js %} if you're using {{ form.media }} for
  * the per-widget Alpine code; the bundle {% formwork_js %} already
@@ -348,6 +350,91 @@ document.addEventListener("htmx:after:settle", (e) => {
   observeDisclosures(target);
   scheduleMeasureDisclosures(target);
 });
+
+// --- Busy buttons ---
+// A .btn that sends a request carries aria-busy="true" until the response is
+// in, and formwork.css turns its icon into a spinner.  Without a visible icon
+// the button also gets data-busy-overlay, and the spinner covers its label.
+// The button is the source of an htmx request or one of its hx-indicator
+// elements, or the submitter of a form, htmx or native.  A menu item in a
+// .dropdown passes the state to the dropdown's trigger.
+//
+// A native submit stays busy until the next page replaces this one, or until
+// the browser stops the navigation.  A form that answers with a download
+// leaves the page in place, so its button opts out with .btn-loading-none.
+
+const BUSY_OPT_OUT = "btn-loading-none";
+const busyCounts = new WeakMap();
+const nativeBusy = new Set();
+
+const busyButton = (el) => {
+  if (!(el instanceof Element)) return null;
+  const button = el.matches(".btn")
+    ? el
+    : el.matches("button") && el.closest(".dropdown")?.querySelector(":scope > .btn");
+  if (!button || button.classList.contains(BUSY_OPT_OUT) || el.classList.contains(BUSY_OPT_OUT)) return null;
+  return button;
+};
+
+const hasVisibleIcon = (button) =>
+  button.matches(".btn-icon, .btn-icon-end") ||
+  [...button.children].some((child) => child.classList.contains("icon") && child.getClientRects().length > 0);
+
+// Counted, as the requests of one button can overlap: a request that
+// hx-sync replaces ends after the one that replaced it has started.
+const setBusy = (button, busy) => {
+  const count = (busyCounts.get(button) ?? 0) + (busy ? 1 : -1);
+  if (count > 0) {
+    busyCounts.set(button, count);
+    if (count === 1) {
+      button.toggleAttribute("data-busy-overlay", !hasVisibleIcon(button));
+      button.setAttribute("aria-busy", "true");
+    }
+    return;
+  }
+  busyCounts.delete(button);
+  button.removeAttribute("aria-busy");
+  button.removeAttribute("data-busy-overlay");
+};
+
+document.addEventListener("htmx:before:request", (e) => {
+  const ctx = e.detail.ctx;
+  const sources = [...(ctx.indicators ?? []), ctx.sourceEvent?.submitter];
+  ctx.formworkBusy = [...new Set(sources.map(busyButton).filter(Boolean))];
+  for (const button of ctx.formworkBusy) setBusy(button, true);
+});
+
+// htmx keeps its indicators while a response header sends the page elsewhere.
+document.addEventListener("htmx:finally:request", (e) => {
+  const ctx = e.detail.ctx;
+  if (ctx.keepIndicators) return;
+  for (const button of ctx.formworkBusy ?? []) setBusy(button, false);
+});
+
+// htmx cancels the submits it sends on the form itself, before this listener.
+document.addEventListener("submit", (e) => {
+  if (e.defaultPrevented) return;
+  const form = e.target;
+  const submitter = e.submitter;
+  if ((submitter?.formMethod || form.method) === "dialog") return;
+  const target = submitter?.formTarget || form.target;
+  if (target && target !== "_self") return;
+  const button = busyButton(submitter);
+  if (!button || nativeBusy.has(button)) return;
+  nativeBusy.add(button);
+  setBusy(button, true);
+});
+
+const clearNativeBusy = () => {
+  for (const button of nativeBusy) setBusy(button, false);
+  nativeBusy.clear();
+};
+// Back and Forward can bring the page back from the cache as it was left.
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) clearNativeBusy();
+});
+// The Navigation API reports the Stop button.  It says nothing of a download.
+window.navigation?.addEventListener("navigateerror", clearNativeBusy);
 
 // --- htmx 4 morph configuration ---
 

@@ -65,6 +65,16 @@
   `select_multiple.html`. Copy them again from the package: the table templates render
   `{{ option_lists }}` and `{{ cl.option_lists }}`, and the select templates leave out
   their option rows when `widget.options_template_id` is set.
+- A button gave no sign that its request was on the way unless it had the `btn-loading`
+  class. Now every `.btn` that sends a request shows a spinner until the response is in,
+  and `btn-loading` is gone: remove it from your templates. The spinner takes the place
+  of the button's icon; a button without one keeps its size and shows the spinner over
+  its label. This covers htmx requests and form submits, htmx or native, and a menu item
+  in a `.dropdown` spins the dropdown's trigger. The button carries `aria-busy="true"`
+  meanwhile. A native submit that answers with a download leaves the page in place, so
+  the spinner would never stop: give that button `btn-loading-none`, which keeps any
+  button still. `btn-loading-dots`, `-ring`, `-ball`, `-bars` and `-infinity` still
+  pick the animation.
 
 ### Added
 

@@ -1513,32 +1513,34 @@ _ICON_MODIFIERS_INNER = (
     '  <button id="btn-icon-lg" class="btn btn-lg btn-icon icon-upload">LG</button>\n'
     '  <button id="btn-icon-xl" class="btn btn-xl btn-icon icon-upload">XL</button>\n'
     "</div>\n"
-    # --- btn-loading ---
     '<div class="divider"></div>\n'
-    '<p class="text-xs font-semibold uppercase tracking-wide text-base-content/40">btn-loading</p>\n'
+    '<p class="text-xs font-semibold uppercase tracking-wide text-base-content/40">busy buttons</p>\n'
     '<div class="flex flex-wrap gap-2 mt-1">\n'
-    '  <button id="btn-loading-standalone" class="btn btn-primary btn-loading"'
-    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
-    ">Save</button>\n"
-    '  <button id="btn-loading-icon" class="btn btn-primary btn-icon btn-loading icon-upload"'
-    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
-    ">Upload</button>\n"
-    '  <button id="btn-loading-dots" class="btn btn-primary btn-loading btn-loading-dots"'
-    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
-    ">Dots</button>\n"
-    '  <button class="btn btn-secondary btn-loading btn-loading-ring"'
-    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
-    ">Ring</button>\n"
-    '  <button class="btn btn-accent btn-loading btn-loading-ball"'
-    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
-    ">Ball</button>\n"
-    '  <button class="btn btn-neutral btn-loading btn-loading-bars"'
-    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
-    ">Bars</button>\n"
-    '  <button class="btn btn-info btn-loading btn-loading-infinity"'
-    " @click=\"$el.classList.add('htmx-request'); setTimeout(() => $el.classList.remove('htmx-request'), 3000)\""
-    ">Infinity</button>\n"
+    '  <button id="busy-icon" class="btn btn-primary" hx-get="/icon-modifiers/?busy=1" hx-swap="none">'
+    '<i class="icon icon-upload size-4" aria-hidden="true"></i>Upload</button>\n'
+    '  <button id="busy-btn-icon" class="btn btn-primary btn-icon icon-upload" hx-get="/icon-modifiers/?busy=1" hx-swap="none">Upload</button>\n'
+    '  <button id="busy-label" class="btn btn-primary" hx-get="/icon-modifiers/?busy=1" hx-swap="none">Save</button>\n'
+    '  <button id="busy-dots" class="btn btn-primary btn-loading-dots" hx-get="/icon-modifiers/?busy=1" hx-swap="none">Dots</button>\n'
+    '  <button class="btn btn-secondary btn-loading-ring" hx-get="/icon-modifiers/?busy=1" hx-swap="none">Ring</button>\n'
+    '  <button class="btn btn-accent btn-loading-ball" hx-get="/icon-modifiers/?busy=1" hx-swap="none">Ball</button>\n'
+    '  <button class="btn btn-neutral btn-loading-bars" hx-get="/icon-modifiers/?busy=1" hx-swap="none">Bars</button>\n'
+    '  <button class="btn btn-info btn-loading-infinity" hx-get="/icon-modifiers/?busy=1" hx-swap="none">Infinity</button>\n'
+    '  <button id="busy-still" class="btn btn-loading-none" hx-get="/icon-modifiers/?busy=1" hx-swap="none">Still</button>\n'
     "</div>\n"
+    '<form class="flex flex-wrap gap-2 mt-2" hx-get="/icon-modifiers/?busy=1" hx-swap="none">\n'
+    '  <button id="busy-htmx-submit" class="btn"><i class="icon icon-search size-4" aria-hidden="true"></i>Search</button>\n'
+    '  <div class="dropdown">\n'
+    '    <div id="busy-menu" tabindex="0" role="button" class="btn">More '
+    '<i class="icon icon-chevron-down size-4" aria-hidden="true"></i></div>\n'
+    '    <ul tabindex="-1" class="dropdown-content menu z-10 w-48 rounded-box bg-base-100 p-1 shadow">\n'
+    '      <li><button id="busy-menu-item" name="more" value="1">Search more</button></li>\n'
+    "    </ul>\n"
+    "  </div>\n"
+    "</form>\n"
+    '<form method="get" action="/icon-modifiers/" class="mt-2">\n'
+    '  <input type="hidden" name="busy" value="1">\n'
+    '  <button id="busy-native" class="btn">Reload</button>\n'
+    "</form>\n"
     # --- alert-icon ---
     '<div class="divider"></div>\n'
     '<p class="text-xs font-semibold uppercase tracking-wide text-base-content/40">alert-icon / alert-col / alert-soft</p>\n'
@@ -1658,7 +1660,7 @@ _PAGES = [
         "icon-modifiers",
         "/icon-modifiers/",
         "Icon Modifiers",
-        "Button and alert icon modifier patterns, btn-icon, btn-loading, alert-icon",
+        "Button and alert icon modifier patterns, btn-icon, busy buttons, alert-icon",
     ),
 ]
 

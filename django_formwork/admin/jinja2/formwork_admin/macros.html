@@ -136,11 +136,12 @@
 {% endif %}
 {% endmacro %}
 
+{#- An export answers with a file and the page stays, so the trigger shows no spinner: it would never stop. #}
 {% macro export_menu(cl, formats) %}
 {% if formats %}
 {% set format_icons = {"csv": "file-text", "xlsx": "file-spreadsheet", "json": "file-braces"} %}
 <div class="dropdown dropdown-end shrink-0" data-export>
-  <div tabindex="0" role="button" class="btn gap-2 max-sm:px-3" aria-label="{{ _("Export") }}">{{ icon("download") }}<span class="max-sm:sr-only">{{ _("Export") }}</span>{{ icon("chevron-down", "size-3.5 opacity-50 max-sm:hidden") }}</div>
+  <div tabindex="0" role="button" class="btn btn-loading-none gap-2 max-sm:px-3" aria-label="{{ _("Export") }}">{{ icon("download") }}<span class="max-sm:sr-only">{{ _("Export") }}</span>{{ icon("chevron-down", "size-3.5 opacity-50 max-sm:hidden") }}</div>
   <ul tabindex="-1" class="dropdown-content menu z-30 mt-2 w-60 rounded-box border border-base-300 bg-base-100 p-1 shadow-lg">
     <li class="menu-title text-xs font-normal">{% if cl.is_filtered %}{% trans trimmed count=cl.result_count, total=number(cl.result_count) %}The {{ total }} filtered row{% pluralize %}The {{ total }} filtered rows{% endtrans %}{% else %}{% trans trimmed count=cl.result_count, total=number(cl.result_count) %}All {{ total }} row{% pluralize %}All {{ total }} rows{% endtrans %}{% endif %}</li>
     {% for format in formats %}

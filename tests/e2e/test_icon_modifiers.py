@@ -1,6 +1,9 @@
-"""E2e tests for icon modifier CSS patterns (btn-icon, btn-loading, alert-icon)."""
+"""E2e tests for icon modifier CSS patterns (btn-icon, busy buttons, alert-icon)."""
+
+import re
 
 import pytest
+from playwright.sync_api import expect
 
 
 class TestBtnIcon:
@@ -66,88 +69,109 @@ class TestBtnIcon:
         assert size["h"] > 0
 
 
-class TestBtnLoading:
-    """Verify btn-loading htmx loading state."""
+BUSY_REQUEST = re.compile(r"/icon-modifiers/\?busy=1")
 
-    def test_standalone_loading_hides_text(self, icon_modifiers_page):
-        """Mode 2: adding htmx-request hides text via color:transparent."""
+MASK_JS = """([id, pseudo]) => {
+    const el = document.getElementById(id);
+    const style = pseudo ? getComputedStyle(el, pseudo) : getComputedStyle(el.querySelector(':scope > .icon'));
+    return style.maskImage || style.webkitMaskImage;
+}"""
+
+
+@pytest.fixture
+def held(icon_modifiers_page):
+    """Requests to the busy buttons' URL, held until the test continues them."""
+    routes = []
+    icon_modifiers_page.route(BUSY_REQUEST, lambda route: routes.append(route))
+    return routes
+
+
+class TestBusyButtons:
+    """A .btn that sends a request shows a spinner until the response is in."""
+
+    @pytest.mark.parametrize(("button_id", "pseudo"), [("busy-icon", None), ("busy-btn-icon", "::before")])
+    def test_icon_turns_into_spinner_while_request_runs(self, icon_modifiers_page, held, button_id, pseudo):
         page = icon_modifiers_page
-        btn = page.locator("#btn-loading-standalone")
-        assert btn.is_visible()
+        idle_mask = page.evaluate(MASK_JS, [button_id, pseudo])
+        button = page.locator(f"#{button_id}")
+        with page.expect_request(BUSY_REQUEST):
+            button.click()
+        expect(button).to_have_attribute("aria-busy", "true")
+        expect(button).not_to_have_attribute("data-busy-overlay", "")
+        assert page.evaluate(MASK_JS, [button_id, pseudo]) != idle_mask
 
-        width_before = page.evaluate(
-            """() => document.getElementById('btn-loading-standalone').offsetWidth""",
-        )
+        held[0].fulfill(body="")
+        expect(button).not_to_have_attribute("aria-busy", "true")
+        assert page.evaluate(MASK_JS, [button_id, pseudo]) == idle_mask
 
-        page.evaluate(
-            "() => document.getElementById('btn-loading-standalone').classList.add('htmx-request')",
-        )
-        page.wait_for_timeout(600)
-
-        # Button dimensions preserved (text still in flow, just invisible)
-        width_during = page.evaluate(
-            """() => document.getElementById('btn-loading-standalone').offsetWidth""",
-        )
-        assert width_during == width_before
-
-        # Text color is transparent
-        color = page.evaluate(
-            """() => getComputedStyle(document.getElementById('btn-loading-standalone')).color""",
-        )
-        assert "0, 0, 0, 0" in color or color == "transparent"
-
-    def test_standalone_loading_shows_spinner(self, icon_modifiers_page):
-        """Mode 2: ::before pseudo appears during htmx-request."""
+    def test_button_without_icon_keeps_its_size_under_spinner(self, icon_modifiers_page, held):
         page = icon_modifiers_page
-        page.evaluate(
-            "() => document.getElementById('btn-loading-standalone').classList.add('htmx-request')",
-        )
-        page.wait_for_timeout(100)
-
-        pseudo = page.evaluate(
+        button = page.locator("#busy-label")
+        idle_box = button.bounding_box()
+        with page.expect_request(BUSY_REQUEST):
+            button.click()
+        expect(button).to_have_attribute("data-busy-overlay", "")
+        busy = page.evaluate(
             """() => {
-                const el = document.getElementById('btn-loading-standalone');
-                const style = getComputedStyle(el, '::before');
-                return { content: style.content, w: style.width, position: style.position };
+                const el = document.getElementById('busy-label');
+                return {
+                    fill: getComputedStyle(el).webkitTextFillColor,
+                    spinner: getComputedStyle(el, '::before').content,
+                };
             }""",
         )
-        assert pseudo["content"] != "none"
-        assert pseudo["w"] != "0px"
-        assert pseudo["position"] == "absolute"
+        assert busy["fill"] == "rgba(0, 0, 0, 0)"
+        assert busy["spinner"] != "none"
+        assert button.bounding_box() == idle_box
 
-    def test_icon_mode_loading_keeps_text(self, icon_modifiers_page):
-        """Mode 1: text stays visible during loading."""
+        held[0].fulfill(body="")
+        expect(button).not_to_have_attribute("data-busy-overlay", "")
+
+    @pytest.mark.parametrize(
+        ("clicks", "busy_id"),
+        [
+            (["busy-htmx-submit"], "busy-htmx-submit"),
+            (["busy-menu", "busy-menu-item"], "busy-menu"),
+        ],
+        ids=["htmx-submit", "menu-item"],
+    )
+    def test_htmx_form_submit_spins_its_button(self, icon_modifiers_page, held, clicks, busy_id):
         page = icon_modifiers_page
-        btn = page.locator("#btn-loading-icon")
-        assert btn.is_visible()
+        for button_id in clicks[:-1]:
+            page.locator(f"#{button_id}").click()
+        with page.expect_request(BUSY_REQUEST):
+            page.locator(f"#{clicks[-1]}").click()
+        expect(page.locator(f"#{busy_id}")).to_have_attribute("aria-busy", "true")
 
-        page.evaluate(
-            "() => document.getElementById('btn-loading-icon').classList.add('htmx-request')",
-        )
-        page.wait_for_timeout(100)
-
-        color = page.evaluate(
-            """() => getComputedStyle(document.getElementById('btn-loading-icon')).color""",
-        )
-        # In mode 1, color should NOT be transparent
-        assert "0, 0, 0, 0" not in color
-
-    def test_loading_dots_variant(self, icon_modifiers_page):
-        """btn-loading-dots swaps the spinner mask for the dots animation."""
+    def test_native_form_submit_spins_its_button(self, icon_modifiers_page):
+        """The busy state is recorded in sessionStorage, which outlives the page it was set on."""
         page = icon_modifiers_page
-        btn = page.locator("#btn-loading-dots")
-        assert btn.is_visible()
-
         page.evaluate(
-            """() => ['btn-loading-standalone', 'btn-loading-dots'].forEach(
-                (id) => document.getElementById(id).classList.add('htmx-request'))""",
+            """() => {
+                const button = document.getElementById('busy-native');
+                new MutationObserver(() => sessionStorage.setItem('busy', button.ariaBusy))
+                    .observe(button, {attributes: true});
+            }""",
         )
-        spinner_mask, dots_mask = page.evaluate(
-            """() => ['btn-loading-standalone', 'btn-loading-dots'].map((id) => {
-                const style = getComputedStyle(document.getElementById(id), '::before');
-                return style.maskImage || style.webkitMaskImage;
-            })""",
-        )
+        page.locator("#busy-native").click()
+        expect(page).to_have_url(BUSY_REQUEST)
+        assert page.evaluate("() => sessionStorage.getItem('busy')") == "true"
+
+    def test_btn_loading_none_stays_still(self, icon_modifiers_page, held):
+        page = icon_modifiers_page
+        with page.expect_request(BUSY_REQUEST):
+            page.locator("#busy-still").click()
+        expect(page.locator("#busy-still")).not_to_have_attribute("aria-busy", "true")
+
+    def test_loading_dots_variant(self, icon_modifiers_page, held):
+        """btn-loading-dots swaps the spinner for the dots animation."""
+        page = icon_modifiers_page
+        for button_id in ("busy-label", "busy-dots"):
+            with page.expect_request(BUSY_REQUEST):
+                page.locator(f"#{button_id}").click()
+            expect(page.locator(f"#{button_id}")).to_have_attribute("aria-busy", "true")
+        spinner_mask = page.evaluate(MASK_JS, ["busy-label", "::before"])
+        dots_mask = page.evaluate(MASK_JS, ["busy-dots", "::before"])
         assert dots_mask not in ("", "none")
         assert dots_mask != spinner_mask
 
