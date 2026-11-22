@@ -40,6 +40,23 @@ def kitchen():
     return Category.objects.create(name="Kitchen", slug="kitchen")
 
 
+@pytest.mark.usefixtures("_e2e_settings")
+def test_the_login_card_sits_in_the_middle_of_the_window_with_the_logo_in_view_above_it(page, live_server, settings):
+    settings.ROOT_URLCONF = "admin_app.urls"
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.goto(f"{live_server.url}/admin/login/")
+    logo = page.locator("main > :first-child")
+    card = page.locator("main .card")
+
+    box = card.bounding_box()
+    assert box["y"] + box["height"] / 2 == pytest.approx(450, abs=1)
+    assert logo.bounding_box()["y"] + logo.bounding_box()["height"] < box["y"]
+
+    page.set_viewport_size({"width": 1280, "height": 480})
+    assert logo.bounding_box()["y"] >= 0
+    assert logo.bounding_box()["y"] + logo.bounding_box()["height"] < card.bounding_box()["y"]
+
+
 def test_selection_works_after_a_search_swap(admin_page, live_server, kitchen):
     for name in ("Kettle", "Toaster", "Kettle lid"):
         Item.objects.create(name=name, category=kitchen)
