@@ -207,7 +207,7 @@ def list_html(cell: Cell) -> SafeString:
             return mark_safe(text)  # noqa: S308 (an "html" cell holds markup the project returned as safe)
         case "file" if cell["url"]:
             return format_html(
-                '<a class="link link-primary inline-flex items-center gap-1" href="{}"><i class="icon icon-paperclip size-3.5" aria-hidden="true"></i>{}</a>',
+                '<a class="link link-hover link-primary inline-flex items-center gap-1" href="{}"><i class="icon icon-paperclip size-3.5" aria-hidden="true"></i>{}</a>',
                 cell["url"],
                 text.rsplit("/", 1)[-1],
             )

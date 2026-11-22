@@ -33,7 +33,7 @@
     link, and a click picks the row for the relation that opened the popup. -#}
 {% block display_cell %}
       {%- if columns[loop.index0].linked and link %}
-      <a href="{{ link }}"{% if not popup %} hx-get="{{ link }}" hx-target="body" hx-swap="outerMorph scroll:top scrollTarget:window" hx-push-url="true" hx-sync="body:replace" hx-preload="formwork-admin:intent, mousedown, touchstart" data-page-link="change"{% endif %} class="link link-primary font-medium"{% if pick %} data-popup-pick="{{ pick }}"{% endif %}>{{ bf.display_value }}</a>
+      <a href="{{ link }}"{% if not popup %} hx-get="{{ link }}" hx-target="body" hx-swap="outerMorph scroll:top scrollTarget:window" hx-push-url="true" hx-sync="body:replace" hx-preload="formwork-admin:intent, mousedown, touchstart" data-page-link="change"{% endif %} class="link link-hover link-primary font-medium"{% if pick %} data-popup-pick="{{ pick }}"{% endif %}>{{ bf.display_value }}</a>
       {%- else %}
       {{ bf.display_value }}
       {%- endif %}
