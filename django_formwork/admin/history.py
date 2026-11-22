@@ -183,7 +183,7 @@ class PghistoryHistory(ModelHistory):
 
         if not event_models(tracks_model=type(obj)._meta.concrete_model):
             return super().entries(request, obj, start, stop)
-        tracked = Events.objects.tracks(obj)  # ty: ignore[unresolved-attribute]
+        tracked = Events.objects.tracks(obj)  # ty: ignore[missing-attribute]
         events = list(tracked.order_by("-pgh_created_at", "-pgh_id")[start:stop])
         users = _users({(event.pgh_context or {}).get("user") for event in events})
         values = _related_values(type(obj), [event.pgh_diff or {} for event in events])

@@ -16,7 +16,7 @@ from django.forms.renderers import TemplatesSetting
 from django.template import TemplateDoesNotExist, defaultfilters
 from django.template.backends.jinja2 import Jinja2
 from django.utils.formats import localize
-from django.utils.timezone import template_localtime  # type: ignore[attr-defined]  # ty: ignore[import-not-found]  (missing from django-stubs)
+from django.utils.timezone import template_localtime  # type: ignore[attr-defined]  # ty: ignore[missing-module-member]  (missing from django-stubs)
 from django.utils.translation import gettext, ngettext, npgettext, pgettext, pgettext_lazy
 
 from django_formwork.boundfield import FormworkBoundField
@@ -34,7 +34,7 @@ def _localize(value: Any) -> Any:  # noqa: ANN401
 
 def environment(**options: Any) -> jinja2.Environment:
     env = jinja2.Environment(**options)  # noqa: S701 (Django's backend sets autoescape)
-    env.install_gettext_callables(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    env.install_gettext_callables(  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         gettext,
         ngettext,
         newstyle=True,

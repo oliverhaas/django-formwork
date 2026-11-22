@@ -68,7 +68,7 @@ def cell_for_value(value: object, empty: str, *, boolean: bool = False) -> Cell:
     if isinstance(value, SafeData):
         return _cell("html", value)
     if isinstance(value, dt.datetime):
-        return _cell("date", formats.localize(timezone.template_localtime(value)))  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        return _cell("date", formats.localize(timezone.template_localtime(value)))  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
     if isinstance(value, dt.date | dt.time):
         return _cell("date", formats.localize(value))
     if isinstance(value, int | float | decimal.Decimal):

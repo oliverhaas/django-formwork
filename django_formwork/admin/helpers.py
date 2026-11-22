@@ -71,7 +71,7 @@ FIRST_OBJECTS = 8
 def _show_errors_inline(form: BaseForm) -> None:
     """Show each field error under its field, unless the form's ``Meta.error_display`` sets a display."""
     if getattr(getattr(type(form), "Meta", None), "error_display", None) is None:
-        form.error_display = "inline"  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        form.error_display = "inline"  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
 
 
 @dataclass
@@ -247,7 +247,7 @@ class _AdminDisplayBoundField(_DisplayBoundField):
 
     @property
     def display_value(self) -> SafeString:
-        return _contents(self.value(), self.field.empty_value_display)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        return _contents(self.value(), self.field.empty_value_display)  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
 
 
 def show_display_fields(form_class: type[ModelForm[Any]], model_admin: Any) -> None:
@@ -258,7 +258,7 @@ def show_display_fields(form_class: type[ModelForm[Any]], model_admin: Any) -> N
         if isinstance(form_field, DisplayField):
             shown = copy.copy(form_field)
             shown.bound_field_class = _AdminDisplayBoundField
-            shown.empty_value_display = model_admin.get_empty_value_display()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            shown.empty_value_display = model_admin.get_empty_value_display()  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
             form_class.base_fields[name] = shown
 
 

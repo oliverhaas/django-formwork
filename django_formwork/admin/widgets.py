@@ -256,7 +256,7 @@ class RelatedWidgetWrapper(_FormworkTemplatesMixin, forms.Widget):
 
     @choices.setter
     def choices(self, value: Any) -> None:
-        self.widget.choices = value  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        self.widget.choices = value  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
 
     def _related_url(self, action: str, *args: Any) -> str:
         opts = self.rel.model._meta
@@ -363,7 +363,7 @@ class AdminDateWidget(DatePicker):
 class NullBooleanSelect(Select):
     """The dropdown over Unknown, Yes and No; it reads and posts values as Django's ``NullBooleanSelect``."""
 
-    format_value = forms.NullBooleanSelect.format_value  # type: ignore[assignment]  # ty: ignore[invalid-method-override]
+    format_value = forms.NullBooleanSelect.format_value  # type: ignore[assignment]  # ty: ignore[incompatible-method-override]
     value_from_datadict = forms.NullBooleanSelect.value_from_datadict
 
     def __init__(self, attrs: dict[str, Any] | None = None) -> None:
@@ -563,7 +563,7 @@ def formwork_widget(widget: forms.Widget, field: forms.Field, admin_site: Any) -
     new.is_localized = bool(field.localize)
     new.attrs.update(field.widget_attrs(new))
     if isinstance(field, forms.ChoiceField):
-        new.choices = field.choices  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        new.choices = field.choices  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
     return new
 
 

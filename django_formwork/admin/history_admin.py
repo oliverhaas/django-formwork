@@ -44,7 +44,7 @@ class HistoryChangeList(ChangeList):
     """The history list's rows link their object's change page, without the list's filters."""
 
     def url_for_result(self, result: models.Model) -> str:
-        obj = result.history_object  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        obj = result.history_object  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         if obj is None:
             return ""
         parent = self.model_admin.parent
@@ -207,9 +207,9 @@ class HistoryAdmin(ModelAdmin):
             changes: (gettext_lazy("Changes"), None),
         }
         for column, (label, order) in labels.items():
-            column.short_description = label  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            column.short_description = label  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
             if order:
-                column.admin_order_field = order  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+                column.admin_order_field = order  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         return {column.__name__: column for column in labels}
 
     @cached_property

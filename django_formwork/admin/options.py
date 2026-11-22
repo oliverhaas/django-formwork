@@ -440,7 +440,7 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
         return queryset if self.fetch_mode is None else queryset.fetch_mode(self.fetch_mode)
 
     def get_sortable_by(self, request: HttpRequest) -> Sequence[Any]:
-        return self.sortable_by if self.sortable_by is not None else self.get_list_display(request)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        return self.sortable_by if self.sortable_by is not None else self.get_list_display(request)  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
 
     # Permissions
 
@@ -468,12 +468,12 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
 
     def has_module_permission(self, request: HttpRequest) -> bool:
         # A site's has_model_permission() can grant a model without a permission in its app.
-        return request.user.has_module_perms(self.opts.app_label) or any(  # ty: ignore[unresolved-attribute]
+        return request.user.has_module_perms(self.opts.app_label) or any(  # ty: ignore[missing-union-attribute]
             self._has_perm(request, action) for action in ("view", "change", "add", "delete")
         )
 
     def _get_form_for_get_fields(self, request: HttpRequest, obj: models.Model | None) -> Any:
-        return self.get_form(request, obj, fields=None)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        return self.get_form(request, obj, fields=None)  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
 
     def _display_fields(
         self, names: Sequence[Any], fields: Sequence[Any] | None, *, saved_only: bool = False
@@ -585,7 +585,7 @@ class ModelAdmin(BaseModelAdmin):
             def wrapper(*args: Any, **kwargs: Any) -> HttpResponseBase:
                 return self.admin_site.admin_view(view)(*args, **kwargs)
 
-            wrapper.model_admin = self  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            wrapper.model_admin = self  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
             return update_wrapper(wrapper, view)
 
         info = self.opts.app_label, self.opts.model_name
@@ -1275,7 +1275,7 @@ class ModelAdmin(BaseModelAdmin):
         self, action: str | Callable[..., Any], action_location: ActionLocation = ActionLocation.CHANGE_LIST
     ) -> Action | None:
         if callable(action):
-            func, name = action, action.__name__  # ty: ignore[unresolved-attribute]
+            func, name = action, action.__name__  # ty: ignore[missing-attribute]
         elif hasattr(self.__class__, action):
             # A method comes off the class, so it gets the admin as its first argument like a function.
             func, name = getattr(self.__class__, action), action
@@ -1955,7 +1955,7 @@ class ModelAdmin(BaseModelAdmin):
             if refresh:
                 if refresh != "errors":
                     # Empty error lists render the form as posted without validating it.
-                    form._errors = ErrorDict(renderer=form.renderer)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+                    form._errors = ErrorDict(renderer=form.renderer)  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
                     for formset in formsets:
                         for inline_form in formset.forms:
                             inline_form._errors = ErrorDict(renderer=inline_form.renderer)
@@ -2361,7 +2361,7 @@ class InlineModelAdmin(BaseModelAdmin):
         if defaults["fields"] is None and not modelform_defines_fields(defaults["form"]):
             defaults["fields"] = forms.ALL_FIELDS
         formset = self._formset_factory(defaults)
-        formset.can_add = can_add  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        formset.can_add = can_add  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         if isinstance(fields, list | tuple):
             _lay_out(formset.form, [field_name(name) for name in fields])
         show_display_fields(formset.form, self)
@@ -2405,7 +2405,7 @@ class InlineModelAdmin(BaseModelAdmin):
             formset.min_num = formset.extra = 0
         else:
             formset.min_num = max(formset.min_num - others, 0)
-        formset.inline_pager = InlinePager(paginator, page, param, request, max_num)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        formset.inline_pager = InlinePager(paginator, page, param, request, max_num)  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         return formset
 
     def get_queryset(self, request: HttpRequest) -> models.QuerySet[Any]:

@@ -263,7 +263,7 @@ class AdminSite:
     # Actions
 
     def add_action(self, action: Callable[..., Any], name: str | None = None) -> None:
-        name = name or action.__name__  # ty: ignore[unresolved-attribute]
+        name = name or action.__name__  # ty: ignore[missing-attribute]
         self._actions[name] = action
         self._global_actions[name] = action
 
@@ -280,7 +280,7 @@ class AdminSite:
     # Access
 
     def has_permission(self, request: HttpRequest) -> bool:
-        return request.user.is_active and request.user.is_staff  # ty: ignore[unresolved-attribute]
+        return request.user.is_active and request.user.is_staff  # ty: ignore[missing-attribute]
 
     def has_model_permission(
         self, request: HttpRequest, model: type[models.Model], action: str, obj: models.Model | None = None
@@ -290,7 +290,7 @@ class AdminSite:
         Every ``ModelAdmin`` and inline of the site asks it. The default checks the model permission, as Django does.
         """
         opts = model._meta
-        return request.user.has_perm(f"{opts.app_label}.{get_permission_codename(action, opts)}")  # ty: ignore[unresolved-attribute]
+        return request.user.has_perm(f"{opts.app_label}.{get_permission_codename(action, opts)}")  # ty: ignore[missing-union-attribute]
 
     def admin_view(
         self, view: Callable[..., HttpResponseBase], cacheable: bool = False
@@ -326,7 +326,7 @@ class AdminSite:
             def wrapper(*args: Any, **kwargs: Any) -> HttpResponseBase:
                 return self.admin_view(view, cacheable)(*args, **kwargs)
 
-            wrapper.admin_site = self  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            wrapper.admin_site = self  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
             return update_wrapper(wrapper, view)
 
         urlpatterns: list[URLPattern | URLResolver] = [

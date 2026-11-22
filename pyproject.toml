@@ -198,7 +198,7 @@ include = ["django_formwork/async_forms.py"]
 
 [tool.ty.overrides.rules]
 # Mixin classes reference attributes from cooperating Form/ModelForm base classes.
-unresolved-attribute = "ignore"
+missing-attribute = "ignore"
 
 [[tool.ty.overrides]]
 include = ["django_formwork/formsets.py"]
@@ -209,7 +209,8 @@ include = ["django_formwork/formsets.py"]
 # super().validate_unique); and unique-check field names always resolve to
 # concrete fields with `attname`, which the Django stub widens to
 # Field | ForeignObjectRel.
-unresolved-attribute = "ignore"
+missing-attribute = "ignore"
+missing-union-attribute = "ignore"
 
 [[tool.ty.overrides]]
 include = ["django_formwork/forms.py"]
@@ -219,7 +220,7 @@ include = ["django_formwork/forms.py"]
 # resolve through the metaclass return type.
 # _DirtyOnlyModelFormMixin passes `self` (a bare mixin) to construct_instance
 # (which expects BaseForm); the mixin is only ever composed into one at runtime.
-unresolved-attribute = "ignore"
+missing-attribute = "ignore"
 invalid-argument-type = "ignore"
 
 [[tool.ty.overrides]]
@@ -228,7 +229,7 @@ include = ["django_formwork/widgets/*.py"]
 [tool.ty.overrides.rules]
 # _DropZoneMixin uses super().get_context() which resolves at runtime via MRO
 # but ty can't see the cooperative base class.
-unresolved-attribute = "ignore"
+missing-attribute = "ignore"
 
 [[tool.ty.overrides]]
 include = ["django_formwork/admin/decorators.py"]
@@ -236,7 +237,7 @@ include = ["django_formwork/admin/decorators.py"]
 [tool.ty.overrides.rules]
 # @display and @action set Django's admin attributes (boolean, short_description,
 # ...) on the decorated function.
-unresolved-attribute = "ignore"
+missing-attribute = "ignore"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "settings.base"
