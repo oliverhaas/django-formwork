@@ -10,6 +10,19 @@ updates:
       production-dependencies:
         dependency-type: "production"
 
+  # htmx.org and alpinejs get a pull request each: AdminSite's default script URLs must name the
+  # new version before the tests pass.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      css:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+          - "daisyui"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
