@@ -53,17 +53,17 @@ dev = [
   "openpyxl==3.1.5",
   "pillow>=13.0.0",
   "pre-commit==4.7.0",
-  "psycopg[binary]==3.3.8",
-  "pytest-asyncio==1.4.1.post1",
+  "psycopg[binary]==3.3.9",
+  "pytest-asyncio==1.5.0",
   "pytest-cov==7.1.0",
   "pytest-django==4.14.0",
   "pytest-playwright==0.10.0",
   "pytest-xdist==3.8.0",
   "pytest==9.2.0",
-  "ruff==0.17.4",
-  "ty==0.0.98",
+  "ruff==0.17.5",
+  "ty==0.0.107",
 ]
-docs = ["mkdocs==1.6.1", "mkdocs-material==9.8.0", "mike==2.2.0"]
+docs = ["mkdocs==1.6.1", "mkdocs-material==9.8.1", "mike==2.2.0"]
 
 [build-system]
 requires = ["hatchling>=1.33.0"]
