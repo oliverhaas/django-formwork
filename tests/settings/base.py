@@ -25,8 +25,11 @@ INSTALLED_APPS = [
 ]
 
 STATIC_URL = "/static/"
+_REPO = Path(__file__).resolve().parent.parent.parent
 STATICFILES_DIRS = [
-    str(Path(__file__).resolve().parent.parent.parent / "django_formwork" / "static"),
+    str(_REPO / "django_formwork" / "static"),
+    ("htmx", str(_REPO / "node_modules" / "htmx.org" / "dist")),
+    ("alpinejs", str(_REPO / "node_modules" / "alpinejs" / "dist")),
 ]
 
 TEMPLATES = [

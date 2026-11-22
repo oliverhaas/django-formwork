@@ -4,7 +4,9 @@ import contextlib
 import csv
 import io
 import json
+import re
 from datetime import UTC, date, datetime, time
+from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
@@ -272,6 +274,13 @@ def test_pages_link_the_site_favicon(client, monkeypatch, favicon, href):
 
     icon = soup.find("link", rel="icon")
     assert (icon and icon["href"]) == href
+
+
+def test_default_scripts_are_the_htmx_and_alpine_versions_the_tests_run():
+    pins = json.loads((Path(__file__).parent.parent / "package.json").read_text())["devDependencies"]
+
+    assert set(re.findall(r"htmx\.org@([^/]+)/", " ".join(admin.AdminSite.scripts))) == {pins["htmx.org"]}
+    assert re.findall(r"alpinejs@([^/]+)/", admin.AdminSite.alpine_script) == [pins["alpinejs"]]
 
 
 def test_login_page_redirects_a_signed_in_user(admin_client):

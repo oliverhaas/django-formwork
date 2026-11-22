@@ -22,12 +22,8 @@ support_site.register(Item, ItemAdmin)
 support_site.register(Category, CategoryAdmin)
 
 for admin_site in (site, support_site):
-    admin_site.scripts = (
-        "e2e/htmx/4.0.1/htmx.min.js",
-        "e2e/htmx/4.0.1/ext/hx-alpine-compat.min.js",
-        "e2e/htmx/4.0.1/ext/hx-preload.min.js",
-    )
-    admin_site.alpine_script = static("e2e/alpinejs/3.17.5/cdn.min.js")
+    admin_site.scripts = ("htmx/htmx.min.js", "htmx/ext/hx-alpine-compat.min.js", "htmx/ext/hx-preload.min.js")
+    admin_site.alpine_script = static("alpinejs/cdn.min.js")
 
 urlpatterns = [
     path("__formwork__/", include("django_formwork.urls")),

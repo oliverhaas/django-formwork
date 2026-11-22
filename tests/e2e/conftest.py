@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 
 import numpy as np
 import pytest
+from django.contrib.staticfiles import finders
 from django.core.handlers.wsgi import WSGIHandler
 from django.template import engines
 from django.test import RequestFactory
@@ -67,6 +68,17 @@ def _navigate(page, live_server, path):
         }""",
     )
     return page
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _scripts_installed():
+    """Fails every browser test at once when npm has not installed the htmx and Alpine the pages load.
+
+    Without them each page would wait 30 seconds for both before it failed.
+    """
+    missing = [script for script in ("htmx/htmx.min.js", "alpinejs/cdn.min.js") if not finders.find(script)]
+    if missing:
+        pytest.fail(f"Run npm ci: no static file {', '.join(missing)}", pytrace=False)
 
 
 @pytest.fixture(scope="session", autouse=True)
