@@ -159,11 +159,11 @@ class _FieldFilterMixin:
                 # A reverse relation has no verbose_name; Django's filter names its model.
                 self.label = getattr(model_field, "verbose_name", None) or model_field.related_model._meta.verbose_name
             self.extra = self.field_defaults(model_field) | self.extra
-            field = super().field  # type: ignore[misc]  # ty: ignore[unresolved-attribute]
+            field = super().field  # type: ignore[misc]  # ty: ignore[missing-attribute]
             # The control floats the filter's name, so the field draws no label row.
             field.label = ""
             return field
-        return super().field  # type: ignore[misc]  # ty: ignore[unresolved-attribute]
+        return super().field  # type: ignore[misc]  # ty: ignore[missing-attribute]
 
 
 class BooleanFilter(_FieldFilterMixin, django_filters.ChoiceFilter):
@@ -538,8 +538,8 @@ class AdminFilterSet(django_filters.FilterSet):
             if claimed := getattr(filter_, "claimed_params", None):
                 keys |= claimed(name, data)
                 continue
-            keys |= {key for key in filter_.params if key in data}  # ty: ignore[unresolved-attribute]
-            null_param = filter_.null_param  # ty: ignore[unresolved-attribute]
+            keys |= {key for key in filter_.params if key in data}  # ty: ignore[missing-attribute]
+            null_param = filter_.null_param  # ty: ignore[missing-attribute]
             if null_param and _truthy(data.get(null_param, "")):
                 keys.add(null_param)
         return keys
@@ -611,9 +611,9 @@ class AdminFilterSet(django_filters.FilterSet):
 def _bind(
     filter_: django_filters.Filter, params: tuple[str, ...], *, null_param: str | None = None, spawns: bool = False
 ) -> django_filters.Filter:
-    filter_.params = params  # ty: ignore[unresolved-attribute]
-    filter_.null_param = null_param  # ty: ignore[unresolved-attribute]
-    filter_.spawns_duplicates = spawns  # ty: ignore[unresolved-attribute]
+    filter_.params = params  # ty: ignore[missing-attribute]
+    filter_.null_param = null_param  # ty: ignore[missing-attribute]
+    filter_.spawns_duplicates = spawns  # ty: ignore[missing-attribute]
     return filter_
 
 

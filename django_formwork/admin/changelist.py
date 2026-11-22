@@ -398,7 +398,7 @@ class ChangeList:
         """``o`` values to the ``list_display`` entry they sort."""
         names: dict[str, str | Callable[..., Any]] = {}
         for entry in self.list_display:
-            key = entry if isinstance(entry, str) else entry.__name__  # ty: ignore[unresolved-attribute]
+            key = entry if isinstance(entry, str) else entry.__name__  # ty: ignore[missing-attribute]
             names[key] = entry
         return names
 

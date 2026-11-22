@@ -127,7 +127,7 @@ def tojson(value: object) -> str:
 
 def environment(**options: Any) -> jinja2.Environment:
     env = jinja2.Environment(**options)  # noqa: S701 (Django's backend sets autoescape)
-    env.install_gettext_callables(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    env.install_gettext_callables(  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         gettext,
         ngettext,
         newstyle=True,
