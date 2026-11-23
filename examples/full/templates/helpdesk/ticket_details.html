@@ -1,18 +1,18 @@
-{# A ticket's latest replies, under its row in the list. #}
+{# A ticket's latest replies, under its row in the list: the requester's on the left, the team's on the right. #}
 {% if replies %}
-<ol class="max-w-3xl space-y-3 border-s-2 border-base-content/10 ps-4">
-  {% if earlier %}<li class="text-xs text-base-content/60">{{ earlier }} earlier repl{{ earlier|pluralize:"y,ies" }}</li>{% endif %}
+<div class="max-w-3xl text-sm">
+  {% if earlier %}<div class="divider my-1 text-xs text-base-content/60">{{ earlier }} earlier repl{{ earlier|pluralize:"y,ies" }}</div>{% endif %}
   {% for reply in replies %}
-  <li>
-    <div class="flex flex-wrap items-center gap-x-2 text-xs text-base-content/60">
+  <div class="chat {% if reply.author %}chat-end{% else %}chat-start{% endif %}">
+    <div class="chat-header flex-wrap items-center text-xs text-base-content/60">
       <span class="font-medium text-base-content">{% if reply.author %}{{ reply.author.name }}{% else %}{{ ticket.requester }}{% endif %}</span>
       <time datetime="{{ reply.created_at|date:"c" }}">{{ reply.created_at|date:"M j, H:i" }}</time>
       {% if reply.is_internal %}<span class="badge badge-soft badge-warning badge-xs">Internal note</span>{% endif %}
     </div>
-    <p class="mt-0.5 line-clamp-2">{{ reply.body }}</p>
-  </li>
+    <div class="chat-bubble{% if reply.is_internal %} bg-warning/15{% elif reply.author %} bg-primary/10{% else %} bg-base-content/5{% endif %}"><p class="line-clamp-2">{{ reply.body }}</p></div>
+  </div>
   {% endfor %}
-</ol>
+</div>
 {% else %}
 <p class="text-sm text-base-content/60">No replies yet.</p>
 {% endif %}
