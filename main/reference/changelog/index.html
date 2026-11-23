@@ -1598,13 +1598,15 @@
   browser to lay out. A badge select keeps one element per label. Overrides of
   <code>formwork/widgets/select.html</code>, <code>select_multiple.html</code> and <code>combo_box.html</code> keep
   working.</li>
-<li>An admin list and <code>formset.as_rows()</code> render about 14% faster, with the same HTML. The
-  example Event list takes 94 ms instead of 109 ms, and 100 rows with three select
-  columns take 106 ms instead of 123 ms. Formwork's Jinja2 environments read a key of a
-  dict without trying an attribute of that name first, and copy their globals once per
-  template instead of twice per render. The select stubs of a column label a selected row
-  once for all rows that hold it, so a <code>label_from_instance()</code> that counts its calls sees
-  fewer of them.</li>
+<li>An admin list renders about 18% faster and <code>formset.as_rows()</code> about 33% faster, with
+  the same HTML. The example Event list takes 89 ms instead of 109 ms, and 100 rows with
+  three select columns take 83 ms instead of 123 ms. A select column whose rows share their
+  choices renders the widget of each value once and puts in each row's name and stub URL,
+  so a <code>get_context()</code> override of the widget runs once per value, not once per row.
+  Formwork's Jinja2 environments read a key of a dict without trying an attribute of that
+  name first, and copy their globals once per template instead of twice per render. The
+  select stubs of a column label a selected row once for all rows that hold it, so a
+  <code>label_from_instance()</code> that counts its calls sees fewer of them.</li>
 <li>The admin list's save button says Save, as on the change form, where a wide list said
   Save changes.</li>
 <li>The admin list's toolbar lost its rounded corners while it stuck under the top bar, and
