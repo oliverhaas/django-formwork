@@ -69,6 +69,12 @@
   padding-block: 0.1875rem;
 }
 
+/* A badge or a checkbox is as high as a line of the row's text. On the text's baseline it would reach
+   below the line and make the row 1.4px higher. */
+#changelist-table > tbody > tr[data-pk] > td > :is(.badge, .checkbox) {
+  vertical-align: top;
+}
+
 /* Each row is a <tbody> of its own. DaisyUI draws the line under every row of a body but its last,
    so the line between two bodies comes from here, in DaisyUI's color. It runs over a body, as a row's
    details under it show only while open. */

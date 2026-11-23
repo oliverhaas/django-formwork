@@ -19,7 +19,7 @@
     </td>
   </tr>
   {% endif %}
-  <tr data-pk="{{ form.instance.pk }}" class="transition-colors {{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)">
+  <tr data-pk="{{ form.instance.pk }}" class="text-sm transition-colors {{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)">
     {%- if select %}
     <td>
       <input type="checkbox" class="checkbox checkbox-sm" name="{{ select }}" value="{{ form.instance.pk }}"

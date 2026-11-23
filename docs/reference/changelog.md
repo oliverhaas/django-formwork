@@ -365,6 +365,9 @@
 - The admin list's toolbar lost its rounded corners while it stuck under the top bar, and
   sat flush against it. It now keeps its corners and a small gap under the top bar, and
   the rows pass out of sight in that gap.
+- The admin list's values are 14px, the size of the text in its editable fields. They
+  were 12px, so a row with fields and a row of plain values used two sizes. The column
+  headers stay 12px, and the rows keep their height.
 
 ### Fixed
 
