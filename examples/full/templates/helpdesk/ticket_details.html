@@ -1,9 +1,9 @@
-{# A ticket's latest replies, under its row in the list: the requester's on the left, the team's on the right. #}
+{# A ticket's latest replies, under its row in the list: the viewer's own on the right, all others on the left. #}
 {% if replies %}
 <div class="max-w-3xl text-sm">
   {% if earlier %}<div class="divider my-1 text-xs text-base-content/60">{{ earlier }} earlier repl{{ earlier|pluralize:"y,ies" }}</div>{% endif %}
   {% for reply in replies %}
-  <div class="chat {% if reply.author %}chat-end{% else %}chat-start{% endif %}">
+  <div class="chat {% if reply.author and reply.author.email == me %}chat-end{% else %}chat-start{% endif %}">
     <div class="chat-header flex-wrap items-center text-xs text-base-content/60">
       <span class="font-medium text-base-content">{% if reply.author %}{{ reply.author.name }}{% else %}{{ ticket.requester }}{% endif %}</span>
       <time datetime="{{ reply.created_at|date:"c" }}">{{ reply.created_at|date:"M j, H:i" }}</time>

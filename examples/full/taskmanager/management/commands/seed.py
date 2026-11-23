@@ -9,6 +9,8 @@ from django.contrib.auth.models import Group, Permission, User
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from taskmanager.models import Member
+
 APPS = ["taskmanager", "people", "crm", "billing", "helpdesk", "recruiting", "events", "content"]
 # Groups with every permission of their apps.
 GROUPS = {"Sales": ["crm"], "Support": ["helpdesk"], "Editors": ["content"]}
@@ -34,6 +36,9 @@ class Command(BaseCommand):
         for name, app_labels in GROUPS.items():
             group, _ = Group.objects.get_or_create(name=name)
             group.permissions.set(Permission.objects.filter(content_type__app_label__in=app_labels))
-        if not User.objects.filter(username="admin").exists():
-            User.objects.create_superuser("admin", "admin@example.com", "admin")
+        admin = User.objects.filter(username="admin").first() or User.objects.create_superuser("admin", "", "admin")
+        # The admin answers tickets as a support agent, so a ticket's replies show which are their own.
+        agent = Member.objects.filter(employee__department__code="CS").first()
+        admin.email = agent.email if agent else "admin@example.com"
+        admin.save(update_fields=["email"])
         self.stdout.write(self.style.SUCCESS("Done. Log in to /admin/ as admin, password admin."))

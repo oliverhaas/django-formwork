@@ -78,7 +78,13 @@ class TicketAdmin(admin.ModelAdmin):
     @admin.slot(lazy=True)
     def row_details(self, request, obj):
         replies = list(obj.replies.select_related("author").order_by("-created_at")[:3])
-        context = {"ticket": obj, "replies": replies[::-1], "earlier": max(obj.replies.count() - len(replies), 0)}
+        context = {
+            "ticket": obj,
+            "replies": replies[::-1],
+            "earlier": max(obj.replies.count() - len(replies), 0),
+            # Member stands in for a user model and matches a user by email.
+            "me": request.user.email,
+        }
         return render_to_string("helpdesk/ticket_details.html", context, request)
 
     @admin.display(
