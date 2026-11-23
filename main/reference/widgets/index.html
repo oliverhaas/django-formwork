@@ -2580,7 +2580,9 @@ label names the pair, so give each input an <code>aria-label</code>:</p>
 <code>DateInput</code> does not fit. <code>format</code> sets how the input shows the date, both
 when the server renders it and after a pick in the calendar, and the
 placeholder shows that format. The widget reads the format back, and also
-<code>YYYY-MM-DD</code>, so the field needs no matching <code>input_formats</code>.</p>
+<code>YYYY-MM-DD</code>, so the field needs no matching <code>input_formats</code>. The input is as
+wide as the longest date the format writes or the placeholder, whatever it
+holds, so a table column keeps its width while the user types.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="n">due_date</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DatePicker</span><span class="p">)</span>
 </span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="n">delivery</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DatePicker</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"</span><span class="si">%d</span><span class="s2">.%m.%Y"</span><span class="p">))</span>
 </span></code></pre></div>
@@ -2603,7 +2605,8 @@ the widget post the value. Now picks the current day and minute of the
 browser's clock and closes the calendar. Clear empties the field.</p>
 <p><code>format</code> sets how the input shows the value: a Django format setting name or
 a format string, <code>SHORT_DATETIME_FORMAT</code> by default. The placeholder spells
-the format out. The input reads typed text in that format and in the formats
+the format out, and the input is as wide as the longer of the placeholder and
+the dates the format writes. The input reads typed text in that format and in the formats
 of <code>DATETIME_INPUT_FORMATS</code> and <code>DATE_INPUT_FORMATS</code>, so <code>3/1/2030 2:30 pm</code>
 and <code>2030-03-01 14:30</code> both work in English. A day typed without a time takes
 the time under the calendar. Text that names no day posts as typed, and the

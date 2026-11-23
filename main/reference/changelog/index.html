@@ -1605,6 +1605,17 @@
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>A <code>DatePicker</code> or <code>DateTimePicker</code> in a table widened its column while the user typed,
+  and a native <code>&lt;select&gt;</code> resized its column when its value changed: both took the
+  width of their value. A date input is now as wide as the widest date its format
+  writes, or its placeholder, and a native select is as wide as its widest option. If
+  you override <code>formwork/widgets/date_picker.html</code>, <code>date_time_picker.html</code> or their
+  <code>_stub.html</code> templates, copy them again.</li>
+<li>The list of a <code>Select</code>, <code>SelectMultiple</code> or <code>ComboBox</code> changed its width while it was
+  open: a search that hid the widest option narrowed it, and the options that a server
+  search or Load more brought in could widen it. An open list now keeps the width it
+  opened with, and long options wrap. A list that the server searches is 20rem wide, or
+  as wide as its trigger.</li>
 <li>The rows of <code>formset.as_rows()</code> had no line between them, because a table with
   separate borders paints no border of a <code>&lt;tbody&gt;</code>. The first cells of each row now
   draw it. If you override <code>formwork/tables/row.html</code>, copy its <code>row_attrs</code> again.</li>
