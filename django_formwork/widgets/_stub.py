@@ -35,11 +35,14 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
     the query ``pk`` and ``prefix``, and the stub's inputs under their names."""
     # Built when the first stub renders, where the selects of the page share their queries.
     copies: dict[str, Callable[[], str]] = {}
+    # By column: the URL up to the row's query, and whether its rows share their choices.
     urls: dict[str, str] = {}
+    shared: dict[str, bool] = {}
     for form in formset.forms:
         pk = getattr(getattr(form, "instance", None), "pk", None)
         if pk is None:
             continue
+        query = urlencode({"pk": pk, "prefix": form.prefix})
         for name, field in form.fields.items():
             widget = widget_of(field, _StubMixin)
             if field.disabled or widget is None or name in form.errors:
@@ -47,12 +50,15 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
             if isinstance(widget, SearchableSelectMixin):
                 if widget.floating:
                     continue
+                if name not in shared:
+                    shared[name] = rows_share_choices(formset, field, share=share)
                 # Rows that share their choices share the labels that size their stubs.
-                if rows_share_choices(formset, field, share=share):
+                if shared[name]:
                     widget.stub_copy = copies.setdefault(name, cache(partial(_shared_copy, form[name], widget)))
             if name not in urls:
-                urls[name] = url_of(name)
-            widget.stub_url = with_query(urls[name], pk=pk, prefix=form.prefix)
+                url = url_of(name)
+                urls[name] = f"{url}{'&' if '?' in url else '?'}"
+            widget.stub_url = urls[name] + query
 
 
 def loaded_widget(bound: forms.BoundField) -> SafeString:

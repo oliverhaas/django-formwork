@@ -348,8 +348,8 @@
   browser to lay out. A badge select keeps one element per label. Overrides of
   `formwork/widgets/select.html`, `select_multiple.html` and `combo_box.html` keep
   working.
-- An admin list renders about 24% faster and `formset.as_rows()` about 35% faster, with
-  the same HTML. The example Event list takes 83 ms instead of 109 ms, and 100 rows with
+- An admin list renders about 27% faster and `formset.as_rows()` about 35% faster, with
+  the same HTML. The example Event list takes 80 ms instead of 109 ms, and 100 rows with
   three select columns take 80 ms instead of 123 ms. A column of checkboxes, of number
   inputs, or of selects whose rows share their choices renders the cell of each value once
   and puts in each row's name and stub URL, so a `get_context()` override of the widget
