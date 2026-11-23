@@ -10,7 +10,7 @@ The widgets are `Select`, `SelectMultiple`, `ComboBox`, `ComboBoxMultiple`, `Tex
 
 `django_formwork.admin` is a Django admin built on formwork forms, django-filter, htmx and Jinja2. It keeps the options, hooks, URL names and permissions of `django.contrib.admin`, so most `admin.py` modules port by changing `from django.contrib import admin` to `from django_formwork import admin`. The admin is experimental; [Admin](reference/admin.md) covers the setup and every option.
 
-![The ticket list with a status filter set](img/admin/changelist.webp)
+![The ticket list with the replies of a ticket open under its row](img/admin/changelist.webp)
 
 ## Requirements
 

@@ -18,7 +18,7 @@ class TicketAdmin(admin.ModelAdmin):
     inlines = [ReplyInline]
 ```
 
-![The ticket list with a status filter set](../img/admin/changelist.webp)
+![The ticket list with the replies of a ticket open under its row](../img/admin/changelist.webp)
 
 The classes are its own. A `ModelAdmin` does not subclass Django's, so an admin class
 written for `django.contrib.admin` that calls into Django's internals needs changes.
@@ -332,7 +332,7 @@ A `class Media` on a `ModelAdmin` or an inline adds its CSS and JavaScript to th
 of that admin, as in Django. Django's admin also loads jQuery on these pages, and this
 admin does not, so a script that uses `django.jQuery` does not run here.
 
-![The change form of an employee](../img/admin/change-form.webp)
+![The change form of an event, with its history](../img/admin/change-form.webp)
 
 Options this admin adds:
 
@@ -568,6 +568,8 @@ a list with many editable columns still reads as a table, a field shows its box 
 row under the pointer or with the focus. In the other rows its value shows as text, lined
 up with the column header, and the icons of a select or a date hide. A date and its time
 share one line, so a row stays one field high.
+
+![The event list with editable columns](../img/admin/changelist-editable.webp)
 
 A cell whose value differs from the saved one gets the accent color, and the toolbar above
 the table counts the changed cells. Save saves the rows, and Discard loads the saved values

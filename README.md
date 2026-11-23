@@ -58,10 +58,12 @@ Keep the scripts in this order. htmx's alpine-compat extension is required: with
 from django_formwork import admin
 ```
 
-![The ticket list with a status filter set](https://raw.githubusercontent.com/oliverhaas/django-formwork/main/docs/img/admin/changelist.webp)
+![The ticket list with the replies of a ticket open under its row](https://raw.githubusercontent.com/oliverhaas/django-formwork/main/docs/img/admin/changelist.webp)
+
+![The event list with editable columns](https://raw.githubusercontent.com/oliverhaas/django-formwork/main/docs/img/admin/changelist-editable.webp)
 
 <p>
-  <img src="https://raw.githubusercontent.com/oliverhaas/django-formwork/main/docs/img/admin/change-form.webp" alt="The change form of an employee" width="49%">
+  <img src="https://raw.githubusercontent.com/oliverhaas/django-formwork/main/docs/img/admin/change-form.webp" alt="The change form of an event, with its history" width="49%">
   <img src="https://raw.githubusercontent.com/oliverhaas/django-formwork/main/docs/img/admin/changelist-dark.webp" alt="The deal list in the dark theme" width="49%">
 </p>
 
