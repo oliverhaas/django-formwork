@@ -11,7 +11,7 @@ from django.forms.widgets import ChoiceWidget
 from django.utils.choices import flatten_choices
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
     from django.forms import Widget
 
@@ -98,6 +98,13 @@ class FormworkBoundField(forms.BoundField):
         ):
             return self.field.prepare_value(self.initial)
         return super().value()
+
+    def table_cell(self, caller: Callable[[FormworkBoundField], str]) -> str:
+        """The HTML that ``caller`` renders for the field's table cell, from the column's ``cache_cells()``."""
+        cache = getattr(self.field, "cell_cache", None)
+        if cache is None:
+            return caller(self)
+        return cache.render(self, caller)
 
     def build_widget_attrs(self, attrs: dict[str, str | bool], widget: Widget | None = None) -> dict[str, str | bool]:
         attrs = super().build_widget_attrs(attrs, widget)

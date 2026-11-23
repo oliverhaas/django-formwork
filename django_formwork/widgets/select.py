@@ -24,7 +24,7 @@ from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search
 from ._base import CellCache, _FormworkTemplatesMixin, _ModuleScript, _StubMixin, widget_of
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Generator, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Collection, Generator, Hashable, Iterable, Iterator, Mapping, Sequence
 
     from django.db.models import QuerySet
     from django.forms.formsets import BaseFormSet
@@ -246,7 +246,11 @@ def column_options(formset: BaseFormSet[Any]) -> SafeString:
     return mark_safe("".join(lists))  # noqa: S308
 
 
-_ROW_STATE = frozenset({"_choices", "stub_url", "truncated", "selected_past_page", "cell_cache"})
+# What a row's field and widgets hold of their own. The field: a queryset clone and the lookup of posted choices.
+# A select: its choices, which ``_column_shares_choices`` checks, its stub URL and page. A wrapper: the inner widget,
+# which is compared next.
+_FIELD_ROW_STATE = frozenset({"_queryset", "to_python", "widget", "cell_cache"})
+_WIDGET_ROW_STATE = frozenset({"_choices", "choices", "stub_url", "truncated", "selected_past_page", "widget"})
 
 
 def _column_shares_choices(formset: BaseFormSet[Any], bound: forms.BoundField, select: SearchableSelectMixin) -> bool:
@@ -256,25 +260,49 @@ def _column_shares_choices(formset: BaseFormSet[Any], bound: forms.BoundField, s
     return rows_share_choices(formset, bound.field)
 
 
-def _settings(select: SearchableSelectMixin) -> dict[str, Any]:
-    return {name: value for name, value in vars(select).items() if name not in _ROW_STATE}
+def _settings(field: forms.Field) -> list[tuple[type, dict[str, Any]]]:
+    """What the cell of ``field`` renders besides its name, value and stub URL."""
+    settings = [(type(field), {name: value for name, value in vars(field).items() if name not in _FIELD_ROW_STATE})]
+    widget = field.widget
+    while widget is not None:
+        settings.append(
+            (type(widget), {name: value for name, value in vars(widget).items() if name not in _WIDGET_ROW_STATE})
+        )
+        widget = getattr(widget, "widget", None)
+    return settings
+
+
+def _value_key(formset: BaseFormSet[Any], bound: forms.BoundField) -> Callable[[Any], Hashable] | None:
+    """What tells the cells of the column of ``bound`` apart; None for a column that renders each cell."""
+    select = widget_of(bound.field, SearchableSelectMixin)
+    if select is not None:
+        if isinstance(select, _StubMixin) and _column_shares_choices(formset, bound, select):
+            return lambda value: tuple(select.format_value(value))
+        return None
+    widget = bound.field.widget
+    if isinstance(widget, forms.CheckboxInput):
+        return lambda value: (widget.check_test(value), widget.format_value(value))
+    if type(widget) is forms.NumberInput:
+        return widget.format_value
+    return None
 
 
 def cache_cells(formset: BaseFormSet[Any]) -> None:
-    """Let the rows of a select column render the widget of a value once, for all rows that hold the value.
+    """Let the rows of a column render the cell of a value once, for all rows that hold the value.
 
-    Call it after ``share_choices`` and ``stub_formset``, before the rows render."""
+    Covers the select columns whose rows share their choices, and the checkbox and number columns. Call it after
+    ``share_choices`` and ``stub_formset``, before the rows render."""
     rows = formset.forms
     for bound in rows[0] if rows else ():
-        select = widget_of(bound.field, SearchableSelectMixin)
-        if not isinstance(select, _StubMixin) or not _column_shares_choices(formset, bound, select):
+        value_key = None if bound.field.disabled else _value_key(formset, bound)
+        if value_key is None:
             continue
-        cells = CellCache()
-        settings = _settings(select)
+        cells = CellCache(value_key)
+        settings = _settings(bound.field)
         for form in rows:
-            row_select = widget_of(form.fields.get(bound.name), SearchableSelectMixin)
-            if type(row_select) is type(select) and _settings(row_select) == settings:
-                row_select.cell_cache = cells
+            field = form.fields.get(bound.name)
+            if field is not None and _settings(field) == settings:
+                field.cell_cache = cells
 
 
 def _defer_page(options: list[dict[str, Any]], pending: dict[str, Any]) -> list[dict[str, Any]]:

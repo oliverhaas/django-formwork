@@ -668,11 +668,11 @@ def towns(cities):
 @pytest.fixture
 def more_tagged(tagged):
     category = Category.objects.get()
-    Item.objects.create(name="Grill", category=category).tags.set(tagged[:2])
-    Item.objects.create(name="Iron", category=category)
+    Item.objects.create(name="Grill", category=category, price=5, is_featured=True).tags.set(tagged[:2])
+    Item.objects.create(name="Iron", category=category, price=5)
 
 
-def _posted_cities():
+def _posted_cities(form=DoverRowForm):
     rows = list(City.objects.order_by("pk"))
     data = {"form-TOTAL_FORMS": len(rows), "form-INITIAL_FORMS": len(rows)}
     for index, city in enumerate(rows):
@@ -682,7 +682,7 @@ def _posted_cities():
             f"form-{index}-region": city.region_id,
             f"form-{index}-size": "s",
         }
-    formset_class = formwork_modelformset_factory(City, form=DoverRowForm, extra=0)
+    formset_class = formwork_modelformset_factory(City, form=form, extra=0)
     return formset_class(data, queryset=City.objects.order_by("pk"))
 
 
@@ -690,9 +690,22 @@ def _tagged_items():
     return TagsFormSet(queryset=Item.objects.order_by("pk").prefetch_related("tags"))
 
 
+class StockRowForm(FormworkModelForm):
+    class Meta:
+        model = Item
+        fields = ["name", "price", "is_featured"]
+
+
+StockFormSet = formwork_modelformset_factory(Item, form=StockRowForm, extra=0)
+
+
+def _stock():
+    return StockFormSet(queryset=Item.objects.order_by("pk"))
+
+
 @pytest.mark.parametrize("cell_url", ["", "/cells/"])
-@pytest.mark.parametrize("rows", [_posted_cities, _tagged_items])
-def test_the_select_columns_of_as_rows_render_the_html_of_rows_rendered_one_by_one(
+@pytest.mark.parametrize("rows", [_posted_cities, _tagged_items, _stock])
+def test_the_columns_of_as_rows_render_the_html_of_rows_rendered_one_by_one(
     towns, more_tagged, monkeypatch, rows, cell_url
 ):
     cached = str(rows().as_rows(cell_url=cell_url))
@@ -703,8 +716,9 @@ def test_the_select_columns_of_as_rows_render_the_html_of_rows_rendered_one_by_o
 
 
 @pytest.mark.parametrize("cell_url", ["", "/cells/"])
+@pytest.mark.parametrize("posted", [False, True])
 def test_the_selects_of_as_rows_build_the_widget_of_a_value_once_for_all_rows_that_hold_it(
-    cities, monkeypatch, cell_url
+    cities, monkeypatch, cell_url, posted
 ):
     built = []
     for method in ("get_context", "get_stub_context"):
@@ -715,7 +729,8 @@ def test_the_selects_of_as_rows_build_the_widget_of_a_value_once_for_all_rows_th
 
     def render():
         built.clear()
-        CityFormSet(queryset=City.objects.all()).as_rows(cell_url=cell_url)
+        formset = _posted_cities(SizeRowForm) if posted else CityFormSet(queryset=City.objects.all())
+        formset.as_rows(cell_url=cell_url)
         return len(built)
 
     two_rows = render()
@@ -723,6 +738,41 @@ def test_the_selects_of_as_rows_build_the_widget_of_a_value_once_for_all_rows_th
     City.objects.bulk_create(City(name=name, region=north) for name in ["Cardiff", "Dover", "Exeter"])
 
     assert render() == two_rows
+
+
+@pytest.mark.parametrize("widget", [forms.NumberInput, forms.CheckboxInput])
+def test_the_number_and_checkbox_columns_of_as_rows_build_the_widget_of_a_value_once(tagged, monkeypatch, widget):
+    built = []
+    original = widget.get_context
+    monkeypatch.setattr(widget, "get_context", lambda self, *args: built.append(args) or original(self, *args))
+
+    def render():
+        built.clear()
+        _stock().as_rows()
+        return len(built)
+
+    three_rows = render()
+    Item.objects.create(name="Grill", category=Category.objects.get())
+
+    assert render() == three_rows
+
+
+class MandatoryRowForm(StockRowForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.name == "Toaster":
+            self.mandatory.add("is_featured")
+
+
+class MandatoryFormSet(formwork_modelformset_factory(Item, form=MandatoryRowForm, extra=0)):
+    def get_form_kwargs(self, index):
+        return {**super().get_form_kwargs(index), "use_required_attribute": True}
+
+
+def test_the_rows_of_a_column_mark_the_field_where_their_form_makes_it_mandatory(tagged):
+    soup = BeautifulSoup(MandatoryFormSet(queryset=Item.objects.order_by("pk")).as_rows(), "html.parser")
+
+    assert [box.get("aria-required") for box in soup.select("input[name$=-is_featured]")] == [None, None, "true"]
 
 
 @pytest.mark.parametrize(

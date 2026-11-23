@@ -16,7 +16,7 @@
     {% set boxed = editable and bf.field.widget.input_type not in ("checkbox", "radio") %}
     <td{% block cell_attrs scoped %} class="min-w-32" data-field="{{ bf.name }}"{% if boxed %} data-boxed{% endif %}{% endblock %}{% if editable %} data-formwork-field{% if form.is_bound and bf.name in form.changed_data %} data-formwork-changed{% if bf.initial_checked %} data-formwork-initial="{{ bf.initial_checked }}"{% endif %}{% endif %}{% if bf.errors %} data-invalid{% endif %}{% endif %}>
       {% if loop.first and not actions %}{{ hidden }}{% endif %}
-      {% if editable %}
+      {% if editable %}{% call(bf) bf.table_cell() %}
       {# The cell has no <label>, so the field's label names the widget. #}
       {% set widget = bf.as_widget(attrs={"aria-label": bf.label|string}) %}
       {% if bf.label_links %}
@@ -26,7 +26,7 @@
       {{ widget }}
       {% endif %}
       {% if bf.auto_id %}<span id="{{ bf.auto_id }}_label" hidden>{{ bf.label }}</span>{% if bf.help_text %}<span id="{{ bf.auto_id }}_helptext" hidden>{{ bf.help_text|striptags }}</span>{% endif %}{% endif %}
-      {% if bf.errors %}<div popover="manual" class="tooltip tooltip-error tooltip-bottom" data-cell-error><div class="tooltip-content formwork-errors" role="tooltip"{% if bf.auto_id %} id="{{ bf.auto_id }}_error"{% endif %}>{% for error in bf.errors %}<p>{{ error }}</p>{% endfor %}</div></div>{% endif %}
+      {% if bf.errors %}<div popover="manual" class="tooltip tooltip-error tooltip-bottom" data-cell-error><div class="tooltip-content formwork-errors" role="tooltip"{% if bf.auto_id %} id="{{ bf.auto_id }}_error"{% endif %}>{% for error in bf.errors %}<p>{{ error }}</p>{% endfor %}</div></div>{% endif %}{% endcall %}
       {% else %}
       {% block display_cell scoped %}<div class="min-h-10 py-2.5 text-sm">{{ bf.display_value|localize }}</div>{% endblock %}
       {% endif %}
