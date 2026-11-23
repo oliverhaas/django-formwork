@@ -876,7 +876,7 @@
 <p><code>{% formwork_js %}</code> loads an ES module that imports <code>formwork-core.js</code> (the <code>formwork-morph</code> htmx extension, dirty-field tracking, native-validation disabling) and the Alpine.data component of each widget. <code>{{ form.media }}</code> loads the same files per form, and a JS bundler can import them. The <a href="getting-started/installation/#js-loading-paths">installation guide</a> describes the three paths.</p>
 <h2 id="admin">Admin<a class="headerlink" href="#admin" title="Permanent link">&para;</a></h2>
 <p><code>django_formwork.admin</code> is a Django admin built on formwork forms, django-filter, htmx and Jinja2. It keeps the options, hooks, URL names and permissions of <code>django.contrib.admin</code>, so most <code>admin.py</code> modules port by changing <code>from django.contrib import admin</code> to <code>from django_formwork import admin</code>. The admin is experimental; <a href="reference/admin/">Admin</a> covers the setup and every option.</p>
-<p><img alt="The ticket list with a status filter set" src="img/admin/changelist.webp" /></p>
+<p><img alt="The ticket list with the replies of a ticket open under its row" src="img/admin/changelist.webp" /></p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <p>Python 3.14+, Django 6.1, <a href="https://daisyui.com/">DaisyUI</a> 5, <a href="https://tailwindcss.com/">Tailwind CSS</a> 4. DaisyUI and Tailwind are not bundled.</p>
 <h2 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>

@@ -1654,7 +1654,7 @@ import:</p>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">search_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"subject"</span><span class="p">,</span> <span class="s2">"requester__email"</span><span class="p">]</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">inlines</span> <span class="o">=</span> <span class="p">[</span><span class="n">ReplyInline</span><span class="p">]</span>
 </span></code></pre></div>
-<p><img alt="The ticket list with a status filter set" src="../../img/admin/changelist.webp" /></p>
+<p><img alt="The ticket list with the replies of a ticket open under its row" src="../../img/admin/changelist.webp" /></p>
 <p>The classes are its own. A <code>ModelAdmin</code> does not subclass Django's, so an admin class
 written for <code>django.contrib.admin</code> that calls into Django's internals needs changes.</p>
 <div class="admonition warning">
@@ -1939,7 +1939,7 @@ and a subclass of <code>AutocompleteSelect</code> raises <code>NoReverseMatch</c
 <p>A <code>class Media</code> on a <code>ModelAdmin</code> or an inline adds its CSS and JavaScript to the pages
 of that admin, as in Django. Django's admin also loads jQuery on these pages, and this
 admin does not, so a script that uses <code>django.jQuery</code> does not run here.</p>
-<p><img alt="The change form of an employee" src="../../img/admin/change-form.webp" /></p>
+<p><img alt="The change form of an event, with its history" src="../../img/admin/change-form.webp" /></p>
 <p>Options this admin adds:</p>
 <table>
 <thead>
@@ -2194,6 +2194,7 @@ a list with many editable columns still reads as a table, a field shows its box 
 row under the pointer or with the focus. In the other rows its value shows as text, lined
 up with the column header, and the icons of a select or a date hide. A date and its time
 share one line, so a row stays one field high.</p>
+<p><img alt="The event list with editable columns" src="../../img/admin/changelist-editable.webp" /></p>
 <p>A cell whose value differs from the saved one gets the accent color, and the toolbar above
 the table counts the changed cells. Save saves the rows, and Discard loads the saved values
 again. Neither loads the page again: the list keeps its scroll position. Both stay disabled while no cell has a change. After a failed save, every changed
