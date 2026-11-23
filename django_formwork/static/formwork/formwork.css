@@ -1231,6 +1231,15 @@ details.dropdown.formwork-select > .dropdown-content,
     max-width: min(26rem, calc(100vw - 2rem));
 }
 
+/* A list that the server searches gets its options after it opens, so its
+   width cannot follow them: it takes a fixed one, never narrower than the
+   trigger, and long options wrap. */
+details.dropdown.formwork-select-multiple[data-has-search-url="true"] > .dropdown-content,
+details.dropdown.formwork-select[data-has-search-url="true"] > .dropdown-content,
+.dropdown.formwork-combobox[data-has-search-url="true"] > .dropdown-content {
+    width: 20rem;
+}
+
 /* ComboBox: position the dropdown below the input.
    DaisyUI's .dropdown class sets position:relative on the wrapper.
    The .dropdown-content inside uses absolute positioning. */

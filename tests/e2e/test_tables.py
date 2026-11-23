@@ -142,6 +142,24 @@ def _row(rows_page, name):
     return rows_page.page.locator("tbody", has=rows_page.page.locator(f"[name$=-name][value={name}]"))
 
 
+def test_an_open_list_keeps_its_width_when_its_search_hides_the_widest_option(rows_page, items):
+    Category.objects.bulk_create(Category(name=f"Shelf {n}", slug=f"shelf-{n}") for n in range(10))
+    Category.objects.create(name="Zoology, botany and the other natural sciences of the coast", slug="long")
+    rows_page.open(rows)
+    category = _row(rows_page, "Kettle").locator("details:has([name$=-category])")
+    category.locator("summary").click()
+    panel = category.locator("[x-ref=panel]")
+    widest = panel.get_by_role("option", name="Zoology", exact=False)
+    expect(widest).to_be_visible()
+    width = panel.evaluate("el => el.getBoundingClientRect().width")
+
+    panel.get_by_role("searchbox").fill("Garden")
+
+    expect(widest).to_be_hidden()
+    assert panel.evaluate("el => el.getBoundingClientRect().width") == width
+    assert rows_page.errors == []
+
+
 def test_a_select_of_a_full_row_lists_the_options_of_its_column_and_marks_its_own(rows_page, items):
     rows_page.open(rows)
     category = _row(rows_page, "Lamp").locator("details:has([name$=-category])")

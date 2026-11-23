@@ -275,10 +275,12 @@ const calendarData = () => ({
   built: false,
 
   // The calendar is as tall as it is: no cap, and it flips up whenever the
-  // room below is short and above holds more.
+  // room below is short and above holds more. It builds its views after it
+  // opens and takes their width.
   panelMaxHeight: Number.POSITIVE_INFINITY,
   panelUsableHeight: Number.POSITIVE_INFINITY,
   panelMatchesTrigger: false,
+  panelKeepsWidth: false,
 
   initCalendar() {
     const data = this.$root.dataset;

@@ -374,12 +374,15 @@ const baseData = () => ({
   dropUp: false,
   hasError: false,
   _unfollow: null,
+  _panelWidth: 0,
 
-  // The panel's height cap, the height below which it flips up, and whether
-  // it is at least as wide as its trigger. The calendar panels change them.
+  // The panel's height cap, the height below which it flips up, whether it is
+  // at least as wide as its trigger, and whether it keeps the width it opened
+  // with. The calendar panels change them.
   panelMaxHeight: PANEL_MAX_HEIGHT,
   panelUsableHeight: PANEL_USABLE_HEIGHT,
   panelMatchesTrigger: true,
+  panelKeepsWidth: true,
 
   // The <details> element owns the open state; the combobox is a plain <div>
   // and overrides this.
@@ -494,6 +497,13 @@ const baseData = () => ({
     const rect = this.$root.getBoundingClientRect();
     // Width first: it decides how the options wrap, so the measured height.
     if (!supportsAnchor && this.panelMatchesTrigger) panel.style.minWidth = `${rect.width}px`;
+    // An open list keeps the width it opened with, so the options that a search
+    // filters out or brings in wrap instead of resizing it. A morph strips the
+    // inline width, and the next placement puts it back.
+    if (this.panelKeepsWidth) {
+      this._panelWidth ||= Math.ceil(panel.getBoundingClientRect().width);
+      panel.style.width = `${this._panelWidth}px`;
+    }
     const reserved = PANEL_OFFSET + VIEWPORT_MARGIN;
     const below = window.innerHeight - rect.bottom - reserved;
     const above = rect.top - reserved;
@@ -540,6 +550,8 @@ const baseData = () => ({
     this._unfollow = null;
     const panel = this.$refs.panel;
     if (panel?.matches(":popover-open")) panel.hidePopover();
+    this._panelWidth = 0;
+    panel?.style.removeProperty("width");
   },
 
   // The toggle event runs after the browser can paint the open panel, so the
