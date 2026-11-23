@@ -480,6 +480,9 @@
   `formwork/widgets/combo_box.html` or `formwork/widgets/partials/calendar.html`, copy
   it again: the row helpers `matches()`, `isHighlighted()`, `optionClass()` and
   `optionId()` are gone.
+- A `Select` or `SelectMultiple` with `badges=True` showed its badge 1.4px below the
+  middle of the line, so in an admin list it sat lower than the values beside it. The
+  badge now sits on the line's middle.
 
 ## 0.1.0a3 (2026-11-06)
 

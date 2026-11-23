@@ -1008,7 +1008,7 @@ def test_select_of_a_choice_field_shows_the_badges_of_the_list(admin_client, cat
     soup = BeautifulSoup(admin_client.get(url(Item, view, *args)).content, "html.parser")
 
     rows = soup.select(f"{select} [role=option] > [data-value]:has(.badge)")
-    assert {row["data-value"]: row.select_one(".badge")["class"][2:] for row in rows} == {
+    assert {row["data-value"]: row.select_one(".badge")["class"][3:] for row in rows} == {
         "draft": ["badge-ghost"],
         "active": ["badge-soft", "badge-success"],
         "archived": ["badge-soft", "badge-warning"],

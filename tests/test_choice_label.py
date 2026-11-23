@@ -91,7 +91,7 @@ def test_badges_show_each_option_as_a_badge_in_its_color(widget_class):
     badges = {}
     for row in soup.select("[role=option] > [data-value]"):
         badge = row.select_one(".badge")
-        badges[row["data-value"]] = badge and (badge.get_text(), badge["class"][2:])
+        badges[row["data-value"]] = badge and (badge.get_text(), badge["class"][3:])
     assert badges == {
         "": None,
         "active": ("Active", ["badge-soft", "badge-success"]),

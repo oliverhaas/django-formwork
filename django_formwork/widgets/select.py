@@ -421,7 +421,7 @@ def label_extras(label: object, *, badges: bool = False) -> dict[str, str]:
     if badges and not label_html:
         color = getattr(label, "color", "neutral")
         variant = "badge-ghost" if color == "neutral" else f"badge-soft badge-{color}"
-        label_html = format_html('<span class="badge badge-sm {}">{}</span>', variant, str(label))
+        label_html = format_html('<span class="badge badge-sm align-top {}">{}</span>', variant, str(label))
     return {
         "icon": getattr(label, "icon", ""),
         "description": getattr(label, "description", ""),
