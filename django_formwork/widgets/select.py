@@ -404,6 +404,13 @@ class ChoiceLabel:
     def __hash__(self) -> int:
         return hash(self.label)
 
+    # A label is a value, as a string is, so each form's copy of the choices keeps the same label.
+    def __copy__(self) -> ChoiceLabel:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> ChoiceLabel:
+        return self
+
 
 def label_extras(label: object, *, badges: bool = False) -> dict[str, str]:
     """What an option row shows beside its text, blank for a plain label.

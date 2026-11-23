@@ -353,7 +353,8 @@
   three select columns take 80 ms instead of 123 ms. A column of checkboxes, of number
   inputs, or of selects whose rows share their choices renders the cell of each value once
   and puts in each row's name and stub URL, so a `get_context()` override of the widget
-  runs once per value, not once per row.
+  runs once per value, not once per row. The forms of one form class share the
+  `ChoiceLabel`s of their choices instead of each copying them.
   Formwork's Jinja2 environments read a key of a dict without trying an attribute of that
   name first, and copy their globals once per template instead of twice per render. The
   select stubs of a column label a selected row once for all rows that hold it, so a

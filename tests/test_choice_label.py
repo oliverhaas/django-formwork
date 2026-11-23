@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 from bs4 import BeautifulSoup
+from django import forms
 
 from django_formwork import ChoiceLabel
 from django_formwork.widgets import Select, SelectMultiple
@@ -51,6 +52,17 @@ def test_choice_label_hash_equal_for_equal_labels():
     b = ChoiceLabel("NY", icon="b")
     assert hash(a) == hash(b)
     assert len({a, b}) == 1
+
+
+def test_the_forms_of_a_form_class_share_its_choice_labels():
+    """A label is a value, so each form's copy of the choices keeps it."""
+
+    class StatusForm(forms.Form):
+        status = forms.ChoiceField(choices=[("active", ChoiceLabel("Active", color="success"))], widget=Select)
+
+    first, second = StatusForm(), StatusForm()
+
+    assert first.fields["status"].choices[0][1] is second.fields["status"].choices[0][1]
 
 
 @pytest.mark.parametrize("widget_class", [Select, SelectMultiple])
