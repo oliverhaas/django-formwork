@@ -461,6 +461,30 @@ def test_as_rows_runs_the_same_queries_for_more_rows(cities, cell_url):
     assert queries() == two_rows
 
 
+def test_the_select_stubs_of_as_rows_label_a_chosen_row_once_for_all_rows_that_hold_it(cities, monkeypatch):
+    labelled = []
+    label_from_instance = forms.ModelChoiceField.label_from_instance
+    monkeypatch.setattr(
+        forms.ModelChoiceField,
+        "label_from_instance",
+        lambda field, obj: labelled.append(obj) or label_from_instance(field, obj),
+    )
+
+    def render():
+        labelled.clear()
+        soup = BeautifulSoup(CityFormSet(queryset=City.objects.all()).as_rows(cell_url="/cells/"), "html.parser")
+        labels = soup.select("[data-formwork-stub] .formwork-autowidth-stack > span:not(.formwork-autowidth)")
+        return len(labelled), [label.get_text(strip=True) for label in labels]
+
+    two_rows, _ = render()
+    north = cities[0].region
+    City.objects.bulk_create(City(name=name, region=north) for name in ["Cardiff", "Dover", "Exeter"])
+    five_rows, shown = render()
+
+    assert five_rows == two_rows
+    assert shown == ["North", "South", "North", "North", "North"]
+
+
 def test_the_selects_of_as_rows_copy_every_choice_from_one_list_of_their_column(cities):
     soup = BeautifulSoup(CityFormSet(queryset=City.objects.order_by("pk")).as_rows(), "html.parser")
 

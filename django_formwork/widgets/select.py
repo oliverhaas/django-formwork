@@ -137,6 +137,7 @@ class _SharedChoices:
         self.key = key
         self.rows = rows
         self._every: list[tuple[Any, Any]] | None = None
+        self._labels: dict[str, tuple[str, object]] = {}
 
     def every(self, choices: ModelChoiceIterator) -> list[tuple[Any, Any]]:
         """Every choice of a select without a server search, listed by the first row that renders for all rows."""
@@ -144,6 +145,18 @@ class _SharedChoices:
             choices.queryset = with_peers(choices.queryset)
             self._every = list(choices)
         return self._every
+
+    def labels_of(self, values: Collection[str], choices: ModelChoiceIterator) -> list[tuple[str, object]]:
+        """The value and the label of each chosen row in ``values``, labelled once for all rows."""
+        labels = []
+        for value, obj in self.chosen.items():
+            if value not in values:
+                continue
+            if value not in self._labels:
+                choice, label = choices.choice(obj)
+                self._labels[value] = (str(choice), label)
+            labels.append(self._labels[value])
+        return labels
 
     @cached_property
     def page(self) -> list[Any]:
@@ -503,9 +516,8 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
             flat: Iterator[tuple[Any, object]] = flatten_choices(choices)
             return [(str(choice), label) for choice, label in flat if str(choice) in values]
         if self.shared is not None:
-            rows = [obj for value, obj in self.shared.chosen.items() if value in values]
-        else:
-            rows = _rows_of(choices.queryset, choices.field.to_field_name or "pk", values)
+            return self.shared.labels_of(values, choices)
+        rows = _rows_of(choices.queryset, choices.field.to_field_name or "pk", values)
         return [(str(value), label) for value, label in map(choices.choice, rows)]
 
     def clear_row(self, option: dict[str, Any], attrs: Mapping[str, Any]) -> dict[str, Any]:
