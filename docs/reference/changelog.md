@@ -364,8 +364,10 @@
 - The list of a `Select`, `SelectMultiple` or `ComboBox` changed its width while it was
   open: a search that hid the widest option narrowed it, and the options that a server
   search or Load more brought in could widen it. An open list now keeps the width it
-  opened with, and long options wrap. A list that the server searches is 20rem wide, or
-  as wide as its trigger.
+  opened with, and long options wrap, also in an admin list cell. A list that the server
+  searches is 20rem wide, or as wide as its trigger. If you override
+  `formwork/widgets/select.html`, `select_multiple.html` or `combo_box.html`, copy them
+  again.
 - The rows of `formset.as_rows()` had no line between them, because a table with
   separate borders paints no border of a `<tbody>`. The first cells of each row now
   draw it. If you override `formwork/tables/row.html`, copy its `row_attrs` again.

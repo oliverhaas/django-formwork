@@ -17,6 +17,7 @@ from PIL import Image
 from playwright.sync_api import expect
 
 from django_formwork.admin import VERTICAL, ActionLocation, TabularInline, action, site, slot
+from django_formwork.search import SEARCH_PAGE_SIZE
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -709,6 +710,22 @@ def test_a_pointer_resting_on_a_select_stub_loads_the_closed_select(admin_page, 
 
     expect(status_cell.locator("[x-data=formworkSelect]")).to_be_attached()
     expect(status_cell.get_by_role("option", name="Active")).to_be_hidden()
+    assert admin_page.errors == []
+
+
+def test_a_long_option_in_a_list_cell_wraps_inside_its_list(admin_page, live_server, kitchen, monkeypatch):
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable", ["category"])
+    Category.objects.bulk_create(Category(name=f"Shelf {n}", slug=f"shelf-{n}") for n in range(SEARCH_PAGE_SIZE))
+    Category.objects.create(name="Kitchen tools, cups, kettles and the other things of a shared office", slug="long")
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    cell = admin_page.locator("#changelist-table tbody tr[data-pk] td:has([name$=-category])")
+
+    cell.locator("summary").click()
+
+    expect(cell.get_by_role("option", name="Kitchen tools", exact=False)).to_be_visible()
+    panel = cell.locator("[x-ref=panel]")
+    assert panel.evaluate("el => el.scrollWidth <= el.clientWidth")
     assert admin_page.errors == []
 
 
