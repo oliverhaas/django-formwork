@@ -355,6 +355,12 @@
 
 ### Fixed
 
+- A `DatePicker` or `DateTimePicker` in a table widened its column while the user typed,
+  and a native `<select>` resized its column when its value changed: both took the
+  width of their value. A date input is now as wide as the widest date its format
+  writes, or its placeholder, and a native select is as wide as its widest option. If
+  you override `formwork/widgets/date_picker.html`, `date_time_picker.html` or their
+  `_stub.html` templates, copy them again.
 - The list of a `Select`, `SelectMultiple` or `ComboBox` changed its width while it was
   open: a search that hid the widest option narrowed it, and the options that a server
   search or Load more brought in could widen it. An open list now keeps the width it

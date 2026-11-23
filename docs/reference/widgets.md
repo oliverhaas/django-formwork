@@ -592,7 +592,9 @@ Text date input with an Alpine calendar dropdown, for a page where the native
 `DateInput` does not fit. `format` sets how the input shows the date, both
 when the server renders it and after a pick in the calendar, and the
 placeholder shows that format. The widget reads the format back, and also
-`YYYY-MM-DD`, so the field needs no matching `input_formats`.
+`YYYY-MM-DD`, so the field needs no matching `input_formats`. The input is as
+wide as the longest date the format writes or the placeholder, whatever it
+holds, so a table column keeps its width while the user types.
 
 ```python
 due_date = forms.DateField(widget=widgets.DatePicker)
@@ -626,7 +628,8 @@ browser's clock and closes the calendar. Clear empties the field.
 
 `format` sets how the input shows the value: a Django format setting name or
 a format string, `SHORT_DATETIME_FORMAT` by default. The placeholder spells
-the format out. The input reads typed text in that format and in the formats
+the format out, and the input is as wide as the longer of the placeholder and
+the dates the format writes. The input reads typed text in that format and in the formats
 of `DATETIME_INPUT_FORMATS` and `DATE_INPUT_FORMATS`, so `3/1/2030 2:30 pm`
 and `2030-03-01 14:30` both work in English. A day typed without a time takes
 the time under the calendar. Text that names no day posts as typed, and the

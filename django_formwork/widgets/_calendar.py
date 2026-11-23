@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import re
 from functools import cache
@@ -49,6 +50,7 @@ def _reset_names(*, setting: str, **_: object) -> None:
     # The settings with which Django reloads its translations.
     if setting in {"INSTALLED_APPS", "LANGUAGES", "LANGUAGE_CODE", "LOCALE_PATHS"}:
         _names.cache_clear()
+        _sizing_texts.cache_clear()
 
 
 setting_changed.connect(_reset_names)
@@ -86,3 +88,23 @@ def calendar_context(months: int = 1, *, input_formats: Sequence[str] = (), **fo
 def format_date(value: Any, date_format: str) -> str:  # noqa: ANN401 (date or datetime)
     """``value`` written in ``date_format``, as the script writes it."""
     return dateformat.format(value, date_format) if value else ""
+
+
+def sizing_texts(date_format: str, *placeholders: str, strftime: bool = False) -> tuple[str, ...]:
+    """The widest texts a date input shows: a date in each month in ``date_format``, and the placeholders.
+
+    ``date_format`` is a Django format, or a ``strftime`` one with ``strftime``. The inputs set
+    digits in tabular figures, so texts that differ only in digits count once.
+    """
+    return _sizing_texts(date_format, tuple(map(str, placeholders)), get_language(), strftime=strftime)
+
+
+@cache
+def _sizing_texts(
+    date_format: str, placeholders: tuple[str, ...], language: str | None, *, strftime: bool
+) -> tuple[str, ...]:
+    """Cached, as each row of a table renders its date inputs."""
+    dates = (dt.datetime(2026, month, 28, 23, 59) for month in range(1, 13))  # noqa: DTZ001 (only formatted)
+    with override(language):
+        texts = [date.strftime(date_format) if strftime else format_date(date, date_format) for date in dates]
+    return tuple(dict.fromkeys(re.sub(r"\d", "0", text) for text in (*texts, *placeholders)))

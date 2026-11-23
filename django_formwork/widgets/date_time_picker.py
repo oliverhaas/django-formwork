@@ -16,7 +16,7 @@ from django.utils.formats import get_format
 from django.utils.translation import get_language, pgettext_lazy
 
 from ._base import _ModuleScript, _StubMixin
-from ._calendar import calendar_context, format_date
+from ._calendar import calendar_context, format_date, sizing_texts
 from .date_picker import _PLACEHOLDER_TOKENS
 
 _HOUR = pgettext_lazy("time format placeholder", "hh")
@@ -114,6 +114,9 @@ class DateTimePicker(_StubMixin, forms.Widget):
         widget["attrs"] = {"placeholder": _placeholder(text_format)} | {
             key: val for key, val in attrs.items() if key not in hidden
         }
+        # The input is as wide as the widest date it can show, whatever it holds.
+        placeholder = str(widget["attrs"].get("placeholder") or "")
+        widget["sizing_texts"] = sizing_texts(text_format, placeholder)
         # The template places the class itself, after its own.
         widget["extra_class"] = widget["attrs"].pop("class", "")
         widget["hidden"] = {"attrs": hidden}

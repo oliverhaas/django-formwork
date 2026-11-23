@@ -698,30 +698,27 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
 }
 
 /* DatePicker: the label wrapper draws the input box around the text input
-   and the icon button. */
+   and the icon button. The input lies over a hidden copy of the widest
+   texts it shows, like the range inputs below, so a table column fits the
+   date and keeps its width while the user types. */
 .date-picker-label {
     @apply input w-full focus-primary;
 }
 
-/* The inner text input keeps the UA default size=20 intrinsic width
-   (~200px) regardless of its value. field-sizing sizes it to its content
-   so intrinsic contexts (auto table columns) fit the date instead of
-   ballooning; w-full form layouts are unaffected since explicit widths
-   win over field-sizing. */
-.date-picker-label > input:not([type="hidden"]) {
-    field-sizing: content;
+.date-picker-part {
+    @apply grow;
 }
 
 /* input-ghost passed via widget attrs lands on the inner input, but the
    border and fill sit on this wrapper; forward the ghost look, mirroring
    DaisyUI's .input-ghost (same idea as the aria-invalid forwarding). */
-.date-picker-label:has(> input.input-ghost) {
+.date-picker-label:has(input.input-ghost) {
     box-shadow: none;
     background-color: transparent;
     border-color: transparent;
 }
 
-.date-picker-label:has(> input.input-ghost:focus) {
+.date-picker-label:has(input.input-ghost:focus) {
     background-color: var(--color-base-100);
     border-color: transparent;
 }
@@ -750,16 +747,19 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
     @apply input w-full cursor-text focus-primary;
 }
 
-.date-range-part {
+.date-range-part,
+.date-picker-part {
     @apply relative min-w-0 self-stretch overflow-hidden;
 }
 
 /* One pixel more than the text, for the caret after the last character. */
-.date-range-sizer {
+.date-range-sizer,
+.date-picker-sizer {
     @apply invisible grid h-0 whitespace-pre pe-px tabular-nums;
 }
 
-.date-range-input {
+.date-range-input,
+.date-picker-input {
     @apply absolute inset-0 size-full min-w-0 tabular-nums;
 }
 
@@ -1666,7 +1666,7 @@ input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type=
 
 /* DatePicker and a <label class="input"> wrapper: style the wrapper label based on the inner input's state. */
 .input:has(> input[aria-invalid="true"]),
-.date-picker-label:has(> input[aria-invalid="true"]),
+.date-picker-label:has(input[aria-invalid="true"]),
 .date-range-field:has(input[aria-invalid="true"]),
 .clearable-file-input-row:has(> input[aria-invalid="true"]) {
     @apply input-error;
@@ -1729,11 +1729,10 @@ input.combobox-input[aria-invalid="true"] {
     }
 
     /* Native selects size to their widest option (uncappable from CSS), so
-       they get a fixed floor, not a measured one.  field-sizing makes
-       intrinsic sizing track the options so auto table columns fit; explicit
-       widths still win, and browsers without it keep UA behavior. */
+       they get a fixed floor, not a measured one. That width does not
+       depend on the picked option, so a table column keeps its width when
+       the value changes. */
     select {
-        field-sizing: content;
         min-width: min(100%, var(--formwork-autowidth-min, 6rem));
     }
 }

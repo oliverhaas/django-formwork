@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import calendar
 import datetime as dt
-import re
 from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
@@ -15,7 +14,7 @@ from django.utils.formats import get_format
 from django.utils.translation import gettext, ngettext
 
 from ._base import _ModuleScript, _plural_forms, _StubMixin
-from ._calendar import calendar_context, format_date
+from ._calendar import calendar_context, format_date, sizing_texts
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
@@ -37,16 +36,6 @@ def _today() -> dt.date:
     """Today in the current time zone, as Django's admin date filter takes it."""
     now = timezone.now()
     return (timezone.localtime(now) if timezone.is_aware(now) else now).date()
-
-
-def _sizing_texts(date_format: str, *placeholders: str) -> list[str]:
-    """The widest texts an input shows: a date in each month, and the placeholders.
-
-    The inputs set digits in tabular figures, so dates that differ only in digits count once.
-    """
-    dates = (dt.datetime(2026, month, 28, 23, 59) for month in range(1, 13))  # noqa: DTZ001 (only formatted)
-    texts = (*(format_date(date, date_format) for date in dates), *placeholders)
-    return list(dict.fromkeys(re.sub(r"\d", "0", text) for text in texts))
 
 
 class DateRangePicker(_StubMixin, forms.MultiWidget):
@@ -148,7 +137,7 @@ class DateRangePicker(_StubMixin, forms.MultiWidget):
         widget["choice"] = choice if choice in labels else ""
         # The field shows the choice's label while neither input names a day.
         widget["choice_label"] = "" if widget["start"] or widget["end"] else labels.get(widget["choice"], "")
-        widget["sizing_texts"] = _sizing_texts(value_format, start_placeholder, end_placeholder, *labels.values())
+        widget["sizing_texts"] = sizing_texts(value_format, start_placeholder, end_placeholder, *labels.values())
         attrs = widget["attrs"]
         widget["disabled"] = bool(attrs.get("disabled"))
         # boundfield.py names the label and the control; the group takes the label.

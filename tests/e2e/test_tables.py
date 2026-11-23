@@ -160,6 +160,17 @@ def test_an_open_list_keeps_its_width_when_its_search_hides_the_widest_option(ro
     assert rows_page.errors == []
 
 
+def test_text_typed_into_a_date_keeps_the_width_of_its_column(rows_page, items):
+    rows_page.open(rows)
+    headers = rows_page.page.locator("thead th")
+    widths = headers.evaluate_all("cells => cells.map(cell => cell.getBoundingClientRect().width)")
+
+    _row(rows_page, "Kettle").locator("[name$=-released]").fill("2026-03-04, and a note far longer than any date")
+
+    assert headers.evaluate_all("cells => cells.map(cell => cell.getBoundingClientRect().width)") == widths
+    assert rows_page.errors == []
+
+
 def test_a_select_of_a_full_row_lists_the_options_of_its_column_and_marks_its_own(rows_page, items):
     rows_page.open(rows)
     category = _row(rows_page, "Lamp").locator("details:has([name$=-category])")

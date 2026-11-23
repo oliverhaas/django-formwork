@@ -11,7 +11,7 @@ from django.utils.functional import lazy
 from django.utils.translation import pgettext_lazy
 
 from ._base import _ModuleScript, _StubMixin
-from ._calendar import calendar_context
+from ._calendar import calendar_context, sizing_texts
 
 #: strftime code -> human placeholder token, for turning a date format into a
 #: hint like ``DD/MM/YYYY``.  Unmapped codes are left as-is.
@@ -71,6 +71,9 @@ class DatePicker(_StubMixin, forms.DateInput):
         widget["extra_class"] = widget["attrs"].pop("class", "")
         widget["iso_value"] = self._iso_value(value)
         widget["date_format"] = self.format
+        # The input is as wide as the widest date it can show, whatever it holds.
+        placeholder = str(widget["attrs"].get("placeholder") or "")
+        widget["sizing_texts"] = sizing_texts(self.format, placeholder, strftime=True)
         return context
 
     def value_from_datadict(self, data: Any, files: Any, name: str) -> Any:  # noqa: ANN401 (widget data)
