@@ -3031,6 +3031,45 @@ def test_a_list_of_stubs_and_its_relation_filter_run_the_queries_of_the_full_lis
     assert queries(stubs=True) == full
 
 
+def test_the_select_stubs_of_a_list_build_the_widget_of_a_value_once_for_all_rows_that_hold_it(
+    admin_client, stub_list, monkeypatch
+):
+    built = []
+    get_stub_context = Select.get_stub_context
+    monkeypatch.setattr(
+        Select, "get_stub_context", lambda select, *args: built.append(args) or get_stub_context(select, *args)
+    )
+
+    def render():
+        built.clear()
+        admin_client.get(url(Item, "changelist"))
+        return len(built)
+
+    two_rows = render()
+    for name in ["Gamma kettle", "Delta kettle"]:
+        Item.objects.create(name=name, category=stub_list.kitchen, status=Item.Status.ARCHIVED)
+
+    assert render() == two_rows
+
+
+class _RowNameForm(FormworkModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].widget.attrs["data-row"] = self.instance.name
+
+
+def test_the_select_stubs_of_a_list_keep_the_widget_attrs_that_each_row_sets(admin_client, stub_list, monkeypatch):
+    model_admin = site.get_model_admin(Item)
+    monkeypatch.setattr(model_admin, "form", _RowNameForm)
+    monkeypatch.setattr(model_admin, "share_choices", True)
+    gamma = Item.objects.create(name="Gamma kettle", category=stub_list.kitchen, status=Item.Status.ARCHIVED)
+
+    soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
+
+    rows = [_cell(soup, obj, "category").select_one("[data-row]")["data-row"] for obj in (stub_list.alpha, gamma)]
+    assert rows == ["Alpha kettle", "Gamma kettle"]
+
+
 @pytest.mark.parametrize("field", ["category", "status"])
 def test_a_select_stub_sizes_its_trigger_with_the_labels_of_the_full_select(
     admin_client, stub_list, monkeypatch, field

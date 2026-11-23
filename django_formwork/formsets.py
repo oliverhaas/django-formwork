@@ -80,7 +80,7 @@ from django.utils.translation import gettext as _
 from django_formwork.forms import FormworkModelForm, RowRenderMixin
 from django_formwork.renderers import FormworkRenderer, formwork_renderer
 from django_formwork.widgets._stub import stub_formset, with_query
-from django_formwork.widgets.select import column_options, rows_share_choices, share_choices
+from django_formwork.widgets.select import cache_cells, column_options, rows_share_choices, share_choices
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Generator
@@ -924,6 +924,7 @@ class TableRenderMixin:
         if cell_url:
             stub_formset(formset, lambda name: with_query(cell_url, field=name))
         option_lists = column_options(formset)
+        cache_cells(formset)
         can_add = not save_url and self.can_add and not getattr(self, "edit_only", False)
         can_delete = not save_url and self.can_delete
         initial = self.initial_form_count()

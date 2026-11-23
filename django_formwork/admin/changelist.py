@@ -41,7 +41,7 @@ from django_formwork.admin.paginator import EstimatedCountPaginator, PageLink, p
 from django_formwork.admin.widgets import IS_POPUP_VAR, TO_FIELD_VAR
 from django_formwork.fields import DisplayField
 from django_formwork.widgets import Select
-from django_formwork.widgets.select import column_options
+from django_formwork.widgets.select import cache_cells, column_options
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -664,6 +664,7 @@ class ChangeList:
         # relation filters do.
         if self.formset is not None:
             self.option_lists = column_options(self.formset)
+            cache_cells(self.formset)
         linked = bool(self.links) and self.model_admin.has_view_or_change_permission(self.request)
         lazy = getattr(self.model_admin.row_details, "slot_lazy", False)
         rows = []

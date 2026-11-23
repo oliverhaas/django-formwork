@@ -21,7 +21,7 @@ from django.utils.translation import gettext
 
 from django_formwork.search import SEARCH_PAGE_SIZE, check_search_params, search_url
 
-from ._base import _FormworkTemplatesMixin, _ModuleScript, _StubMixin, widget_of
+from ._base import CellCache, _FormworkTemplatesMixin, _ModuleScript, _StubMixin, widget_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Generator, Iterable, Iterator, Mapping, Sequence
@@ -228,13 +228,7 @@ def column_options(formset: BaseFormSet[Any]) -> SafeString:
     lists = []
     for bound in rows[0].visible_fields() if rows else ():
         select = widget_of(bound.field, SearchableSelectMixin)
-        if select is None or bound.field.disabled:
-            continue
-        # A relation's rows share their choices where share_choices() said so, other choices where no hook changes them.
-        if isinstance(bound.field, forms.ModelChoiceField):
-            if select.shared is None:
-                continue
-        elif not rows_share_choices(formset, bound.field):
+        if select is None or bound.field.disabled or not _column_shares_choices(formset, bound, select):
             continue
         selects = [
             row_select for form in rows if (row_select := widget_of(form.fields.get(bound.name), SearchableSelectMixin))
@@ -250,6 +244,37 @@ def column_options(formset: BaseFormSet[Any]) -> SafeString:
             row_select.options_template_id = template_id
         lists.append(format_html('<template id="{}">{}</template>', template_id, options))
     return mark_safe("".join(lists))  # noqa: S308
+
+
+_ROW_STATE = frozenset({"_choices", "stub_url", "truncated", "selected_past_page", "cell_cache"})
+
+
+def _column_shares_choices(formset: BaseFormSet[Any], bound: forms.BoundField, select: SearchableSelectMixin) -> bool:
+    """Whether the rows of the column of ``bound`` list the same choices."""
+    if isinstance(bound.field, forms.ModelChoiceField):
+        return select.shared is not None
+    return rows_share_choices(formset, bound.field)
+
+
+def _settings(select: SearchableSelectMixin) -> dict[str, Any]:
+    return {name: value for name, value in vars(select).items() if name not in _ROW_STATE}
+
+
+def cache_cells(formset: BaseFormSet[Any]) -> None:
+    """Let the rows of a select column render the widget of a value once, for all rows that hold the value.
+
+    Call it after ``share_choices`` and ``stub_formset``, before the rows render."""
+    rows = formset.forms
+    for bound in rows[0] if rows else ():
+        select = widget_of(bound.field, SearchableSelectMixin)
+        if not isinstance(select, _StubMixin) or not _column_shares_choices(formset, bound, select):
+            continue
+        cells = CellCache()
+        settings = _settings(select)
+        for form in rows:
+            row_select = widget_of(form.fields.get(bound.name), SearchableSelectMixin)
+            if type(row_select) is type(select) and _settings(row_select) == settings:
+                row_select.cell_cache = cells
 
 
 def _defer_page(options: list[dict[str, Any]], pending: dict[str, Any]) -> list[dict[str, Any]]:

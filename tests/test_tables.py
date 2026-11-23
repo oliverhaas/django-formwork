@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 from urllib.parse import parse_qs, urlsplit
 
+import jinja2
 import pytest
 from admin_app.models import Category, Item, Tag
 from bs4 import BeautifulSoup
@@ -31,6 +32,7 @@ from django_formwork import (
     formwork_modelformset_factory,
 )
 from django_formwork.forms import PREFIX_INPUT_NAME
+from django_formwork.renderers import engine
 from django_formwork.widgets import ChoiceLabel, ComboBox, ComboBoxMultiple, Select, SelectMultiple
 
 pytestmark = pytest.mark.django_db
@@ -638,6 +640,114 @@ def test_a_select_multiple_cell_answers_with_the_full_select_for_the_values_its_
     checked = soup.select("[x-data=formworkSelectMultiple] input[type=checkbox][checked]")
     assert [box["value"] for box in checked] == [str(sale.pk), str(used.pk)]
     assert eco.name in soup.select_one(".formwork-autowidth").get_text()
+
+
+class DoverRowForm(SizeRowForm):
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("name") == "Dover":
+            self.add_error("region", "No ferries.")
+        return cleaned_data
+
+
+class NamedSelect(Select):
+    template_name = "cells/named.html"
+
+
+class NamedSelectRowForm(CityRowForm):
+    class Meta(CityRowForm.Meta):
+        widgets = {"region": NamedSelect()}
+
+
+@pytest.fixture
+def towns(cities):
+    north = cities[0].region
+    City.objects.bulk_create(City(name=name, region=north) for name in ["Cardiff", "Dover", "Exeter"])
+
+
+@pytest.fixture
+def more_tagged(tagged):
+    category = Category.objects.get()
+    Item.objects.create(name="Grill", category=category).tags.set(tagged[:2])
+    Item.objects.create(name="Iron", category=category)
+
+
+def _posted_cities():
+    rows = list(City.objects.order_by("pk"))
+    data = {"form-TOTAL_FORMS": len(rows), "form-INITIAL_FORMS": len(rows)}
+    for index, city in enumerate(rows):
+        data |= {
+            f"form-{index}-id": city.pk,
+            f"form-{index}-name": city.name,
+            f"form-{index}-region": city.region_id,
+            f"form-{index}-size": "s",
+        }
+    formset_class = formwork_modelformset_factory(City, form=DoverRowForm, extra=0)
+    return formset_class(data, queryset=City.objects.order_by("pk"))
+
+
+def _tagged_items():
+    return TagsFormSet(queryset=Item.objects.order_by("pk").prefetch_related("tags"))
+
+
+@pytest.mark.parametrize("cell_url", ["", "/cells/"])
+@pytest.mark.parametrize("rows", [_posted_cities, _tagged_items])
+def test_the_select_columns_of_as_rows_render_the_html_of_rows_rendered_one_by_one(
+    towns, more_tagged, monkeypatch, rows, cell_url
+):
+    cached = str(rows().as_rows(cell_url=cell_url))
+
+    monkeypatch.setattr("django_formwork.formsets.cache_cells", lambda formset: None)
+
+    assert str(rows().as_rows(cell_url=cell_url)) == cached
+
+
+@pytest.mark.parametrize("cell_url", ["", "/cells/"])
+def test_the_selects_of_as_rows_build_the_widget_of_a_value_once_for_all_rows_that_hold_it(
+    cities, monkeypatch, cell_url
+):
+    built = []
+    for method in ("get_context", "get_stub_context"):
+        original = getattr(Select, method)
+        monkeypatch.setattr(
+            Select, method, lambda select, *args, _original=original: built.append(args) or _original(select, *args)
+        )
+
+    def render():
+        built.clear()
+        CityFormSet(queryset=City.objects.all()).as_rows(cell_url=cell_url)
+        return len(built)
+
+    two_rows = render()
+    north = cities[0].region
+    City.objects.bulk_create(City(name=name, region=north) for name in ["Cardiff", "Dover", "Exeter"])
+
+    assert render() == two_rows
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "widget.name|upper if widget.selected_label == 'South' else widget.name",
+        "widget.name|tojson if widget.selected_label == 'South' else widget.name",
+        "widget.name|replace('-', '_')",
+    ],
+)
+def test_a_select_whose_template_changes_its_name_renders_the_name_of_each_row(towns, monkeypatch, name):
+    env = engine().env
+    template = jinja2.DictLoader({"cells/named.html": f"<i data-name>{{{{ {name} }}}}</i>"})
+    monkeypatch.setattr(env, "loader", jinja2.ChoiceLoader([template, env.loader]))
+    formset_class = formwork_modelformset_factory(City, form=NamedSelectRowForm, extra=0)
+
+    def names():
+        html = formset_class(queryset=City.objects.order_by("pk")).as_rows()
+        return [tag.get_text() for tag in BeautifulSoup(html, "html.parser").select("i[data-name]")]
+
+    cached = names()
+    monkeypatch.setattr("django_formwork.formsets.cache_cells", lambda formset: None)
+
+    assert cached == names()
+    assert len(set(cached)) == City.objects.count()
 
 
 class PeriodRowForm(FormworkModelForm):
