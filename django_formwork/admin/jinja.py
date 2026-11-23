@@ -26,6 +26,7 @@ from django.utils.translation import gettext, ngettext, npgettext, pgettext
 
 from django_formwork.admin.cells import list_html
 from django_formwork.admin.helpers import deleted_groups
+from django_formwork.renderers import Environment
 from django_formwork.widgets.select import shared_pages
 
 if TYPE_CHECKING:
@@ -126,7 +127,7 @@ def tojson(value: object) -> str:
 
 
 def environment(**options: Any) -> jinja2.Environment:
-    env = jinja2.Environment(**options)  # noqa: S701 (Django's backend sets autoescape)
+    env = Environment(**options)
     env.install_gettext_callables(  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         gettext,
         ngettext,

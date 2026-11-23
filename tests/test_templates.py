@@ -1,5 +1,6 @@
 import json
 
+import jinja2
 import pytest
 from bs4 import BeautifulSoup
 from django import forms
@@ -8,6 +9,7 @@ from django.template import Context, Template
 from django.utils.html import format_html
 
 from django_formwork.forms import FormworkForm
+from django_formwork.renderers import engine
 
 
 def render_html(form):
@@ -597,3 +599,35 @@ def test_a_widget_puts_its_label_links_in_the_label_row_outside_the_label(widget
 
     assert [a["href"] for a in fieldset.select(":scope > .formwork-label-links a")] == ["/venue/hall/"]
     assert fieldset.select("label a, legend a") == []
+
+
+class _Labelled(dict):
+    label = "attribute"
+
+
+@pytest.mark.parametrize(
+    ("source", "context", "expected"),
+    [
+        ("{{ d.a }}", {"d": {"a": "key"}}, "key"),
+        ("[{{ d.missing.deeper }}]", {"d": {}}, "[]"),
+        ("{{ d.items is callable }}", {"d": {"items": "key"}}, "True"),
+        ("{{ d.keys()|join(',') }}", {"d": {"a": 1, "b": 2}}, "a,b"),
+        ("{{ d.label }}", {"d": _Labelled(label="key")}, "attribute"),
+    ],
+)
+def test_formwork_templates_read_a_dict_as_jinja_does(source, context, expected):
+    stock = jinja2.Environment(undefined=jinja2.ChainableUndefined, autoescape=True)
+
+    rendered = [env.from_string(source).render(context) for env in (engine().env, stock)]
+
+    assert rendered == [expected, expected]
+
+
+def test_the_globals_of_one_template_stay_out_of_the_others():
+    env = engine().env
+
+    page = env.from_string("{{ title }}", globals={"title": "Page"})
+
+    assert page.render() == "Page"
+    assert env.from_string("[{{ title }}]").render() == "[]"
+    assert "title" not in env.globals

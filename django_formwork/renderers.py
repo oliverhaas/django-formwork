@@ -23,9 +23,35 @@ from django_formwork.boundfield import FormworkBoundField
 from django_formwork.widgets.display import clamp
 
 if TYPE_CHECKING:
+    from collections.abc import MutableMapping
+
     from django.forms.renderers import BaseRenderer
 
 __all__ = ["FormworkRenderer", "engine", "formwork_renderer"]
+
+# A plain dict has no attributes besides these, so any other name a template reads from it is a key.
+_DICT_ATTRIBUTES = frozenset(dir(dict))
+
+
+class Environment(jinja2.Environment):
+    """Jinja2's environment, with two shortcuts for the hundreds of small templates that a table renders.
+
+    The output stays the same as Jinja's.
+    """
+
+    def getattr(self, obj: Any, attribute: str) -> Any:  # noqa: ANN401
+        # Jinja tries the attribute first, and on a widget's dicts that raises an AttributeError for each key.
+        if type(obj) is dict and attribute not in _DICT_ATTRIBUTES:
+            try:
+                return obj[attribute]
+            except KeyError:
+                return self.undefined(obj=obj, name=attribute)
+        return super().getattr(obj, attribute)
+
+    def make_globals(self, d: MutableMapping[str, Any] | None) -> MutableMapping[str, Any]:
+        # Jinja's ChainMap shows globals added after a template loads, and each render copies it twice, slowly.
+        # The environment functions add every global before the first template loads.
+        return {**self.globals, **(d or {})}
 
 
 def _localize(value: Any) -> Any:  # noqa: ANN401
@@ -34,7 +60,7 @@ def _localize(value: Any) -> Any:  # noqa: ANN401
 
 
 def environment(**options: Any) -> jinja2.Environment:
-    env = jinja2.Environment(**options)  # noqa: S701 (Django's backend sets autoescape)
+    env = Environment(**options)
     env.install_gettext_callables(  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         gettext,
         ngettext,
