@@ -732,6 +732,68 @@ document.addEventListener("click", (event) => {
   }
 });
 
+// A row's lazy details (change_list_row.html) open once their HTML is in, so the rows under them move once:
+// the chevron spins while it loads. A pointer that rests on the row loads it early.
+const detailsLoads = new WeakMap();
+
+// The slot of a toggle's details while it holds its skeleton, which no load has replaced yet.
+const unloadedDetails = (toggle) => {
+  const id = toggle?.querySelector(":scope > summary")?.getAttribute("aria-controls");
+  const slot = id && document.getElementById(id)?.querySelector("[data-slot=details]");
+  return slot?.querySelector(":scope > [data-slot-skeleton]") ? slot : null;
+};
+
+// Resolves when the load ends, also when it failed, so the chevron stops either way.
+const loadDetails = (slot) => {
+  if (!detailsLoads.has(slot)) {
+    detailsLoads.set(
+      slot,
+      new Promise((resolve) => {
+        const done = (event) => {
+          if (event.target !== slot) return;
+          slot.removeEventListener("htmx:finally:request", done);
+          detailsLoads.delete(slot);
+          resolve();
+        };
+        slot.addEventListener("htmx:finally:request", done);
+      }),
+    );
+    slot.dispatchEvent(new CustomEvent("formwork-admin:load"));
+  }
+  return detailsLoads.get(slot);
+};
+
+// Capture, so the summary's own toggle never opens details that have not loaded.
+document.addEventListener(
+  "click",
+  (event) => {
+    const summary = event.target.closest?.("details[data-row-toggle]:not([open]) > summary");
+    const slot = unloadedDetails(summary?.parentElement);
+    if (!slot) return;
+    event.preventDefault();
+    if (summary.getAttribute("aria-busy") === "true") return;
+    summary.setAttribute("aria-busy", "true");
+    loadDetails(slot).then(() => {
+      summary.removeAttribute("aria-busy");
+      if (!unloadedDetails(summary.parentElement)) summary.parentElement.open = true;
+    });
+  },
+  true,
+);
+
+let detailsIntent;
+document.addEventListener("mouseover", (event) => {
+  const row = event.target.closest?.("#changelist-table > tbody > tr:not([data-row-details])");
+  if (!row || row.contains(event.relatedTarget)) return;
+  clearTimeout(detailsIntent);
+  const slot = unloadedDetails(row.querySelector(":scope > td > div > details[data-row-toggle]"));
+  if (slot) detailsIntent = setTimeout(() => loadDetails(slot), INTENT_DELAY);
+});
+document.addEventListener("mouseout", (event) => {
+  const row = event.target.closest?.("#changelist-table > tbody > tr:not([data-row-details])");
+  if (row && !row.contains(event.relatedTarget)) clearTimeout(detailsIntent);
+});
+
 // A page link (data-page-link) morphs the page into the next one, so the sidebar keeps its place.
 document.addEventListener("htmx:config:request", (event) => {
   const { ctx } = event.detail;

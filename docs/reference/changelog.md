@@ -81,7 +81,8 @@
 - A click on a table row can open details under it: HTML that the row's object gives,
   such as the latest replies to a ticket. A formset method `row_details(form)` gives the
   rows of `formset.as_rows()` their details, and an admin method `row_details(request,
-  obj)` those of the list. `@admin.slot(lazy=True)` loads the details as the row opens.
+  obj)` those of the list. With `@admin.slot(lazy=True)`, the details load when the
+  pointer rests on the row or the row is clicked, and the row opens after they are in.
   The row gets a chevron in a last column, and a click on its inputs, links or buttons
   does not open it. The details never change the widths of the columns. See
   [Formsets](formsets.md) and [Row details](admin.md#row-details).

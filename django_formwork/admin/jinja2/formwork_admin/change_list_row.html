@@ -65,10 +65,11 @@
 {% block details_leading_cells %}{% if select %}<td></td>{% endif %}{% endblock %}
 {% block details_span %}{{ cells|length + (1 if collapsible else 0) + (1 if expandable else 0) }}{% endblock %}
 
-{#- Lazy details load as the row opens, as a lazy slot loads (macros.html slot), and again after a list save. #}
+{#- Lazy details load before the row opens (admin.js), and again after a list save. The skeleton marks details that
+    have not loaded. #}
 {% block details_content %}
       {%- if details_url %}
-      <div data-slot="details" hx-get="{{ details_url }}" hx-trigger="intersect once, formwork-admin:reload" hx-target="this" hx-swap="innerMorph" hx-sync="this:replace" hx-morph-skip-children>
+      <div data-slot="details" hx-get="{{ details_url }}" hx-trigger="formwork-admin:load, formwork-admin:reload" hx-target="this" hx-swap="innerMorph" hx-sync="this:replace" hx-morph-skip-children>
         <div data-slot-skeleton>{% if details %}{{ details }}{% else %}<div class="skeleton h-16 rounded-box"></div>{% endif %}</div>
       </div>
       {%- else %}

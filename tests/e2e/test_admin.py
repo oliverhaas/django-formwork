@@ -941,6 +941,50 @@ def test_a_lazy_slot_at_the_bottom_loads_as_it_scrolls_into_view(admin_page, liv
     assert admin_page.errors == []
 
 
+@pytest.fixture
+def lazy_details_row(admin_page, live_server, kitchen, monkeypatch):
+    def notes(self, request, obj):
+        return format_html("<p data-notes>{} notes</p>", obj.name)
+
+    monkeypatch.setattr(ItemAdmin, "row_details", slot(lazy=True)(notes))
+    Item.objects.create(name="Kettle", category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    admin_page.wait_for_load_state("networkidle")
+    return admin_page.locator("#changelist-table > tbody").filter(has_text="Kettle")
+
+
+def test_lazy_row_details_open_once_their_html_is_in(admin_page, lazy_details_row):
+    held = []
+    admin_page.route("**/details/", lambda route: held.append(route))  # noqa: PLW0108 (Playwright reads the handler's signature, which a builtin lacks)
+    summary = lazy_details_row.locator("summary[aria-controls]")
+    details = lazy_details_row.locator("tr[data-row-details]")
+
+    summary.click()
+
+    expect(summary).to_have_attribute("aria-busy", "true")
+    expect(details).to_be_hidden()
+    held[0].continue_()
+    expect(details).to_be_visible()
+    expect(details.locator("[data-notes]")).to_have_text("Kettle notes")
+    expect(summary).not_to_have_attribute("aria-busy", "true")
+    assert admin_page.errors == []
+
+
+def test_a_pointer_resting_on_a_row_loads_its_details_before_the_click(admin_page, lazy_details_row):
+    requests = []
+    admin_page.on("request", lambda request: requests.append(request.url) if "/details/" in request.url else None)
+    details = lazy_details_row.locator("tr[data-row-details]")
+
+    lazy_details_row.locator("summary[aria-controls]").hover()
+    expect(details.locator("[data-notes]")).to_be_attached()
+    expect(details).to_be_hidden()
+    lazy_details_row.locator("summary[aria-controls]").click()
+
+    expect(details).to_be_visible()
+    assert len(requests) == 1
+    assert admin_page.errors == []
+
+
 def test_the_top_slot_stays_closed_over_a_reload_and_loads_the_searched_rows_when_it_opens(
     admin_page, live_server, kitchen, monkeypatch
 ):

@@ -691,9 +691,10 @@ class TicketAdmin(admin.ModelAdmin):
 
 Without `@admin.slot`, the method runs for every row while the list renders, and a row
 whose method returns an empty string has no chevron. With `lazy=True`, every row has a
-chevron, and the HTML loads from `details/` under the object's URL when the row opens,
-with the skeleton until then. That URL needs the view permission for the object. A save
-of the list loads the open details again. The list in a dialog that picks a related row
+chevron, and the HTML loads from `details/` under the object's URL when the pointer
+rests on the row or the row is clicked. The chevron spins until the HTML is in, and the
+row opens with it. That URL needs the view permission for the object. After a save of
+the list, the details that have loaded load again. The list in a dialog that picks a related row
 shows no details.
 
 As with the slots, the page shows the HTML as it is, so escape the values in it.

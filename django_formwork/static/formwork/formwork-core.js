@@ -382,7 +382,8 @@ document.addEventListener("htmx:after:settle", (e) => {
 // A table row with details opens or closes them on a click anywhere on it, except on what has a click or
 // an input of its own: a link, a control, a cell's field, the [more] of a value. A click that ends a text
 // selection leaves the row as it is. The toggle is the native <details> in the row's last cell, so the
-// keyboard reaches it and a morph keeps its state.
+// keyboard reaches it and a morph keeps its state. A click on the row clicks its summary, so a listener of
+// the toggle's clicks sees each open.
 const OWN_CLICK =
   "a, button, input, select, textarea, label, summary, details, [contenteditable], [tabindex], [role=button], [data-formwork-field]";
 document.addEventListener("click", (e) => {
@@ -391,7 +392,7 @@ document.addEventListener("click", (e) => {
   const toggle = row?.querySelector(":scope > td > div > details[data-row-toggle]");
   if (!toggle || row.contains(e.target.closest(OWN_CLICK))) return;
   if (!document.getSelection()?.isCollapsed) return;
-  toggle.open = !toggle.open;
+  toggle.querySelector(":scope > summary").click();
 });
 
 // --- Busy buttons ---
