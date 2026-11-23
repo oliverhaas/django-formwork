@@ -1441,6 +1441,34 @@ def test_list_editable_failed_save_keeps_every_change_marked(admin_client, catal
     assert [cell.find("input")["name"] for cell in marked] == ["form-0-quantity", "form-1-quantity"]
 
 
+@pytest.mark.parametrize("posted", [False, True])
+def test_list_editable_cell_is_the_field_cell_of_a_formset_row(admin_client, catalog, monkeypatch, posted):
+    """The list writes out the field cells of ``formwork/tables/row.html``, with their marks and errors."""
+    columns = ["category", "status", "price", "quantity", "is_featured", "released"]
+    monkeypatch.setattr(site.get_model_admin(Item), "list_editable", columns)
+    if posted:
+        data = {**management("form", 1, 1), "form-0-id": catalog.alpha.pk, "form-0-quantity": "-1", "_save": "1"}
+        response = admin_client.post(url(Item, "changelist"), data)
+    else:
+        response = admin_client.get(url(Item, "changelist"))
+    row = next(row for row in response.context_data["cl"].rows if row["form"].instance == catalog.alpha)
+    form = row["form"]
+    for name in columns:
+        form.fields[name].cell_cache = None
+    form.template_name_row = "formwork/tables/row.html"
+
+    listed = BeautifulSoup(response.content, "html.parser").find(id=row["row_id"])
+    alone = BeautifulSoup(form.as_row(), "html.parser")
+
+    def cell(soup, name):
+        td = soup.select_one(f'td[data-field="{name}"]')
+        marks = {key: value for key, value in td.attrs.items() if key.startswith(("data-formwork", "data-invalid"))}
+        return marks, " ".join(td.decode_contents().split())
+
+    assert [cell(listed, name) for name in columns] == [cell(alone, name) for name in columns]
+    assert form.errors if posted else not form.is_bound
+
+
 @pytest.mark.parametrize(
     ("button", "target"),
     [

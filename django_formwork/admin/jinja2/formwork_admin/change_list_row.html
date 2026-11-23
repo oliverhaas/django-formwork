@@ -1,23 +1,25 @@
-{% extends "formwork/tables/row.html" %}
 {#- A row of the changelist. formwork's engine renders it, so the admin's globals and macros are not available.
     The context adds "columns", "select" (the checkbox's name, empty without actions), "index", "popup", "pick"
-    and "details_url" (where lazy details load from) to the row's. -#}
+    and "details_url" (where lazy details load from) to the row's.
+    It writes out formwork/tables/row.html instead of extending it: a block per cell copies the template's context,
+    and a page of 100 rows rendered about 10% slower that way. A field's cell must stay the same as row.html's,
+    which test_admin compares. -#}
 {#- Opaque row colors, so a pinned column takes its row's color over the columns that scroll under it.
     The server renders them, so the rows keep their markup when Alpine starts. A row and its details light up
     together. -#}
 {% set row_bg = "bg-base-100 group-hover/row:bg-[color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100))]" %}
 {% set selected_bg = "data-selected:bg-[color-mix(in_srgb,var(--color-primary)_7%,var(--color-base-100))] data-selected:group-hover/row:bg-[color-mix(in_oklab,var(--color-primary)_7%,color-mix(in_oklab,var(--color-base-content)_5%,var(--color-base-100)))]" %}
 {% set collapsible = columns|length > 1 %}
-
-{% block row_attrs %} class="group/row"{% endblock %}
-
-{#- An error of the whole row, as Django shows it: on a line of its own, right above the row. -#}
-{% block errors_attrs %} data-row-errors class="border-b-0"{% endblock %}
-{% block errors_span %}{{ cells|length + (1 if select else 0) + (1 if collapsible else 0) + (1 if expandable else 0) }}{% endblock %}
-
-{% block cells_attrs %} data-pk="{{ form.instance.pk }}" class="transition-colors {{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)"{% endblock %}
-
-{% block leading_cells %}
+<tbody id="{{ row_id }}" class="group/row">
+  {#- An error of the whole row, as Django shows it: on a line of its own, right above the row. #}
+  {% if form.non_field_errors() %}
+  <tr data-row-errors class="border-b-0">
+    <td colspan="{{ cells|length + (1 if select else 0) + (1 if collapsible else 0) + (1 if expandable else 0) }}" class="pb-0">
+      <p class="flex items-center gap-1.5 text-xs text-error"><i class="icon icon-circle-exclamation-point size-3.5" aria-hidden="true"></i> {{ form.non_field_errors()|join(" ") }}</p>
+    </td>
+  </tr>
+  {% endif %}
+  <tr data-pk="{{ form.instance.pk }}" class="transition-colors {{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)">
     {%- if select %}
     <td>
       <input type="checkbox" class="checkbox checkbox-sm" name="{{ select }}" value="{{ form.instance.pk }}"
@@ -25,28 +27,40 @@
              aria-label="{{ _("Select row") }}">
     </td>
     {%- endif %}
-{%- endblock %}
-
-{#- A boxed field sets its value in from the cell's edge, as its header does. -#}
-{% block cell_attrs %}{% set column = columns[loop.index0] %} class="{{ "min-w-48" if column.wrap else "whitespace-nowrap" }}{{ " text-right" if column.numeric }}" data-field="{{ bf.name }}"{% if editable %} data-editable{% if boxed %} data-indent{% endif %}{% endif %}{% endblock %}
-
-{#- The link loads the change page as the admin's page links do (the page_link macro). In a popup it is a plain
-    link, and a click picks the row for the relation that opened the popup. -#}
-{% block display_cell %}
-      {%- if columns[loop.index0].linked and link %}
+    {% for bf in cells %}
+    {# A field that posts nothing, a DisplayField or a disabled field, shows its value. A boxed field sets its
+       value in from the cell's edge, as its header does. #}
+    {% set editable = not bf.field.disabled %}
+    {% set column = columns[loop.index0] %}
+    <td class="{{ "min-w-48" if column.wrap else "whitespace-nowrap" }}{{ " text-right" if column.numeric }}" data-field="{{ bf.name }}"{% if editable %} data-editable{% if bf.field.widget.input_type not in ("checkbox", "radio") %} data-indent{% endif %} data-formwork-field{% if form.is_bound and bf.name in form.changed_data %} data-formwork-changed{% if bf.initial_checked %} data-formwork-initial="{{ bf.initial_checked }}"{% endif %}{% endif %}{% if bf.errors %} data-invalid{% endif %}{% endif %}>
+      {% if loop.first %}{{ hidden }}{% endif %}
+      {% if editable %}{% call(bf) bf.table_cell() %}
+      {# The cell has no <label>, so the field's label names the widget. #}
+      {% set widget = bf.as_widget(attrs={"aria-label": bf.label|string}) %}
+      {% if bf.label_links %}
+      {# A cell has no label row, so the links follow the widget. #}
+      <div class="flex items-center gap-3"><div class="min-w-0 flex-1">{{ widget }}</div><span class="formwork-label-links">{{ bf.label_links }}</span></div>
+      {% else %}
+      {{ widget }}
+      {% endif %}
+      {% if bf.auto_id %}<span id="{{ bf.auto_id }}_label" hidden>{{ bf.label }}</span>{% if bf.help_text %}<span id="{{ bf.auto_id }}_helptext" hidden>{{ bf.help_text|striptags }}</span>{% endif %}{% endif %}
+      {% if bf.errors %}<div popover="manual" class="tooltip tooltip-error tooltip-bottom" data-cell-error><div class="tooltip-content formwork-errors" role="tooltip"{% if bf.auto_id %} id="{{ bf.auto_id }}_error"{% endif %}>{% for error in bf.errors %}<p>{{ error }}</p>{% endfor %}</div></div>{% endif %}{% endcall %}
+      {% else %}
+      {#- The link loads the change page as the admin's page links do (the page_link macro). In a popup it is a
+          plain link, and a click picks the row for the relation that opened the popup. #}
+      {%- if column.linked and link %}
       <a href="{{ link }}"{% if not popup %} hx-get="{{ link }}" hx-target="body" hx-swap="outerMorph scroll:top scrollTarget:window" hx-push-url="true" hx-sync="body:replace" hx-preload="formwork-admin:intent, mousedown, touchstart" data-page-link="change"{% endif %} class="link link-hover link-primary font-medium"{% if pick %} data-popup-pick="{{ pick }}"{% endif %}>{{ bf.display_value }}</a>
       {%- else %}
       {{ bf.display_value }}
       {%- endif %}
-{%- endblock %}
-
-{% block trailing_cells %}{{ self.details_toggle() }}{% if collapsible %}<td data-col-toggle></td>{% endif %}{% endblock %}
-
-{#- The list is dense, so its toggle is a size smaller and its cell keeps the row's height. -#}
-{% block details_toggle %}
+      {% endif %}
+    </td>
+    {% endfor %}
+    {#- The list is dense, so its details toggle is a size smaller and its cell keeps the row's height. #}
     {%- if expandable %}
     <td class="w-px py-0">
       {%- if details is not none %}
+      {#- The morph keeps a details' open state; the id holds the row's, so the state stays with its row. #}
       <div class="flex items-center justify-end">
         <details id="{{ details_id }}-toggle" class="[&[open]_[data-chevron]]:rotate-180" data-row-toggle>
           <summary class="btn btn-ghost btn-xs btn-square list-none text-base-content/60 [&::-webkit-details-marker]:hidden" aria-controls="{{ details_id }}" title="{{ _("Details") }}" aria-label="{{ _("Details") }}">
@@ -56,23 +70,25 @@
       </div>
       {%- endif %}
     </td>
-    {%- endif %}
-{%- endblock %}
-
-{% block details_attrs %} data-pk="{{ form.instance.pk }}" class="{{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)"{% endblock %}
-
-{#- The details line up with the row's first column. #}
-{% block details_leading_cells %}{% if select %}<td></td>{% endif %}{% endblock %}
-{% block details_span %}{{ cells|length + (1 if collapsible else 0) + (1 if expandable else 0) }}{% endblock %}
-
-{#- Lazy details load before the row opens (admin.js), and again after a list save. The skeleton marks details that
-    have not loaded. #}
-{% block details_content %}
+    {%- endif %}{% if collapsible %}<td data-col-toggle></td>{% endif %}
+  </tr>
+  {% if details is not none %}
+  {#- Shown while the toggle is open (formwork.css). The content has no width of its own, so it never widens a
+      column, and fades in as it opens. The details line up with the row's first column. #}
+  <tr id="{{ details_id }}" data-row-details data-pk="{{ form.instance.pk }}" class="{{ row_bg }} {{ selected_bg }}" :data-selected="selected.includes($el.dataset.pk)">
+    {%- if select %}<td></td>{% endif %}
+    <td colspan="{{ cells|length + (1 if collapsible else 0) + (1 if expandable else 0) }}" class="pt-0 pb-4">
+      <div class="w-0 min-w-full motion-safe:transition-[opacity,translate] motion-safe:duration-200 starting:-translate-y-1 starting:opacity-0">
+      {#- Lazy details load before the row opens (admin.js), and again after a list save. The skeleton marks
+          details that have not loaded. #}
       {%- if details_url %}
       <div data-slot="details" hx-get="{{ details_url }}" hx-trigger="formwork-admin:load, formwork-admin:reload" hx-target="this" hx-swap="innerMorph" hx-sync="this:replace" hx-morph-skip-children>
         <div data-slot-skeleton>{% if details %}{{ details }}{% else %}<div class="skeleton h-16 rounded-box"></div>{% endif %}</div>
       </div>
       {%- else %}
       {{ details }}
-      {%- endif %}
-{%- endblock %}
+      {%- endif %}</div>
+    </td>
+  </tr>
+  {% endif %}
+</tbody>

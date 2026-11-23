@@ -348,12 +348,13 @@
   browser to lay out. A badge select keeps one element per label. Overrides of
   `formwork/widgets/select.html`, `select_multiple.html` and `combo_box.html` keep
   working.
-- An admin list renders about 27% faster and `formset.as_rows()` about 35% faster, with
-  the same HTML. The example Event list takes 80 ms instead of 109 ms, and 100 rows with
-  three select columns take 80 ms instead of 123 ms. A column of checkboxes, of number
-  inputs, or of selects whose rows share their choices renders the cell of each value once
-  and puts in each row's name and stub URL, so a `get_context()` override of the widget
-  runs once per value, not once per row. The forms of one form class share the
+- An admin list renders about 36% faster and `formset.as_rows()` about 35% faster, with
+  the same HTML. The example Event list takes 70 ms instead of 109 ms, and 100 rows with
+  three select columns take 80 ms instead of 123 ms. The admin list's rows write out their
+  cells, where extending `formwork/tables/row.html` copied the template's context for each
+  cell's blocks. A column of checkboxes, of number inputs, or of selects whose rows share
+  their choices renders the cell of each value once and puts in each row's name and stub
+  URL, so a `get_context()` override of the widget runs once per value, not once per row. The forms of one form class share the
   `ChoiceLabel`s of their choices instead of each copying them.
   Formwork's Jinja2 environments read a key of a dict without trying an attribute of that
   name first, and copy their globals once per template instead of twice per render. The

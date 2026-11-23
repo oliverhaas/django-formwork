@@ -262,7 +262,6 @@ invalid marks and its errors stay the same.
 | `details_content`                       | what the details show, `details` by default              |
 
 `cell_attrs` and `display_cell` see the cell's bound field as `bf` and Jinja's `loop`.
-The admin's changelist rows extend the template this way.
 
 ## Saving a row
 
