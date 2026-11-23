@@ -2293,9 +2293,10 @@ row's chevron, or anywhere on the row outside its links and inputs, opens it.</p
 </span></code></pre></div>
 <p>Without <code>@admin.slot</code>, the method runs for every row while the list renders, and a row
 whose method returns an empty string has no chevron. With <code>lazy=True</code>, every row has a
-chevron, and the HTML loads from <code>details/</code> under the object's URL when the row opens,
-with the skeleton until then. That URL needs the view permission for the object. A save
-of the list loads the open details again. The list in a dialog that picks a related row
+chevron, and the HTML loads from <code>details/</code> under the object's URL when the pointer
+rests on the row or the row is clicked. The chevron spins until the HTML is in, and the
+row opens with it. That URL needs the view permission for the object. After a save of
+the list, the details that have loaded load again. The list in a dialog that picks a related row
 shows no details.</p>
 <p>As with the slots, the page shows the HTML as it is, so escape the values in it.</p>
 <h3 id="actions">Actions<a class="headerlink" href="#actions" title="Permanent link">&para;</a></h3>
