@@ -10,7 +10,11 @@
    colors the rows. #}
 {% set head_bg = "bg-[color-mix(in_srgb,var(--color-base-200)_50%,var(--color-base-100))]" %}
 <div id="changelist">
-<div id="changelist-{{ cl.state_key }}" x-init="reset($el)" data-total="{{ cl.result_count }}">
+{#- The box keeps its id, so a sort or a filter morphs the rows in place. With a new box for each query, the morph
+    moved the form into it, and Chromium restyled every row. The marker is new for each query instead, and its
+    x-init starts a new selection. #}
+<div id="changelist-results" data-total="{{ cl.result_count }}" data-state="{{ cl.state_key }}">
+  <span id="changelist-state-{{ cl.state_key }}" hidden x-init="reset($el.parentElement)"></span>
   {% if cl.current_order is not none %}<input type="hidden" name="o" value="{{ cl.current_order }}" form="changelist-filters">{% endif %}
   {% if cl.per_page_param %}<input type="hidden" name="per_page" value="{{ cl.per_page_param }}" form="changelist-filters">{% endif %}
 

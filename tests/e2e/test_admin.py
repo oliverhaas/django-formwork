@@ -74,6 +74,21 @@ def test_selection_works_after_a_search_swap(admin_page, live_server, kitchen):
     assert admin_page.errors == []
 
 
+def test_a_sorted_list_starts_with_nothing_selected(admin_page, live_server, kitchen):
+    for name in ("Kettle", "Toaster"):
+        Item.objects.create(name=name, category=kitchen)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    admin_page.locator("#changelist tbody input[type=checkbox]").first.click()
+    expect(admin_page.locator("#changelist-actions")).to_contain_text("1 selected")
+
+    admin_page.locator("#changelist-table thead a", has_text="Name").click()
+
+    expect(admin_page).to_have_url(re.compile(r"\?o="))
+    expect(admin_page.locator("#changelist tbody input[type=checkbox]:checked")).to_have_count(0)
+    expect(admin_page.locator("#changelist-actions")).to_contain_text("0 selected")
+    assert admin_page.errors == []
+
+
 def test_a_page_size_picked_under_the_list_stays_through_a_search(admin_page, live_server, kitchen, monkeypatch):
     item_admin = site.get_model_admin(Item)
     monkeypatch.setattr(item_admin, "list_per_page", 1)

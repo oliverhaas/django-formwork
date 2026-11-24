@@ -374,6 +374,15 @@
   with `data-has-details` now. If your project overrides `formwork/tables/row.html`, copy
   it again or add the attribute to the `<tr>` of a row with details; without it, that row
   shows a line above its details and the default cursor.
+- The admin list keeps its box, `#changelist-results`, across a sort, a filter and a page
+  change. The box had a new id for each query, so the morph moved the toolbar, the form
+  and the footer into a new box, and Chromium restyled every row. A hidden marker in the
+  box, `#changelist-state-…`, is new for each query instead and starts the new selection.
+  If your project overrides `formwork_admin/change_list_results.html`, copy it again.
+  With the row marker above and the open htmx fix (#4233) and DaisyUI fix (#4897), a sort
+  of the example project's event list spends 140 ms on style where it spent 200 ms. With
+  htmx 4.0.2 and DaisyUI 5.8.1, each swap still restyles the whole page, so the time
+  stays the same there.
 
 ### Fixed
 

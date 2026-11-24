@@ -227,7 +227,7 @@
   // link under the rows shows the next page's first rows. A morph of the same list keeps its place.
   const watch = () => {
     const el = document.getElementById("changelist-scroll");
-    const key = el?.closest("[data-total]")?.id ?? "";
+    const key = el?.closest("[data-state]")?.dataset.state ?? "";
     if (el && key !== state.key) {
       const card = el.closest(".card") ?? el;
       const bar = parseFloat(getComputedStyle(el).getPropertyValue("--formwork-admin-top")) || 0;
