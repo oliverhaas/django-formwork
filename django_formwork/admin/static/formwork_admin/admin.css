@@ -70,8 +70,9 @@
 }
 
 /* A badge or a checkbox is as high as a line of the row's text. On the text's baseline it would reach
-   below the line and make the row 1.4px higher. */
-#changelist-table > tbody > tr[data-pk] > td > :is(.badge, .checkbox) {
+   below the line and make the row 1.4px higher. The rule names no attribute of the row: a sort writes
+   each row's data-pk, and a rule on it restyles every badge and checkbox of the list. */
+#changelist-table > tbody > tr > td > :is(.badge, .checkbox) {
   vertical-align: top;
 }
 
