@@ -29,10 +29,19 @@
   // The room a new list's top keeps under the top bar.
   const GAP = 12;
 
-  // Every rule lives in an adopted sheet, which a morph of the page content leaves alone.
+  // Every rule lives in an adopted sheet, which a morph of the page content leaves alone. A change to a sheet
+  // restyles the elements its rules can match, so the rules are split by what they match and by when they
+  // change. The sheet pins the first columns and holds their shadow. The tools show the toggle and its count,
+  // which only the toggle cells match. The cut hides the columns that don't fit, and the probe sets the table
+  // to its narrowest. A measure changes only the cut and the probe, as only they set a width.
   const sheet = new CSSStyleSheet();
+  const tools = new CSSStyleSheet();
+  const cut = new CSSStyleSheet();
+  const probe = new CSSStyleSheet();
   const heads = new CSSStyleSheet();
-  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet, heads];
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet, tools, cut, probe, heads];
+  // The probe names the table and the header's toggle by id, so it restyles those two alone.
+  const PROBE = `${TABLE} { width: 0 } ${TABLE} #changelist-col-toggle { display: table-cell }`;
 
   const state = {
     scroller: null,
@@ -48,8 +57,17 @@
     // The rows are scrolled under the header.
     below: false,
     rules: "",
+    tools: "",
+    cut: "",
     head: "",
     key: "",
+  };
+
+  // A sheet changes only when its text does, as each change restyles the cells.
+  const write = (target, key, text) => {
+    if (text === state[key]) return;
+    target.replaceSync(text);
+    state[key] = text;
   };
 
   const resized = new ResizeObserver(() => fit());
@@ -80,10 +98,11 @@
         state.expanded = false;
       }
     }
-    sheet.replaceSync(`${TABLE} { width: 0 } ${TABLE} > thead > tr > [data-col-toggle] { display: table-cell }`);
+    probe.replaceSync(PROBE);
+    write(cut, "cut", "");
     state.widths = cells.map((cell) => cell.getBoundingClientRect().width);
+    probe.replaceSync("");
     state.cells = table.querySelectorAll("th, td").length;
-    state.rules = "";
     state.forced = null;
     fit();
   };
@@ -156,14 +175,17 @@
     );
     const edge = state.pins.at(-1).position;
     if (state.start) rules.push(`${ROWS} > ${CELL}:nth-child(${edge}) { box-shadow: ${8 * dir}px 0 8px -8px ${SHADOW} }`);
+    const toggles = [];
+    let hide = "";
     if (state.hidden.length) {
-      rules.push(
+      // The toggle's button has a fixed width, so its count and its icons set no width.
+      toggles.push(
         `${ROWS} > [data-col-toggle] { display: table-cell; position: sticky; inset-inline-end: 0; z-index: 2; background-color: inherit }`,
         `${TABLE} [data-col-count]::after { content: "${state.hidden.length}" }`,
         `${TABLE} ${open() ? "[data-col-more]" : "[data-col-less]"} { display: none }`,
       );
-      if (state.end) rules.push(`${ROWS} > [data-col-toggle] { box-shadow: ${-8 * dir}px 0 8px -8px ${SHADOW} }`);
-      if (!open()) rules.push(`${ROWS} > ${CELL}:is(${state.hidden.map((i) => `:nth-child(${i + 1})`).join(", ")}) { display: none }`);
+      if (state.end) toggles.push(`${ROWS} > [data-col-toggle] { box-shadow: ${-8 * dir}px 0 8px -8px ${SHADOW} }`);
+      if (!open()) hide = `${ROWS} > ${CELL}:is(${state.hidden.map((i) => `:nth-child(${i + 1})`).join(", ")}) { display: none }`;
     }
     // The header's pinned cells cover the header cells and the rows that scroll under them.
     const corners = state.pins.map(({ position }) => `:nth-child(${position})`);
@@ -173,11 +195,9 @@
     // It clips both ways, as only then does it clip to its rounded corners. The menus and error tips in the
     // cells open in the top layer, so the clip doesn't cut them.
     if (!(state.hidden.length && open())) rules.push("#changelist-scroll { overflow: clip }");
-    const text = rules.join("\n");
-    if (text !== state.rules) {
-      sheet.replaceSync(text);
-      state.rules = text;
-    }
+    write(sheet, "rules", rules.join("\n"));
+    write(tools, "tools", toggles.join("\n"));
+    write(cut, "cut", hide);
   };
 
   // The shadows mark an edge that has columns scrolled under it.

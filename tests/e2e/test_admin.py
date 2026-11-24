@@ -441,6 +441,35 @@ def test_columns_that_do_not_fit_hide_behind_a_toggle(admin_page, live_server, k
     assert admin_page.errors == []
 
 
+def test_a_sort_keeps_the_fit_and_leaves_the_pinned_columns_rules_alone(admin_page, live_server, kitchen):
+    """A change to the pins' rules restyles every cell, so measuring the sorted rows keeps them."""
+    for name in ("Kettle", "Toaster"):
+        Item.objects.create(name=name, category=kitchen)
+    admin_page.set_viewport_size({"width": 480, "height": 800})
+    admin_page.add_init_script("""
+        window.pinWrites = 0;
+        const replace = CSSStyleSheet.prototype.replaceSync;
+        CSSStyleSheet.prototype.replaceSync = function (text) {
+            if (text.includes("inset-inline-start")) window.pinWrites += 1;
+            return replace.call(this, text);
+        };
+    """)
+    admin_page.goto(f"{live_server.url}/admin/admin_app/item/")
+    name = admin_page.locator("#changelist-table > tbody > tr > td[data-field=name]").first
+    released = admin_page.locator("#changelist-table thead th", has_text="Released")
+    expect(name).to_have_text("Toaster")
+    expect(released).to_be_hidden()
+    writes = admin_page.evaluate("window.pinWrites")
+
+    admin_page.locator("#changelist-table thead a", has_text="Name").click()
+
+    expect(name).to_have_text("Kettle")
+    expect(released).to_be_hidden()
+    expect(name).to_have_css("position", "sticky")
+    assert admin_page.evaluate("window.pinWrites") == writes
+    assert admin_page.errors == []
+
+
 def test_a_cell_that_a_script_widens_before_the_page_loads_fits_the_columns_again(admin_page, live_server, kitchen):
     """A script that fills a cell after the table is parsed gets the columns fitted to it on load."""
     Item.objects.create(name="Kettle", category=kitchen)

@@ -138,7 +138,7 @@
             {#- columns.js keeps room for the details' toggles and never hides them. #}
             {% if cl.expandable %}<th class="w-px" data-pin><span class="sr-only">{{ _("Details") }}</span></th>{% endif %}
             {% if collapsible %}
-            <th class="w-px px-1 text-center" data-col-toggle>
+            <th id="changelist-col-toggle" class="w-px px-1 text-center" data-col-toggle>
               {% set more, less = _("Show all columns"), _("Show fewer columns") %}
               <button type="button" class="btn btn-ghost btn-xs w-14 gap-0.5 px-0 font-medium tabular-nums text-base-content/70"
                       aria-controls="changelist-table" aria-expanded="false" aria-label="{{ more }}" title="{{ more }}" data-more="{{ more }}" data-less="{{ less }}">

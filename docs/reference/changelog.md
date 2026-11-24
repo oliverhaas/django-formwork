@@ -383,6 +383,16 @@
   of the example project's event list spends 140 ms on style where it spent 200 ms. With
   htmx 4.0.2 and DaisyUI 5.8.1, each swap still restyles the whole page, so the time
   stays the same there.
+- After a sort, a filter or a page change, the admin list restyled every cell two more
+  times while it measured its columns. The measure rewrote the rules that pin the first
+  columns, and Chromium restyles every cell for a change to them. It now leaves those rules
+  alone and measures with rules that reach only the table and its toggle. The rule that
+  sets badges and checkboxes on a row's line no longer names the row's `data-pk`, which
+  a sort rewrites in each row. A sort of the example project's event list spends 112 ms on
+  style where it spent 144 ms, or 294 ms where it spent 320 ms with htmx 4.0.2 and
+  DaisyUI 5.8.1. If your project overrides `formwork_admin/change_list_results.html`, copy
+  it again or add `id="changelist-col-toggle"` to the toggle's header cell; without it,
+  the last column that shows can reach under the toggle.
 
 ### Fixed
 
