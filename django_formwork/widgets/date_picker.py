@@ -47,6 +47,8 @@ class DatePicker(_StubMixin, forms.DateInput):
     template_name = "formwork/widgets/date_picker.html"
     stub_template_name = "formwork/widgets/date_picker_stub.html"
     input_type = "text"
+    #: Set in ``__init__``, also without a ``format`` argument.
+    format: str
 
     class Media:
         js = (_ModuleScript("formwork/widgets/date_picker.js"),)
