@@ -1618,6 +1618,21 @@
 <li>The admin list's values are 14px, the size of the text in its editable fields. They
   were 12px, so a row with fields and a row of plain values used two sizes. The column
   headers stay 12px, and the rows keep their height.</li>
+<li>In Chromium, a morph swap of a formwork table restyled a whole row for each value it
+  wrote into that row. Two rules found a row with details through <code>tr:has()</code>, which made
+  every row an anchor for the browser's <code>:has()</code> checks. The row templates mark such a row
+  with <code>data-has-details</code> now. If your project overrides <code>formwork/tables/row.html</code>, copy
+  it again or add the attribute to the <code>&lt;tr&gt;</code> of a row with details; without it, that row
+  shows a line above its details and the default cursor.</li>
+<li>The admin list keeps its box, <code>#changelist-results</code>, across a sort, a filter and a page
+  change. The box had a new id for each query, so the morph moved the toolbar, the form
+  and the footer into a new box, and Chromium restyled every row. A hidden marker in the
+  box, <code>#changelist-state-…</code>, is new for each query instead and starts the new selection.
+  If your project overrides <code>formwork_admin/change_list_results.html</code>, copy it again.
+  With the row marker above and the open htmx fix (#4233) and DaisyUI fix (#4897), a sort
+  of the example project's event list spends 140 ms on style where it spent 200 ms. With
+  htmx 4.0.2 and DaisyUI 5.8.1, each swap still restyles the whole page, so the time
+  stays the same there.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
