@@ -368,6 +368,12 @@
 - The admin list's values are 14px, the size of the text in its editable fields. They
   were 12px, so a row with fields and a row of plain values used two sizes. The column
   headers stay 12px, and the rows keep their height.
+- In Chromium, a morph swap of a formwork table restyled a whole row for each value it
+  wrote into that row. Two rules found a row with details through `tr:has()`, which made
+  every row an anchor for the browser's `:has()` checks. The row templates mark such a row
+  with `data-has-details` now. If your project overrides `formwork/tables/row.html`, copy
+  it again or add the attribute to the `<tr>` of a row with details; without it, that row
+  shows a line above its details and the default cursor.
 
 ### Fixed
 

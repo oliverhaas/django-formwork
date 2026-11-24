@@ -985,6 +985,14 @@ def test_a_pointer_resting_on_a_row_loads_its_details_before_the_click(admin_pag
     assert admin_page.errors == []
 
 
+def test_a_row_with_details_shows_the_pointer_and_no_line_above_them(admin_page, lazy_details_row):
+    value = lazy_details_row.locator("tr:not([data-row-details]) > td[data-field=name]")
+
+    expect(value).to_have_css("cursor", "pointer")
+    expect(value).to_have_css("border-bottom-width", "0px")
+    assert admin_page.errors == []
+
+
 def test_the_top_slot_stays_closed_over_a_reload_and_loads_the_searched_rows_when_it_opens(
     admin_page, live_server, kitchen, monkeypatch
 ):

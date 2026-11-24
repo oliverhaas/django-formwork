@@ -8,7 +8,7 @@
     </td>
   </tr>
   {% endif %}
-  <tr{% block cells_attrs %} class="align-top"{% endblock %}>
+  <tr{% block cells_attrs %} class="align-top"{% endblock %}{% if details is not none %} data-has-details{% endif %}>
     {% block leading_cells %}{% endblock %}
     {% for bf in cells %}
     {# A field that posts nothing, a DisplayField or a disabled field, shows its value. #}

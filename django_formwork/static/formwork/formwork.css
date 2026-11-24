@@ -283,8 +283,10 @@ fieldset.fieldset > details.formwork-disclosure {
 }
 
 /* A table row and its details read as one.  DaisyUI draws a line under
-   each row of a body but its last; unlayered to beat it. */
-tbody > tr:has(+ tr[data-row-details]) > td {
+   each row of a body but its last; unlayered to beat it.  The template
+   marks the row (data-has-details): with a tr:has() rule, Chromium
+   restyles the whole row for each value a morph writes into it. */
+tbody > tr[data-has-details] > td {
     border-bottom-width: 0;
 }
 
@@ -1381,7 +1383,9 @@ details.formwork-disclosure[open] > summary > .formwork-disclosure-row > .icon {
    <details> in its last cell, and the details in a row of their own
    under it, which shows while that toggle is open.  A click elsewhere
    on the row opens it too (formwork-core.js), so the row's cells,
-   except a field's, show the pointer.  The row and its details read
+   except a field's, show the pointer.  The template marks that row
+   (data-has-details), as a tr:has() rule restyles the whole row for
+   each value a morph writes into it.  The row and its details read
    as one, with no line between them (the unlayered rule by the
    clamped value's).
    ================================================================ */
@@ -1393,7 +1397,7 @@ tbody:has(> tr > td > div > details[data-row-toggle][open]) > tr[data-row-detail
     display: table-row;
 }
 
-tbody > tr:has(> td > div > details[data-row-toggle]) > td:not([data-formwork-field]) {
+tbody > tr[data-has-details] > td:not([data-formwork-field]) {
     cursor: pointer;
 }
 
