@@ -1745,12 +1745,15 @@ input.combobox-input[aria-invalid="true"] {
    sizing can't see, so each trigger carries a hidden copy of its option labels
    for fit-content to measure; the visible label overlays it and ellipsizes.
    The copy is one label per line of text, or one block span per badge label.
-   It must be a block box, or its lines stack as extra lines of the trigger. */
+   It must be a block box, or its lines stack as extra lines of the trigger.
+   In a table column whose rows share their options, only the first stub holds
+   the copy; the stack keeps a line's height without it. */
 .formwork-autowidth-stack {
     position: relative;
     display: block;
     flex: 1 1 0%;
     min-width: 0;
+    min-height: 1lh;
 }
 
 .formwork-autowidth-stack > :first-child {

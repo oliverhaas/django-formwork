@@ -1346,9 +1346,10 @@ view builds the row with the list's formset, so the row gets the choices that a 
 the form or of the formset gives it, and it checks the change permission for the row.
 
 A select is as wide as its longest option, so a stub holds the labels of the options.
-The rows of a select that [share their choices](#shared-choices) share the labels too. A
-row with choices of its own loads them for its stub, with the queries of the full
-select.
+When the rows of a select [share their choices](#shared-choices), the first stub of the
+column holds the labels and the column is as wide for the other rows. An option with an
+icon widens its own row alone, so with such an option each stub holds the labels. A row
+with choices of its own loads them for its stub, with the queries of the full select.
 
 These keep the full widget in every row:
 

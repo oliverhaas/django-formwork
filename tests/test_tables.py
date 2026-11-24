@@ -595,12 +595,37 @@ def _closed(soup, selector):
 
 
 def test_the_select_multiple_stubs_of_as_rows_show_the_closed_toggles_of_the_full_selects(tagged):
+    """The first stub holds the labels that size the column, for all three rows."""
     stubs = _rows(cell_url="/cells/")
+    full = _rows()
+    toggles = "details:has([name$=-tags]) > summary"
+    for copy in full.select(f"{toggles} .formwork-autowidth")[1:]:
+        copy.decompose()
 
     assert len(stubs.select("[data-formwork-stub]:has([name$=-tags])")) == 3
-    toggles = "details:has([name$=-tags]) > summary"
     assert len(set(_closed(stubs, toggles))) == 3
-    assert _closed(stubs, toggles) == _closed(_rows(), toggles)
+    assert _closed(stubs, toggles) == _closed(full, toggles)
+
+
+@pytest.mark.parametrize(
+    ("labels", "copies"),
+    [(["Draft", "Active", "Archived"], 1), ([ChoiceLabel("Draft", icon="\u270f"), "Active", "Archived"], 3)],
+)
+def test_the_select_stubs_of_a_column_hold_its_labels_once_unless_an_option_has_an_icon(tagged, labels, copies):
+    """An icon sits beside the labels and widens the trigger of its own row alone."""
+
+    class StatusRowForm(FormworkModelForm):
+        status = forms.ChoiceField(choices=list(zip(Item.Status.values, labels, strict=True)), widget=Select())
+
+        class Meta:
+            model = Item
+            fields = ["status"]
+
+    formset = formwork_modelformset_factory(Item, form=StatusRowForm, extra=0)(queryset=Item.objects.order_by("pk"))
+    soup = BeautifulSoup(formset.as_rows(cell_url="/cells/"), "html.parser")
+
+    assert len(soup.select("[data-formwork-stub]")) == 3
+    assert len(soup.select("[data-formwork-stub] .formwork-autowidth")) == copies
 
 
 @pytest.mark.parametrize("cell_url", ["", "/cells/"])
@@ -720,6 +745,7 @@ def test_the_columns_of_as_rows_render_the_html_of_rows_rendered_one_by_one(
 def test_the_selects_of_as_rows_build_the_widget_of_a_value_once_for_all_rows_that_hold_it(
     cities, monkeypatch, cell_url, posted
 ):
+    """The stub that sizes its column renders apart from the others, so the first rows hold a value in both."""
     built = []
     for method in ("get_context", "get_stub_context"):
         original = getattr(Select, method)
@@ -733,11 +759,12 @@ def test_the_selects_of_as_rows_build_the_widget_of_a_value_once_for_all_rows_th
         formset.as_rows(cell_url=cell_url)
         return len(built)
 
-    two_rows = render()
     north = cities[0].region
-    City.objects.bulk_create(City(name=name, region=north) for name in ["Cardiff", "Dover", "Exeter"])
+    City.objects.create(name="Cardiff", region=north)
+    three_rows = render()
+    City.objects.bulk_create(City(name=name, region=north) for name in ["Dover", "Exeter", "Falmouth"])
 
-    assert render() == two_rows
+    assert render() == three_rows
 
 
 @pytest.mark.parametrize("widget", [forms.NumberInput, forms.CheckboxInput])

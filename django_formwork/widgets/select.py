@@ -250,7 +250,9 @@ def column_options(formset: BaseFormSet[Any]) -> SafeString:
 # A select: its choices, which ``_column_shares_choices`` checks, its stub URL and page. A wrapper: the inner widget,
 # which is compared next.
 _FIELD_ROW_STATE = frozenset({"_queryset", "to_python", "widget", "cell_cache"})
-_WIDGET_ROW_STATE = frozenset({"_choices", "choices", "stub_url", "truncated", "selected_past_page", "widget"})
+_WIDGET_ROW_STATE = frozenset(
+    {"_choices", "choices", "stub_url", "stub_sizes_column", "truncated", "selected_past_page", "widget"}
+)
 
 
 def _column_shares_choices(formset: BaseFormSet[Any], bound: forms.BoundField, select: SearchableSelectMixin) -> bool:
@@ -439,8 +441,9 @@ class SearchableSelectMixin(_FormworkTemplatesMixin, _SelectBase):
     search_variant: ClassVar[str]
     #: The template of the option rows, which the search endpoint and a table column render.
     option_list_template_name: ClassVar[str]
-    #: The option labels that size the stubs of rows that share their choices, set with ``stub_url``.
-    stub_copy: Callable[[], str] | None = None
+    #: The option labels that size the stubs of rows that share their choices, and whether each stub needs them,
+    #: set with ``stub_url``. Without that need, only the stub with ``stub_sizes_column`` holds the labels.
+    stub_copy: Callable[[], tuple[str, bool]] | None = None
     #: The id of the ``<template>`` that holds the option rows of a table column, set by ``column_options()``.
     #: The select copies the rows from it when its list opens, so each row does not repeat them.
     options_template_id = ""
@@ -759,6 +762,7 @@ class Select(_StubMixin, SearchableSelectMixin, forms.Select):
         labels = self._labels_of({current}) if current else []
         label = labels[0][1] if labels else None
         extras = label_extras(label, badges=self.badges) if label is not None else {}
+        copy, each = self.stub_copy()
         _trigger_context(widget)
         widget.update(
             {
@@ -768,7 +772,7 @@ class Select(_StubMixin, SearchableSelectMixin, forms.Select):
                 "selected_label_html": extras.get("label_html", ""),
                 "selected_toggle_class": extras.get("selected_toggle_class", ""),
                 "trigger_placeholder": widget["attrs"].get("placeholder", ""),
-                "autowidth_copy": self.stub_copy(),
+                "autowidth_copy": copy if each or self.stub_sizes_column else None,
             }
         )
         return context

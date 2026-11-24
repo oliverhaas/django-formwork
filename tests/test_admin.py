@@ -3062,6 +3062,7 @@ def test_a_list_of_stubs_and_its_relation_filter_run_the_queries_of_the_full_lis
 def test_the_select_stubs_of_a_list_build_the_widget_of_a_value_once_for_all_rows_that_hold_it(
     admin_client, stub_list, monkeypatch
 ):
+    """The stub that sizes its column renders apart from the others, so the first rows hold a value in both."""
     built = []
     get_stub_context = Select.get_stub_context
     monkeypatch.setattr(
@@ -3073,11 +3074,15 @@ def test_the_select_stubs_of_a_list_build_the_widget_of_a_value_once_for_all_row
         admin_client.get(url(Item, "changelist"))
         return len(built)
 
-    two_rows = render()
-    for name in ["Gamma kettle", "Delta kettle"]:
-        Item.objects.create(name=name, category=stub_list.kitchen, status=Item.Status.ARCHIVED)
+    def add(*names):
+        for name in names:
+            Item.objects.create(name=name, category=stub_list.kitchen, status=Item.Status.ARCHIVED)
 
-    assert render() == two_rows
+    add("Gamma kettle", "Delta kettle")
+    four_rows = render()
+    add("Epsilon kettle", "Zeta kettle")
+
+    assert render() == four_rows
 
 
 class _RowNameForm(FormworkModelForm):
@@ -3099,17 +3104,19 @@ def test_the_select_stubs_of_a_list_keep_the_widget_attrs_that_each_row_sets(adm
 
 
 @pytest.mark.parametrize("field", ["category", "status"])
-def test_a_select_stub_sizes_its_trigger_with_the_labels_of_the_full_select(
-    admin_client, stub_list, monkeypatch, field
-):
-    def label_copy():
+def test_a_column_of_select_stubs_holds_the_labels_of_the_full_select_once(admin_client, stub_list, monkeypatch, field):
+    """The first stub sizes the column for all its rows."""
+
+    def label_copies():
         soup = BeautifulSoup(admin_client.get(url(Item, "changelist")).content, "html.parser")
-        return str(_cell(soup, stub_list.alpha, field).select_one(".formwork-autowidth"))
+        return [str(copy) for copy in soup.select(f"#changelist-table td:has([name$=-{field}]) .formwork-autowidth")]
 
-    stubbed = label_copy()
+    stubbed = label_copies()
     monkeypatch.setattr(site.get_model_admin(Item), "list_editable_stubs", False)
+    full = label_copies()
 
-    assert label_copy() == stubbed
+    assert len(full) == 2
+    assert stubbed == full[:1]
 
 
 def test_the_stub_of_a_row_with_its_own_choices_sizes_its_trigger_with_the_rows_labels(

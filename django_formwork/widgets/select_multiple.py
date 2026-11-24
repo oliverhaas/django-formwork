@@ -86,7 +86,8 @@ class SelectMultiple(_StubMixin, SearchableSelectMixin, forms.SelectMultiple):
         _trigger_context(widget)
         self._toggle_context(widget)
         widget["trigger_placeholder"] = widget["attrs"].get("placeholder", "")
-        widget["autowidth_copy"] = self.stub_copy()
+        copy, each = self.stub_copy()
+        widget["autowidth_copy"] = copy if each or self.stub_sizes_column else None
         return context
 
     def autowidth_copy(self, widget: Mapping[str, Any]) -> str:

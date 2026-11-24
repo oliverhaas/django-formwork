@@ -91,7 +91,9 @@ class CellCache:
         value = bf.value()
         # A form can make the field required for its row alone.
         required = (bf.form.use_required_attribute, bf.is_mandatory)
-        key = (url is None, self.value_key(value), required, bf.form.renderer, get_language())
+        # The stub that sizes the column holds more than the others.
+        sizes = stub is not None and stub.stub_sizes_column
+        key = (url is None, sizes, self.value_key(value), required, bf.form.renderer, get_language())
         try:
             hash(key)
         except TypeError:
@@ -146,6 +148,8 @@ class _StubMixin(_FormworkTemplatesMixin):
     stub_template_name: str
     #: Set for each row of an editable list, see ``django_formwork.widgets._stub``.
     stub_url: str | None = None
+    #: False for a stub that leaves what sizes its table column to another stub of the column.
+    stub_sizes_column: bool = True
 
     def render(
         self,

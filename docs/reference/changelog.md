@@ -393,6 +393,14 @@
   DaisyUI 5.8.1. If your project overrides `formwork_admin/change_list_results.html`, copy
   it again or add `id="changelist-col-toggle"` to the toggle's header cell; without it,
   the last column that shows can reach under the toggle.
+- Each select stub of an editable list or a tabular inline held a hidden copy of the
+  labels of all options, which makes a select as wide as its longest option. When the
+  rows share their choices, the first stub of the column holds the labels and the column
+  is as wide for the other rows. An option with an icon widens its own row alone, so with
+  such an option each stub keeps the labels. The example project's event list is 58 KB
+  smaller and spends 12 ms less on style when it loads, or 20 ms less with htmx 4.0.2
+  and DaisyUI 5.8.1. If your project overrides `formwork/widgets/select_stub.html` or
+  `formwork/widgets/select_multiple_stub.html`, copy them again.
 
 ### Fixed
 

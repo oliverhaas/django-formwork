@@ -17,10 +17,14 @@ if TYPE_CHECKING:
     from django.utils.safestring import SafeString
 
 
-def _shared_copy(bound: forms.BoundField, select: SearchableSelectMixin) -> str:
-    return select.autowidth_copy(
-        select.get_context(bound.html_name, bound.value(), bound.build_widget_attrs({}))["widget"]
-    )
+def _shared_copy(bound: forms.BoundField, select: SearchableSelectMixin) -> tuple[str, bool]:
+    """The option labels that size the stubs of a column, and whether each row needs them."""
+    widget = select.get_context(bound.html_name, bound.value(), bound.build_widget_attrs({}))["widget"]
+    copy = select.autowidth_copy(widget)
+    # The icon or the trigger class of a row's option sits beside the labels and widens that row alone. A copy
+    # without labels sizes the trigger by a fixed floor, which costs a row nothing.
+    each = not copy or any(option.get("icon") or option.get("selected_toggle_class") for option in widget["options"])
+    return copy, each
 
 
 def with_query(url: str, **query: Any) -> str:
@@ -34,7 +38,7 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
     A field with an error renders in full, next to its error. ``url_of(name)`` answers with ``loaded_widget`` for
     the query ``pk`` and ``prefix``, and the stub's inputs under their names."""
     # Built when the first stub renders, where the selects of the page share their queries.
-    copies: dict[str, Callable[[], str]] = {}
+    copies: dict[str, Callable[[], tuple[str, bool]]] = {}
     # By column: the URL up to the row's query, and whether its rows share their choices.
     urls: dict[str, str] = {}
     shared: dict[str, bool] = {}
@@ -52,8 +56,10 @@ def stub_formset(formset: BaseFormSet[Any], url_of: Callable[[str], str], *, sha
                     continue
                 if name not in shared:
                     shared[name] = rows_share_choices(formset, field, share=share)
-                # Rows that share their choices share the labels that size their stubs.
+                # Rows that share their choices share the labels that size their stubs. The column's first stub
+                # holds them, and the column is as wide for the others.
                 if shared[name]:
+                    widget.stub_sizes_column = name not in copies
                     widget.stub_copy = copies.setdefault(name, cache(partial(_shared_copy, form[name], widget)))
             if name not in urls:
                 url = url_of(name)
