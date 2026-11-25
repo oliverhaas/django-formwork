@@ -14,7 +14,7 @@
 {% endblock %}
 
 {% block content %}
-{# Each field renders through as_field_group: formwork adds the label, help text and errors. In a grid the gap spaces the fields, so *:mt-0 drops the margin formwork puts between stacked fields. #}
+{# Each field renders through as_field_group: formwork adds the label, help text and errors. The grid around the fields spaces them. #}
 <form method="post" enctype="multipart/form-data" novalidate class="max-w-3xl mx-auto"{% if task %} data-formwork-dirty{% endif %}>
   {% csrf_token %}
   <h1 class="text-2xl font-semibold tracking-tight mb-6">{% if task %}Edit task{% else %}New task{% endif %}</h1>
@@ -27,14 +27,14 @@
   {% endif %}
 
   <div class="card bg-base-100 border border-base-300">
-    <div class="px-6 py-5 sm:px-8">
+    <div class="grid gap-2 px-6 py-5 sm:px-8">
       {{ form.title.as_field_group }}
       {{ form.description.as_field_group }}
     </div>
 
     <section aria-labelledby="details-heading" class="border-t border-base-300 px-6 py-5 sm:px-8">
       <h2 id="details-heading" class="font-semibold mb-1">Details</h2>
-      <div class="grid items-start gap-x-6 gap-y-2 sm:grid-cols-2 *:mt-0">
+      <div class="grid items-start gap-x-6 gap-y-2 sm:grid-cols-2">
         {{ form.status.as_field_group }}
         {{ form.priority.as_field_group }}
         {{ form.assignee.as_field_group }}
@@ -46,7 +46,7 @@
 
     <section aria-labelledby="files-heading" class="border-t border-base-300 px-6 py-5 sm:px-8">
       <h2 id="files-heading" class="font-semibold mb-1">Files</h2>
-      <div class="grid items-start gap-x-6 gap-y-2 sm:grid-cols-2 *:mt-0">
+      <div class="grid items-start gap-x-6 gap-y-2 sm:grid-cols-2">
         {{ form.cover_image.as_field_group }}
         {{ form.attachment.as_field_group }}
       </div>

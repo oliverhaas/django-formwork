@@ -25,7 +25,7 @@ class TicketTitleForm(forms.Form):
 <!-- template.html -->
 <form method="post">
   {% csrf_token %}
-  {{ form }}
+  <div class="grid gap-2">{{ form }}</div>
   <button type="submit" class="btn btn-primary">Create</button>
 </form>
 ```
@@ -118,7 +118,7 @@ class TicketValidatedForm(TicketWidgetsForm):
       hx-swap="outerMorph"
       data-formwork-dirty>
   {% csrf_token %}
-  {{ form }}
+  <div class="grid gap-2">{{ form }}</div>
   <button type="submit" class="btn btn-primary mt-4">Save</button>
 </form>
 ```

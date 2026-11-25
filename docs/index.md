@@ -41,7 +41,7 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 
 <form method="post">
   {% csrf_token %}
-  {{ form }}
+  <div class="grid gap-2">{{ form }}</div>
   <button type="submit" class="btn btn-primary">Save</button>
 </form>
 ```

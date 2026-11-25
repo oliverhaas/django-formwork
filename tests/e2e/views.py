@@ -1340,11 +1340,11 @@ _THEME_SWITCHER = (
 
 def _form_html(url, form_id):
     return (
-        f'<form id="{form_id}" method="post" enctype="multipart/form-data" '
+        f'<form id="{form_id}" method="post" enctype="multipart/form-data" class="grid gap-2" '
         f'hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}">\n'
         "  {% csrf_token %}\n"
         "  {{ form }}\n"
-        '  <div class="flex gap-2 mt-4">\n'
+        '  <div class="flex gap-2 mt-2">\n'
         '    <button type="submit" class="btn btn-primary">Submit</button>\n'
         "    {% if saved %}\n"
         f'    <button type="button" class="btn btn-error ml-auto" '
@@ -1359,14 +1359,14 @@ def _read_only_form_html(url, form_id):
     return (
         f'<form id="{form_id}" method="post" hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}">\n'
         "  {% csrf_token %}\n"
-        "  <fieldset disabled>{{ form }}</fieldset>\n"
+        '  <fieldset disabled class="grid gap-2">{{ form }}</fieldset>\n'
         "</form>"
     )
 
 
 def _complex_form_html(url, form_id):
     return (
-        f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate '
+        f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate class="grid gap-2" '
         f'hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}" '
         f'hx-sync="this:replace" '
         f'hx-trigger="input delay:1500ms, change delay:300ms, submit" '
@@ -1376,7 +1376,7 @@ def _complex_form_html(url, form_id):
         f'hx-on:submit="for (const s of this._htmx?.triggerSpecs || []) {{ if (s.timeout) {{ clearTimeout(s.timeout); s.timeout = null; }} }}">\n'
         "  {% csrf_token %}\n"
         "  {{ form }}\n"
-        '  <div class="flex gap-2 mt-4">\n'
+        '  <div class="flex gap-2 mt-2">\n'
         f'    <button type="submit" name="_submit" value="1" class="btn btn-primary">Submit</button>\n'
         "    {% if saved %}\n"
         f'    <button type="button" class="btn btn-error ml-auto" '
@@ -1397,12 +1397,12 @@ def _autosave_form_html(url, form_id):
         "{ if (s.timeout) { clearTimeout(s.timeout); s.timeout = null; } }"
     )
     return (
-        f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate '
+        f'<form id="{form_id}" method="post" enctype="multipart/form-data" novalidate class="grid gap-2" '
         f'hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}" '
         f'hx-trigger="input delay:500ms, change delay:200ms">\n'
         "  {% csrf_token %}\n"
         "  {{ form }}\n"
-        '  <div class="flex gap-2 mt-4">\n'
+        '  <div class="flex gap-2 mt-2">\n'
         f'    <button type="submit" class="btn btn-primary" '
         f'hx-post="{url}" hx-swap="outerMorph" hx-target="#{form_id}" '
         f'hx-on:click="{cancel_timers}" '
@@ -1736,7 +1736,7 @@ _ELEMENTS_CARD = _card_body(
 _ELEMENTS_HTML = _page_html("Standalone Elements", _ELEMENTS_BODY)
 
 _SECTION_FORM_ATTRS = (
-    'data-section-form novalidate hx-post="/sections/" hx-trigger="change delay:300ms" '
+    'data-section-form novalidate class="grid gap-2" hx-post="/sections/" hx-trigger="change delay:300ms" '
     'hx-swap="outerMorph" hx-sync="closest [data-section-forms]:queue all"'
 )
 

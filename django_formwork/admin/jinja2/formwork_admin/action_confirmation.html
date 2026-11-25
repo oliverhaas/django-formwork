@@ -24,7 +24,7 @@
   {% call m.confirm_card(action.question or action.label, action.help_text, action.icon or "circle-check", "error" if action.danger else "primary", back_url, action.label, action.icon) %}
   {{ m.selected_objects(caption, objects, more, model_admin.get_icon()) }}
   {% if form is not none %}
-  <div class="border-t border-base-300 pt-6">{{ form }}</div>
+  <div class="grid gap-2 border-t border-base-300 pt-6">{{ form }}</div>
   {% endif %}
   {% endcall %}
 </form>

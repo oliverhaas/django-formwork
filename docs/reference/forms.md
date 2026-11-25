@@ -214,7 +214,7 @@ bound to a formwork form or not:
 ```html
 <form method="post" data-formwork-dirty>
   {% csrf_token %}
-  {{ form }}
+  <div class="grid gap-2">{{ form }}</div>
   <button type="submit" class="btn btn-primary">Save</button>
 </form>
 ```

@@ -613,18 +613,15 @@ details.formwork-select[open] > summary.formwork-placeholder {
 
 @layer components {
 
-/* Vertical spacing between consecutive field groups. */
-.fieldset + .fieldset {
-    @apply mt-2;
-}
-
 /* ================================================================
    Base component styling
 
    DaisyUI form components default to width: clamp(3rem, 20rem, 100%).
    Formwork overrides this to width: 100% so that inputs fill their
-   container and form layout is controlled at the <form> element level
-   (e.g. max-w-sm for a narrow form, grid grid-cols-2 for multi-column).
+   container. A field group has no outer margin: the element around the
+   fields lays them out and spaces them (e.g. grid gap-2 for a stack,
+   grid sm:grid-cols-2 gap-x-6 gap-y-2 for two columns, max-w-sm for a
+   narrow form).
    ================================================================ */
 
 /* Text-like inputs: text, email, url, number, password, date, time,

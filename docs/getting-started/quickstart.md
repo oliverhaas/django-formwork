@@ -19,7 +19,7 @@ class ContactForm(forms.Form):
 <!-- template.html; the base template loads the CSS and the scripts -->
 <form method="post" class="max-w-md mx-auto">
   {% csrf_token %}
-  {{ form }}
+  <div class="grid gap-2">{{ form }}</div>
   <button type="submit" class="btn btn-primary mt-4">Send</button>
 </form>
 ```
@@ -27,6 +27,8 @@ class ContactForm(forms.Form):
 The [installation guide](installation.md#5-htmx-and-alpinejs) shows the `<head>` with the scripts in the order they must load.
 
 Each field renders inside a `<fieldset class="fieldset">` with a label, help text and errors. A required field shows a red `*` after its label. Errors sit inline under a field that has help text and in a tooltip on a field without.
+
+A field group has no outer margin, so the element around the fields lays them out: `grid gap-2` stacks them, `grid sm:grid-cols-2 gap-x-6 gap-y-2` puts them in two columns. `{{ form }}` adds no wrapper of its own, so the classes can also go on the `<form>`.
 
 ## Per-form styling
 

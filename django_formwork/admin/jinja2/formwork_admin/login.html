@@ -24,8 +24,10 @@
 
 <form method="post" action="{{ app_path }}" id="login-form" novalidate class="grid gap-1">
   {{ csrf_input }}
-  {{ form.username.as_field_group() }}
-  {{ form.password.as_field_group() }}
+  <div class="grid gap-3">
+    {{ form.username.as_field_group() }}
+    {{ form.password.as_field_group() }}
+  </div>
   <input type="hidden" name="next" value="{{ next }}">
   {% if password_reset_url %}
   <a href="{{ password_reset_url }}" class="link justify-self-end text-sm text-base-content/60">{{ _("Forgot your password?") }}</a>

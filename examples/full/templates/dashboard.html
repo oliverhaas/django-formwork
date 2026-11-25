@@ -59,7 +59,7 @@
             hx-on::after:request="if (ctx.response.raw.redirected) this.reset()">
         {% csrf_token %}
         <h2 class="font-semibold mb-1">Add a task</h2>
-        {{ form }}
+        <div class="grid gap-3">{{ form }}</div>
         <div class="flex items-center justify-between gap-3 mt-2">
           <p class="text-xs text-base-content/50">{% if me %}Assigned to you{% else %}Unassigned{% endif %}</p>
           <button type="submit" class="btn btn-sm gap-2"><i class="icon icon-plus size-4"></i> Add task</button>

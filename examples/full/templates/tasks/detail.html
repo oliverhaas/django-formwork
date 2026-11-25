@@ -50,7 +50,7 @@
       <div class="card-body p-5 gap-1">
         <h2 id="details-heading" class="font-semibold mb-1">Details</h2>
         <div data-section-forms>
-          <form id="details_form" data-section-form novalidate method="post"
+          <form id="details_form" data-section-form novalidate method="post" class="grid gap-2"
                 hx-post="{{ request.path }}" hx-trigger="change delay:300ms"
                 hx-select="#details_form" hx-swap="outerMorph"
                 hx-sync="closest [data-section-forms]:queue all">

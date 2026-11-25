@@ -15,7 +15,7 @@
   <div class="card-body p-6 lg:p-8 space-y-6">
     {% include "wizard/steps.html#wizard-steps" %}
 
-    <form method="post" class="space-y-2">
+    <form method="post" class="grid gap-2">
       {% csrf_token %}
       <input type="hidden" name="step" value="{{ step }}">
       {{ form }}
