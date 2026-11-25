@@ -637,6 +637,15 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
     @apply input w-full focus-primary;
 }
 
+/* The input box of the compound widgets (DatePicker, DateTimePicker,
+   DateRangePicker, InputMask, ComboBox, ClearableFileInput). Each @apply input
+   copies all of DaisyUI's input rules, and Chrome tries some of them on
+   every element of the page, so the widgets share one copy. Each widget's own
+   class adds the rest. */
+.formwork-input {
+    @apply input;
+}
+
 /* Hide the native number spinners everywhere: StepperNumberInput renders
    its own buttons, and the spinners crowd a SuffixNumberInput's suffix.
    :where() keeps the rule overridable by one class. */
@@ -704,7 +713,7 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
    texts it shows, like the range inputs below, so a table column fits the
    date and keeps its width while the user types. */
 .date-picker-label {
-    @apply input w-full focus-primary;
+    @apply w-full focus-primary;
 }
 
 .date-picker-part {
@@ -746,7 +755,7 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
 }
 
 .date-range-field {
-    @apply input w-full cursor-text focus-primary;
+    @apply w-full cursor-text focus-primary;
 }
 
 .date-range-part,
@@ -899,12 +908,12 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
 }
 
 .input-mask-display {
-    @apply input w-full !bg-transparent !text-transparent z-1;
+    @apply w-full !bg-transparent !text-transparent z-1;
     caret-color: var(--color-base-content);
 }
 
 .input-mask-overlay {
-    @apply input w-full border-transparent pointer-events-none overflow-hidden whitespace-pre gap-0;
+    @apply w-full border-transparent pointer-events-none overflow-hidden whitespace-pre gap-0;
 }
 
 /* Unfilled dots and trailing literals are gray. */
@@ -1029,7 +1038,7 @@ input.toggle {
    root's fit-content measurement; min-width stretches it back to the
    root's final width. */
 input.combobox-input {
-    @apply input focus-primary;
+    @apply focus-primary;
     width: 0;
     min-width: 100%;
 }
@@ -1044,9 +1053,10 @@ input.combobox-input {
 
 /* formwork's ClearableFileInput: the row draws the input box, and a click on
    it opens the file picker.  The file input inside it is visually hidden and
-   takes the keyboard focus, which .input:focus-within shows on the row. */
+   takes the keyboard focus, which .formwork-input:focus-within shows on the
+   row. */
 .clearable-file-input-row {
-    @apply input w-full cursor-pointer focus-primary;
+    @apply w-full cursor-pointer focus-primary;
 }
 
 /* FileDropzoneInput: fill the container width. */

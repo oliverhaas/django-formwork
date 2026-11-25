@@ -75,6 +75,15 @@
   the spinner would never stop: give that button `btn-loading-none`, which keeps any
   button still. `btn-loading-dots`, `-ring`, `-ball`, `-bars` and `-infinity` still
   pick the animation.
+- An overridden template of a `DatePicker`, `DateTimePicker`, `DateRangePicker`,
+  `DateTimeRangePicker`, `InputMask`, `ComboBox` or `ClearableFileInput` shows the
+  widget without the input's border, background, height and padding. These widgets get
+  the input look from a shared `formwork-input` class now. Copy the templates again from
+  the package, or add `formwork-input` next to `date-picker-label`, `date-range-field`,
+  `input-mask-display`, `input-mask-overlay`, `combobox-input` or
+  `clearable-file-input-row`. With the shared class, formwork.css copies DaisyUI's input
+  rules twice instead of seven times, and every style recalculation of a page has fewer
+  rules to try.
 
 ### Added
 

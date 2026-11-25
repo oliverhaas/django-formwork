@@ -1,5 +1,5 @@
 <div class="clearable-file-input"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_picker"{% endif %} x-data="formworkClearableFileInput"{% if widget.is_initial %} data-stored{% endif %}{% if widget.max_size %} data-max-size="{{ widget.max_size }}"{% endif %} data-type-error="{{ _('File type not accepted') }}" data-size-error="{{ _('File too large') }}" data-count-text="{{ widget.count_text }}" data-file-icons="{{ widget.file_icons }}">
-  <div class="clearable-file-input-row" :class="rowClass" @click="browse()">
+  <div class="clearable-file-input-row formwork-input" :class="rowClass" @click="browse()">
     <input x-ref="input" type="{{ widget.type }}" name="{{ widget.name }}" class="sr-only" @click.stop @change="onChange()"{% for name, value in widget.attrs.items() %}{% if value is not false and name != "class" %} {{ name }}{% if value is not true %}="{{ value }}"{% endif %}{% endif %}{% endfor %}>
     {% if widget.is_initial and not widget.required %}<input type="checkbox" x-ref="clear" class="hidden" name="{{ widget.checkbox_name }}" id="{{ widget.checkbox_id }}" :checked="clearChecked"{% if widget.clear_checked %} checked{% endif %}{% if widget.attrs.disabled %} disabled{% endif %}>{% endif %}
     <i class="icon icon-upload shrink-0 text-base text-base-content/50" x-show="empty"{% if widget.is_initial %} x-cloak{% endif %} aria-hidden="true"></i>
