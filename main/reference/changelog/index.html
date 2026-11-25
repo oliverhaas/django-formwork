@@ -1325,6 +1325,13 @@
   the spinner would never stop: give that button <code>btn-loading-none</code>, which keeps any
   button still. <code>btn-loading-dots</code>, <code>-ring</code>, <code>-ball</code>, <code>-bars</code> and <code>-infinity</code> still
   pick the animation.</li>
+<li>Field groups no longer get a top margin when they follow another field group. In a
+  grid, that margin pushed every field after the first 8px down, so fields side by side
+  did not line up, and in a flex or grid container with a gap it doubled the space. The
+  element around the fields now spaces them. Stacked fields without one sit closer
+  together, as in the admin. Add <code>grid gap-2</code> to keep the previous spacing:
+  <code>&lt;div class="grid gap-2"&gt;{{ form }}&lt;/div&gt;</code>, or the classes on the <code>&lt;form&gt;</code> itself. A
+  grid that removed the margin with <code>*:mt-0</code> can drop it.</li>
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
