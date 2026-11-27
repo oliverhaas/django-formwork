@@ -60,6 +60,7 @@ nav:
       - Forms: reference/forms.md
       - Formsets: reference/formsets.md
       - Widgets: reference/widgets.md
+      - Themes and Layout: reference/theming.md
       - Views: reference/views.md
       - Admin: reference/admin.md
       - Browser Support: reference/browser-support.md
