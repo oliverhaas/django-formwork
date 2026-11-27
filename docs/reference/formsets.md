@@ -178,8 +178,10 @@ The rows need `tables.js`. `{% formwork_js %}` loads it, and so does
 ### Saving row by row
 
 `formset.as_rows(save_url)` saves each row by itself: a row posts its own fields to
-`save_url` 400 ms after a change and morphs the response in place. A row is saved
-the moment it changes, so this table has no Add another, Remove or Delete.
+`save_url` on each change and morphs the response in place. The saves of one row
+wait in a queue and run in the order of the changes, so a change made while a save
+runs is sent after it. A row is saved the moment it changes, so this table has no
+Add another, Remove or Delete.
 `form.as_row(save_url)` renders one `FormworkForm` or `FormworkModelForm` the same
 way, as one `<tbody>`. [Saving a row](#saving-a-row) describes the view behind
 `save_url`.
@@ -334,7 +336,7 @@ the row: it carries the prefix and the primary key the view reads.
 ```html
 {# tasks/row.html #}
 <tbody id="{{ form.row_id }}"
-       hx-post="{% url 'task_row_save' %}" hx-trigger="change delay:400ms"
+       hx-post="{% url 'task_row_save' %}" hx-trigger="change" hx-sync="this:queue all"
        hx-target="this" hx-swap="outerMorph" hx-include="closest tbody">
   <tr>
     <td>

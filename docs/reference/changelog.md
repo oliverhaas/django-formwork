@@ -431,6 +431,12 @@
 
 ### Fixed
 
+- In a table from `formset.as_rows(save_url)`, a change made while the row's save ran
+  and another change of the row waited for it was never saved, although the row kept
+  showing it: htmx keeps one waiting request and dropped the later one. A row now
+  queues every save and sends each change at once instead of 400 ms later. If you
+  override `formwork/tables/row.html` or write the rows yourself, give the `<tbody>`
+  `hx-trigger="change"` and `hx-sync="this:queue all"`.
 - A `DatePicker` or `DateTimePicker` in a table widened its column while the user typed,
   and a native `<select>` resized its column when its value changed: both took the
   width of their value. A date input is now as wide as the widest date its format

@@ -1,6 +1,6 @@
 {#- A template that extends this one can change the attributes of the row and its cells, a value's cell,
     the cells before and after the fields, and the row's details. -#}
-<tbody id="{{ row_id }}"{% block row_attrs %} class="[&:not(:first-of-type)>tr:first-child>td]:border-t [&:not(:first-of-type)>tr:first-child>td]:border-base-content/5" data-formset-row="{{ form.prefix if form.prefix is not none else '' }}"{% if new %} data-formset-new{% endif %}{% if save_url %} hx-post="{{ save_url }}" hx-trigger="change delay:400ms" hx-target="this" hx-swap="outerMorph" hx-include="closest tbody"{% endif %}{% endblock %}>
+<tbody id="{{ row_id }}"{% block row_attrs %} class="[&:not(:first-of-type)>tr:first-child>td]:border-t [&:not(:first-of-type)>tr:first-child>td]:border-base-content/5" data-formset-row="{{ form.prefix if form.prefix is not none else '' }}"{% if new %} data-formset-new{% endif %}{% if save_url %} hx-post="{{ save_url }}" hx-trigger="change" hx-sync="this:queue all" hx-target="this" hx-swap="outerMorph" hx-include="closest tbody"{% endif %}{% endblock %}>
   {% if form.non_field_errors() %}
   <tr{% block errors_attrs %}{% endblock %}>
     <td colspan="{% block errors_span %}{{ cells|length + actions + expandable }}{% endblock %}" class="pb-0">

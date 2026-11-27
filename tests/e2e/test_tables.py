@@ -6,6 +6,7 @@ import pytest
 from admin_app.models import Category, Item, Tag
 from django.utils.datastructures import MultiValueDict
 from django.utils.html import format_html
+from django.views import View
 from playwright.sync_api import expect
 
 from django_formwork import (
@@ -14,6 +15,7 @@ from django_formwork import (
     DisplayField,
     FormworkCellMixin,
     FormworkModelForm,
+    FormworkRowSaveMixin,
     formwork_modelformset_factory,
 )
 from django_formwork.widgets import ChoiceLabel, ComboBox, ComboBoxMultiple, DatePicker, Select, SelectMultiple
@@ -276,4 +278,45 @@ def test_a_click_on_a_row_opens_its_details_under_it_and_a_click_on_its_own_cont
     kettle.locator("summary[aria-controls]").click()
     expect(details).to_be_hidden()
     expect(_row(rows_page, "Toaster").locator("[data-row-toggle]")).to_have_count(0)
+    assert rows_page.errors == []
+
+
+class NameForm(FormworkModelForm):
+    class Meta:
+        model = Item
+        fields = ["name", "slug"]
+
+
+class NameSave(FormworkRowSaveMixin, View):
+    form_class = NameForm
+    queryset = Item.objects.all()
+
+
+def names():
+    return formwork_modelformset_factory(Item, form=NameForm, extra=0)(queryset=Item.objects.order_by("pk"))
+
+
+def _change(page, selector, value):
+    """Commit ``value`` to the field and wait until htmx has made a save of the change."""
+    requests = page.evaluate("document._formworkRequests")
+    field = page.locator(selector)
+    field.fill(value)
+    field.blur()
+    page.wait_for_function(f"document._formworkRequests > {requests}")
+
+
+def test_changes_made_while_a_row_saves_are_saved_after_it_in_order(rows_page, items):
+    rows_page.open(names, save_view=NameSave)
+    rows_page.hold_saves()
+    page = rows_page.page
+
+    _change(page, "#id_form-0-name", "Kettle one")
+    _change(page, "#id_form-0-slug", "steel")
+    _change(page, "#id_form-0-name", "Kettle two")
+    with page.expect_response(lambda response: "Kettle+two" in (response.request.post_data or "")):
+        rows_page.release_saves()
+
+    expect(page.locator("#id_form-0-name")).to_have_attribute("value", "Kettle two")
+    kettle = Item.objects.order_by("pk").first()
+    assert (kettle.name, kettle.slug) == ("Kettle two", "steel")
     assert rows_page.errors == []

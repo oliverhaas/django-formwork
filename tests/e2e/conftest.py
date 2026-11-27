@@ -414,23 +414,56 @@ class RowsPage(_ScreenPage):
 
     def __init__(self, page, live_server, output):
         super().__init__(page, live_server, output)
+        self.held = None
         page.route(re.compile(rf"^{re.escape(live_server.url)}/rows/"), self._respond)
 
-    def open(self, formset, cell_view=None):
-        """Load the rows of ``formset()``, as stubs that ``cell_view`` answers if given."""
+    def open(self, formset, cell_view=None, save_view=None):
+        """Load the rows of ``formset()``, as stubs that ``cell_view`` answers if given.
+
+        With ``save_view``, each row saves its changes through that view.
+        """
         self.formset = formset
         self.cell_view = cell_view
+        self.save_view = save_view
         _navigate(self.page, self.live_server, "/rows/")
         self.page.evaluate("document.fonts.ready.then(() => true)")
 
+    def hold_saves(self):
+        """Keep the saves from ``save_view`` until ``release_saves()``."""
+        self.held = []
+
+    def release_saves(self):
+        """Answer the held saves, and the ones after them at once."""
+        held, self.held = self.held, None
+        for route in held:
+            self._save(route)
+
     def _respond(self, route):
         url = urlsplit(route.request.url)
+        if url.path == "/rows/save/":
+            if self.held is None:
+                self._save(route)
+            else:
+                self.held.append(route)
+            return
         if url.path == "/rows/cell/":
             body = self.cell_view().get(RequestFactory().get(f"{url.path}?{url.query}")).content
         else:
-            rows = self.formset().as_rows(cell_url="/rows/cell/" if self.cell_view else "")
+            rows = self.formset().as_rows(
+                "/rows/save/" if self.save_view else "",
+                cell_url="/rows/cell/" if self.cell_view else "",
+            )
             body = _page_html("Rows", f'<div class="card-body">{rows}</div>', width="max-w-5xl")
         route.fulfill(content_type="text/html", body=body)
+
+    def _save(self, route):
+        request = RequestFactory().generic(
+            "POST",
+            "/rows/save/",
+            route.request.post_data_buffer or b"",
+            content_type=route.request.headers.get("content-type", ""),
+        )
+        route.fulfill(content_type="text/html", body=self.save_view.as_view()(request).content)
 
 
 @pytest.fixture
