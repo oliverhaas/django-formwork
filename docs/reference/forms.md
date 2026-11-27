@@ -3,8 +3,7 @@
 `FormworkForm` and `FormworkModelForm` bundle the DaisyUI renderer with
 behaviours plain Django forms do not have: search registration, a choice of
 error placement, mandatory fields, dirty-only validation, and async validation
-and saving. `section_forms()` builds the forms of a page that saves one row in
-several sections.
+and saving.
 
 With `FORM_RENDERER = "django_formwork.FormworkRenderer"` set, every form in
 the project renders styled, including plain `forms.Form`. Reach for the base
@@ -14,7 +13,7 @@ forms without the global renderer.
 Everything documented here is importable from the package root:
 
 ```python
-from django_formwork import DisplayField, FormworkForm, FormworkModel, FormworkModelForm, section_forms
+from django_formwork import DisplayField, FormworkForm, FormworkModel, FormworkModelForm
 ```
 
 ## Base classes
@@ -185,9 +184,8 @@ For a field the user did not change:
   instance, so an unchanged relation is never re-assigned
 
 A field that the post leaves out counts as unchanged, so a form that posts
-only its changed fields (a section form with `data-send-changed`) validates
-only those. Changed fields validate as usual, and the form-wide `clean()`
-method always runs. `Form.changed_data` decides whether a field counts as
+only its changed fields validates only those. Changed fields validate as usual,
+and the form-wide `clean()` method always runs. `Form.changed_data` decides whether a field counts as
 changed: it compares the posted value against the initial data of the form,
 and with `instance=` bound, the initial data is what the database holds. The
 model-level exclusions apply only to existing instances. On create, the
@@ -313,74 +311,81 @@ forms are exempt from the setting; see [Formsets](formsets.md#formwork_force_asy
 `FormworkRowSaveMixin` calls the sync `is_valid()`, so a row save fails while the
 setting is on.
 
-## Section forms
+## Several forms on one page
 
-A section form saves its own fields of one row, without a submit button: it
-posts on every change and morphs itself back from the response. Several
-section forms on one page share a request queue, so their saves run in order.
-
-`section_forms(request, sections, **kwargs)` builds every section's form and
-binds only the one that the POST names. The keyword arguments go to each form,
-for example `instance=`. A POST that names no known section raises
-`BadRequest`.
+A page can show one row in several forms, each of which saves its own fields
+on change, without a submit button. The pattern needs no formwork API: a
+hidden input names the form, the view binds only that form, and htmx
+attributes post the form and morph the answer in.
 
 ```python
-from django_formwork import section_forms
-
-
 def edit_project(request, pk):
     project = get_object_or_404(Project, pk=pk)
-    sections = section_forms(
-        request,
-        {"general": ProjectGeneralForm, "extras": ProjectExtrasForm},
-        instance=project,
-    )
-    for form in sections.values():
+    posted = request.POST.get("section")
+    general = ProjectGeneralForm(request.POST if posted == "general" else None, instance=project)
+    extras = ProjectExtrasForm(request.POST if posted == "extras" else None, instance=project)
+    for form in (general, extras):
         if form.is_bound and form.is_valid():
             form.save()
-    return render(request, "project_edit.html", {"sections": sections})
+    return render(request, "project_edit.html", {"general": general, "extras": extras})
 ```
 
 ```html
-{% load formwork %}
-<div data-section-forms>
-  <form id="general_form" data-section-form novalidate
-        hx-post="{{ request.path }}" hx-trigger="change delay:300ms"
-        hx-select="#general_form" hx-swap="outerMorph"
-        hx-sync="closest [data-section-forms]:queue all">
-    {% csrf_token %}{% formwork_section "general" %}
-    {{ sections.general }}
-  </form>
-  <form id="extras_form" data-section-form data-send-changed novalidate
-        hx-post="{{ request.path }}" hx-trigger="change delay:300ms"
-        hx-select="#extras_form" hx-swap="outerMorph"
-        hx-sync="closest [data-section-forms]:queue all">
-    {% csrf_token %}{% formwork_section "extras" %}
-    {{ sections.extras }}
-  </form>
-</div>
+<form id="general_form" novalidate class="grid gap-2"
+      hx-post="{{ request.path }}" hx-trigger="change, submit"
+      hx-select="#general_form" hx-swap="outerMorph" hx-sync="body:queue all">
+  {% csrf_token %}
+  <input type="hidden" name="section" value="general">
+  {{ general }}
+</form>
+<form id="extras_form" novalidate class="grid gap-2"
+      hx-post="{{ request.path }}" hx-trigger="change, submit"
+      hx-select="#extras_form" hx-swap="outerMorph" hx-sync="body:queue all">
+  {% csrf_token %}
+  <input type="hidden" name="section" value="extras">
+  {{ extras }}
+</form>
 ```
 
-Load `{% formwork_sections_js %}` after htmx. The formwork bundle leaves it
-out, and it does not need Alpine.
+Give the hidden input another name than `form`. htmx finds the form it posts
+through the `form` property of the element, and on a form element an input
+named `form` takes that property over.
 
-- `{% formwork_section "name" %}` writes the hidden `_formwork_section` input
-  that names the section.
-- Every section form needs `hx-sync="closest [data-section-forms]:queue all"`.
-  A dropped or replaced save leaves its change unsent, and a request that
-  waits for that save then never runs.
-- A response to a save that is older than the latest change leaves the form
-  alone; the queued request after it carries that change.
-- A request that replaces section forms (a tab switch, for example) waits
-  until their saves are answered. Leaving the page during a save asks for
-  confirmation.
-- `data-send-changed` on a form posts only the fields that differ from the last
-  valid render, plus `csrfmiddlewaretoken` and `_formwork_section`. With a
-  value, `data-send-changed="<prefix>"` also posts every field whose name
-  starts with `<prefix>`, changed or not. Pair it with `validate_dirty_only`,
-  so the fields the post leaves out keep their stored values.
-- `data-section-indicator="<selector>"` on a field wrapper shows that indicator
-  while a save the field started runs.
+The attributes decide what reaches the database:
+
+- `hx-trigger="change, submit"` saves each change when the user commits it.
+  A change event comes once per edit, so it needs no delay. A trigger on
+  `input` saves while the user types and needs one, for example
+  `input changed delay:500ms`. The browser submits a form with one text field
+  when the user presses Enter, and with `submit` in the trigger htmx sends that
+  submit as a save instead of a page load.
+- `hx-sync="body:queue all"` puts the saves of every form on the page in one
+  queue, so they run one at a time in the order of the changes. `form.save()`
+  writes every column of the row, so two saves that run at the same time can
+  undo each other's changes. Only `queue all` sends every change: `drop` and
+  the default `queue first` drop changes, and `replace` aborts a save in the
+  browser that the server still runs next to the new one.
+- Each form posts all its fields, and the view saves the form with
+  `form.save()`. The answer renders the form from what it posted, with its
+  errors.
+
+When the forms of a page save different rows, one queue per row is enough:
+give the forms of one row a common container and
+`hx-sync="closest .project:queue all"`.
+
+`formwork-core.js` keeps the user's work while the saves run:
+
+- When the user changes a form again before the answer to its save arrives,
+  the morph keeps the value of every field that the user edited after the save
+  collected the form, as it keeps the focused field. The next save in the queue
+  carries the edit.
+- The browser asks before it leaves the page while a save waits in a
+  `queue all` queue. A save that is on its way finishes on the server.
+
+A request that replaces the forms, such as a tab, can run before the saves
+in the queue. They still go out, and htmx drops their answers because the
+forms are gone. To let the tab wait for the saves, give it the same
+`hx-sync="body:queue all"`.
 
 ## DisplayField
 

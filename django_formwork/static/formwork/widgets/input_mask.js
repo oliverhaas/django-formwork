@@ -21,8 +21,13 @@ document.addEventListener("alpine:init", () => {
     // copy of them is empty. Fill it in before the morph copies it over.
     acceptMorph(newNode) {
       const display = newNode.querySelector(".input-mask-display");
-      // A focused display keeps the user's typing, as every focused input does.
-      if (display && this.$refs.display !== document.activeElement) {
+      // The user's typing stays while the display has focus, and when it came
+      // after the request this answers, as in every input. Each edit sends
+      // input from the hidden input, where formwork-core stamps it.
+      const keeps =
+        this.$refs.display === document.activeElement ||
+        this.$refs.hidden._formworkEditedAfter >= newNode._formworkRequest;
+      if (display && !keeps) {
         this.raw = this.parse(display.getAttribute("data-initial") || "");
         display.setAttribute("value", this.buildFull());
       }

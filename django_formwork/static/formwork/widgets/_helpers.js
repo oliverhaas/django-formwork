@@ -337,21 +337,9 @@ if (typeof document !== "undefined") {
   });
 }
 
-// Numbers each htmx request when it has collected its values. A swap stamps
-// the formwork roots it brings in with the number of the request they answer,
-// so a widget can tell the answer to a request sent before its latest pick
-// from the answer to one that carried the pick.
-let requestSeq = 0;
-
 if (typeof document !== "undefined") {
-  document.addEventListener("htmx:config:request", (e) => {
-    e.detail.ctx.formworkRequest = ++requestSeq;
-  });
   document.addEventListener("htmx:before:swap", (e) => {
     for (const task of e.detail.tasks ?? []) {
-      for (const root of task.fragment?.querySelectorAll('[x-data^="formwork"]') ?? []) {
-        root._formworkRequest = e.detail.ctx?.formworkRequest;
-      }
       // A widget that replaces a started one starts with it, so a morph that
       // clones Alpine state onto the new markup finds it bound. Without an id
       // the old widget is unknown, and the new one starts as before.
@@ -406,8 +394,9 @@ const baseData = () => ({
     this.clearHighlight();
   },
 
+  // formwork-core numbers the requests and stamps the roots a swap brings in.
   notePick() {
-    this._pickedAfter = requestSeq;
+    this._pickedAfter = document._formworkRequests ?? 0;
   },
 
   // Asked by the formwork morph before a morph touches this root. The answer

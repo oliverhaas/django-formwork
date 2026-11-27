@@ -218,10 +218,4 @@ The form class registers the search when Python creates it. Formwork imports the
 
 <!-- JS module: core plus every widget component; load it after htmx and before Alpine -->
 {% formwork_js %}
-
-<!-- Section forms (opt-in); load it after htmx -->
-{% formwork_sections_js %}
-
-<!-- Hidden input that names the section a section form saves -->
-{% formwork_section "general" %}
 ```

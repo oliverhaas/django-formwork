@@ -130,7 +130,7 @@ def test_task_page_saves_a_change_and_records_it(client, me):
     task = Task.objects.create(title="Finish me", priority=Task.Priority.HIGH)
     response = client.post(
         reverse("task_detail", args=[task.pk]),
-        {"_formwork_section": "details", "status": Task.Status.DONE, "priority": Task.Priority.HIGH, "assignee": ""},
+        {"status": Task.Status.DONE, "priority": Task.Priority.HIGH, "assignee": ""},
     )
     assert response["HX-Trigger"] == "task-changed"
     task.refresh_from_db()

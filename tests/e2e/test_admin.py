@@ -1207,7 +1207,7 @@ def test_a_sidebar_link_loads_the_whole_page_when_it_needs_new_files_or_fails(
 ):
     """A page with files of its own, or an error page, is not morphed into this one."""
     if change == "files":
-        media = forms.Media(js=[forms.Script("formwork/sections.js", type="module")])
+        media = forms.Media(js=[forms.Script("e2e/extra.js", type="module")])
         monkeypatch.setattr(TagAdmin, "media", property(lambda self: media))
     else:
         monkeypatch.setattr(TagAdmin, "get_queryset", forbidden)

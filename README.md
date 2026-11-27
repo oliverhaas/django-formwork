@@ -47,7 +47,7 @@ Keep the scripts in this order. htmx's alpine-compat extension is required: with
 
 ## htmx 4 integration
 
-`{% formwork_js %}` loads `formwork.js` as an ES module. It imports `formwork-core.js` (the `formwork-morph` htmx extension, dirty-field tracking, native validation disabling) and the Alpine component of each widget. Per-form `{{ form.media }}` and bundler imports also work; the installation docs describe all three paths. `{% formwork_sections_js %}` adds section forms: several forms on one page that each autosave their own fields of one row.
+`{% formwork_js %}` loads `formwork.js` as an ES module. It imports `formwork-core.js` (the `formwork-morph` htmx extension, dirty-field tracking, native validation disabling) and the Alpine component of each widget. Per-form `{{ form.media }}` and bundler imports also work; the installation docs describe all three paths.
 
 ## Admin
 

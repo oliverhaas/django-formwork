@@ -329,10 +329,10 @@ the attribute.
   full-text search. On PostgreSQL, `search_ranked=True` ranks the matches and
   forgives typos. See [server-side search](reference/views.md#server-side-search).
 - Several forms on one page can each autosave their own fields of one row. See
-  [section forms](reference/forms.md#section-forms).
+  [Several forms on one page](reference/forms.md#several-forms-on-one-page).
 - The [full example](https://github.com/oliverhaas/django-formwork/tree/main/examples/full)
   is a small task tracker that combines these patterns: a board filtered through the
-  URL, a task page whose side column saves each change as a section form, a
+  URL, a task page whose side column saves each change on its own, a
   multi-step wizard, and the admin over the same models.
 
 The [Forms](reference/forms.md), [Widgets](reference/widgets.md), and

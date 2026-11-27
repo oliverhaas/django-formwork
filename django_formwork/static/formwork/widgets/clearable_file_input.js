@@ -70,7 +70,7 @@ document.addEventListener("alpine:init", () => {
         this.fire(this.$refs.input);
       },
 
-      // The change event reaches dirty tracking and section forms once Alpine has set the box.
+      // The change event reaches dirty tracking and an hx-trigger once Alpine has set the box.
       setCleared(cleared) {
         this.cleared = cleared;
         this.$nextTick(() => this.fire(this.$refs.clear));

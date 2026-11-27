@@ -35,7 +35,7 @@ document.addEventListener("alpine:init", () => {
       this.$refs.input.click();
     },
 
-    // A drop fills the real file input, so the form posts the file and a section form saves at once.
+    // A drop fills the real file input, so the form posts the file and a form that saves on change saves at once.
     drop(event) {
       this.dragging = false;
       const file = event.dataTransfer?.files[0];

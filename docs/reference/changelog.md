@@ -82,6 +82,16 @@
   together, as in the admin. Add `grid gap-2` to keep the previous spacing:
   `<div class="grid gap-2">{{ form }}</div>`, or the classes on the `<form>` itself. A
   grid that removed the margin with `*:mt-0` can drop it.
+- A page with section forms fails with `ImportError` or `TemplateSyntaxError`:
+  `section_forms()`, the `{% formwork_sections_js %}` and `{% formwork_section %}` tags,
+  `sections.js` and its `formwork-sections` htmx extension are removed, and with them
+  `data-section-forms`, `data-send-changed` and `data-section-indicator`. Several forms
+  on one page need no formwork API. Give each form a hidden input with its name in
+  place of `{% formwork_section %}`, read that name in the view, and give the form
+  `hx-trigger="change, submit"` and `hx-sync="body:queue all"`.
+  [Several forms on one page](forms.md#several-forms-on-one-page) shows the view and
+  the template. A tab that replaces the forms no longer waits for their saves on its
+  own: give it the same `hx-sync` as the forms.
 
 ### Added
 
@@ -250,6 +260,10 @@
   command reads every template with the Django template lexer, which finds no text in a
   Jinja2 `{% trans %}` block or in a `_()` call with arguments. See
   [Translations](../getting-started/installation.md#translations).
+- The browser asks before it leaves a page while a save waits in an htmx
+  `hx-sync="... queue all"` queue, which would otherwise never send it. A save that is
+  on its way finishes on the server and leaves without asking. `formwork-core.js` does
+  this on every page that loads it.
 
 ### Changed
 
@@ -481,7 +495,9 @@
   rendered another one. A list that gained a choice could show the wrong choice as
   checked and post it, and a field the server answered empty kept the typed text. The
   morph now applies the server's state to every control except the focused one, also
-  where the server's HTML for the field is the same as before.
+  where the server's HTML for the field is the same as before. A control that the user
+  changed after the request collected the form keeps its value too, an `InputMask`
+  included, so an autosave answer does not undo an edit that the next save carries.
 - An htmx morph of the form, such as an autosave, disturbed the dropdown of a `Select`,
   `SelectMultiple` or `ComboBox`. It replaced the results of a search through
   `search_url` with the options of the form's own render, dropped the option that the

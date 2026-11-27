@@ -254,7 +254,7 @@ class TestCrossFieldRuleGuard:
 
 
 # ---------------------------------------------------------------------------
-# Fields the post leaves out (data-send-changed)
+# Fields the post leaves out
 # ---------------------------------------------------------------------------
 
 

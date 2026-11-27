@@ -31,7 +31,7 @@ tenth of the rows, `--seed 2` gives a different but repeatable data set.
 |---|---|
 | `/` | My work: your open tasks by due date (overdue, this week, later), what you finished this week, the team's latest activity and a quick add. A checkbox ticks a task off. |
 | `/tasks/` | The board: one column per status, your tasks first in each. Drag a card to another column to move it (on a touch screen, change the status on the task page), or add a task at the foot of a column. The filters live in the URL. |
-| `/tasks/<id>/` | The task page: description, comments and changes on the left. Status, assignee, due date, priority and tags on the right save each change by themselves (section forms). |
+| `/tasks/<id>/` | The task page: description, comments and changes on the left. Status, assignee, due date, priority and tags on the right save each change by themselves. |
 | `/tasks/new/` and `/tasks/<id>/edit/` | The full task form, with every field. The template places the fields in sections with `as_field_group`. |
 | `/wizard/` | Four-step project wizard (Project → Configuration → First task → Review) with the DaisyUI `steps` component |
 | `/settings/` | Your profile, sign-in and preferences, saved on a single local `Profile` row. The member you pick here is "you" on My work and the board. Shows `PhoneInput`, `Select`, `ImageDropzoneInput`, `PasswordInput`, `OTPInput`, `ComboBox` and `Rating`. |
@@ -87,7 +87,7 @@ Every widget in the package gets airtime across these pages. Quick lookup:
 
 - **My work quick add**: a text input and `DatePicker`
 - **Board filters**: `SearchInput`, `Select` with a placeholder for "any"
-- **Task page side column**: `Select`, `SelectMultiple` and `DatePicker` in a section form that saves on change
+- **Task page side column**: `Select`, `SelectMultiple` and `DatePicker` in a form that saves on change
 - **Task form**: `Select` (assignee, backed by the `Member` model with an initials badge and email per option, server search), `SelectMultiple` (tags, server search), `DatePicker`, `DateTimePicker` (reminder), `ImageDropzoneInput`, `FileDropzoneInput`, `Rating`
 - **Wizard**: `ValidatedTextarea`, `ToggleInput`, `Range`, `RadioSelect`, `DatePicker`, `SelectMultiple`
 - **Settings**: `PhoneInput`, `Select` (country), `ImageDropzoneInput`, `PasswordInput`, `OTPInput`, `ComboBox`, `Rating`

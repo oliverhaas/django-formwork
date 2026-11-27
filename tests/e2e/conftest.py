@@ -238,7 +238,7 @@ def translated_page(page, live_server, pseudo_catalog):
 
 @pytest.fixture
 def sections_page(page, live_server):
-    """Navigate to the section-forms page."""
+    """Navigate to the page with two forms that save one row."""
     return _navigate(page, live_server, "/sections/")
 
 
@@ -257,6 +257,7 @@ _CSS_IMAGES_LOADED = r"""() => [...document.querySelectorAll("*")]
         return [...`${style.maskImage} ${style.backgroundImage}`.matchAll(/url\("(.+?)"\)/g)];
     })
     .every(([, url]) => url.startsWith("data:") || performance.getEntriesByName(url).length)"""
+_IDLE_INDICATORS = ".htmx-indicator { opacity: 0 !important; } .htmx-indicator-inverse { opacity: 1 !important; }"
 _NEXT_FRAME = "new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))"
 
 
@@ -272,7 +273,7 @@ class _ScreenPage:
         page.on("console", self._on_console)
         page.on("response", self._on_response)
 
-    def screenshot(self):
+    def screenshot(self, style=""):
         """With the mouse off every control, after each visible icon, a CSS mask image, has loaded."""
         self.page.mouse.move(0, 0)
         self.page.wait_for_function(_CSS_IMAGES_LOADED)
@@ -280,7 +281,7 @@ class _ScreenPage:
         return self.page.screenshot(
             animations="disabled",
             caret="hide",
-            style="*, *::before, *::after { transition: none !important; }",
+            style=f"*, *::before, *::after {{ transition: none !important; }} {style}",
         )
 
     def assert_same_screens(self, first, second, *names):
@@ -312,6 +313,7 @@ class MorphPage(_ScreenPage):
         self.form = page.locator("#morph_form")
         self.revision = 0
         self.reply = None
+        self.held = None
 
     def open(self, form_class, data=None):
         """Load the page with the form, bound to ``data`` if given."""
@@ -327,6 +329,29 @@ class MorphPage(_ScreenPage):
         self.form.dispatch_event("save")
         expect(self.form).to_have_attribute("data-revision", str(revision))
         expect(self.page.locator(".htmx-request")).to_have_count(0)
+
+    def hold(self):
+        """Save the form and hold the answer, which renders what the form held when the save collected it."""
+        self.reply = None
+        self.held = []
+        with self.page.expect_request(lambda request: request.method == "POST"):
+            self.form.dispatch_event("save")
+
+    def assert_older_answer_keeps_state(self):
+        """The held answer, morphed in after the user's edits, changes no pixel.
+
+        The user has left the field, so only the edit keeps it."""
+        self.page.evaluate("document.activeElement?.blur()")
+        before = self.screenshot(_IDLE_INDICATORS)
+        assert self.held, "The save was not held"
+        route, html = self.held.pop()
+        self.held = None
+        route.fulfill(content_type="text/html", body=html)
+        expect(self.form).to_have_attribute("data-revision", str(self.revision))
+        expect(self.page.locator(".htmx-request")).to_have_count(0)
+        after = self.screenshot(_IDLE_INDICATORS)
+        assert not self.errors
+        self.assert_same_screens(before, after, "before", "after")
 
     def assert_morph_keeps_state(self):
         """A save answered with what the user entered changes no pixel and replaces no node."""
@@ -372,7 +397,10 @@ class MorphPage(_ScreenPage):
                 data = self.reply
         form = self.form_class() if data is None else self.form_class(data, files)
         html = _MORPH_PAGE.render({"form": form, "revision": self.revision})
-        route.fulfill(content_type="text/html", body=html)
+        if route.request.method == "POST" and self.held is not None:
+            self.held.append((route, html))
+        else:
+            route.fulfill(content_type="text/html", body=html)
 
 
 @pytest.fixture

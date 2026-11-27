@@ -5,7 +5,8 @@
  * regardless of which widgets are on the page:
  *
  *   1. htmx 4 morph extension (`formwork-morph`) that preserves focused
- *      input values, <details> open state, unconfirmed dropdown picks, and
+ *      input values, edits made after the answered request collected the
+ *      form, <details> open state, unconfirmed dropdown picks, and
  *      Alpine-template-generated DOM nodes during full-form morphs.  Alpine
  *      bindings survive the morph through htmx's alpine-compat extension.
  *   2. Native browser validation disabling on forms with formwork error
@@ -15,6 +16,8 @@
  *      an element marked data-formwork-field.
  *   4. Busy buttons: a .btn that sends a request carries aria-busy until
  *      the response is in, and formwork.css shows a spinner on it.
+ *   5. Leaving the page while a save waits in an hx-sync "queue all" queue
+ *      asks first.
  *
  * Load via {% formwork_core_js %} if you're using {{ form.media }} for
  * the per-widget Alpine code; the bundle {% formwork_js %} already
@@ -480,6 +483,77 @@ window.addEventListener("pageshow", (e) => {
 // The Navigation API reports the Stop button.  It says nothing of a download.
 window.navigation?.addEventListener("navigateerror", clearNativeBusy);
 
+// --- Request numbers ---
+// Each htmx request gets a number when it has collected its values. A swap
+// stamps the controls and formwork roots it brings in with the number of the
+// request they answer. An edit stamps its control with the latest number, so
+// the morph can tell the answer to a request sent before the edit from the
+// answer to one that carried it. The count lives on the document, where the
+// widget scripts read it. They can't import this module: under hashed static
+// URLs, their relative import would load a second copy of it.
+document._formworkRequests ??= 0;
+
+document.addEventListener("htmx:config:request", (e) => {
+  e.detail.ctx.formworkRequest = ++document._formworkRequests;
+});
+
+document.addEventListener("htmx:before:swap", (e) => {
+  const request = e.detail.ctx?.formworkRequest;
+  for (const task of e.detail.tasks ?? []) {
+    task.formworkRequest = request;
+    for (const el of task.fragment?.querySelectorAll('input, textarea, select, option, [x-data^="formwork"]') ?? []) {
+      el._formworkRequest = request;
+    }
+  }
+});
+
+// Capturing, so the edit is stamped before a trigger on the form sends it.
+// Checking a radio unchecks the others of its group, so they count as edited too.
+const noteEdit = (e) => {
+  const control = e.target;
+  if (!(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement || control instanceof HTMLSelectElement)) {
+    return;
+  }
+  const group =
+    control.type === "radio" && control.name
+      ? (control.form ?? document).querySelectorAll(`input[type=radio][name="${CSS.escape(control.name)}"]`)
+      : [control];
+  for (const el of group) el._formworkEditedAfter = document._formworkRequests;
+};
+document.addEventListener("input", noteEdit, true);
+document.addEventListener("change", noteEdit, true);
+
+// The answer to a request that the user's last edit of the control came after.
+const editedSince = (control, request) => control?._formworkEditedAfter >= request;
+
+// --- Saves waiting in a queue ---
+// A save that waits in an hx-sync "queue all" queue has not been sent yet, and
+// leaving the page drops it, so the browser asks first. A save already sent
+// finishes on the server even when the page goes. Other strategies drop queued
+// requests themselves, so only "queue all" is tracked. htmx keeps a request's
+// status at "created" until it leaves the queue. Its events can't say so: once
+// a swap has removed the form, they no longer reach the document.
+const waiting = new Set();
+const forgetSent = () => {
+  for (const ctx of waiting) if (ctx.status !== "created") waiting.delete(ctx);
+};
+
+document.addEventListener("htmx:config:request", (e) => {
+  forgetSent();
+  const ctx = e.detail.ctx;
+  const source = ctx.sourceElement;
+  const sync = source?.getAttribute?.("hx-sync") ?? source?.getAttribute?.("data-hx-sync") ?? "";
+  if (ctx.request.method === "GET" || !/queue all\s*$/.test(sync)) return;
+  waiting.add(ctx);
+  // A listener after this one may cancel the request.
+  queueMicrotask(() => e.defaultPrevented && waiting.delete(ctx));
+});
+document.addEventListener("htmx:finally:request", forgetSent);
+window.addEventListener("beforeunload", (e) => {
+  forgetSent();
+  if (waiting.size) e.preventDefault();
+});
+
 // --- htmx 4 morph configuration ---
 
 if (typeof htmx !== "undefined") {
@@ -530,13 +604,18 @@ if (typeof htmx !== "undefined") {
     );
   };
 
-  const syncToAttributes = (control) => {
-    if (control === document.activeElement || control._x_model) return;
+  // The user's value stays in the control they are in, and in one they edited
+  // after the request this swap answers: a later request carries that edit.
+  const keeps = (control, request) => control === document.activeElement || editedSince(control, request);
+
+  const syncToAttributes = (control, request) => {
+    if (control._x_model) return;
     if (control instanceof HTMLOptionElement) {
-      if (control.closest("select") !== document.activeElement) {
-        control.selected = control.hasAttribute("selected");
-      }
-    } else if (control instanceof HTMLTextAreaElement) {
+      if (!keeps(control.closest("select"), request)) control.selected = control.hasAttribute("selected");
+      return;
+    }
+    if (keeps(control, request)) return;
+    if (control instanceof HTMLTextAreaElement) {
       control.value = control.defaultValue;
     } else if (control.type === "checkbox" || control.type === "radio") {
       control.checked = control.hasAttribute("checked");
@@ -562,9 +641,10 @@ if (typeof htmx !== "undefined") {
           ? oldNode.tagName === newNode.tagName && oldNode.dataset.label === newNode.dataset?.label
           : isSoftMatch(oldNode, newNode);
     },
-    htmx_before_settle: (target) => {
+    htmx_before_settle: (target, detail) => {
       if (!morphed.length) return;
-      if (target.isConnected) morphedControls(target).forEach(syncToAttributes);
+      const request = detail.task?.formworkRequest;
+      if (target.isConnected) morphedControls(target).forEach((control) => syncToAttributes(control, request));
       morphed = [];
     },
     htmx_before_morph_node: (_elt, detail) => {
@@ -575,6 +655,7 @@ if (typeof htmx !== "undefined") {
         return true;
       }
       morphed.push(detail);
+      const request = newNode._formworkRequest;
 
       // A dropdown holding a pick the server has not confirmed yet skips a
       // stale echo whole: its hidden inputs would otherwise post the older
@@ -584,15 +665,15 @@ if (typeof htmx !== "undefined") {
       }
 
       // Sync input `.value` property to match the new server-rendered
-      // value, EXCEPT when this is the focused element (preserve user's
-      // in-progress typing).  htmx's core morph only writes .value when
-      // the `value` *attribute* differs, but `<input>` elements where
+      // value, EXCEPT when the user's value stays (in-progress typing, or an
+      // edit the answered request did not carry).  htmx's core morph only
+      // writes .value when the `value` *attribute* differs, but `<input>` elements where
       // the user has typed have a .value PROPERTY that diverges from the
       // empty .value attribute.  Without this sync, server-driven
       // resets (e.g. clearing a form on delete) leave stale typed
       // values in the inputs.
       if (oldNode instanceof HTMLInputElement && oldNode.type !== "file") {
-        if (oldNode === document.activeElement) {
+        if (keeps(oldNode, request)) {
           // Preserve user's in-progress typing AND cursor position.
           newNode.setAttribute("value", oldNode.value);
           newNode.value = oldNode.value;
@@ -603,7 +684,7 @@ if (typeof htmx !== "undefined") {
           }
         }
       } else if (oldNode instanceof HTMLTextAreaElement) {
-        if (oldNode === document.activeElement) {
+        if (keeps(oldNode, request)) {
           // For <textarea>, defaultValue is the inner text content;
           // making newNode's textContent match oldNode.value avoids the
           // defaultValue-comparison branch in htmx's morph that would
@@ -634,13 +715,13 @@ if (typeof htmx !== "undefined") {
         // changed it, the `checked` attribute that htmx copies no longer
         // moves it, and a list that gains a choice pairs each old input with
         // a different choice.
-        if (oldNode === document.activeElement) {
+        if (keeps(oldNode, request)) {
           newNode.toggleAttribute("checked", oldNode.checked);
         } else {
           oldNode.checked = newNode.hasAttribute("checked");
         }
       } else if (oldNode instanceof HTMLOptionElement) {
-        if (oldNode.closest("select") === document.activeElement) {
+        if (keeps(oldNode.closest("select"), request)) {
           newNode.toggleAttribute("selected", oldNode.selected);
         } else {
           oldNode.selected = newNode.hasAttribute("selected");

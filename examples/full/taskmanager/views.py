@@ -14,8 +14,6 @@ from django.utils import timezone
 from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
-from django_formwork import section_forms
-
 from .filters import TaskFilter
 from .forms import (
     BoardAddForm,
@@ -182,8 +180,7 @@ def field_text(task: Task, name: str) -> str:
 def task_detail(request, pk):
     """Read a task and its activity. The side column saves each change on its own."""
     task = get_object_or_404(Task.objects.select_related("assignee"), pk=pk)
-    sections = section_forms(request, {"details": TaskDetailsForm}, instance=task)
-    details = sections["details"]
+    details = TaskDetailsForm(request.POST if request.method == "POST" else None, instance=task)
     changed = []
     if details.is_bound and details.is_valid():
         changed = details.changed_data

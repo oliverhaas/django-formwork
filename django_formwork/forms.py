@@ -152,9 +152,8 @@ class _DirtyOnlyFormMixin:
     machinery behind ``Form.changed_data``) and carry the bound field's
     ``initial`` value through to ``cleaned_data``.  ``clean_<name>`` methods
     are skipped for those fields too.  A field the post leaves out (the
-    widget's ``value_omitted_from_data()``) counts as unchanged, because a
-    ``data-send-changed`` form posts only the fields that differ from the
-    render.
+    widget's ``value_omitted_from_data()``) counts as unchanged, so a form
+    can post only the fields that differ from the render.
 
     One consequence to know about: for an unchanged field, ``cleaned_data``
     holds ``BoundField.initial`` rather than the field's cleaned Python value.

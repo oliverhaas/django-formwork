@@ -1,38 +1,15 @@
-"""E2e tests for section forms (``formwork/sections.js``).
+"""E2e tests for several forms on one page that each save their own fields of one row.
 
-Two forms save one ``SectionRecord`` through one request queue; a tab
-outside them replaces both.
+Each form posts itself on change or submit and morphs its answer in. Both share one
+``body:queue all`` queue, and a tab outside them replaces both.
 """
-
-import re
-from contextlib import contextmanager
 
 from e2e.models import SectionRecord
 from playwright.sync_api import expect
 
-REQUESTING = re.compile(r"\bhtmx-request\b")
 
-
-@contextmanager
-def _swapped(page, form):
-    """Wait for the swap of the save that the block triggers."""
-    page.evaluate(
-        """(form) => {
-            window.__fwSwapped = false;
-            document.querySelector(form)
-                .addEventListener('htmx:after:swap', () => { window.__fwSwapped = true; }, {once: true});
-        }""",
-        form,
-    )
-    yield
-    page.wait_for_function("window.__fwSwapped === true")
-
-
-def _pick_city(page, value):
-    page.locator("summary#id_city").click()
-    panel = page.locator("#id_city_wrapper [x-ref=panel]")
-    expect(panel).to_be_visible()
-    panel.locator(f'button[data-value="{value}"]').click()
+def _is_post(request):
+    return request.method == "POST"
 
 
 def _hold_the_first_save(page):
@@ -48,6 +25,19 @@ def _hold_the_first_save(page):
     return held
 
 
+def _edit(page, selector, value):
+    field = page.locator(selector)
+    field.fill(value)
+    field.blur()
+
+
+def _pick_city(page, value):
+    page.locator("summary#id_city").click()
+    panel = page.locator("#id_city_wrapper [x-ref=panel]")
+    expect(panel).to_be_visible()
+    panel.locator(f'button[data-value="{value}"]').click()
+
+
 def test_a_change_made_while_a_save_is_held_is_kept_and_saved(sections_page):
     page = sections_page
     held = _hold_the_first_save(page)
@@ -57,81 +47,90 @@ def test_a_change_made_while_a_save_is_held_is_kept_and_saved(sections_page):
         }, {once: true})""",
     )
 
-    name = page.locator("#id_name")
-    with page.expect_request(lambda request: request.method == "POST"):
-        name.fill("Desk")
-        name.blur()
-    name.fill("Chair")
-    name.blur()
+    with page.expect_request(_is_post):
+        _edit(page, "#id_name", "Desk")
+    _edit(page, "#id_name", "Chair")
     with page.expect_response(lambda response: "name=Chair" in (response.request.post_data or "")):
         held[0].continue_()
 
     assert page.evaluate("window.__nameAfterFirstSave") == "Chair"
-    expect(name).to_have_attribute("value", "Chair")
+    expect(page.locator("#id_name")).to_have_attribute("value", "Chair")
     assert SectionRecord.objects.get().name == "Chair"
 
 
-def test_a_tab_opened_while_saves_are_pending_opens_after_them(sections_page):
+def test_a_change_in_each_form_while_a_save_is_held_saves_both(sections_page):
     page = sections_page
     held = _hold_the_first_save(page)
-    sent = []
-    page.on("request", lambda request: sent.append(request.method) if "/sections/" in request.url else None)
 
-    with page.expect_request(lambda request: request.method == "POST"):
+    with page.expect_request(_is_post):
+        _edit(page, "#id_name", "Desk")
+    _edit(page, "#id_note", "Fragile")
+    with page.expect_response(lambda response: "note=Fragile" in (response.request.post_data or "")):
+        held[0].continue_()
+
+    expect(page.locator("#id_name")).to_have_attribute("value", "Desk")
+    expect(page.locator("#id_note")).to_have_attribute("value", "Fragile")
+    record = SectionRecord.objects.get()
+    assert (record.name, record.note) == ("Desk", "Fragile")
+
+
+def test_leaving_while_a_save_waits_in_the_queue_asks_first(sections_page, live_server):
+    page = sections_page
+    held = _hold_the_first_save(page)
+    dialogs = []
+    page.on("dialog", lambda dialog: (dialogs.append(dialog.type), dialog.dismiss()))
+
+    with page.expect_request(_is_post):
+        _edit(page, "#id_name", "Desk")
+    _edit(page, "#id_note", "Fragile")
+    page.locator("#leave_link").click()
+
+    assert dialogs == ["beforeunload"]
+    expect(page).to_have_url(f"{live_server.url}/sections/")
+
+    with page.expect_response(lambda response: "note=Fragile" in (response.request.post_data or "")):
+        held[0].continue_()
+    page.locator("#leave_link").click()
+
+    expect(page).to_have_url(f"{live_server.url}/basic/")
+    assert dialogs == ["beforeunload"]
+    record = SectionRecord.objects.get()
+    assert (record.name, record.note) == ("Desk", "Fragile")
+
+
+def test_a_tab_that_replaces_the_forms_leaves_their_saves_to_finish(sections_page, live_server):
+    page = sections_page
+    held = _hold_the_first_save(page)
+    dialogs = []
+    page.on("dialog", lambda dialog: (dialogs.append(dialog.type), dialog.dismiss()))
+
+    with page.expect_request(_is_post):
         _pick_city(page, "ldn")
     page.locator("#id_name").fill("Desk")
     page.locator("#second_tab_button").click()
-    with page.expect_response(lambda response: "tab=2" in response.url):
+    expect(page.locator("#second_tab")).to_be_attached()
+    with page.expect_response(lambda response: "name=Desk" in (response.request.post_data or "")):
         held[0].continue_()
 
     expect(page.locator("#second_tab")).to_be_attached()
-    assert sent == ["POST", "POST", "GET"]
     record = SectionRecord.objects.get()
     assert (record.name, record.city) == ("Desk", "ldn")
+    page.locator("#leave_link").click()
+    expect(page).to_have_url(f"{live_server.url}/basic/")
+    assert dialogs == []
 
 
-def test_enter_saves_a_text_input(sections_page):
+def test_enter_in_a_form_with_one_text_field_saves_without_leaving(sections_page, live_server):
     page = sections_page
-    name = page.locator("#id_name")
-    name.fill("Desk")
-
-    with page.expect_response(lambda response: response.request.method == "POST") as response_info:
-        name.press("Enter")
-
-    assert response_info.value.request.headers.get("hx-request") == "true"
-    expect(name).not_to_be_focused()
-    assert SectionRecord.objects.get().name == "Desk"
-
-
-def test_send_changed_posts_only_the_changed_fields(sections_page):
-    page = sections_page
+    methods = []
+    page.on("request", lambda request: methods.append(request.method))
     note = page.locator("#id_note")
+    note.fill("Fragile")
 
-    with _swapped(page, "#extras_form"), page.expect_request(lambda request: request.method == "POST") as request_info:
-        note.fill("Fragile")
-        note.blur()
+    with page.expect_response(lambda response: "note=Fragile" in (response.request.post_data or "")):
+        note.press("Enter")
 
-    posted = request_info.value.post_data
-    assert "note=Fragile" in posted
-    assert "_formwork_section=extras" in posted
-    assert "csrfmiddlewaretoken=" in posted
-    assert "color=" not in posted
-    expect(page.locator("#id_color")).to_have_attribute("value", "red")
-    record = SectionRecord.objects.get()
-    assert (record.note, record.color) == ("Fragile", "red")
-
-
-def test_a_save_started_inside_an_indicator_field_shows_the_indicator(sections_page):
-    page = sections_page
-    held = _hold_the_first_save(page)
-    indicator = page.locator("#extras_indicator")
-    note = page.locator("#id_note")
-
-    with page.expect_request(lambda request: request.method == "POST"):
-        note.fill("Fragile")
-        note.blur()
-    expect(indicator).to_have_class(REQUESTING)
-
-    with _swapped(page, "#extras_form"):
-        held[0].continue_()
-    expect(indicator).not_to_have_class(REQUESTING)
+    expect(note).to_have_attribute("value", "Fragile")
+    assert "GET" not in methods
+    expect(page).to_have_url(f"{live_server.url}/sections/")
+    assert SectionRecord.objects.get().note == "Fragile"

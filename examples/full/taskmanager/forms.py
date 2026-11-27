@@ -131,7 +131,7 @@ class TaskEditForm(FormworkModelForm):
 
 
 class TaskDetailsForm(FormworkModelForm):
-    """The task page's side column: a section form that saves each change."""
+    """The task page's side column: a form that saves each change on its own."""
 
     status = forms.ChoiceField(choices=STATUS_CHOICES, widget=Select)
     priority = forms.ChoiceField(choices=PRIORITY_CHOICES, widget=Select)

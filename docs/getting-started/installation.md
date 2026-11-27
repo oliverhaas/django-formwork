@@ -133,7 +133,7 @@ htmx 4 sends the server-side search and validation requests, and its built-in `o
 
 ### htmx extensions
 
-htmx 4 runs every registered extension on the whole page. If you restrict them with an `htmx.config.extensions` whitelist, list `alpine-compat` and `formwork-morph`, plus `formwork-sections` on a page that loads [section forms](../reference/forms.md#section-forms).
+htmx 4 runs every registered extension on the whole page. If you restrict them with an `htmx.config.extensions` whitelist, list `alpine-compat` and `formwork-morph`.
 
 `formwork-core.js` adds `open` to `htmx.config.morphIgnore`, so a morph leaves an open dropdown or disclosure as the user left it. For the same reason a server response cannot open or close a `<details>` or a `<dialog>` by morph; change the `open` state in the browser.
 
@@ -146,8 +146,6 @@ For per-form loading via Django's `Media`, use `{{ form.media }}` for the widget
 For a JS bundler (vite, webpack or esbuild), import `formwork.js` by its file path in the installed package, under the directory that the command in [step 4](#4-build-the-css) prints: `import "path/to/site-packages/django_formwork/static/formwork/formwork.js";`. The bundler follows the relative imports and emits one bundle, so the page needs no formwork template tag. The bundle must run after htmx and before Alpine, like the tag.
 
 ES modules are deduplicated by URL, so mixing tags is harmless. Combining `{% formwork_js %}` and `{% formwork_core_js %}` on the same page still executes the core only once.
-
-`{% formwork_sections_js %}` loads `sections.js` for section forms. The bundle leaves it out. Load it after htmx; it does not need Alpine.
 
 ## Translations
 

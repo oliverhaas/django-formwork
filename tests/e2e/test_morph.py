@@ -1,4 +1,6 @@
-"""A morph keeps what the user did in a field, and shows what the server sent after the user left it."""
+"""A morph keeps what the user did in a field, and shows what the server sent after the user left it.
+
+The answer to a save that the user's edit came after keeps the edit."""
 
 import pytest
 from django import forms
@@ -362,3 +364,14 @@ def test_morph_shows_what_the_server_sent(morph_page, field, act, data):
     morph_page.open(form_with(field))
     act(morph_page.form)
     morph_page.assert_morph_shows(data)
+
+
+EDITS = {name: entry[:2] for name, entry in {**KEEPS, **SHOWS}.items()}
+
+
+@pytest.mark.parametrize(("field", "act"), EDITS.values(), ids=EDITS.keys())
+def test_an_older_answer_keeps_what_the_user_changed_after_the_save(morph_page, field, act):
+    morph_page.open(form_with(field))
+    morph_page.hold()
+    act(morph_page.form)
+    morph_page.assert_older_answer_keeps_state()

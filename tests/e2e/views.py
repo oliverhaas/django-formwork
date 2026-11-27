@@ -18,7 +18,6 @@ from django_formwork import (
     DateTimeRange,
     DateTimeRangeField,
     MultipleFileField,
-    section_forms,
 )
 from django_formwork.forms import FormworkForm, FormworkModelForm
 from django_formwork.views import FormworkValidateView
@@ -978,7 +977,7 @@ class AutoSaveDropdownForm(FormworkForm):
 
 
 class SectionGeneralForm(FormworkModelForm):
-    """The first section of the section-forms page."""
+    """The first form of the section-forms page."""
 
     city = forms.ChoiceField(
         choices=[("", ""), ("nyc", "New York"), ("ldn", "London"), ("tyo", "Tokyo")],
@@ -993,12 +992,11 @@ class SectionGeneralForm(FormworkModelForm):
 
 
 class SectionExtrasForm(FormworkModelForm):
-    """The second section: it posts only its changed fields."""
+    """The second form of the section-forms page."""
 
     class Meta:
         model = SectionRecord
-        fields = ["note", "color"]
-        validate_dirty_only = True
+        fields = ["note"]
 
 
 _STORED_IMAGE = (
@@ -1736,36 +1734,33 @@ _ELEMENTS_CARD = _card_body(
 _ELEMENTS_HTML = _page_html("Standalone Elements", _ELEMENTS_BODY)
 
 _SECTION_FORM_ATTRS = (
-    'data-section-form novalidate class="grid gap-2" hx-post="/sections/" hx-trigger="change delay:300ms" '
-    'hx-swap="outerMorph" hx-sync="closest [data-section-forms]:queue all"'
+    'novalidate class="grid gap-2" hx-post="/sections/" hx-trigger="change, submit" hx-swap="outerMorph" '
+    'hx-sync="body:queue all"'
 )
 
 _SECTIONS_INNER = (
-    "{% load formwork %}\n"
-    '<div id="sections" class="flex flex-col gap-6" data-section-forms>\n'
+    '<div id="sections" class="flex flex-col gap-6">\n'
     "  {% if tab == '2' %}\n"
     '  <p id="second_tab">Second tab</p>\n'
     "  {% else %}\n"
     f'  <form id="general_form" hx-select="#general_form" {_SECTION_FORM_ATTRS}>\n'
-    '    {% csrf_token %}{% formwork_section "general" %}\n'
-    "    {{ sections.general }}\n"
+    '    {% csrf_token %}<input type="hidden" name="section" value="general">\n'
+    "    {{ general }}\n"
     "  </form>\n"
-    f'  <form id="extras_form" hx-select="#extras_form" data-send-changed {_SECTION_FORM_ATTRS}>\n'
-    '    {% csrf_token %}{% formwork_section "extras" %}\n'
-    '    <div data-section-indicator="#extras_indicator">{{ sections.extras.note.as_field_group }}</div>\n'
-    "    {{ sections.extras.color.as_field_group }}\n"
+    f'  <form id="extras_form" hx-select="#extras_form" {_SECTION_FORM_ATTRS}>\n'
+    '    {% csrf_token %}<input type="hidden" name="section" value="extras">\n'
+    "    {{ extras }}\n"
     "  </form>\n"
-    '  <span id="extras_indicator" class="loading loading-spinner loading-sm htmx-indicator" aria-hidden="true">'
-    "</span>\n"
     "  {% endif %}\n"
     "</div>\n"
-    '<button id="second_tab_button" type="button" class="btn mt-4" hx-get="/sections/?tab=2" '
-    'hx-target="#sections" hx-select="#sections" hx-swap="outerHTML">Second tab</button>'
+    '<div class="mt-4 flex items-center gap-4">\n'
+    '  <button id="second_tab_button" type="button" class="btn" hx-get="/sections/?tab=2" '
+    'hx-target="#sections" hx-select="#sections" hx-swap="outerHTML">Second tab</button>\n'
+    '  <a id="leave_link" class="link" href="/basic/">Leave</a>\n'
+    "</div>"
 )
 
-_SECTIONS_HTML = _page_html("Section Forms", _card_body("Section Forms", _SECTIONS_INNER)).replace(
-    "</head>", "  {% load formwork %}{% formwork_sections_js %}\n</head>"
-)
+_SECTIONS_HTML = _page_html("Several Forms", _card_body("Several Forms", _SECTIONS_INNER))
 
 _TRANSLATED_HTML = _page_html("Deutsch", _card_body("Deutsch", "{{ form }}")).replace('lang="en"', 'lang="de"')
 
@@ -2004,11 +1999,14 @@ def translated_view(request: HttpRequest) -> HttpResponse:
 
 
 def sections_view(request: HttpRequest) -> HttpResponse:
-    """Two section forms that save one SectionRecord, and a tab that replaces them."""
+    """Two forms that each save their own fields of one SectionRecord, and a tab that replaces them."""
     record = SectionRecord.objects.first() or SectionRecord.objects.create(name="Lamp", city="nyc", color="red")
-    sections = section_forms(request, {"general": SectionGeneralForm, "extras": SectionExtrasForm}, instance=record)
-    for form in sections.values():
+    posted = request.POST.get("section")
+    general = SectionGeneralForm(request.POST if posted == "general" else None, instance=record)
+    extras = SectionExtrasForm(request.POST if posted == "extras" else None, instance=record)
+    for form in (general, extras):
         if form.is_bound and form.is_valid():
             form.save()
     template = engines["django"].from_string(_SECTIONS_HTML)
-    return HttpResponse(template.render({"sections": sections, "tab": request.GET.get("tab")}, request))
+    context = {"general": general, "extras": extras, "tab": request.GET.get("tab")}
+    return HttpResponse(template.render(context, request))
