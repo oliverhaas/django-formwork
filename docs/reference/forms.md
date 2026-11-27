@@ -56,6 +56,21 @@ other layouts render formwork markup too, also for a plain `forms.Form` that
 The form's own errors come first, in an alert. `{{ formset }}` renders its
 forms with `as_div()`.
 
+To place the fields yourself, render `{{ field.as_field_group() }}` for each
+one. `{{ field.as_control() }}` renders only the widget and its error tooltip,
+for a layout that shows the label somewhere else, such as a column header:
+
+```html+jinja
+<table>
+  <tr>{% for field in form %}<th>{{ field.label }}</th>{% endfor %}</tr>
+  <tr>{% for field in form %}<td>{{ field.as_control() }}</td>{% endfor %}</tr>
+</table>
+```
+
+The control keeps the field's name for a screen reader: the widget gets an
+`aria-label`, and a radio or checkbox list becomes a named group. It also
+carries the [changed-field mark](#changed-field-highlight).
+
 ## Search registration
 
 A field whose widget (`Select`, `SelectMultiple`, `ComboBox` or

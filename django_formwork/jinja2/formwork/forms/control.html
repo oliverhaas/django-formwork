@@ -1,0 +1,7 @@
+{#- as_control(): the widget and its error tooltip, without the label, help text and fieldset of a field group. -#}
+{% if field.is_hidden %}{{ field }}{% else %}{% set group = field.use_fieldset %}{% set widget = field.as_widget(attrs={"aria-label": field.label|string} if field.label and not group else {}) %}
+<div data-formwork-field{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}{% if group and field.label %} role="group" aria-label="{{ field.label }}"{% endif %}{% if field.form.is_bound and not field.field.widget.needs_multipart_form and field.name in field.form.changed_data %} data-formwork-changed{% if field.initial_checked %} data-formwork-initial="{{ field.initial_checked }}"{% endif %}{% endif %}>
+  {% if field.errors %}<div class="tooltip tooltip-error tooltip-bottom">{{ widget }}<div class="tooltip-content formwork-errors" role="alert"{% if field.auto_id %} id="{{ field.auto_id }}_error"{% endif %}>{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}</div></div>{% else %}{{ widget }}{% endif %}
+  {% if field.auto_id %}{% if field.label %}<span id="{{ field.auto_id }}_label" hidden>{{ field.label }}</span>{% endif %}{% if field.help_text %}<span id="{{ field.auto_id }}_helptext" hidden>{{ field.help_text|striptags }}</span>{% endif %}{% endif %}
+</div>
+{% endif %}

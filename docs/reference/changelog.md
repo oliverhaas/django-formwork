@@ -8,6 +8,9 @@
   Django's plain markup, also for a plain `forms.Form` that `FormworkRenderer`
   renders. `as_p()` renders what `as_div()` does, and `as_table()` puts each
   label in a `<th>`. See [Layouts](forms.md#layouts).
+- `field.as_control()` renders a field's widget and its error tooltip without
+  the label, help text and fieldset, for a layout that shows the label
+  somewhere else. The widget keeps the field's name as its `aria-label`.
 
 ### Fixed
 

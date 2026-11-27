@@ -10,6 +10,7 @@ from django.utils.html import format_html
 
 from django_formwork.forms import FormworkForm
 from django_formwork.renderers import FormworkRenderer, engine
+from django_formwork.widgets import Select
 
 
 def render_html(form):
@@ -662,3 +663,38 @@ def test_as_table_puts_the_label_in_the_row_header_and_the_field_group_beside_it
     assert level.select_one("td fieldset")["aria-labelledby"] == "id_level_label"
     assert level.select("td legend") == []
 
+
+class _ControlForm(FormworkForm):
+    name = forms.CharField()
+    level = forms.ChoiceField(choices=[("junior", "Junior"), ("senior", "Senior")], widget=forms.RadioSelect)
+    role = forms.ChoiceField(choices=[("dev", "Developer"), ("ops", "Operations")], widget=Select)
+
+
+def test_as_control_names_the_widget_without_a_visible_label():
+    soup = BeautifulSoup(str(_ControlForm()["name"].as_control()), "html.parser")
+
+    assert soup.select("label, legend, fieldset") == []
+    assert soup.select_one("input[name=name]")["aria-label"] == "Name"
+
+
+def test_as_control_names_a_choice_group_and_a_dropdown_trigger():
+    form = _ControlForm()
+
+    group = BeautifulSoup(str(form["level"].as_control()), "html.parser").select_one("[data-formwork-field]")
+    role = BeautifulSoup(str(form["role"].as_control()), "html.parser")
+
+    assert (group["role"], group["aria-label"]) == ("group", "Level")
+    label_id = role.select_one("[aria-labelledby]")["aria-labelledby"].split()[0]
+    assert role.find(id=label_id).get_text() == "Role"
+
+
+def test_as_control_shows_the_error_and_the_changed_mark():
+    form = _ControlForm(data={"name": "", "level": "senior", "role": "dev"})
+    form.is_valid()
+
+    name = BeautifulSoup(str(form["name"].as_control()), "html.parser")
+    level = BeautifulSoup(str(form["level"].as_control()), "html.parser").select_one("[data-formwork-field]")
+
+    assert "id_name_error" in name.select_one("input[name=name]")["aria-describedby"]
+    assert name.find(id="id_name_error").get_text(strip=True) != ""
+    assert level.has_attr("data-formwork-changed")

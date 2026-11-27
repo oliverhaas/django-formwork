@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
     from django.forms import Widget
+    from django.utils.safestring import SafeString
 
 __all__ = ["FormworkBoundField"]
 
@@ -98,6 +99,10 @@ class FormworkBoundField(forms.BoundField):
         ):
             return self.field.prepare_value(self.initial)
         return super().value()
+
+    def as_control(self) -> SafeString:
+        """The widget and its error tooltip, without the label, help text and fieldset of ``as_field_group()``."""
+        return self.render("formwork/forms/control.html")
 
     def table_cell(self, caller: Callable[[FormworkBoundField], str]) -> str:
         """The HTML that ``caller`` renders for the field's table cell, from the column's ``cache_cells()``."""
