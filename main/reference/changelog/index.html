@@ -1332,6 +1332,16 @@
   together, as in the admin. Add <code>grid gap-2</code> to keep the previous spacing:
   <code>&lt;div class="grid gap-2"&gt;{{ form }}&lt;/div&gt;</code>, or the classes on the <code>&lt;form&gt;</code> itself. A
   grid that removed the margin with <code>*:mt-0</code> can drop it.</li>
+<li>A page with section forms fails with <code>ImportError</code> or <code>TemplateSyntaxError</code>:
+  <code>section_forms()</code>, the <code>{% formwork_sections_js %}</code> and <code>{% formwork_section %}</code> tags,
+  <code>sections.js</code> and its <code>formwork-sections</code> htmx extension are removed, and with them
+  <code>data-section-forms</code>, <code>data-send-changed</code> and <code>data-section-indicator</code>. Several forms
+  on one page need no formwork API. Give each form a hidden input with its name in
+  place of <code>{% formwork_section %}</code>, read that name in the view, and give the form
+  <code>hx-trigger="change, submit"</code> and <code>hx-sync="body:queue all"</code>.
+  <a href="../forms/#several-forms-on-one-page">Several forms on one page</a> shows the view and
+  the template. A tab that replaces the forms no longer waits for their saves on its
+  own: give it the same <code>hx-sync</code> as the forms.</li>
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1500,6 +1510,10 @@
   command reads every template with the Django template lexer, which finds no text in a
   Jinja2 <code>{% trans %}</code> block or in a <code>_()</code> call with arguments. See
   <a href="../../getting-started/installation/#translations">Translations</a>.</li>
+<li>The browser asks before it leaves a page while a save waits in an htmx
+  <code>hx-sync="... queue all"</code> queue, which would otherwise never send it. A save that is
+  on its way finishes on the server and leaves without asking. <code>formwork-core.js</code> does
+  this on every page that loads it.</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1731,7 +1745,9 @@
   rendered another one. A list that gained a choice could show the wrong choice as
   checked and post it, and a field the server answered empty kept the typed text. The
   morph now applies the server's state to every control except the focused one, also
-  where the server's HTML for the field is the same as before.</li>
+  where the server's HTML for the field is the same as before. A control that the user
+  changed after the request collected the form keeps its value too, an <code>InputMask</code>
+  included, so an autosave answer does not undo an edit that the next save carries.</li>
 <li>An htmx morph of the form, such as an autosave, disturbed the dropdown of a <code>Select</code>,
   <code>SelectMultiple</code> or <code>ComboBox</code>. It replaced the results of a search through
   <code>search_url</code> with the options of the form's own render, dropped the option that the
