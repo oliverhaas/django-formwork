@@ -47,8 +47,6 @@ class DatePicker(_StubMixin, forms.DateInput):
     template_name = "formwork/widgets/date_picker.html"
     stub_template_name = "formwork/widgets/date_picker_stub.html"
     input_type = "text"
-    #: Set in ``__init__``, also without a ``format`` argument.
-    format: str
 
     class Media:
         js = (_ModuleScript("formwork/widgets/date_picker.js"),)
@@ -75,7 +73,7 @@ class DatePicker(_StubMixin, forms.DateInput):
         widget["date_format"] = self.format
         # The input is as wide as the widest date it can show, whatever it holds.
         placeholder = str(widget["attrs"].get("placeholder") or "")
-        widget["sizing_texts"] = sizing_texts(self.format, placeholder, strftime=True)
+        widget["sizing_texts"] = sizing_texts(self.format or "%Y-%m-%d", placeholder, strftime=True)
         return context
 
     def value_from_datadict(self, data: Any, files: Any, name: str) -> Any:  # noqa: ANN401 (widget data)
