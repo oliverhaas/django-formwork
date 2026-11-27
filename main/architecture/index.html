@@ -939,7 +939,10 @@
 <h2 id="rendering">Rendering<a class="headerlink" href="#rendering" title="Permanent link">&para;</a></h2>
 <p><code>FormworkRenderer</code> is a <code>TemplatesSetting</code> renderer. It renders <code>{{ form }}</code>
 with <code>formwork/forms/div.html</code> and each field group with
-<code>formwork/forms/field.html</code>. Formwork's templates are Jinja2. The renderer
+<code>formwork/forms/field.html</code>. It also maps the layouts that Django names on
+every form, <code>django/forms/div.html</code>, <code>p.html</code>, <code>ul.html</code> and <code>table.html</code>, to
+formwork's templates, so <code>as_table()</code> and a formset's forms render formwork
+markup too. Formwork's templates are Jinja2. The renderer
 loads them and Django's built-in widget templates from a Jinja2 engine of its
 own, which reads <code>django/forms/jinja2/</code> and the <code>jinja2/</code> directory of each
 installed app. A template that engine does not find, such as a widget template of another
