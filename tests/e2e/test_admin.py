@@ -375,6 +375,34 @@ def test_the_filters_fit_the_row_in_the_first_frame(admin_page, live_server, kit
     assert admin_page.errors == []
 
 
+def test_a_page_that_stops_parsing_inside_the_more_menu_fits_the_filters_without_an_error(
+    admin_page, live_server, kitchen
+):
+    """A script held inside the More menu lets the next frame come before the parser reaches the menu's count."""
+    Item.objects.create(name="Kettle", category=kitchen)
+    url = f"{live_server.url}/admin/admin_app/item/"
+    held = []
+
+    def stop_in_more(route):
+        response = route.fetch()
+        body = response.text().replace("data-filter-more>", 'data-filter-more><script src="/held.js"></script>', 1)
+        route.fulfill(response=response, body=body)
+
+    def hold(route):
+        held.append(route)
+
+    admin_page.route(url, stop_in_more)
+    admin_page.route("**/held.js", hold)
+    admin_page.goto(url, wait_until="commit")
+    admin_page.wait_for_function("document.querySelector('[data-filter-more] script')", polling=50)
+    for route in held:
+        route.fulfill(body="", content_type="text/javascript")
+    admin_page.wait_for_load_state()
+
+    expect_filters(admin_page, "Status", "Category")
+    assert admin_page.errors == []
+
+
 def test_a_list_that_a_link_loads_shows_only_the_filters_that_fit_from_its_first_frame(
     admin_page, live_server, kitchen
 ):

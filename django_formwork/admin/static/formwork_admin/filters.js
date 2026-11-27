@@ -36,14 +36,15 @@
     const bar = document.getElementById(BAR);
     const list = bar?.querySelector("[data-filter-list]");
     const more = bar?.querySelector("[data-filter-more]");
-    return list && more ? { bar, list, more, filters: [...list.children] } : null;
+    // While the page parses, a frame can come between the More menu and its count.
+    const count = more?.querySelector("[data-more-count]");
+    return list && count ? { bar, list, more, count, filters: [...list.children] } : null;
   };
 
   const fit = () => {
     const found = parts();
     if (!found) return;
-    const { bar, list, more, filters } = found;
-    const count = more.querySelector("[data-more-count]");
+    const { bar, list, more, count, filters } = found;
     const button = more.querySelector("[role=button]");
     // Everything in the flow at its widest, to be measured.
     for (const el of [...filters, count]) el.hidden = false;
