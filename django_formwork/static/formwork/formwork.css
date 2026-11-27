@@ -980,11 +980,12 @@ select:has(> option[value=""]:checked) optgroup {
     @apply text-base-content;
 }
 
-input[type="checkbox"]:not(.toggle):not(.hidden) {
+/* A DaisyUI tab or button made from a checkbox or radio input keeps its own look. */
+input[type="checkbox"]:not(.toggle):not(.hidden):not(.btn) {
     @apply checkbox;
 }
 
-input[type="radio"]:not(.mask):not(.rating-hidden) {
+input[type="radio"]:not(.mask):not(.rating-hidden):not(.tab):not(.btn) {
     @apply radio;
 }
 

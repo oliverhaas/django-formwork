@@ -33,11 +33,11 @@ class TestStandaloneElements:
         assert ta.is_visible()
 
     def test_checkbox_renders(self, elements_page):
-        cb = self._card(elements_page).locator('input[type="checkbox"]')
+        cb = self._card(elements_page).locator('input[type="checkbox"]:not(.btn)')
         assert cb.count() == 1
 
     def test_radio_renders(self, elements_page):
-        radios = self._card(elements_page).locator('input[type="radio"]')
+        radios = self._card(elements_page).locator('input[type="radio"]:not(.tab, .btn)')
         assert radios.count() == 2
 
     def test_file_input_renders(self, elements_page):
@@ -98,3 +98,15 @@ class TestStandaloneElements:
         assert soft_textarea.evaluate("el => getComputedStyle(el).color") != base_input.evaluate(
             "el => getComputedStyle(el).color",
         )
+
+
+def test_a_daisyui_tab_or_button_made_from_an_input_keeps_its_own_look(elements_page):
+    def width(selector):
+        return elements_page.locator(selector).evaluate("el => el.offsetWidth")
+
+    def padding(selector):
+        return elements_page.locator(selector).evaluate("el => getComputedStyle(el).paddingInline")
+
+    assert padding("input.tab:checked") == padding("input.tab:not(:checked)")
+    assert width("input.btn[aria-label=Two]") == width("button.btn >> text=Two")
+    assert width("input.btn[aria-label=Bold]") == width("button.btn >> text=Bold")

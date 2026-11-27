@@ -16,6 +16,11 @@
 
 - `{{ formset }}` rendered its forms with Django's plain markup, without
   formwork's field groups. It now renders them as `{{ form }}` does.
+- A DaisyUI tab made from a radio input, `<input type="radio" class="tab">`,
+  lost its padding when checked and showed as a radio button. A `btn` made from a
+  radio or checkbox input was wider than a `<button>` with the same label.
+  Formwork's styles for plain radio buttons and checkboxes now skip inputs with
+  the `tab` or `btn` class.
 
 ## 0.1.0a4 (2026-11-27)
 

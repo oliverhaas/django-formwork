@@ -1722,6 +1722,15 @@ _ELEMENTS_INNER = (
     "  </select>\n"
     '  <input type="text" class="input-soft input-accent" value="Accent soft input">\n'
     '  <textarea class="textarea-soft textarea-accent" rows="2">Accent soft textarea</textarea>\n'
+    '  <p class="text-sm font-medium mt-2">DaisyUI components made from inputs</p>\n'
+    '  <div role="tablist" class="tabs tabs-box">'
+    '<input type="radio" name="tabs-demo" class="tab" aria-label="Tab A" checked>'
+    '<input type="radio" name="tabs-demo" class="tab" aria-label="Tab B"></div>\n'
+    '  <div class="flex gap-2">'
+    '<input type="radio" name="join-demo" class="btn" aria-label="Two">'
+    '<input type="checkbox" class="btn" aria-label="Bold">'
+    '<button type="button" class="btn">Two</button>'
+    '<button type="button" class="btn">Bold</button></div>\n'
     "</div>"
 )
 
