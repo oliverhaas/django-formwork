@@ -1254,8 +1254,10 @@ and its first and last columns take the card's padding.</p>
 <code>{{ formset.media }}</code> after <code>{% formwork_core_js %}</code>.</p>
 <h3 id="saving-row-by-row">Saving row by row<a class="headerlink" href="#saving-row-by-row" title="Permanent link">&para;</a></h3>
 <p><code>formset.as_rows(save_url)</code> saves each row by itself: a row posts its own fields to
-<code>save_url</code> 400 ms after a change and morphs the response in place. A row is saved
-the moment it changes, so this table has no Add another, Remove or Delete.
+<code>save_url</code> on each change and morphs the response in place. The saves of one row
+wait in a queue and run in the order of the changes, so a change made while a save
+runs is sent after it. A row is saved the moment it changes, so this table has no
+Add another, Remove or Delete.
 <code>form.as_row(save_url)</code> renders one <code>FormworkForm</code> or <code>FormworkModelForm</code> the same
 way, as one <code>&lt;tbody&gt;</code>. <a href="#saving-a-row">Saving a row</a> describes the view behind
 <code>save_url</code>.</p>
@@ -1468,7 +1470,7 @@ form only the columns the table shows.</p>
 the row: it carries the prefix and the primary key the view reads.</p>
 <div class="language-html highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>{# tasks/row.html #}
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="p">&lt;</span><span class="nt">tbody</span> <span class="na">id</span><span class="o">=</span><span class="s">"{{ form.row_id }}"</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>       <span class="na">hx-post</span><span class="o">=</span><span class="s">"{% url 'task_row_save' %}"</span> <span class="na">hx-trigger</span><span class="o">=</span><span class="s">"change delay:400ms"</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>       <span class="na">hx-post</span><span class="o">=</span><span class="s">"{% url 'task_row_save' %}"</span> <span class="na">hx-trigger</span><span class="o">=</span><span class="s">"change"</span> <span class="na">hx-sync</span><span class="o">=</span><span class="s">"this:queue all"</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>       <span class="na">hx-target</span><span class="o">=</span><span class="s">"this"</span> <span class="na">hx-swap</span><span class="o">=</span><span class="s">"outerMorph"</span> <span class="na">hx-include</span><span class="o">=</span><span class="s">"closest tbody"</span><span class="p">&gt;</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>  <span class="p">&lt;</span><span class="nt">tr</span><span class="p">&gt;</span>
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="p">&lt;</span><span class="nt">td</span><span class="p">&gt;</span>
