@@ -1,0 +1,8 @@
+{#- as_ul(): each field group in an <li>, for a <ul> that the page writes around them. -#}
+{% if errors %}
+<li>{% include "formwork/forms/errors.html" %}{% if not fields %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}</li>
+{% endif %}
+{% for field, errors in fields %}
+<li>{{ field.as_field_group() }}{% if loop.last %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}</li>
+{% endfor %}
+{% if not fields and not errors %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}

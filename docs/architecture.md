@@ -24,7 +24,10 @@ Django admin renders only at the widget level, so formwork follows five constrai
 
 `FormworkRenderer` is a `TemplatesSetting` renderer. It renders `{{ form }}`
 with `formwork/forms/div.html` and each field group with
-`formwork/forms/field.html`. Formwork's templates are Jinja2. The renderer
+`formwork/forms/field.html`. It also maps the layouts that Django names on
+every form, `django/forms/div.html`, `p.html`, `ul.html` and `table.html`, to
+formwork's templates, so `as_table()` and a formset's forms render formwork
+markup too. Formwork's templates are Jinja2. The renderer
 loads them and Django's built-in widget templates from a Jinja2 engine of its
 own, which reads `django/forms/jinja2/` and the `jinja2/` directory of each
 installed app. A template that engine does not find, such as a widget template of another

@@ -41,6 +41,21 @@ class MemberChoiceField(forms.ModelChoiceField):
         return ChoiceLabel(obj.name, description=obj.email)
 ```
 
+## Layouts
+
+`{{ form }}` and `as_div()` render one field group after another. Django's
+other layouts render formwork markup too, also for a plain `forms.Form` that
+`FormworkRenderer` renders:
+
+| Method | Renders |
+|---|---|
+| `as_p()` | what `as_div()` renders, since a `<p>` cannot hold a field group |
+| `as_ul()` | each field group in an `<li>`; the page writes the `<ul>` |
+| `as_table()` | a row per field, with the label in a `<th>` and the rest of the field group in a `<td>`; the page writes the `<table>` |
+
+The form's own errors come first, in an alert. `{{ formset }}` renders its
+forms with `as_div()`.
+
 ## Search registration
 
 A field whose widget (`Select`, `SelectMultiple`, `ComboBox` or

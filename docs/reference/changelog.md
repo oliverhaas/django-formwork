@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `as_p()`, `as_ul()` and `as_table()` render formwork field groups instead of
+  Django's plain markup, also for a plain `forms.Form` that `FormworkRenderer`
+  renders. `as_p()` renders what `as_div()` does, and `as_table()` puts each
+  label in a `<th>`. See [Layouts](forms.md#layouts).
+
+### Fixed
+
+- `{{ formset }}` rendered its forms with Django's plain markup, without
+  formwork's field groups. It now renders them as `{{ form }}` does.
+
 ## 0.1.0a4 (2026-11-27)
 
 ### Breaking changes

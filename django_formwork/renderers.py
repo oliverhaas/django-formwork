@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import django.forms
 import jinja2
@@ -122,8 +122,17 @@ class FormworkRenderer(TemplatesSetting):
     form_template_name = "formwork/forms/div.html"
     field_template_name = "formwork/forms/field.html"
     bound_field_class = FormworkBoundField
+    #: Formwork's template for each of Django's form layouts, also for a plain Django form.
+    #: A ``<p>`` cannot hold a field group, so ``as_p()`` renders what ``as_div()`` does.
+    layout_template_names: ClassVar[dict[str, str]] = {
+        "django/forms/div.html": "formwork/forms/div.html",
+        "django/forms/p.html": "formwork/forms/div.html",
+        "django/forms/ul.html": "formwork/forms/ul.html",
+        "django/forms/table.html": "formwork/forms/table.html",
+    }
 
     def get_template(self, template_name: str) -> Any:  # noqa: ANN401
+        template_name = self.layout_template_names.get(template_name, template_name)
         try:
             return engine().get_template(template_name)
         except TemplateDoesNotExist:

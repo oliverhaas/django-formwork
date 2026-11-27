@@ -1,9 +1,9 @@
 
 {% macro label_row() %}{{ field.label }}{% if field.is_mandatory and not field.field.disabled %} <span class="text-error" aria-hidden="true">*</span>{% endif %}{% endmacro %}
-{% macro label() %}{% if field.label %}<label class="fieldset-legend"{% if field.auto_id %} id="{{ field.auto_id }}_label"{% endif %}{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}><span>{{ label_row() }}</span></label>{% endif %}{% endmacro %}
+{% macro label() %}{% if field.label and not label_elsewhere %}<label class="fieldset-legend"{% if field.auto_id %} id="{{ field.auto_id }}_label"{% endif %}{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}><span>{{ label_row() }}</span></label>{% endif %}{% endmacro %}
 {% macro label_links() %}{% with links = field.label_links %}{% if links %}<span class="formwork-label-links">{{ links }}</span>{% endif %}{% endwith %}{% endmacro %}
 {% macro control() %}{% if field.widget_type == "checkbox" and field.subwidgets[0].data.text %}<label class="checkbox-single flex cursor-pointer items-center gap-2">{{ field }}<span>{{ field.subwidgets[0].data.text }}</span></label>{% elif field.widget_type == "clearablefile" %}<div class="clearable-file">{{ field }}</div>{% else %}{{ field }}{% endif %}{% endmacro %}
-{% macro toggle() %}<label class="flex min-h-10 w-fit cursor-pointer items-center gap-x-2 text-sm text-balance text-base-content/60 has-checked:font-medium has-checked:text-base-content"{% if field.auto_id %} id="{{ field.auto_id }}_label"{% endif %}{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}>{{ field }}{% if field.label %}<span>{{ label_row() }}</span>{% endif %}</label>{% endmacro %}
+{% macro toggle() %}<label class="flex min-h-10 w-fit cursor-pointer items-center gap-x-2 text-sm text-balance text-base-content/60 has-checked:font-medium has-checked:text-base-content"{% if field.auto_id and not label_elsewhere %} id="{{ field.auto_id }}_label"{% endif %}{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}>{{ field }}{% if field.label and not label_elsewhere %}<span>{{ label_row() }}</span>{% endif %}</label>{% endmacro %}
 {% macro changed() %}{% if field.form.is_bound and not field.field.widget.needs_multipart_form and field.name in field.form.changed_data %} data-formwork-changed{% if field.initial_checked %} data-formwork-initial="{{ field.initial_checked }}"{% endif %}{% endif %}{% endmacro %}
 {% macro tooltip_content() %}<div class="tooltip-content formwork-errors" role="alert"{% if field.auto_id %} id="{{ field.auto_id }}_error"{% endif %}>{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}</div>{% endmacro %}
 {% macro error_help_row(edisplay) %}{% if field.errors and edisplay == "inline" or field.errors and edisplay == "auto" and field.help_text %}
@@ -12,8 +12,8 @@
   <details class="formwork-disclosure"{% if field.auto_id %} id="{{ field.auto_id }}_disclosure"{% endif %}><summary class="label" data-more="{{ help_toggle.more }}" data-less="{{ help_toggle.less }}"><span class="formwork-disclosure-row"><i class="icon icon-info shrink-0" aria-hidden="true"></i><span class="formwork-disclosure-text min-w-0 flex-1"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text }}</span></span></summary></details>
 {% endif %}{% endmacro %}
 {% if field.is_hidden %}{{ field }}{% else %}{% with edisplay = field.form.error_display|default('auto', true) %}{% if field.use_fieldset %}
-<fieldset class="fieldset{% if field.widget_type == "checkboxselectmultiple" or field.widget_type == "radioselect" %} choice-group{% endif %}"{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}{{ changed() }}{% if field.aria_describedby %} aria-describedby="{{ field.aria_describedby }}"{% endif %}>
-  {% if field.label %}<legend class="fieldset-legend"><span>{{ label_row() }}</span></legend>{% endif %}{{ label_links() }}
+<fieldset class="fieldset{% if field.widget_type == "checkboxselectmultiple" or field.widget_type == "radioselect" %} choice-group{% endif %}"{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}{{ changed() }}{% if field.aria_describedby %} aria-describedby="{{ field.aria_describedby }}"{% endif %}{% if label_elsewhere and field.label and field.auto_id %} aria-labelledby="{{ field.auto_id }}_label"{% endif %}>
+  {% if field.label and not label_elsewhere %}<legend class="fieldset-legend"><span>{{ label_row() }}</span></legend>{% endif %}{{ label_links() }}
   {% if field.errors and edisplay == "tooltip" or field.errors and edisplay == "auto" and not field.help_text %}<div class="tooltip tooltip-error tooltip-bottom">{{ field }}{{ tooltip_content() }}</div>{% else %}{{ field }}{% endif %}
   {{ error_help_row(edisplay) }}
 </fieldset>
@@ -23,7 +23,7 @@
   {{ error_help_row(edisplay) }}
 </fieldset>
 {% elif field.widget_type == "checkbox" and not field.subwidgets[0].data.text %}
-<fieldset class="fieldset"{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}{{ changed() }}>
+<fieldset class="fieldset{% if label_elsewhere %} pt-3{% endif %}"{% if field.auto_id %} id="{{ field.auto_id }}_field"{% endif %}{{ changed() }}>
   {% if field.errors and edisplay == "tooltip" or field.errors and edisplay == "auto" and not field.help_text %}<div class="tooltip tooltip-error tooltip-bottom">{{ label() }}{{ field }}{{ tooltip_content() }}</div>{% else %}{{ label() }}{{ field }}{% endif %}
   {{ error_help_row(edisplay) }}
 </fieldset>

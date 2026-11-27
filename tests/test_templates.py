@@ -9,7 +9,7 @@ from django.template import Context, Template
 from django.utils.html import format_html
 
 from django_formwork.forms import FormworkForm
-from django_formwork.renderers import engine
+from django_formwork.renderers import FormworkRenderer, engine
 
 
 def render_html(form):
@@ -619,3 +619,46 @@ def test_the_globals_of_one_template_stay_out_of_the_others():
     assert page.render() == "Page"
     assert env.from_string("[{{ title }}]").render() == "[]"
     assert "title" not in env.globals
+
+
+class _PlainForm(forms.Form):
+    name = forms.CharField()
+    level = forms.ChoiceField(choices=[("junior", "Junior"), ("senior", "Senior")], widget=forms.RadioSelect)
+    token = forms.CharField(widget=forms.HiddenInput, required=False)
+
+    def clean(self):
+        raise forms.ValidationError("Check the fields below.")
+
+
+@pytest.mark.parametrize("layout", ["as_p", "as_div", "as_ul", "as_table"])
+def test_a_plain_django_form_gets_formwork_markup_in_each_layout(layout):
+    form = _PlainForm(data={"name": ""}, renderer=FormworkRenderer())
+
+    soup = BeautifulSoup(str(getattr(form, layout)()), "html.parser")
+
+    assert soup.select(".errorlist") == []
+    assert soup.select_one(".alert-error[role=alert]").get_text(strip=True) == "Check the fields below."
+    assert soup.select_one("fieldset#id_name_field input[name=name]") is not None
+    assert len(soup.select("input[name=token]")) == 1
+
+
+def test_as_ul_puts_each_field_group_in_a_list_item():
+    soup = BeautifulSoup(str(_PlainForm(renderer=FormworkRenderer()).as_ul()), "html.parser")
+
+    items = soup.find_all("li", recursive=False)
+
+    assert [li.select_one("fieldset")["id"] for li in items] == ["id_name_field", "id_level_field"]
+
+
+def test_as_table_puts_the_label_in_the_row_header_and_the_field_group_beside_it():
+    soup = BeautifulSoup(str(_PlainForm(renderer=FormworkRenderer()).as_table()), "html.parser")
+
+    name, level = soup.find_all("tr", recursive=False)
+
+    assert name.select_one("th label")["for"] == "id_name"
+    assert name.select_one("th label")["id"] == "id_name_label"
+    assert name.select("td label, td legend") == []
+    assert level.select_one("th label")["id"] == "id_level_label"
+    assert level.select_one("td fieldset")["aria-labelledby"] == "id_level_label"
+    assert level.select("td legend") == []
+

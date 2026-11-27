@@ -1,0 +1,11 @@
+{#- as_table(): a row per field with the label in a <th>, for a <table> that the page writes around them. -#}
+{% if errors %}
+<tr><td colspan="2" class="pb-2">{% include "formwork/forms/errors.html" %}{% if not fields %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}</td></tr>
+{% endif %}
+{% for field, errors in fields %}
+<tr>
+  <th scope="row" class="pe-4 text-start align-top text-xs font-normal">{% if field.label %}<label class="fieldset-legend mt-1 py-0 {{ "min-h-7" if field.use_fieldset else "min-h-10" }}"{% if field.auto_id %} id="{{ field.auto_id }}_label"{% endif %}{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}><span>{{ field.label }}{% if field.is_mandatory and not field.field.disabled %} <span class="text-error" aria-hidden="true">*</span>{% endif %}</span></label>{% endif %}</th>
+  <td class="align-top">{{ field.render(context={"field": field, "label_elsewhere": true}) }}{% if loop.last %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}</td>
+</tr>
+{% endfor %}
+{% if not fields and not errors %}{% for field in hidden_fields %}{{ field }}{% endfor %}{% endif %}
