@@ -55,6 +55,7 @@ nav:
       - Installation: getting-started/installation.md
       - Quick Start: getting-started/quickstart.md
   - Cookbook: cookbook.md
+  - The Stack: stack.md
   - Reference:
       - Architecture: architecture.md
       - Forms: reference/forms.md
