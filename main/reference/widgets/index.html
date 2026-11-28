@@ -921,15 +921,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dates" class="md-nav__link">
+  <a href="#dates-and-times" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dates
+        Dates and times
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Dates">
+    <nav class="md-nav" aria-label="Dates and times">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -992,6 +992,17 @@
     <span class="md-ellipsis">
       
         DateTimePicker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timepicker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TimePicker
       
     </span>
   </a>
@@ -1629,15 +1640,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dates" class="md-nav__link">
+  <a href="#dates-and-times" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dates
+        Dates and times
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Dates">
+    <nav class="md-nav" aria-label="Dates and times">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1700,6 +1711,17 @@
     <span class="md-ellipsis">
       
         DateTimePicker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timepicker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TimePicker
       
     </span>
   </a>
@@ -1977,7 +1999,7 @@ to <code>xl</code>. <code>md</code> is the default:</p>
 <tbody>
 <tr>
 <td><code>input-*</code></td>
-<td><code>TextInput</code> and the other text inputs, <code>PasswordInput</code>, <code>SearchInput</code>, <code>DataList</code>, <code>ComboBox</code>, <code>ComboBoxMultiple</code>, <code>InputMask</code>, <code>StepperNumberInput</code>, <code>SuffixNumberInput</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>DateRangePicker</code></td>
+<td><code>TextInput</code> and the other text inputs, <code>PasswordInput</code>, <code>SearchInput</code>, <code>DataList</code>, <code>ComboBox</code>, <code>ComboBoxMultiple</code>, <code>InputMask</code>, <code>StepperNumberInput</code>, <code>SuffixNumberInput</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>TimePicker</code>, <code>DateRangePicker</code></td>
 </tr>
 <tr>
 <td><code>select-*</code></td>
@@ -2587,7 +2609,7 @@ The value is clamped when the user commits it.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">volume</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Range</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"min"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"max"</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="mi">5</span><span class="p">}))</span>
 </span></code></pre></div>
 <hr />
-<h2 id="dates">Dates<a class="headerlink" href="#dates" title="Permanent link">&para;</a></h2>
+<h2 id="dates-and-times">Dates and times<a class="headerlink" href="#dates-and-times" title="Permanent link">&para;</a></h2>
 <h3 id="dateinput">DateInput<a class="headerlink" href="#dateinput" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.DateInput</code></p>
 <p>Native date input. Django's own widget renders <code>type="text"</code> with a locale
@@ -2734,22 +2756,46 @@ field reports it.</p>
 seconds posts them back while its minute stays the same. Microseconds are
 dropped, as in Django's admin. <code>data-*</code> and <code>hx-*</code> attrs go on the hidden
 input, which fires <code>change</code>. The other attrs go on the text input.</p>
+<h3 id="timepicker">TimePicker<a class="headerlink" href="#timepicker" title="Permanent link">&para;</a></h3>
+<p><strong>Parent class:</strong> <code>forms.Widget</code></p>
+<p>A time of day in a text input, with lists of hours and minutes under it. Use
+it with Django's <code>TimeField</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">opens_at</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">TimeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">TimePicker</span><span class="p">)</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="n">closes_at</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">TimeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">TimePicker</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"H:i"</span><span class="p">,</span> <span class="n">minute_step</span><span class="o">=</span><span class="mi">15</span><span class="p">))</span>
+</span></code></pre></div>
+<p>A pick in one list keeps the rest of the time. A 12-hour format gets a third
+list for a.m. and p.m. Done, Enter and leaving the widget post the value. Now
+picks the current minute of the browser's clock, and Clear empties the field.
+Down moves from the input into the hours, Up and Down move in a list, and
+Left and Right go to the next list.</p>
+<p><code>format</code> sets how the input shows the time: a Django format setting name or a
+format string, <code>TIME_FORMAT</code> by default. The placeholder spells the format
+out, and the input is as wide as the longer of the placeholder and the times
+the format writes. The input reads typed text in that format and in the
+formats of <code>TIME_INPUT_FORMATS</code>, so <code>2:30 pm</code>, <code>noon</code> and <code>14:30</code> all work in
+English. Text that names no time posts as typed, and the field reports it.</p>
+<p><code>minute_step</code> sets the minutes the list offers, 5 by default. A typed minute
+off the step joins the list while it is picked.</p>
+<p>A hidden input posts <code>HH:MM</code>, which <code>TimeField</code> reads without extra
+<code>input_formats</code>. A stored value with seconds posts them back while its minute
+stays the same. <code>data-*</code> and <code>hx-*</code> attrs go on the hidden input, which fires
+<code>change</code>. The other attrs go on the text input.</p>
 <hr />
 <h2 id="choices">Choices<a class="headerlink" href="#choices" title="Permanent link">&para;</a></h2>
 <h3 id="checkboxinput">CheckboxInput<a class="headerlink" href="#checkboxinput" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.CheckboxInput</code></p>
 <p>Without <code>text</code>, the field label sits beside the box. With <code>text</code>, the field
 label sits above the box and <code>text</code> beside it:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">terms</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>    <span class="n">label</span><span class="o">=</span><span class="s2">"Terms"</span><span class="p">,</span>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">"I accept the terms of service"</span><span class="p">),</span>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="n">terms</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>    <span class="n">label</span><span class="o">=</span><span class="s2">"Terms"</span><span class="p">,</span>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">"I accept the terms of service"</span><span class="p">),</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="toggleinput">ToggleInput<a class="headerlink" href="#toggleinput" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.CheckboxInput</code></p>
 <p>Checkbox drawn as a DaisyUI toggle switch, with the field label beside it and
 no background. The label turns full strength while the switch is on.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="n">dark_mode</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ToggleInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"class"</span><span class="p">:</span> <span class="s2">"toggle-primary"</span><span class="p">}),</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="n">dark_mode</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ToggleInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"class"</span><span class="p">:</span> <span class="s2">"toggle-primary"</span><span class="p">}),</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="checkboxselectmultiple">CheckboxSelectMultiple<a class="headerlink" href="#checkboxselectmultiple" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.CheckboxSelectMultiple</code></p>
@@ -2760,10 +2806,10 @@ rows with no background box. Pass <code>columns=2</code> for a two-column grid.<
 <p>Choices drawn as large selectable cards with the label text centered, stacked
 on small screens and side by side from the <code>lg</code> breakpoint. The checked card
 fills with the primary color.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="n">plan</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="s2">"free"</span><span class="p">,</span> <span class="s2">"Free"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"pro"</span><span class="p">,</span> <span class="s2">"Pro"</span><span class="p">)],</span>
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">CardRadioSelect</span><span class="p">,</span>
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="n">plan</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="s2">"free"</span><span class="p">,</span> <span class="s2">"Free"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"pro"</span><span class="p">,</span> <span class="s2">"Pro"</span><span class="p">)],</span>
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">CardRadioSelect</span><span class="p">,</span>
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="rating">Rating<a class="headerlink" href="#rating" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.RadioSelect</code></p>
@@ -2801,11 +2847,11 @@ fills with the primary color.</p>
 <p><code>Rating.make_choices(max_stars=5)</code> returns <code>[("1", "1 star"), ("2", "2 stars"), ...]</code>.
 Use it instead of writing the choices yourself; <code>choices</code> is a reserved
 property name on <code>ChoiceWidget</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="n">rating</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">TypedChoiceField</span><span class="p">(</span>
-</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>    <span class="n">choices</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Rating</span><span class="o">.</span><span class="n">make_choices</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span>
-</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>    <span class="n">coerce</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
-</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Rating</span><span class="p">(</span><span class="n">star_class</span><span class="o">=</span><span class="s2">"mask-heart"</span><span class="p">,</span> <span class="n">allow_clear</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="n">rating</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">TypedChoiceField</span><span class="p">(</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>    <span class="n">choices</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Rating</span><span class="o">.</span><span class="n">make_choices</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span>
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>    <span class="n">coerce</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Rating</span><span class="p">(</span><span class="n">star_class</span><span class="o">=</span><span class="s2">"mask-heart"</span><span class="p">,</span> <span class="n">allow_clear</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="files">Files<a class="headerlink" href="#files" title="Permanent link">&para;</a></h2>
@@ -2816,7 +2862,7 @@ stored file and the clear box on one line and the file input under them.</p>
 <p>A file upload in one row, as high as a text input. The row shows the stored
 file as a link, with an icon for its type, and a click anywhere on it opens the
 file picker.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="n">delivery_note</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ClearableFileInput</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="n">delivery_note</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ClearableFileInput</span><span class="p">)</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -2855,16 +2901,16 @@ icons.</p>
 <p><strong>Parent class:</strong> <code>forms.FileInput</code></p>
 <p>Dashed drop area that takes dragged files or opens the file picker. <code>max_size</code>
 (bytes) rejects larger files in the browser.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="n">docs</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span>
-</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">FileDropzoneInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"accept"</span><span class="p">:</span> <span class="s2">".pdf"</span><span class="p">},</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">),</span>
-</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="n">docs</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">FileDropzoneInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"accept"</span><span class="p">:</span> <span class="s2">".pdf"</span><span class="p">},</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">),</span>
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>For several files, use <code>MultipleFileField</code>. Its default widget is this drop
 area with <code>multiple</code>, and it cleans to a list of files. A plain <code>FileField</code>
 rejects the list that a <code>multiple</code> input sends.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultipleFileField</span>
-</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>
-</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="n">attachments</span> <span class="o">=</span> <span class="n">MultipleFileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultipleFileField</span>
+</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>
+</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a><span class="n">attachments</span> <span class="o">=</span> <span class="n">MultipleFileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>required</code> demands at least one file, and each file gets the <code>FileField</code> checks,
 such as the one for an empty file. No model field holds several files, so save
@@ -2928,43 +2974,43 @@ instance. On another field, set <code>disabled=True</code>. Each item is a strin
 <code>ChoiceLabel</code>; with <code>badges=True</code>, each item is a badge in its <code>color</code>. With
 <code>max_lines</code>, from 1 to 10, the items run as text cut to that many lines, with a
 <code>[more]</code> toggle for the rest.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">event_kind</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>    <span class="k">return</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">get_kind_display</span><span class="p">(),</span> <span class="n">color</span><span class="o">=</span><span class="n">Event</span><span class="o">.</span><span class="n">KIND_COLORS</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">kind</span><span class="p">])]</span>
-</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>
-</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>
-</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">EventForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
-</span><span id="__span-32-6"><a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>    <span class="n">kind</span> <span class="o">=</span> <span class="n">DisplayField</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">event_kind</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Display</span><span class="p">(</span><span class="n">badges</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">event_kind</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>    <span class="k">return</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">get_kind_display</span><span class="p">(),</span> <span class="n">color</span><span class="o">=</span><span class="n">Event</span><span class="o">.</span><span class="n">KIND_COLORS</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">kind</span><span class="p">])]</span>
+</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>
+</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>
+</span><span id="__span-33-5"><a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">EventForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
+</span><span id="__span-33-6"><a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a>    <span class="n">kind</span> <span class="o">=</span> <span class="n">DisplayField</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">event_kind</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Display</span><span class="p">(</span><span class="n">badges</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </span></code></pre></div>
 <hr />
 <h2 id="patternhintmixin">PatternHintMixin<a class="headerlink" href="#patternhintmixin" title="Permanent link">&para;</a></h2>
 <p>Shows the class attribute <code>pattern_hint</code> under a text control while its value
 misses the <code>pattern</code> attribute. CSS reads the browser's verdict, so it needs no
 JavaScript. Pair it with a server-side validator.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostcodeInput</span><span class="p">(</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">):</span>
-</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>    <span class="n">pattern_hint</span> <span class="o">=</span> <span class="n">_</span><span class="p">(</span><span class="s2">"Five digits, for example 10115"</span><span class="p">)</span>
-</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>
-</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-</span><span id="__span-33-5"><a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">({</span><span class="s2">"pattern"</span><span class="p">:</span> <span class="s2">"[0-9]</span><span class="si">{5}</span><span class="s2">"</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">attrs</span> <span class="ow">or</span> <span class="p">{})})</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostcodeInput</span><span class="p">(</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">):</span>
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>    <span class="n">pattern_hint</span> <span class="o">=</span> <span class="n">_</span><span class="p">(</span><span class="s2">"Five digits, for example 10115"</span><span class="p">)</span>
+</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>
+</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">({</span><span class="s2">"pattern"</span><span class="p">:</span> <span class="s2">"[0-9]</span><span class="si">{5}</span><span class="s2">"</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">attrs</span> <span class="ow">or</span> <span class="p">{})})</span>
 </span></code></pre></div>
 <hr />
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <p>Every widget with a <code>Media</code> class needs Alpine.js on the page: <code>Select</code>,
-<code>SelectMultiple</code>, <code>ComboBox</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>DateRangePicker</code>,
-<code>DateTimeRangePicker</code>, <code>StepperNumberInput</code>, <code>PasswordInput</code>, <code>SearchInput</code>,
+<code>SelectMultiple</code>, <code>ComboBox</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>TimePicker</code>,
+<code>DateRangePicker</code>, <code>DateTimeRangePicker</code>, <code>StepperNumberInput</code>, <code>PasswordInput</code>, <code>SearchInput</code>,
 <code>ClearableFileInput</code>, <code>FileDropzoneInput</code>, <code>ImageDropzoneInput</code>, <code>InputMask</code> and
 <code>ValidatedTextarea</code>.
 A server search and <code>ValidatedTextarea</code> need htmx as well. The <a href="../../getting-started/installation/#5-htmx-and-alpinejs">installation guide</a>
 shows the script order.</p>
-<p><code>Select</code>, <code>SelectMultiple</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>DateRangePicker</code> and
-<code>DateTimeRangePicker</code> start their Alpine component on first use: a press, focus, a
+<p><code>Select</code>, <code>SelectMultiple</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>TimePicker</code>,
+<code>DateRangePicker</code> and <code>DateTimeRangePicker</code> start their Alpine component on first use: a press, focus, a
 key, or the list opening. Until then the server's markup shows the widget as it is,
 so a form with a hundred of them loads without starting a hundred components. The
 root of such a widget has <code>data-formwork-lazy</code>; for a <code>Select</code> it is the element
 with the id <code>id_&lt;name&gt;_wrapper</code>. A script that calls into the widget, or writes its
 <code>data-*</code> attributes, starts it first:</p>
-<div class="language-js highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">root</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s2">"id_city_wrapper"</span><span class="p">);</span>
-</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="nx">root</span><span class="p">.</span><span class="nx">dispatchEvent</span><span class="p">(</span><span class="ow">new</span><span class="w"> </span><span class="nx">Event</span><span class="p">(</span><span class="s2">"formwork:start"</span><span class="p">));</span>
-</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">select</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">Alpine</span><span class="p">.</span><span class="nx">$data</span><span class="p">(</span><span class="nx">root</span><span class="p">);</span>
+<div class="language-js highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">root</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s2">"id_city_wrapper"</span><span class="p">);</span>
+</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a><span class="nx">root</span><span class="p">.</span><span class="nx">dispatchEvent</span><span class="p">(</span><span class="ow">new</span><span class="w"> </span><span class="nx">Event</span><span class="p">(</span><span class="s2">"formwork:start"</span><span class="p">));</span>
+</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">select</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">Alpine</span><span class="p">.</span><span class="nx">$data</span><span class="p">(</span><span class="nx">root</span><span class="p">);</span>
 </span></code></pre></div>
 <p>A started widget ignores the event. An overridden widget template without
 <code>data-formwork-lazy</code> starts its widget on load.</p>
