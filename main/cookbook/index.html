@@ -1014,10 +1014,9 @@ styling from your DaisyUI theme.</p>
 </span></code></pre></div>
 <p><img alt="A single styled title field" src="../img/cookbook/step-1.png" /></p>
 <p>A plain text field needs no JavaScript. The richer widgets and the htmx
-integration in the later steps do, so put the scripts from
+integration in the later steps do, so put <code>{% formwork_head %}</code> from
 <a href="../getting-started/installation/#5-htmx-and-alpinejs">installation step 5</a> in
-the base template's <code>&lt;head&gt;</code> from the start: htmx, its alpine-compat extension,
-<code>{% formwork_js %}</code>, then Alpine.</p>
+the base template's <code>&lt;head&gt;</code> from the start.</p>
 <h2 id="step-2-richer-widgets">Step 2: richer widgets<a class="headerlink" href="#step-2-richer-widgets" title="Permanent link">&para;</a></h2>
 <p>Formwork widgets add styling and behaviour that the Django widgets lack, such
 as a dropdown with search. Here the assignee is a <code>Select</code> backed by a model,

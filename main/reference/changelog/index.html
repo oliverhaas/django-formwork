@@ -1419,6 +1419,11 @@
   time in <code>TIME_FORMAT</code> or its own <code>format</code>, reads typed text, and posts
   <code>HH:MM</code>. <code>minute_step</code> sets the minutes the list offers. See
   <a href="../widgets/#timepicker">TimePicker</a>.</li>
+<li><code>{% formwork_head "dist.css" %}</code> links the stylesheets and loads htmx, its
+  alpine-compat extension, formwork's scripts and Alpine.js in the order they
+  must run, in the versions formwork's tests run. It replaces the five tags of
+  <a href="../../getting-started/installation/#5-htmx-and-alpinejs">installation step 5</a>,
+  which still work for a project that serves htmx and Alpine itself.</li>
 </ul>
 <h2 id="010a5-2026-11-28">0.1.0a5 (2026-11-28)<a class="headerlink" href="#010a5-2026-11-28" title="Permanent link">&para;</a></h2>
 <h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
