@@ -151,7 +151,7 @@ changes the module name). Attributes of `AdminSite` that Django's site does not 
 |---|---|---|
 | `stylesheets` | `("formwork/formwork-dist.css",)` | Static paths of the built CSS. |
 | `scripts` | htmx 4, `hx-alpine-compat` and `hx-preload` | Scripts loaded before the admin's own. |
-| `alpine_script` | Alpine.js 3.15 | Loaded last, with `defer`. |
+| `alpine_script` | Alpine.js 3.17 | Loaded last, with `defer`. |
 | `favicon` | `"formwork_admin/favicon.svg"` | Static path or URL of the icon in the browser tab. `None` links no icon. |
 | `themes` | `("light", "dark")` | The DaisyUI themes the theme menu offers. The first is the default. |
 | `history` | `ModelHistory()` | Where the history goes; see [History](#history). |
