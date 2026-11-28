@@ -74,6 +74,45 @@ color modifier), `-soft` gives a readable neutral fill.
 
 ---
 
+## Sizes
+
+A widget takes the size class of the DaisyUI component it is built from, `xs`
+to `xl`. `md` is the default:
+
+```python
+name = forms.CharField(widget=widgets.TextInput(attrs={"class": "input-sm"}))
+city = forms.ChoiceField(choices=CITIES, widget=widgets.Select(attrs={"class": "select-sm"}))
+```
+
+| Size class | Widgets |
+|---|---|
+| `input-*` | `TextInput` and the other text inputs, `PasswordInput`, `SearchInput`, `DataList`, `ComboBox`, `ComboBoxMultiple`, `InputMask`, `StepperNumberInput`, `SuffixNumberInput`, `DatePicker`, `DateTimePicker`, `DateRangePicker` |
+| `select-*` | `Select`, `SelectMultiple` |
+| `textarea-*` | `Textarea`, `ValidatedTextarea` |
+| `otp-*` | `OTPInput` |
+| `file-input-*` | `ClearableFileInput` |
+| `checkbox-*` | `CheckboxInput`, `CheckboxSelectMultiple` |
+| `radio-*` | `RadioSelect` |
+| `toggle-*` | `ToggleInput` |
+| `range-*` | `Range` |
+| `rating-*` | `Rating` |
+
+The parts around the box follow its size: icons, a suffix, the buttons of
+`StepperNumberInput` and `ClearableFileInput`, and the panel of a dropdown. The
+size classes are safelisted in `formwork.css`. A responsive variant such as
+`input-sm md:input-md` compiles when Tailwind scans the Python file that names
+it. `StepperNumberInput` with `trailing_buttons=True` gives its buttons the
+`btn-*` class of the same size, so for `md:input-md` your sources also need
+`md:btn-md`.
+
+`OTPInput` is `otp-md`, and `otp-lg` from the `sm` breakpoint up, unless its
+class has an `otp-*` size.
+
+A theme's `--size-field` makes every field denser or roomier. See
+[Density](theming.md#density).
+
+---
+
 ## Floating labels
 
 **Widgets:** `TextInput`, `Textarea`, `PasswordInput`, `Select`, `SelectMultiple`

@@ -1,8 +1,8 @@
-<div class="date-picker"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datetimepicker"{% endif %} data-formwork-stub="{{ widget.stub_url }}">
+{% set sizes = widget.extra_class|size_classes %}<div class="date-picker{% if sizes %} {{ sizes }}{% endif %}"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_datetimepicker"{% endif %} data-formwork-stub="{{ widget.stub_url }}">
   <div class="date-picker-label formwork-input">
     <span class="date-picker-part"><span class="date-picker-sizer" aria-hidden="true">{% for text in widget.sizing_texts %}<span>{{ text }}</span>{% endfor %}</span><input type="text" value="{{ widget.text }}"{% include "django/forms/widgets/attrs.html" %} aria-haspopup="dialog" autocomplete="off" class="date-picker-input{% if widget.extra_class %} {{ widget.extra_class }}{% endif %}"></span>
     <button type="button" class="date-picker-toggle" aria-label="{{ _('Open calendar') }}"{% if widget.attrs.disabled %} disabled{% endif %}>
-      <i class="icon icon-calendar-clock size-4" aria-hidden="true"></i>
+      <i class="icon icon-calendar-clock size-[calc(1em/0.875)]" aria-hidden="true"></i>
     </button>
   </div>
   <input type="hidden" name="{{ widget.name }}" value="{{ widget.iso_value }}"{% if widget.attrs.disabled %} disabled{% endif %}{% with widget = widget.hidden %}{% include "django/forms/widgets/attrs.html" %}{% endwith %}>

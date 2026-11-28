@@ -42,6 +42,11 @@
    Tailwind's static scan never sees them and would otherwise purge them. */
 @source inline("{select,input,textarea}-{primary,secondary,accent,neutral,info,success,warning,error}");
 
+/* Safelist DaisyUI's size classes of the same controls, applied the same way
+   (e.g. TextInput(attrs={"class": "input-sm"})). StepperNumberInput turns an
+   input size into the size of its buttons. */
+@source inline("{input,select,textarea,file-input,otp,checkbox,radio,toggle,range,rating,btn}-{xs,sm,md,lg,xl}");
+
 /* Display(badges=True) renders badge-{{ item.color }}. */
 @source inline("badge-{neutral,primary,secondary,accent,info,success,warning,error}");
 
@@ -611,6 +616,20 @@ details.formwork-select[open] > summary.formwork-placeholder {
     color: color-mix(in oklab, currentColor 50%, transparent);
 }
 
+/* ClearableFileInput's buttons: DaisyUI's btn-xs in the default row. In a row
+   with a size class or a theme's --size-field they keep btn-xs's proportions:
+   6/10 of the row's height, the font of btn-xs relative to the row's font.
+   Unlayered, so it beats DaisyUI's btn-xs. */
+.clearable-file-input-row {
+    --formwork-row-size: var(--size);
+}
+
+.clearable-file-input-row .btn {
+    --fontsize: calc(0.6875em / 0.875);
+    --size: calc(var(--formwork-row-size) * 0.6);
+    --btn-p: calc(0.5em / 0.6875);
+}
+
 @layer components {
 
 /* ================================================================
@@ -641,6 +660,15 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
    class adds the rest. */
 .formwork-input {
     @apply input;
+}
+
+/* The font of a DaisyUI input or select, for the parts of a widget outside
+   its box: an icon, a suffix, a dropdown panel. A size class such as input-sm
+   sets the variables, and the widget repeats its size classes on its outer
+   element, so these parts follow the size. A part that is Xrem at the default
+   .875rem font is calc(Xem / 0.875) inside. */
+.formwork-field-font {
+    font-size: max(var(--font-size, 0rem), var(--font-size-min, 0.875rem));
 }
 
 /* Hide the native number spinners everywhere: StepperNumberInput renders
@@ -863,7 +891,7 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="h
    padding.  The trailing-buttons variant resets the padding with utilities. */
 .input-stepper {
     @apply text-center;
-    padding-inline: 2.25rem;
+    padding-inline: calc(1.5rem + 0.75em / 0.875);
 }
 
 .input-stepper-button {
@@ -1023,7 +1051,7 @@ input[type="range"] {
 
 /* PasswordInput: room for the reveal button at the inline end. */
 [x-data="formworkPasswordInput"] > input {
-    padding-inline-end: 2.5rem;
+    padding-inline-end: calc(1.5rem + 1em / 0.875);
 }
 
 /* Custom widget: toggle switch */
@@ -1043,9 +1071,9 @@ input.combobox-input {
 
 /* ComboBox: icon display overlay (shown when input is not focused).
    The input underneath provides all visual chrome (border, height, shadows).
-   Match font-size and offset padding by the input border so text aligns. */
+   The overlay has the input's font (.formwork-field-font) and offsets its
+   padding by the input border so the text aligns. */
 .combobox-display {
-    font-size: max(var(--font-size, 0.875rem), 0.875rem);
     padding-inline: calc(var(--border, 1px) + 0.75rem);
 }
 

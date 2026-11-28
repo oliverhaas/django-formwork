@@ -6,7 +6,7 @@ from typing import Any
 
 from django import forms
 
-from ._base import _FormworkTemplatesMixin
+from ._base import _FormworkTemplatesMixin, size_classes
 
 
 class OTPInput(_FormworkTemplatesMixin, forms.TextInput):
@@ -29,4 +29,8 @@ class OTPInput(_FormworkTemplatesMixin, forms.TextInput):
         widget["attrs"]["maxlength"] = self.length
         widget["attrs"]["pattern"] = f"[0-9]{{{self.length}}}"
         widget["slots"] = range(self.length)
+        # DaisyUI sizes and colors the boxes through classes on the <label class="otp">.
+        css_class = widget["attrs"].pop("class", "")
+        own_size = any(size.rpartition(":")[2].startswith("otp-") for size in size_classes(css_class).split())
+        widget["otp_class"] = css_class if own_size else f"otp-md sm:otp-lg {css_class}".strip()
         return context

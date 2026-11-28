@@ -213,6 +213,12 @@ def icon_modifiers_page(page, live_server):
 
 
 @pytest.fixture
+def sizes_page(page, live_server):
+    """Navigate to the page of widgets at each DaisyUI size."""
+    return _navigate(page, live_server, "/sizes/")
+
+
+@pytest.fixture
 def complex_page(page, live_server):
     """Navigate to the complex forms page."""
     return _navigate(page, live_server, "/complex/")

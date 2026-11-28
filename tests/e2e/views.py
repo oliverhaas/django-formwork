@@ -36,9 +36,11 @@ from django_formwork.widgets import (
     PasswordInput,
     Range,
     Rating,
+    SearchInput,
     Select,
     SelectMultiple,
     StepperNumberInput,
+    SuffixNumberInput,
     Textarea,
     TextInput,
     ToggleInput,
@@ -2019,3 +2021,99 @@ def sections_view(request: HttpRequest) -> HttpResponse:
     template = engines["django"].from_string(_SECTIONS_HTML)
     context = {"general": general, "extras": extras, "tab": request.GET.get("tab")}
     return HttpResponse(template.render(context, request))
+
+
+_SIZES = ["xs", "sm", "md", "lg", "xl"]
+_SIZE_CHOICES = [("a", "Alpha"), ("b", "Bravo"), ("c", "Charlie")]
+_SIZE_WORDS = ["Python", "Go", "Rust"]
+
+_SIZE_SPECS = [
+    ("password", lambda c: forms.CharField(widget=PasswordInput(attrs={"class": c})), "input", "input"),
+    ("search", lambda c: forms.CharField(widget=SearchInput(attrs={"class": c})), "input", "input"),
+    (
+        "suffix",
+        lambda c: forms.IntegerField(widget=SuffixNumberInput(attrs={"class": c}, suffix="kg")),
+        "input",
+        "input",
+    ),
+    (
+        "stepper",
+        lambda c: forms.IntegerField(initial=3, widget=StepperNumberInput(attrs={"class": c})),
+        "input",
+        "input",
+    ),
+    (
+        "mask",
+        lambda c: forms.CharField(widget=InputMask(attrs={"class": c}, mask="#####")),
+        "input",
+        ".input-mask-display",
+    ),
+    (
+        "combobox",
+        lambda c: forms.CharField(widget=ComboBox(attrs={"class": c}, suggestions=_SIZE_WORDS)),
+        "input",
+        ".combobox-input",
+    ),
+    (
+        "combobox_multiple",
+        lambda c: forms.CharField(
+            initial="Python,Go", widget=ComboBoxMultiple(attrs={"class": c}, suggestions=_SIZE_WORDS)
+        ),
+        "input",
+        ".combobox-input",
+    ),
+    ("date", lambda c: forms.DateField(widget=DatePicker(attrs={"class": c})), "input", ".date-picker-label"),
+    (
+        "datetime",
+        lambda c: forms.DateTimeField(widget=DateTimePicker(attrs={"class": c})),
+        "input",
+        ".date-picker-label",
+    ),
+    ("period", lambda c: DateRangeField(widget=DateRangePicker(attrs={"class": c})), "input", ".date-range-field"),
+    (
+        "select",
+        lambda c: forms.ChoiceField(choices=_SIZE_CHOICES, widget=Select(attrs={"class": c})),
+        "select",
+        "summary",
+    ),
+    (
+        "select_multiple",
+        lambda c: forms.MultipleChoiceField(choices=_SIZE_CHOICES, widget=SelectMultiple(attrs={"class": c})),
+        "select",
+        "summary",
+    ),
+    ("code", lambda c: forms.CharField(widget=OTPInput(attrs={"class": c}, length=4)), "otp", "label.otp"),
+    (
+        "upload",
+        lambda c: forms.FileField(widget=ClearableFileInput(attrs={"class": c})),
+        "file-input",
+        ".clearable-file-input-row",
+    ),
+]
+
+_SIZE_REFERENCES = {
+    "input": '<input class="input input-{size}" aria-label="Reference">',
+    "select": '<label class="select select-{size}"><select aria-label="Reference"><option>Alpha</option></select></label>',
+    "otp": '<label class="otp otp-{size}"><span></span><span></span><span></span><span></span><input maxlength="4" aria-label="Reference"></label>',
+    "file-input": '<input type="file" class="file-input file-input-{size}" aria-label="Reference">',
+}
+
+
+def sizes_view(request: HttpRequest) -> HttpResponse:
+    """Each widget at each DaisyUI size, next to the DaisyUI element of the same size.
+
+    A spec names the widget, the DaisyUI component of its size classes and the selector of its box.
+    """
+    rows = []
+    for name, field, component, box in _SIZE_SPECS:
+        cells = []
+        for size in _SIZES:
+            form = type("SizeForm", (FormworkForm,), {name: field(f"{component}-{size}")})(prefix=size)
+            cells.append(
+                f'<div data-widget="{name}" data-size="{size}" data-box="{box}">'
+                f'<div class="size-reference">{_SIZE_REFERENCES[component].format(size=size)}</div>'
+                f'<div class="size-widget">{form[name].as_control()}</div></div>'
+            )
+        rows.append(f'<div class="grid grid-cols-5 gap-4 items-start">{"".join(cells)}</div>')
+    body = f'<form class="card-body grid gap-6">{"".join(rows)}</form>'
+    return HttpResponse(_page_html("Sizes", body, width="max-w-7xl"))

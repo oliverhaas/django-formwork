@@ -51,7 +51,13 @@ def test_search_input_without_clear_or_filter_needs_no_component():
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(("show_clear", "padding"), [(True, ["ps-10", "pe-10"]), (False, ["ps-10"])])
+@pytest.mark.parametrize(
+    ("show_clear", "padding"),
+    [
+        (True, ["ps-[calc(1.5rem+1em/0.875)]", "pe-[calc(1.5rem+1em/0.875)]"]),
+        (False, ["ps-[calc(1.5rem+1em/0.875)]"]),
+    ],
+)
 def test_search_input_pads_for_its_icons(show_clear, padding):
     """The input keeps the caller's classes and makes room for the icons it shows."""
     soup = render_widget(SearchInput(attrs={"class": "w-64"}, show_clear=show_clear), name="q")

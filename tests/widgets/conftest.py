@@ -31,6 +31,7 @@ from tests.e2e.conftest import (  # noqa: F401
     select_multiple_page,
     select_page,
     simple_page,
+    sizes_page,
     submit,
     textarea_page,
     toggle_page,

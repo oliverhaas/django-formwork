@@ -554,9 +554,8 @@ def test_select_server_mode_options_include_descriptions():
     widget = server_widget(Select, descriptions=True)
     soup = render_widget(widget, value=str(SEARCH_PAGE_SIZE), attrs={"id": "id_x"})
     first = soup.find("li", attrs={"role": "option"})
-    desc = first.find("span", class_="text-xs")
+    desc = first.find("span", string=f"desc {SEARCH_PAGE_SIZE}")
     assert desc is not None
-    assert f"desc {SEARCH_PAGE_SIZE}" in desc.get_text()
 
 
 @pytest.mark.unit
@@ -1476,7 +1475,7 @@ def test_select_htmx_icons_results_have_descriptions(select_page):
 
     sel = select_page.locator("details.dropdown.formwork-select").nth(5)
     _open_dropdown(select_page, 5)
-    descs = sel.locator("ul button span.text-xs")
+    descs = sel.locator("ul button span.flex-col > span:nth-child(2)")
     expect(descs.first).to_be_visible(timeout=10000)
     assert descs.first.text_content().strip() != ""
 

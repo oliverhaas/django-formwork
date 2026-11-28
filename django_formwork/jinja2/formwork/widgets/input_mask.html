@@ -1,4 +1,4 @@
-<div class="input-mask"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_mask"{% endif %} x-data="formworkInputMask" data-mask="{{ widget.mask }}">
+{% set sizes = widget.attrs.class|size_classes %}<div class="input-mask{% if sizes %} {{ sizes }}{% endif %}"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_mask"{% endif %} x-data="formworkInputMask" data-mask="{{ widget.mask }}">
   <input x-ref="hidden" type="hidden" name="{{ widget.name }}" value="{{ widget.value|default('', true) }}">
   <div class="input-mask-overlay formwork-input" x-ref="overlay" aria-hidden="true"></div>
   <input x-ref="display" type="text"{% if widget.attrs.id %} id="{{ widget.attrs.id }}"{% endif %} data-initial="{{ widget.value|default('', true) }}" class="input-mask-display formwork-input{% if widget.attrs.class %} {{ widget.attrs.class }}{% endif %}"{% for name, value in widget.attrs.items() %}{% if name not in ("id", "class") and value is not false %} {{ name }}{% if value is not true %}="{{ value }}"{% endif %}{% endif %}{% endfor %} @beforeinput="handleBeforeInput($event)" @input="handleInput($event)" @click="handleClick($event)" autocomplete="off">

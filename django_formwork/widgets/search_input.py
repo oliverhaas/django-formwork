@@ -44,7 +44,11 @@ class SearchInput(_FormworkTemplatesMixin, forms.TextInput):
         widget["filter_items"] = self.filter_items
         widget["attrs"].setdefault("placeholder", _("Search..."))
         # Room for the leading magnifier, and for the clear button when shown.
-        padding = "ps-10 pe-10" if self.show_clear else "ps-10"
+        padding = (
+            "ps-[calc(1.5rem+1em/0.875)] pe-[calc(1.5rem+1em/0.875)]"
+            if self.show_clear
+            else "ps-[calc(1.5rem+1em/0.875)]"
+        )
         classes = f"clearable-search {widget['attrs'].get('class', '')} {padding}"
         widget["attrs"]["class"] = " ".join(classes.split())
         return context

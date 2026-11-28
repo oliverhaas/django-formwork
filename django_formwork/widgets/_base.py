@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from typing import TYPE_CHECKING, Any
 
 from django.utils.formats import number_format
@@ -41,6 +42,22 @@ _FILE_ICONS = {
 }
 # The component picks the icon of a file the user picks from the same lists.
 _FILE_ICONS_JSON = json.dumps(_FILE_ICONS)
+
+
+# A DaisyUI size class of a form control, with any variant prefix: input-sm, md:select-lg.
+_SIZE_CLASS = re.compile(r"(?P<variants>(?:\S+:)?)(?:input|select|textarea|file-input|otp)-(?P<size>xs|sm|md|lg|xl)")
+
+
+def size_classes(classes: str | None, component: str = "") -> str:
+    """The DaisyUI size classes of the form controls in ``classes``, such as ``"input-sm md:input-lg"``.
+
+    A widget of several parts repeats them on its outer element, so the parts around the box follow the size.
+    With ``component``, each class names that component instead: ``"btn"`` gives ``"btn-sm md:btn-lg"``.
+    """
+    found = [match for token in (classes or "").split() if (match := _SIZE_CLASS.fullmatch(token))]
+    if component:
+        return " ".join(f"{match['variants']}{component}-{match['size']}" for match in found)
+    return " ".join(match[0] for match in found)
 
 
 def widget_of[W](field: Any, kind: type[W]) -> W | None:  # noqa: ANN401 (a form field, or None)

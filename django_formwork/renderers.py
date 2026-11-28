@@ -20,6 +20,7 @@ from django.utils.timezone import template_localtime  # type: ignore[attr-define
 from django.utils.translation import gettext, ngettext, npgettext, pgettext, pgettext_lazy
 
 from django_formwork.boundfield import FormworkBoundField
+from django_formwork.widgets._base import size_classes
 from django_formwork.widgets.display import clamp
 
 if TYPE_CHECKING:
@@ -75,6 +76,7 @@ def environment(**options: Any) -> jinja2.Environment:
             # Jinja's forceescape leaves a SafeString as it is.
             "force_escape": defaultfilters.force_escape,
             "localize": _localize,
+            "size_classes": size_classes,
             # Jinja's striptags also decodes entities and collapses whitespace.
             "striptags": defaultfilters.striptags,
         },

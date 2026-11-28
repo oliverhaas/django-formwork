@@ -20,6 +20,7 @@ urlpatterns = [
     path("textarea/", views.textarea_view),
     path("new-widgets/", views.new_widgets_view),
     path("icon-modifiers/", views.icon_modifiers_view),
+    path("sizes/", views.sizes_view),
     path("complex/", views.complex_view),
     path("autosave/", views.autosave_view),
     path("autosave-dropdowns/", views.autosave_dropdowns_view),

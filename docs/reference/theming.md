@@ -78,6 +78,31 @@ floating label. It is `var(--color-primary)` unless a theme or a page sets it:
 The colors of a changed field have
 [variables of their own](forms.md#changed-field-highlight).
 
+## Density
+
+DaisyUI sizes its fields from the theme's `--size-field`, `0.25rem` in the
+built-in themes. A field of size `md` is 10 times as high, 40px. Every formwork
+widget follows it, so one value makes all forms denser:
+
+```css
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  --size-field: 0.1875rem;
+}
+```
+
+The variable also works on a part of the page, such as a filter bar:
+
+```css
+.filters {
+  --size-field: 0.1875rem;
+}
+```
+
+For one field, use a size class such as `input-sm`. See
+[Sizes](widgets.md#sizes).
+
 ## Lay out a form
 
 `{{ form }}` writes no element around the fields, and a field group has no outer

@@ -11,6 +11,12 @@
 - `field.as_control()` renders a field's widget and its error tooltip without
   the label, help text and fieldset, for a layout that shows the label
   somewhere else. The widget keeps the field's name as its `aria-label`.
+- Every widget takes the DaisyUI size class of its component, `xs` to `xl`:
+  `TextInput(attrs={"class": "input-sm"})`, `Select(attrs={"class": "select-lg"})`,
+  `OTPInput(attrs={"class": "otp-sm"})`. Icons, suffixes, buttons and dropdown
+  panels follow the size of the box. A theme's `--size-field` makes every
+  widget denser or roomier, as it does DaisyUI's own fields. See
+  [Sizes](widgets.md#sizes) and [Density](theming.md#density).
 
 ### Fixed
 
@@ -23,6 +29,14 @@
   the `tab` or `btn` class.
 - `InputMask` dropped the `class` of its `attrs`. The class now goes on the box
   the user types in.
+- `OTPInput` put the `class` of its `attrs` on its input, where `otp-sm` and the
+  color classes had no effect. The class now goes on the `.otp` label, and an
+  `otp-*` size replaces the default `otp-md sm:otp-lg`.
+- `ClearableFileInput` ignored a class such as `file-input-sm` in its `attrs`.
+  The class now goes on the visible row.
+- `DatePicker` and `DateTimePicker` ignored a size class such as `input-sm`.
+- The search and clear icons of `SearchInput` were 12px in a field group and
+  16px outside one. They are 16px in both.
 
 ## 0.1.0a4 (2026-11-27)
 
