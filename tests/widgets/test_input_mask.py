@@ -147,6 +147,14 @@ def test_input_mask_label_targets_display_input(renderer):
     assert label["for"] == display["id"]
 
 
+@pytest.mark.unit
+def test_input_mask_keeps_the_caller_class_on_its_visible_box():
+    """The caller's class reaches the box the user types in, next to the component class."""
+    soup = render_widget(InputMask(attrs={"class": "input-sm w-40"}, mask="###"), name="zip")
+    box = soup.select_one(".input-mask-display")
+    assert box["class"] == ["input-mask-display", "formwork-input", "input-sm", "w-40"]
+
+
 # ─── Level 5: E2e basic interaction ──────────────────────────────────────
 
 

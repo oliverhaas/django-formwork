@@ -21,6 +21,8 @@
   radio or checkbox input was wider than a `<button>` with the same label.
   Formwork's styles for plain radio buttons and checkboxes now skip inputs with
   the `tab` or `btn` class.
+- `InputMask` dropped the `class` of its `attrs`. The class now goes on the box
+  the user types in.
 
 ## 0.1.0a4 (2026-11-27)
 
