@@ -60,10 +60,10 @@ dev = [
   "pytest-playwright==0.10.0",
   "pytest-xdist==3.8.0",
   "pytest==9.2.0",
-  "ruff==0.17.5",
+  "ruff==0.17.6",
   "ty==0.0.107",
 ]
-docs = ["mkdocs==1.6.1", "mkdocs-material==9.8.1", "mike==2.2.0"]
+docs = ["mkdocs==1.6.1", "mkdocs-material==9.8.2", "mike==2.2.0"]
 
 [build-system]
 requires = ["hatchling>=1.33.0"]
