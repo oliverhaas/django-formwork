@@ -512,6 +512,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="stack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Stack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     
     
     
@@ -528,10 +555,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -549,8 +576,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -901,7 +928,7 @@
 <h1 id="django-formwork">django-formwork<a class="headerlink" href="#django-formwork" title="Permanent link">&para;</a></h1>
 <p>django-formwork is an opinionated UI framework for Django, built on Django forms. Forms are the central building block of most Django apps (CRUD pages, admin, search filters, sign-ups, content editors), so formwork treats the form as the primary UI surface: define a <code>Form</code> or <code>ModelForm</code> and you get DaisyUI styling, widgets that go beyond Django's built-ins, and the htmx + Alpine wiring that makes them dynamic without bespoke per-page JS. Set <code>FORM_RENDERER</code> once, build the CSS with Tailwind as the <a href="getting-started/installation/#4-build-the-css">installation guide</a> shows, put <code>{% formwork_head %}</code> in the base template's <code>&lt;head&gt;</code>, and <code>{{ form }}</code> produces the full DaisyUI markup. Django's admin is unaffected, since it renders widgets directly, never <code>{{ form }}</code> or <code>as_field_group()</code>. The package also ships <a href="#admin">its own admin</a>, built on these forms.</p>
 <p>The widgets are <code>Select</code>, <code>SelectMultiple</code>, <code>ComboBox</code>, <code>ComboBoxMultiple</code>, <code>TextInput</code>, <code>Textarea</code>, <code>PasswordInput</code>, <code>SearchInput</code>, <code>DateInput</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>DateRangePicker</code>, <code>DateTimeRangePicker</code>, <code>TimePicker</code>, <code>StepperNumberInput</code>, <code>SuffixNumberInput</code>, <code>CheckboxInput</code>, <code>ToggleInput</code>, <code>CheckboxSelectMultiple</code>, <code>CardRadioSelect</code>, <code>CardCheckboxSelectMultiple</code>, <code>ClearableFileInput</code>, <code>FileDropzoneInput</code>, <code>ImageDropzoneInput</code>, <code>OTPInput</code>, <code>InputMask</code>, <code>Range</code>, <code>Rating</code>, <code>DataList</code>, <code>ValidatedTextarea</code> and <code>Display</code>. <code>Select</code>, <code>SelectMultiple</code>, <code>ComboBox</code> and <code>ComboBoxMultiple</code> search on the server when the widget gets a <code>search_queryset</code>, and the validated textarea posts to a view you write.</p>
-<p><code>{% formwork_head %}</code> loads htmx, Alpine.js and formwork's ES module, which imports <code>formwork-core.js</code> (the <code>formwork-morph</code> htmx extension, dirty-field tracking, native-validation disabling) and the Alpine.data component of each widget. <code>{% formwork_js %}</code> loads only that module, <code>{{ form.media }}</code> loads the same files per form, and a JS bundler can import them. The <a href="getting-started/installation/#js-loading-paths">installation guide</a> describes the three paths.</p>
+<p><code>{% formwork_head %}</code> loads htmx, Alpine.js and formwork's ES module, which imports <code>formwork-core.js</code> (the <code>formwork-morph</code> htmx extension, dirty-field tracking, native-validation disabling) and the Alpine.data component of each widget. <code>{% formwork_js %}</code> loads only that module, <code>{{ form.media }}</code> loads the same files per form, and a JS bundler can import them. The <a href="getting-started/installation/#js-loading-paths">installation guide</a> describes the three paths. <a href="stack/">The Stack</a> explains why formwork uses htmx, Alpine.js and DaisyUI, and which one a change belongs to.</p>
 <h2 id="admin">Admin<a class="headerlink" href="#admin" title="Permanent link">&para;</a></h2>
 <p><code>django_formwork.admin</code> is a Django admin built on formwork forms, django-filter, htmx and Jinja2. It keeps the options, hooks, URL names and permissions of <code>django.contrib.admin</code>, so most <code>admin.py</code> modules port by changing <code>from django.contrib import admin</code> to <code>from django_formwork import admin</code>. The admin is experimental; <a href="reference/admin/">Admin</a> covers the setup and every option.</p>
 <p><img alt="The ticket list with the replies of a ticket open under its row" src="img/admin/changelist.webp" /></p>
