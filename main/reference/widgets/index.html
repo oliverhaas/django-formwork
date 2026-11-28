@@ -672,6 +672,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sizes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sizes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#floating-labels" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1369,6 +1380,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sizes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sizes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#floating-labels" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1939,6 +1961,74 @@ explicit <code>select-error</code>) renders a red-tinted fill, because both the 
 and <code>-soft</code> flow through the same <code>--input-color</code> variable. Used on its own (no
 color modifier), <code>-soft</code> gives a readable neutral fill.</p>
 <hr />
+<h2 id="sizes">Sizes<a class="headerlink" href="#sizes" title="Permanent link">&para;</a></h2>
+<p>A widget takes the size class of the DaisyUI component it is built from, <code>xs</code>
+to <code>xl</code>. <code>md</code> is the default:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">name</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"class"</span><span class="p">:</span> <span class="s2">"input-sm"</span><span class="p">}))</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">CITIES</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"class"</span><span class="p">:</span> <span class="s2">"select-sm"</span><span class="p">}))</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Size class</th>
+<th>Widgets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>input-*</code></td>
+<td><code>TextInput</code> and the other text inputs, <code>PasswordInput</code>, <code>SearchInput</code>, <code>DataList</code>, <code>ComboBox</code>, <code>ComboBoxMultiple</code>, <code>InputMask</code>, <code>StepperNumberInput</code>, <code>SuffixNumberInput</code>, <code>DatePicker</code>, <code>DateTimePicker</code>, <code>DateRangePicker</code></td>
+</tr>
+<tr>
+<td><code>select-*</code></td>
+<td><code>Select</code>, <code>SelectMultiple</code></td>
+</tr>
+<tr>
+<td><code>textarea-*</code></td>
+<td><code>Textarea</code>, <code>ValidatedTextarea</code></td>
+</tr>
+<tr>
+<td><code>otp-*</code></td>
+<td><code>OTPInput</code></td>
+</tr>
+<tr>
+<td><code>file-input-*</code></td>
+<td><code>ClearableFileInput</code></td>
+</tr>
+<tr>
+<td><code>checkbox-*</code></td>
+<td><code>CheckboxInput</code>, <code>CheckboxSelectMultiple</code></td>
+</tr>
+<tr>
+<td><code>radio-*</code></td>
+<td><code>RadioSelect</code></td>
+</tr>
+<tr>
+<td><code>toggle-*</code></td>
+<td><code>ToggleInput</code></td>
+</tr>
+<tr>
+<td><code>range-*</code></td>
+<td><code>Range</code></td>
+</tr>
+<tr>
+<td><code>rating-*</code></td>
+<td><code>Rating</code></td>
+</tr>
+</tbody>
+</table>
+<p>The parts around the box follow its size: icons, a suffix, the buttons of
+<code>StepperNumberInput</code> and <code>ClearableFileInput</code>, and the panel of a dropdown. The
+size classes are safelisted in <code>formwork.css</code>. A responsive variant such as
+<code>input-sm md:input-md</code> compiles when Tailwind scans the Python file that names
+it. <code>StepperNumberInput</code> with <code>trailing_buttons=True</code> gives its buttons the
+<code>btn-*</code> class of the same size, so for <code>md:input-md</code> your sources also need
+<code>md:btn-md</code>.</p>
+<p><code>OTPInput</code> is <code>otp-md</code>, and <code>otp-lg</code> from the <code>sm</code> breakpoint up, unless its
+class has an <code>otp-*</code> size.</p>
+<p>A theme's <code>--size-field</code> makes every field denser or roomier. See
+<a href="../theming/#density">Density</a>.</p>
+<hr />
 <h2 id="floating-labels">Floating labels<a class="headerlink" href="#floating-labels" title="Permanent link">&para;</a></h2>
 <p><strong>Widgets:</strong> <code>TextInput</code>, <code>Textarea</code>, <code>PasswordInput</code>, <code>Select</code>, <code>SelectMultiple</code></p>
 <p>Pass <code>floating=True</code> to reuse a control's placeholder as a
@@ -1948,16 +2038,16 @@ focus or fill. The widget wraps the control in <code>&lt;label class="floating-l
 with a <code>&lt;span&gt;</code> that carries the label text, and that wrapper becomes the
 accessible name, so CSS hides the redundant field legend. A floating widget
 without a <code>placeholder</code> raises <code>ImproperlyConfigured</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">nickname</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"placeholder"</span><span class="p">:</span> <span class="s2">"Nickname"</span><span class="p">},</span> <span class="n">floating</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">)</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">note</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Textarea</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"placeholder"</span><span class="p">:</span> <span class="s2">"Note"</span><span class="p">},</span> <span class="n">floating</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">)</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">role</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span> <span class="p">(</span><span class="s2">"admin"</span><span class="p">,</span> <span class="s2">"Admin"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"user"</span><span class="p">,</span> <span class="s2">"User"</span><span class="p">)],</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"placeholder"</span><span class="p">:</span> <span class="s2">"Role"</span><span class="p">},</span> <span class="n">floating</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">nickname</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"placeholder"</span><span class="p">:</span> <span class="s2">"Nickname"</span><span class="p">},</span> <span class="n">floating</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">)</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">note</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Textarea</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"placeholder"</span><span class="p">:</span> <span class="s2">"Note"</span><span class="p">},</span> <span class="n">floating</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">)</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="n">role</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span> <span class="p">(</span><span class="s2">"admin"</span><span class="p">,</span> <span class="s2">"Admin"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"user"</span><span class="p">,</span> <span class="s2">"User"</span><span class="p">)],</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"placeholder"</span><span class="p">:</span> <span class="s2">"Role"</span><span class="p">},</span> <span class="n">floating</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>On a select, the label always floats above the trigger. With <code>allow_clear</code>, the empty
 trigger shows the label of the clearing row.</p>
@@ -2015,28 +2105,28 @@ importable from <code>django_formwork</code> and from <code>django_formwork.widg
 </tbody>
 </table>
 <p>Use it in <code>choices</code>, or return it from <code>label_from_instance</code> for a model field:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.html</span><span class="w"> </span><span class="kn">import</span> <span class="n">format_html</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChoiceLabel</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">priority</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="p">(</span><span class="s2">"low"</span><span class="p">,</span> <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Low"</span><span class="p">,</span> <span class="n">selected_toggle_class</span><span class="o">=</span><span class="s2">"select-success"</span><span class="p">)),</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="p">(</span><span class="s2">"mid"</span><span class="p">,</span> <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Medium"</span><span class="p">,</span> <span class="n">selected_toggle_class</span><span class="o">=</span><span class="s2">"select-warning"</span><span class="p">)),</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="p">(</span><span class="s2">"high"</span><span class="p">,</span> <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"High"</span><span class="p">,</span> <span class="n">selected_toggle_class</span><span class="o">=</span><span class="s2">"select-error"</span><span class="p">)),</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="p">],</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">,</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="p">)</span>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="k">class</span><span class="w"> </span><span class="nc">MemberChoiceField</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">):</span>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">label_from_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
-</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>        <span class="k">return</span> <span class="n">ChoiceLabel</span><span class="p">(</span>
-</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>            <span class="n">obj</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>            <span class="n">icon</span><span class="o">=</span><span class="n">format_html</span><span class="p">(</span><span class="s1">'&lt;span class="badge badge-ghost badge-sm"&gt;</span><span class="si">{}</span><span class="s1">&lt;/span&gt;'</span><span class="p">,</span> <span class="n">obj</span><span class="o">.</span><span class="n">initials</span><span class="p">),</span>
-</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>            <span class="n">description</span><span class="o">=</span><span class="n">obj</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
-</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>        <span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.html</span><span class="w"> </span><span class="kn">import</span> <span class="n">format_html</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChoiceLabel</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">priority</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>        <span class="p">(</span><span class="s2">"low"</span><span class="p">,</span> <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Low"</span><span class="p">,</span> <span class="n">selected_toggle_class</span><span class="o">=</span><span class="s2">"select-success"</span><span class="p">)),</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>        <span class="p">(</span><span class="s2">"mid"</span><span class="p">,</span> <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Medium"</span><span class="p">,</span> <span class="n">selected_toggle_class</span><span class="o">=</span><span class="s2">"select-warning"</span><span class="p">)),</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>        <span class="p">(</span><span class="s2">"high"</span><span class="p">,</span> <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"High"</span><span class="p">,</span> <span class="n">selected_toggle_class</span><span class="o">=</span><span class="s2">"select-error"</span><span class="p">)),</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="p">],</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">,</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="p">)</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="k">class</span><span class="w"> </span><span class="nc">MemberChoiceField</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">):</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">label_from_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>        <span class="k">return</span> <span class="n">ChoiceLabel</span><span class="p">(</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>            <span class="n">obj</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>            <span class="n">icon</span><span class="o">=</span><span class="n">format_html</span><span class="p">(</span><span class="s1">'&lt;span class="badge badge-ghost badge-sm"&gt;</span><span class="si">{}</span><span class="s1">&lt;/span&gt;'</span><span class="p">,</span> <span class="n">obj</span><span class="o">.</span><span class="n">initials</span><span class="p">),</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>            <span class="n">description</span><span class="o">=</span><span class="n">obj</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>        <span class="p">)</span>
 </span></code></pre></div>
 <p><code>selected_toggle_class</code> applies on the first render, after a validation error,
 and on every pick in the browser, with no round-trip. Formwork passes the
@@ -2155,19 +2245,19 @@ instead; see <a href="../views/#server-side-search">Server-side search</a>.</p>
 </tr>
 </tbody>
 </table>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">CITIES</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">)</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">assignee</span> <span class="o">=</span> <span class="n">MemberChoiceField</span><span class="p">(</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">queryset</span><span class="o">=</span><span class="n">Member</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">empty_label</span><span class="o">=</span><span class="s2">"Unassigned"</span><span class="p">,</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>        <span class="n">search_queryset</span><span class="o">=</span><span class="k">lambda</span> <span class="n">request</span><span class="p">:</span> <span class="n">Member</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>        <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"email"</span><span class="p">],</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>        <span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">,</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>        <span class="n">allow_clear</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="p">),</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">city</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">CITIES</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">)</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">assignee</span> <span class="o">=</span> <span class="n">MemberChoiceField</span><span class="p">(</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">queryset</span><span class="o">=</span><span class="n">Member</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">empty_label</span><span class="o">=</span><span class="s2">"Unassigned"</span><span class="p">,</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>        <span class="n">search_queryset</span><span class="o">=</span><span class="k">lambda</span> <span class="n">request</span><span class="p">:</span> <span class="n">Member</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>        <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"email"</span><span class="p">],</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>        <span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">,</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>        <span class="n">allow_clear</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    <span class="p">),</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="p">)</span>
 </span></code></pre></div>
 <p><code>label_from_instance</code> of a <code>ModelChoiceField</code> can read a relation of the row, as in
 <code>f"{city.name} in {city.region}"</code>. <code>Select</code> and <code>SelectMultiple</code> load the rows with
@@ -2202,20 +2292,20 @@ values, because the list holds only one page.</p>
 </tr>
 </tbody>
 </table>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">languages</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">MultipleChoiceField</span><span class="p">(</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="s2">"py"</span><span class="p">,</span> <span class="s2">"Python"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"js"</span><span class="p">,</span> <span class="s2">"JavaScript"</span><span class="p">)],</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">SelectMultiple</span><span class="p">,</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="p">)</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">tags</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelMultipleChoiceField</span><span class="p">(</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">queryset</span><span class="o">=</span><span class="n">Tag</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">SelectMultiple</span><span class="p">(</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>        <span class="n">search_queryset</span><span class="o">=</span><span class="k">lambda</span> <span class="n">request</span><span class="p">:</span> <span class="n">Tag</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>        <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>        <span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">,</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="p">),</span>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">languages</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">MultipleChoiceField</span><span class="p">(</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="s2">"py"</span><span class="p">,</span> <span class="s2">"Python"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"js"</span><span class="p">,</span> <span class="s2">"JavaScript"</span><span class="p">)],</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">SelectMultiple</span><span class="p">,</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">tags</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelMultipleChoiceField</span><span class="p">(</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="n">queryset</span><span class="o">=</span><span class="n">Tag</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">SelectMultiple</span><span class="p">(</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>        <span class="n">search_queryset</span><span class="o">=</span><span class="k">lambda</span> <span class="n">request</span><span class="p">:</span> <span class="n">Tag</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>        <span class="n">search_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>        <span class="n">search_decorator</span><span class="o">=</span><span class="n">login_required</span><span class="p">,</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="p">),</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="combobox">ComboBox<a class="headerlink" href="#combobox" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.TextInput</code></p>
@@ -2263,22 +2353,22 @@ typed; the suggestions are hints.</p>
 </tr>
 </tbody>
 </table>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">food</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>        <span class="n">suggestions</span><span class="o">=</span><span class="p">[</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>            <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Pizza"</span><span class="p">,</span> <span class="n">icon</span><span class="o">=</span><span class="n">PIZZA_ICON</span><span class="p">),</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>            <span class="s2">"Pasta"</span><span class="p">,</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>            <span class="p">(</span><span class="s2">"Asian"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"Sushi"</span><span class="p">,</span> <span class="s2">"Ramen"</span><span class="p">,</span> <span class="s2">"Curry"</span><span class="p">]),</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="p">],</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="p">),</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">food</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>        <span class="n">suggestions</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>            <span class="n">ChoiceLabel</span><span class="p">(</span><span class="s2">"Pizza"</span><span class="p">,</span> <span class="n">icon</span><span class="o">=</span><span class="n">PIZZA_ICON</span><span class="p">),</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>            <span class="s2">"Pasta"</span><span class="p">,</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>            <span class="p">(</span><span class="s2">"Asian"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"Sushi"</span><span class="p">,</span> <span class="s2">"Ramen"</span><span class="p">,</span> <span class="s2">"Curry"</span><span class="p">]),</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        <span class="p">],</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="p">),</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>A picked suggestion's icon shows beside the text in the closed input.</p>
 <h3 id="comboboxmultiple">ComboBoxMultiple<a class="headerlink" href="#comboboxmultiple" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>ComboBox</code></p>
 <p><code>ComboBox</code> for comma-separated free text. The suggestions apply to the segment
 that the user types.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">tags</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ComboBoxMultiple</span><span class="p">(</span><span class="n">suggestions</span><span class="o">=</span><span class="p">[</span><span class="s2">"pizza"</span><span class="p">,</span> <span class="s2">"pasta"</span><span class="p">,</span> <span class="s2">"sushi"</span><span class="p">]))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">tags</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ComboBoxMultiple</span><span class="p">(</span><span class="n">suggestions</span><span class="o">=</span><span class="p">[</span><span class="s2">"pizza"</span><span class="p">,</span> <span class="s2">"pasta"</span><span class="p">,</span> <span class="s2">"sushi"</span><span class="p">]))</span>
 </span></code></pre></div>
 <hr />
 <h2 id="text">Text<a class="headerlink" href="#text" title="Permanent link">&para;</a></h2>
@@ -2396,23 +2486,23 @@ and a clear button. The default placeholder is "Search...".</p>
 </tr>
 </tbody>
 </table>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">q</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">SearchInput</span><span class="p">(</span><span class="n">filter_items</span><span class="o">=</span><span class="s2">"#task-list [data-label]"</span><span class="p">),</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">q</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">SearchInput</span><span class="p">(</span><span class="n">filter_items</span><span class="o">=</span><span class="s2">"#task-list [data-label]"</span><span class="p">),</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="datalist">DataList<a class="headerlink" href="#datalist" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.TextInput</code></p>
 <p>Text input with native <code>&lt;datalist&gt;</code> suggestions. The browser draws the list, so
 it needs no JavaScript. The submitted value is free text.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">browser</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DataList</span><span class="p">(</span><span class="n">suggestions</span><span class="o">=</span><span class="p">[</span><span class="s2">"Chrome"</span><span class="p">,</span> <span class="s2">"Firefox"</span><span class="p">,</span> <span class="s2">"Safari"</span><span class="p">]))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">browser</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DataList</span><span class="p">(</span><span class="n">suggestions</span><span class="o">=</span><span class="p">[</span><span class="s2">"Chrome"</span><span class="p">,</span> <span class="s2">"Firefox"</span><span class="p">,</span> <span class="s2">"Safari"</span><span class="p">]))</span>
 </span></code></pre></div>
 <h3 id="inputmask">InputMask<a class="headerlink" href="#inputmask" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.TextInput</code></p>
 <p>Text input with a fixed-format mask that Alpine enforces as the user types.
 Mask tokens: <code>#</code> is a digit, <code>A</code> a letter, <code>*</code> any character. The placeholder
 shows the mask.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">phone</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">InputMask</span><span class="p">(</span><span class="n">mask</span><span class="o">=</span><span class="s2">"(###) ###-####"</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">phone</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">InputMask</span><span class="p">(</span><span class="n">mask</span><span class="o">=</span><span class="s2">"(###) ###-####"</span><span class="p">))</span>
 </span></code></pre></div>
 <h3 id="otpinput">OTPInput<a class="headerlink" href="#otpinput" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.TextInput</code></p>
@@ -2420,7 +2510,7 @@ shows the mask.</p>
 box per digit. One real input keeps SMS autofill and paste working. It sets
 <code>inputmode="numeric"</code>, <code>autocomplete="one-time-code"</code>, <code>maxlength</code> and a
 <code>pattern</code>, and needs no JavaScript.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">code</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">OTPInput</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="mi">6</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">code</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">OTPInput</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="mi">6</span><span class="p">))</span>
 </span></code></pre></div>
 <h3 id="validatedtextarea">ValidatedTextarea<a class="headerlink" href="#validatedtextarea" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.Textarea</code></p>
@@ -2433,9 +2523,9 @@ renders a plain textarea.</p>
 and the error area are built from it. A form field gets the <code>id</code> from the
 form's <code>auto_id</code>. With <code>auto_id=False</code>, or when you render the widget yourself
 without <code>attrs={"id": ...}</code>, the textarea sends no validation request.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">content</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ValidatedTextarea</span><span class="p">(</span><span class="n">validate_url</span><span class="o">=</span><span class="n">reverse_lazy</span><span class="p">(</span><span class="s2">"spell-check"</span><span class="p">)),</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">content</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ValidatedTextarea</span><span class="p">(</span><span class="n">validate_url</span><span class="o">=</span><span class="n">reverse_lazy</span><span class="p">(</span><span class="s2">"spell-check"</span><span class="p">)),</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>See <a href="../views/#formworkvalidateview"><code>FormworkValidateView</code></a> for the server
 side. The live errors render in the widget's own tooltip, whatever the form's
@@ -2484,17 +2574,17 @@ The value is clamped when the user commits it.</p>
 </tr>
 </tbody>
 </table>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">seats</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">StepperNumberInput</span><span class="p">(</span><span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">seats</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">StepperNumberInput</span><span class="p">(</span><span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
 </span></code></pre></div>
 <h3 id="suffixnumberinput">SuffixNumberInput<a class="headerlink" href="#suffixnumberinput" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.NumberInput</code></p>
 <p>Number input with a static unit, currency or percent sign inside the field.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">weight</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DecimalField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">SuffixNumberInput</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">"kg"</span><span class="p">))</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="n">price</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DecimalField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">SuffixNumberInput</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"€"</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">weight</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DecimalField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">SuffixNumberInput</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">"kg"</span><span class="p">))</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="n">price</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DecimalField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">SuffixNumberInput</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"€"</span><span class="p">))</span>
 </span></code></pre></div>
 <h3 id="range">Range<a class="headerlink" href="#range" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.NumberInput</code>, with <code>input_type = "range"</code></p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">volume</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Range</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"min"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"max"</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="mi">5</span><span class="p">}))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">volume</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Range</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"min"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"max"</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="mi">5</span><span class="p">}))</span>
 </span></code></pre></div>
 <hr />
 <h2 id="dates">Dates<a class="headerlink" href="#dates" title="Permanent link">&para;</a></h2>
@@ -2520,14 +2610,14 @@ posts as typed: the field reports it and the input keeps the text. An end
 typed before the start is not swapped, and the field reports the order.</p>
 <p>Use it through <code>DateRangeField</code>, which cleans to a <code>DateRange(start, end)</code>
 and uses the picker by default:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">DateRangeField</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="n">period</span> <span class="o">=</span> <span class="n">DateRangeField</span><span class="p">(</span>
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    <span class="n">max_span</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">90</span><span class="p">),</span>
-</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>    <span class="n">error_messages</span><span class="o">=</span><span class="p">{</span><span class="s2">"max_span"</span><span class="p">:</span> <span class="s2">"Pick at most 90 days."</span><span class="p">},</span>
-</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">DateRangeField</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="n">period</span> <span class="o">=</span> <span class="n">DateRangeField</span><span class="p">(</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>    <span class="n">max_span</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">90</span><span class="p">),</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>    <span class="n">error_messages</span><span class="o">=</span><span class="p">{</span><span class="s2">"max_span"</span><span class="p">:</span> <span class="s2">"Pick at most 90 days."</span><span class="p">},</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="p">)</span>
 </span></code></pre></div>
 <p><code>required</code> demands both dates. The field rejects a start after the end
 (<code>start_after_end</code>) and, with <code>max_span</code>, a range longer than that
@@ -2539,7 +2629,7 @@ weekday names follow the active language, and the week starts on
 <code>FIRST_DAY_OF_WEEK</code>. Each input is as wide as the longest date the format
 writes, so the end keeps its place whatever the start holds. A short format
 fits a narrow column:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">period</span> <span class="o">=</span> <span class="n">DateRangeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateRangePicker</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"SHORT_DATE_FORMAT"</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">period</span> <span class="o">=</span> <span class="n">DateRangeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateRangePicker</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"SHORT_DATE_FORMAT"</span><span class="p">))</span>
 </span></code></pre></div>
 <p><code>presets=True</code> adds four buttons under the calendar: Today, Past 7 days,
 This month and This year. A preset picks its whole range and closes the
@@ -2547,17 +2637,17 @@ calendar. The days count in the current time zone, as in Django's admin date
 filter, and Past 7 days is today and the six days before it. For other
 ranges, pass a function that takes today and returns <code>(label, start, end)</code>
 tuples. <code>DateRangePicker.default_presets</code> returns the four above:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.translation</span><span class="w"> </span><span class="kn">import</span> <span class="n">gettext</span> <span class="k">as</span> <span class="n">_</span>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">presets</span><span class="p">(</span><span class="n">today</span><span class="p">):</span>
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>    <span class="n">past_30_days</span> <span class="o">=</span> <span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s2">"Past 30 days"</span><span class="p">),</span> <span class="n">today</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">29</span><span class="p">),</span> <span class="n">today</span><span class="p">)</span>
-</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>    <span class="k">return</span> <span class="p">[</span><span class="o">*</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateRangePicker</span><span class="o">.</span><span class="n">default_presets</span><span class="p">(</span><span class="n">today</span><span class="p">),</span> <span class="n">past_30_days</span><span class="p">]</span>
-</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>
-</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>
-</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="n">period</span> <span class="o">=</span> <span class="n">DateRangeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateRangePicker</span><span class="p">(</span><span class="n">presets</span><span class="o">=</span><span class="n">presets</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.translation</span><span class="w"> </span><span class="kn">import</span> <span class="n">gettext</span> <span class="k">as</span> <span class="n">_</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">presets</span><span class="p">(</span><span class="n">today</span><span class="p">):</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    <span class="n">past_30_days</span> <span class="o">=</span> <span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s2">"Past 30 days"</span><span class="p">),</span> <span class="n">today</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">29</span><span class="p">),</span> <span class="n">today</span><span class="p">)</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>    <span class="k">return</span> <span class="p">[</span><span class="o">*</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateRangePicker</span><span class="o">.</span><span class="n">default_presets</span><span class="p">(</span><span class="n">today</span><span class="p">),</span> <span class="n">past_30_days</span><span class="p">]</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="n">period</span> <span class="o">=</span> <span class="n">DateRangeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateRangePicker</span><span class="p">(</span><span class="n">presets</span><span class="o">=</span><span class="n">presets</span><span class="p">))</span>
 </span></code></pre></div>
 <p><code>choices</code> adds <code>(value, label)</code> buttons next to the presets for an option that is not a
 range, such as "No date". A choice clears both dates and posts its value as a third
@@ -2579,27 +2669,27 @@ current time zone, and an aware value shows in it.</p>
 <code>DATETIME_INPUT_FORMATS</code>: <code>3/1/2030 14:30</code> or <code>Mar. 1, 2030, 2:30 p.m.</code>. A
 date typed without a time takes the time under the calendar. A preset picks
 its days from 00:00 to 23:59.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">DateTimeRangeField</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="n">stay</span> <span class="o">=</span> <span class="n">DateTimeRangeField</span><span class="p">(</span><span class="n">max_span</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">14</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">DateTimeRangeField</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="n">stay</span> <span class="o">=</span> <span class="n">DateTimeRangeField</span><span class="p">(</span><span class="n">max_span</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">14</span><span class="p">))</span>
 </span></code></pre></div>
 <p><code>format</code> defaults to <code>DATETIME_FORMAT</code>.</p>
 <h3 id="two-native-date-inputs">Two native date inputs<a class="headerlink" href="#two-native-date-inputs" title="Permanent link">&para;</a></h3>
 <p><code>DateRangeField</code> also takes Django's own <code>MultiWidget</code>. With two <code>DateInput</code>s
 it shows the browser's date controls side by side under one field label. The
 label names the pair, so give each input an <code>aria-label</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django</span><span class="w"> </span><span class="kn">import</span> <span class="n">forms</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.translation</span><span class="w"> </span><span class="kn">import</span> <span class="n">gettext_lazy</span> <span class="k">as</span> <span class="n">_</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">DateRangeField</span><span class="p">,</span> <span class="n">widgets</span>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="n">period</span> <span class="o">=</span> <span class="n">DateRangeField</span><span class="p">(</span>
-</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">MultiWidget</span><span class="p">(</span>
-</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>        <span class="p">[</span>
-</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>            <span class="n">widgets</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"aria-label"</span><span class="p">:</span> <span class="n">_</span><span class="p">(</span><span class="s2">"From"</span><span class="p">)}),</span>
-</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>            <span class="n">widgets</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"aria-label"</span><span class="p">:</span> <span class="n">_</span><span class="p">(</span><span class="s2">"To"</span><span class="p">)}),</span>
-</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>        <span class="p">]</span>
-</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>    <span class="p">),</span>
-</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django</span><span class="w"> </span><span class="kn">import</span> <span class="n">forms</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django.utils.translation</span><span class="w"> </span><span class="kn">import</span> <span class="n">gettext_lazy</span> <span class="k">as</span> <span class="n">_</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">DateRangeField</span><span class="p">,</span> <span class="n">widgets</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="n">period</span> <span class="o">=</span> <span class="n">DateRangeField</span><span class="p">(</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">MultiWidget</span><span class="p">(</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>        <span class="p">[</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>            <span class="n">widgets</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"aria-label"</span><span class="p">:</span> <span class="n">_</span><span class="p">(</span><span class="s2">"From"</span><span class="p">)}),</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>            <span class="n">widgets</span><span class="o">.</span><span class="n">DateInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"aria-label"</span><span class="p">:</span> <span class="n">_</span><span class="p">(</span><span class="s2">"To"</span><span class="p">)}),</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>        <span class="p">]</span>
+</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>    <span class="p">),</span>
+</span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>The inputs post <code>period_0</code> and <code>period_1</code>, like <code>DateRangePicker</code>.</p>
 <h3 id="datepicker">DatePicker<a class="headerlink" href="#datepicker" title="Permanent link">&para;</a></h3>
@@ -2611,8 +2701,8 @@ placeholder shows that format. The widget reads the format back, and also
 <code>YYYY-MM-DD</code>, so the field needs no matching <code>input_formats</code>. The input is as
 wide as the longest date the format writes or the placeholder, whatever it
 holds, so a table column keeps its width while the user types.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="n">due_date</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DatePicker</span><span class="p">)</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="n">delivery</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DatePicker</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"</span><span class="si">%d</span><span class="s2">.%m.%Y"</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">due_date</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DatePicker</span><span class="p">)</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="n">delivery</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DatePicker</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"</span><span class="si">%d</span><span class="s2">.%m.%Y"</span><span class="p">))</span>
 </span></code></pre></div>
 <p>A click on the month title switches to a month grid, and a click on the
 year to a year grid. The arrow keys move a day or a week, Page Up and Page
@@ -2625,8 +2715,8 @@ Python's <code>strftime</code> writes.</p>
 <p><strong>Parent class:</strong> <code>forms.Widget</code></p>
 <p>A day and a time in one text input, with a calendar and a time input under
 it. Use it with Django's <code>DateTimeField</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">starts_at</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateTimePicker</span><span class="p">)</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="n">starts_at</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateTimePicker</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"d.m.Y H:i"</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="n">starts_at</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateTimePicker</span><span class="p">)</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="n">starts_at</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">DateTimePicker</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"d.m.Y H:i"</span><span class="p">))</span>
 </span></code></pre></div>
 <p>A picked day keeps the calendar open for the time. Done, Enter and leaving
 the widget post the value. Now picks the current day and minute of the
@@ -2650,16 +2740,16 @@ input, which fires <code>change</code>. The other attrs go on the text input.</p
 <p><strong>Parent class:</strong> <code>forms.CheckboxInput</code></p>
 <p>Without <code>text</code>, the field label sits beside the box. With <code>text</code>, the field
 label sits above the box and <code>text</code> beside it:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="n">terms</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>    <span class="n">label</span><span class="o">=</span><span class="s2">"Terms"</span><span class="p">,</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">"I accept the terms of service"</span><span class="p">),</span>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">terms</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>    <span class="n">label</span><span class="o">=</span><span class="s2">"Terms"</span><span class="p">,</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">CheckboxInput</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">"I accept the terms of service"</span><span class="p">),</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="toggleinput">ToggleInput<a class="headerlink" href="#toggleinput" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.CheckboxInput</code></p>
 <p>Checkbox drawn as a DaisyUI toggle switch, with the field label beside it and
 no background. The label turns full strength while the switch is on.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">dark_mode</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ToggleInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"class"</span><span class="p">:</span> <span class="s2">"toggle-primary"</span><span class="p">}),</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="n">dark_mode</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ToggleInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"class"</span><span class="p">:</span> <span class="s2">"toggle-primary"</span><span class="p">}),</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="checkboxselectmultiple">CheckboxSelectMultiple<a class="headerlink" href="#checkboxselectmultiple" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.CheckboxSelectMultiple</code></p>
@@ -2670,10 +2760,10 @@ rows with no background box. Pass <code>columns=2</code> for a two-column grid.<
 <p>Choices drawn as large selectable cards with the label text centered, stacked
 on small screens and side by side from the <code>lg</code> breakpoint. The checked card
 fills with the primary color.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="n">plan</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="s2">"free"</span><span class="p">,</span> <span class="s2">"Free"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"pro"</span><span class="p">,</span> <span class="s2">"Pro"</span><span class="p">)],</span>
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">CardRadioSelect</span><span class="p">,</span>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="n">plan</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>    <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="s2">"free"</span><span class="p">,</span> <span class="s2">"Free"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"pro"</span><span class="p">,</span> <span class="s2">"Pro"</span><span class="p">)],</span>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">CardRadioSelect</span><span class="p">,</span>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="rating">Rating<a class="headerlink" href="#rating" title="Permanent link">&para;</a></h3>
 <p><strong>Parent class:</strong> <code>forms.RadioSelect</code></p>
@@ -2711,11 +2801,11 @@ fills with the primary color.</p>
 <p><code>Rating.make_choices(max_stars=5)</code> returns <code>[("1", "1 star"), ("2", "2 stars"), ...]</code>.
 Use it instead of writing the choices yourself; <code>choices</code> is a reserved
 property name on <code>ChoiceWidget</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="n">rating</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">TypedChoiceField</span><span class="p">(</span>
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>    <span class="n">choices</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Rating</span><span class="o">.</span><span class="n">make_choices</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span>
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>    <span class="n">coerce</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Rating</span><span class="p">(</span><span class="n">star_class</span><span class="o">=</span><span class="s2">"mask-heart"</span><span class="p">,</span> <span class="n">allow_clear</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="n">rating</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">TypedChoiceField</span><span class="p">(</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>    <span class="n">choices</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Rating</span><span class="o">.</span><span class="n">make_choices</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span>
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>    <span class="n">coerce</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Rating</span><span class="p">(</span><span class="n">star_class</span><span class="o">=</span><span class="s2">"mask-heart"</span><span class="p">,</span> <span class="n">allow_clear</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="files">Files<a class="headerlink" href="#files" title="Permanent link">&para;</a></h2>
@@ -2726,7 +2816,7 @@ stored file and the clear box on one line and the file input under them.</p>
 <p>A file upload in one row, as high as a text input. The row shows the stored
 file as a link, with an icon for its type, and a click anywhere on it opens the
 file picker.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="n">delivery_note</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ClearableFileInput</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="n">delivery_note</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">ClearableFileInput</span><span class="p">)</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -2765,16 +2855,16 @@ icons.</p>
 <p><strong>Parent class:</strong> <code>forms.FileInput</code></p>
 <p>Dashed drop area that takes dragged files or opens the file picker. <code>max_size</code>
 (bytes) rejects larger files in the browser.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="n">docs</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span>
-</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">FileDropzoneInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"accept"</span><span class="p">:</span> <span class="s2">".pdf"</span><span class="p">},</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">),</span>
-</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="n">docs</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>    <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">FileDropzoneInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"accept"</span><span class="p">:</span> <span class="s2">".pdf"</span><span class="p">},</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">),</span>
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>For several files, use <code>MultipleFileField</code>. Its default widget is this drop
 area with <code>multiple</code>, and it cleans to a list of files. A plain <code>FileField</code>
 rejects the list that a <code>multiple</code> input sends.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultipleFileField</span>
-</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>
-</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="n">attachments</span> <span class="o">=</span> <span class="n">MultipleFileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_formwork</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultipleFileField</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="n">attachments</span> <span class="o">=</span> <span class="n">MultipleFileField</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>required</code> demands at least one file, and each file gets the <code>FileField</code> checks,
 such as the one for an empty file. No model field holds several files, so save
@@ -2838,23 +2928,23 @@ instance. On another field, set <code>disabled=True</code>. Each item is a strin
 <code>ChoiceLabel</code>; with <code>badges=True</code>, each item is a badge in its <code>color</code>. With
 <code>max_lines</code>, from 1 to 10, the items run as text cut to that many lines, with a
 <code>[more]</code> toggle for the rest.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">event_kind</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>    <span class="k">return</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">get_kind_display</span><span class="p">(),</span> <span class="n">color</span><span class="o">=</span><span class="n">Event</span><span class="o">.</span><span class="n">KIND_COLORS</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">kind</span><span class="p">])]</span>
-</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>
-</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>
-</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">EventForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
-</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>    <span class="n">kind</span> <span class="o">=</span> <span class="n">DisplayField</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">event_kind</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Display</span><span class="p">(</span><span class="n">badges</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">event_kind</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>    <span class="k">return</span> <span class="p">[</span><span class="n">ChoiceLabel</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">get_kind_display</span><span class="p">(),</span> <span class="n">color</span><span class="o">=</span><span class="n">Event</span><span class="o">.</span><span class="n">KIND_COLORS</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">kind</span><span class="p">])]</span>
+</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>
+</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>
+</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">EventForm</span><span class="p">(</span><span class="n">FormworkModelForm</span><span class="p">):</span>
+</span><span id="__span-32-6"><a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>    <span class="n">kind</span> <span class="o">=</span> <span class="n">DisplayField</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">event_kind</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">widgets</span><span class="o">.</span><span class="n">Display</span><span class="p">(</span><span class="n">badges</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </span></code></pre></div>
 <hr />
 <h2 id="patternhintmixin">PatternHintMixin<a class="headerlink" href="#patternhintmixin" title="Permanent link">&para;</a></h2>
 <p>Shows the class attribute <code>pattern_hint</code> under a text control while its value
 misses the <code>pattern</code> attribute. CSS reads the browser's verdict, so it needs no
 JavaScript. Pair it with a server-side validator.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostcodeInput</span><span class="p">(</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">):</span>
-</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>    <span class="n">pattern_hint</span> <span class="o">=</span> <span class="n">_</span><span class="p">(</span><span class="s2">"Five digits, for example 10115"</span><span class="p">)</span>
-</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>
-</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">({</span><span class="s2">"pattern"</span><span class="p">:</span> <span class="s2">"[0-9]</span><span class="si">{5}</span><span class="s2">"</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">attrs</span> <span class="ow">or</span> <span class="p">{})})</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostcodeInput</span><span class="p">(</span><span class="n">widgets</span><span class="o">.</span><span class="n">TextInput</span><span class="p">):</span>
+</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>    <span class="n">pattern_hint</span> <span class="o">=</span> <span class="n">_</span><span class="p">(</span><span class="s2">"Five digits, for example 10115"</span><span class="p">)</span>
+</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>
+</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+</span><span id="__span-33-5"><a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">({</span><span class="s2">"pattern"</span><span class="p">:</span> <span class="s2">"[0-9]</span><span class="si">{5}</span><span class="s2">"</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">attrs</span> <span class="ow">or</span> <span class="p">{})})</span>
 </span></code></pre></div>
 <hr />
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
@@ -2872,9 +2962,9 @@ so a form with a hundred of them loads without starting a hundred components. Th
 root of such a widget has <code>data-formwork-lazy</code>; for a <code>Select</code> it is the element
 with the id <code>id_&lt;name&gt;_wrapper</code>. A script that calls into the widget, or writes its
 <code>data-*</code> attributes, starts it first:</p>
-<div class="language-js highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">root</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s2">"id_city_wrapper"</span><span class="p">);</span>
-</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="nx">root</span><span class="p">.</span><span class="nx">dispatchEvent</span><span class="p">(</span><span class="ow">new</span><span class="w"> </span><span class="nx">Event</span><span class="p">(</span><span class="s2">"formwork:start"</span><span class="p">));</span>
-</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">select</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">Alpine</span><span class="p">.</span><span class="nx">$data</span><span class="p">(</span><span class="nx">root</span><span class="p">);</span>
+<div class="language-js highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">root</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s2">"id_city_wrapper"</span><span class="p">);</span>
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="nx">root</span><span class="p">.</span><span class="nx">dispatchEvent</span><span class="p">(</span><span class="ow">new</span><span class="w"> </span><span class="nx">Event</span><span class="p">(</span><span class="s2">"formwork:start"</span><span class="p">));</span>
+</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">select</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">Alpine</span><span class="p">.</span><span class="nx">$data</span><span class="p">(</span><span class="nx">root</span><span class="p">);</span>
 </span></code></pre></div>
 <p>A started widget ignores the event. An overridden widget template without
 <code>data-formwork-lazy</code> starts its widget on load.</p>

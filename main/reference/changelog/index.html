@@ -1365,6 +1365,12 @@
 <li><code>field.as_control()</code> renders a field's widget and its error tooltip without
   the label, help text and fieldset, for a layout that shows the label
   somewhere else. The widget keeps the field's name as its <code>aria-label</code>.</li>
+<li>Every widget takes the DaisyUI size class of its component, <code>xs</code> to <code>xl</code>:
+  <code>TextInput(attrs={"class": "input-sm"})</code>, <code>Select(attrs={"class": "select-lg"})</code>,
+  <code>OTPInput(attrs={"class": "otp-sm"})</code>. Icons, suffixes, buttons and dropdown
+  panels follow the size of the box. A theme's <code>--size-field</code> makes every
+  widget denser or roomier, as it does DaisyUI's own fields. See
+  <a href="../widgets/#sizes">Sizes</a> and <a href="../theming/#density">Density</a>.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1375,6 +1381,16 @@
   radio or checkbox input was wider than a <code>&lt;button&gt;</code> with the same label.
   Formwork's styles for plain radio buttons and checkboxes now skip inputs with
   the <code>tab</code> or <code>btn</code> class.</li>
+<li><code>InputMask</code> dropped the <code>class</code> of its <code>attrs</code>. The class now goes on the box
+  the user types in.</li>
+<li><code>OTPInput</code> put the <code>class</code> of its <code>attrs</code> on its input, where <code>otp-sm</code> and the
+  color classes had no effect. The class now goes on the <code>.otp</code> label, and an
+  <code>otp-*</code> size replaces the default <code>otp-md sm:otp-lg</code>.</li>
+<li><code>ClearableFileInput</code> ignored a class such as <code>file-input-sm</code> in its <code>attrs</code>.
+  The class now goes on the visible row.</li>
+<li><code>DatePicker</code> and <code>DateTimePicker</code> ignored a size class such as <code>input-sm</code>.</li>
+<li>The search and clear icons of <code>SearchInput</code> were 12px in a field group and
+  16px outside one. They are 16px in both.</li>
 </ul>
 <h2 id="010a4-2026-11-27">0.1.0a4 (2026-11-27)<a class="headerlink" href="#010a4-2026-11-27" title="Permanent link">&para;</a></h2>
 <h3 id="breaking-changes">Breaking changes<a class="headerlink" href="#breaking-changes" title="Permanent link">&para;</a></h3>
