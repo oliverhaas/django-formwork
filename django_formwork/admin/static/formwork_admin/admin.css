@@ -14,7 +14,7 @@
 /* The version these templates come from. A system check warns while the compiled CSS
    carries another one, as it then lacks the classes the templates added since. */
 :root {
-  --formwork-admin-css: "0.1.0a4";
+  --formwork-admin-css: "0.1.0a5";
 }
 
 @source "../../";
