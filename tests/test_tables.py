@@ -33,7 +33,7 @@ from django_formwork import (
 )
 from django_formwork.forms import PREFIX_INPUT_NAME
 from django_formwork.renderers import engine
-from django_formwork.widgets import ChoiceLabel, ComboBox, ComboBoxMultiple, Select, SelectMultiple
+from django_formwork.widgets import ChoiceLabel, ComboBox, ComboBoxMultiple, Select, SelectMultiple, TimePicker
 
 pytestmark = pytest.mark.django_db
 
@@ -886,6 +886,54 @@ def test_a_date_range_cell_answers_with_the_full_picker_for_the_range_its_stub_h
 
     picker = soup.select_one("[x-data=formworkDateRangePicker]")
     assert (picker["data-start"], picker["data-end"]) == ("2026-05-01", "2026-05-09")
+
+
+class OpensRowForm(FormworkModelForm):
+    opens = forms.TimeField(widget=TimePicker, required=False)
+
+    class Meta:
+        model = Item
+        fields = ["name"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        available_from = self.instance.available_from
+        self.initial["opens"] = available_from and available_from.time()
+
+
+OpensFormSet = formwork_modelformset_factory(Item, form=OpensRowForm, extra=0)
+
+
+@pytest.fixture
+def opening():
+    kitchen = Category.objects.create(name="Kitchen", slug="kitchen")
+    for name, available_from in [("Kettle", None), ("Lamp", dt.datetime(2026, 3, 4, 21, 30, 15, tzinfo=dt.UTC))]:
+        Item.objects.create(name=name, category=kitchen, available_from=available_from)
+
+
+def _opens(*, cell_url=""):
+    return BeautifulSoup(OpensFormSet(queryset=Item.objects.order_by("pk")).as_rows(cell_url=cell_url), "html.parser")
+
+
+@pytest.mark.usefixtures("opening")
+def test_the_time_picker_stubs_of_as_rows_show_the_closed_boxes_of_the_full_pickers():
+    stubs = _opens(cell_url="/cells/")
+
+    assert len(stubs.select("[data-formwork-stub].date-picker")) == 2
+    assert _closed(stubs, ".date-picker-label") == _closed(_opens(), ".date-picker-label")
+
+
+@pytest.mark.usefixtures("opening")
+def test_the_time_picker_stubs_of_as_rows_post_the_times_of_their_rows():
+    """A time with seconds posts them, so the row reads as unchanged."""
+    stubs = _opens(cell_url="/cells/").select("input[name]")
+
+    formset = OpensFormSet(
+        {stub["name"]: stub.get("value", "") for stub in stubs}, queryset=Item.objects.order_by("pk")
+    )
+
+    assert formset.is_valid()
+    assert not formset.has_changed()
 
 
 _NAMES = [ChoiceLabel("Lamp", icon="\U0001f4a1"), "Kettle", "Toaster"]

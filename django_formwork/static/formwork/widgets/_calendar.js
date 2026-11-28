@@ -33,7 +33,7 @@ export const addMonths = (date, months) => {
 // A picked day, month or year. The class also marks it for focus.
 export const SELECTED = "btn-primary calendar-selected";
 
-const parseJson = (text) => {
+export const parseJson = (text) => {
   try {
     return JSON.parse(text || "{}");
   } catch {
@@ -197,20 +197,26 @@ const readers = (names) => {
   };
 };
 
-// The day and time that `parts` hold, or null for no real day. A 12-hour
-// clock without a.m. or p.m. reads as a 24-hour one.
+// The time that `parts` hold as HH:MM, "" for none, or null for no real
+// time. A 12-hour clock without a.m. or p.m. reads as a 24-hour one.
+const timeOf = (parts) => {
+  const { hour12, half, minute = 0 } = parts;
+  const hour = hour12 === undefined ? parts.hour : half === undefined ? hour12 : (hour12 % 12) + half * 12;
+  if (hour === undefined) return "";
+  return hour > 23 || minute > 59 ? null : `${pad(hour)}:${pad(minute)}`;
+};
+
+// The day and time that `parts` hold, or null for no real day.
 const finish = (parts) => {
-  const { year, month, day, hour12, half, minute = 0 } = parts;
+  const { year, month, day } = parts;
   if (year === undefined || month === undefined || day === undefined) return null;
   const date = makeDate(year, month, day);
   if (date.getMonth() !== month || date.getDate() !== day) return null;
-  const hour = hour12 === undefined ? parts.hour : half === undefined ? hour12 : (hour12 % 12) + half * 12;
-  if (hour === undefined) return { iso: isoDate(date), time: "" };
-  if (hour > 23 || minute > 59) return null;
-  return { iso: isoDate(date), time: `${pad(hour)}:${pad(minute)}` };
+  const time = timeOf(parts);
+  return time === null ? null : { iso: isoDate(date), time };
 };
 
-const readPieces = (text, pieces) => {
+const readPieces = (text, pieces, toValue) => {
   const reads = [];
   const source = pieces
     .map((piece) => {
@@ -223,7 +229,7 @@ const readPieces = (text, pieces) => {
   if (!match) return null;
   const parts = {};
   reads.forEach((read, index) => read?.(parts, match[index + 1]));
-  return finish(parts);
+  return toValue(parts);
 };
 
 // Codes a typed date cannot carry (a time zone, a week number) match any word.
@@ -233,9 +239,9 @@ const djangoPieces = (format, codes) =>
 const strftimePieces = (format, codes) =>
   format.split(/%(.)/).map((piece, index) => (index % 2 ? codes[piece] || (piece === "%" ? "%" : { pattern: "\\S*?" }) : piece));
 
-// The day `text` names as { iso: "YYYY-MM-DD", time: "HH:MM" or "" }, or null.
+// What `toValue` makes of the first format that reads `text`, or null.
 // `formats` are Django formats, `inputFormats` strftime formats.
-export const readDate = (text, formats, inputFormats, names) => {
+const readText = (text, formats, inputFormats, names, toValue) => {
   if (!text.trim()) return null;
   const codes = readers(names);
   const tries = [
@@ -243,11 +249,18 @@ export const readDate = (text, formats, inputFormats, names) => {
     ...inputFormats.map((format) => strftimePieces(format, codes.strftime)),
   ];
   for (const pieces of tries) {
-    const read = readPieces(text, pieces);
+    const read = readPieces(text, pieces, toValue);
     if (read) return read;
   }
   return null;
 };
+
+// The day `text` names as { iso: "YYYY-MM-DD", time: "HH:MM" or "" }, or null.
+export const readDate = (text, formats, inputFormats, names) => readText(text, formats, inputFormats, names, finish);
+
+// The time of day `text` names as HH:MM, or null.
+export const readTime = (text, formats, inputFormats, names) =>
+  readText(text, formats, inputFormats, names, (parts) => timeOf(parts) || null);
 
 // --- The calendar component -------------------------------------------
 // Mixed into a widget component through withCalendar(). The widget supplies

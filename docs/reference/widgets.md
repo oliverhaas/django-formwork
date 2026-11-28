@@ -86,7 +86,7 @@ city = forms.ChoiceField(choices=CITIES, widget=widgets.Select(attrs={"class": "
 
 | Size class | Widgets |
 |---|---|
-| `input-*` | `TextInput` and the other text inputs, `PasswordInput`, `SearchInput`, `DataList`, `ComboBox`, `ComboBoxMultiple`, `InputMask`, `StepperNumberInput`, `SuffixNumberInput`, `DatePicker`, `DateTimePicker`, `DateRangePicker` |
+| `input-*` | `TextInput` and the other text inputs, `PasswordInput`, `SearchInput`, `DataList`, `ComboBox`, `ComboBoxMultiple`, `InputMask`, `StepperNumberInput`, `SuffixNumberInput`, `DatePicker`, `DateTimePicker`, `TimePicker`, `DateRangePicker` |
 | `select-*` | `Select`, `SelectMultiple` |
 | `textarea-*` | `Textarea`, `ValidatedTextarea` |
 | `otp-*` | `OTPInput` |
@@ -488,7 +488,7 @@ volume = forms.IntegerField(widget=widgets.Range(attrs={"min": 0, "max": 100, "s
 
 ---
 
-## Dates
+## Dates and times
 
 ### DateInput
 
@@ -679,6 +679,39 @@ A hidden input posts `YYYY-MM-DDTHH:MM` in the current time zone, which
 seconds posts them back while its minute stays the same. Microseconds are
 dropped, as in Django's admin. `data-*` and `hx-*` attrs go on the hidden
 input, which fires `change`. The other attrs go on the text input.
+
+### TimePicker
+
+**Parent class:** `forms.Widget`
+
+A time of day in a text input, with lists of hours and minutes under it. Use
+it with Django's `TimeField`:
+
+```python
+opens_at = forms.TimeField(widget=widgets.TimePicker)
+closes_at = forms.TimeField(widget=widgets.TimePicker(format="H:i", minute_step=15))
+```
+
+A pick in one list keeps the rest of the time. A 12-hour format gets a third
+list for a.m. and p.m. Done, Enter and leaving the widget post the value. Now
+picks the current minute of the browser's clock, and Clear empties the field.
+Down moves from the input into the hours, Up and Down move in a list, and
+Left and Right go to the next list.
+
+`format` sets how the input shows the time: a Django format setting name or a
+format string, `TIME_FORMAT` by default. The placeholder spells the format
+out, and the input is as wide as the longer of the placeholder and the times
+the format writes. The input reads typed text in that format and in the
+formats of `TIME_INPUT_FORMATS`, so `2:30 pm`, `noon` and `14:30` all work in
+English. Text that names no time posts as typed, and the field reports it.
+
+`minute_step` sets the minutes the list offers, 5 by default. A typed minute
+off the step joins the list while it is picked.
+
+A hidden input posts `HH:MM`, which `TimeField` reads without extra
+`input_formats`. A stored value with seconds posts them back while its minute
+stays the same. `data-*` and `hx-*` attrs go on the hidden input, which fires
+`change`. The other attrs go on the text input.
 
 ---
 
@@ -884,15 +917,15 @@ class PostcodeInput(widgets.TextInput):
 ## Requirements
 
 Every widget with a `Media` class needs Alpine.js on the page: `Select`,
-`SelectMultiple`, `ComboBox`, `DatePicker`, `DateTimePicker`, `DateRangePicker`,
-`DateTimeRangePicker`, `StepperNumberInput`, `PasswordInput`, `SearchInput`,
+`SelectMultiple`, `ComboBox`, `DatePicker`, `DateTimePicker`, `TimePicker`,
+`DateRangePicker`, `DateTimeRangePicker`, `StepperNumberInput`, `PasswordInput`, `SearchInput`,
 `ClearableFileInput`, `FileDropzoneInput`, `ImageDropzoneInput`, `InputMask` and
 `ValidatedTextarea`.
 A server search and `ValidatedTextarea` need htmx as well. The [installation guide](../getting-started/installation.md#5-htmx-and-alpinejs)
 shows the script order.
 
-`Select`, `SelectMultiple`, `DatePicker`, `DateTimePicker`, `DateRangePicker` and
-`DateTimeRangePicker` start their Alpine component on first use: a press, focus, a
+`Select`, `SelectMultiple`, `DatePicker`, `DateTimePicker`, `TimePicker`,
+`DateRangePicker` and `DateTimeRangePicker` start their Alpine component on first use: a press, focus, a
 key, or the list opening. Until then the server's markup shows the widget as it is,
 so a form with a hundred of them loads without starting a hundred components. The
 root of such a widget has `data-formwork-lazy`; for a `Select` it is the element

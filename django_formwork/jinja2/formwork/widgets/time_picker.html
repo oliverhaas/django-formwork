@@ -1,0 +1,27 @@
+{% set sizes = widget.extra_class|size_classes %}<div class="date-picker{% if sizes %} {{ sizes }}{% endif %}" :data-open="open"{% if widget.attrs.id %} id="{{ widget.attrs.id }}_timepicker"{% endif %} x-data="formworkTimePicker" data-formwork-lazy data-value="{{ widget.iso_value }}" data-hour="{{ widget.clock.hour }}" data-half="{{ widget.clock.half }}" data-step="{{ widget.clock.step }}" data-names="{{ widget.clock.names_json }}" data-formats="{{ widget.clock.formats_json }}" data-input-formats="{{ widget.clock.input_formats_json }}" @click.outside="close()" @keydown.escape="onEscape($event)" @focusout="onFocusOut($event)" @mousedown="keepInputFocus($event)">
+  <div class="date-picker-label formwork-input" @click="focusInput($event)">
+    <span class="date-picker-part"><span class="date-picker-sizer" aria-hidden="true">{% for text in widget.sizing_texts %}<span>{{ text }}</span>{% endfor %}</span><input x-ref="input" type="text" value="{{ widget.text }}"{% include "django/forms/widgets/attrs.html" %} aria-haspopup="dialog" autocomplete="off" @focus="onInputFocus()" @click="show()" @input.stop="onType()" @change.stop="onTypeDone()" @keydown.down="onInputDown($event)" @keydown.enter="onEnter($event)" class="date-picker-input{% if widget.extra_class %} {{ widget.extra_class }}{% endif %}"></span>
+    <button type="button" class="date-picker-toggle" @click="toggle()" aria-label="{{ _('Choose time') }}" :aria-expanded="open"{% if widget.attrs.id %} aria-controls="{{ widget.attrs.id }}_clock"{% endif %}{% if widget.attrs.disabled %} disabled{% endif %}>
+      <i class="icon icon-clock size-[calc(1em/0.875)]" aria-hidden="true"></i>
+    </button>
+  </div>
+  <input type="hidden" x-ref="value" name="{{ widget.name }}" value="{{ widget.iso_value }}"{% if widget.attrs.disabled %} disabled{% endif %}{% with widget = widget.hidden %}{% include "django/forms/widgets/attrs.html" %}{% endwith %}>
+  <div x-ref="panel" popover="manual" x-show="open" x-cloak{% if widget.attrs.id %} id="{{ widget.attrs.id }}_clock"{% endif %} role="dialog" aria-label="{{ _('Time') }}" class="dropdown-content calendar-panel bg-base-100 rounded-box shadow-lg border border-base-300">
+    <div class="flex h-56 gap-1" @keydown="onColumnKey($event)">
+      <template x-if="built">
+        <div class="contents">{% for column, label in [("hour", _("Hour")), ("minute", _("Minute"))] + ([("half", _("AM/PM"))] if widget.clock.half else []) %}
+          <div role="listbox" aria-label="{{ label }}" data-column="{{ column }}" class="flex min-w-14 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain [scrollbar-width:thin]{% if not loop.first %} border-s border-base-200 ps-1{% endif %}">
+            <template x-for="option in options('{{ column }}')" :key="option.value">
+              <button type="button" role="option" class="btn btn-sm shrink-0 font-normal tabular-nums" :class="optionClass('{{ column }}', option)" :aria-selected="isPicked('{{ column }}', option)" :tabindex="optionTabindex('{{ column }}', option)" @click="pick('{{ column }}', option)" x-text="option.label"></button>
+            </template>
+          </div>{% endfor %}
+        </div>
+      </template>
+    </div>
+    <div class="calendar-footer">
+      <button type="button" class="btn btn-ghost btn-sm" @click="pickNow()">{{ _("Now") }}</button>
+      <button type="button" class="btn btn-ghost btn-sm" @click="clear()">{{ _("Clear") }}</button>
+      <button type="button" class="btn btn-primary btn-sm ms-auto" :disabled="!draft" @click="done()">{{ _("Done") }}</button>
+    </div>
+  </div>
+</div>

@@ -189,7 +189,7 @@ way, as one `<tbody>`. [Saving a row](#saving-a-row) describes the view behind
 ### Widgets that load on use
 
 `formset.as_rows(cell_url=...)` renders each `Select`, `SelectMultiple`, `ComboBox`,
-`ComboBoxMultiple`, `DatePicker`, `DateTimePicker`, `DateRangePicker` and
+`ComboBoxMultiple`, `DatePicker`, `DateTimePicker`, `TimePicker`, `DateRangePicker` and
 `DateTimeRangePicker` of the saved rows as a stub: the closed widget with its value, and
 inputs that post the value as the full widget does. When the pointer rests on a stub, or
 the stub takes the focus or a press, the full widget loads from `cell_url` and takes its

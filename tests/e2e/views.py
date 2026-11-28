@@ -43,6 +43,7 @@ from django_formwork.widgets import (
     SuffixNumberInput,
     Textarea,
     TextInput,
+    TimePicker,
     ToggleInput,
     ValidatedTextarea,
 )
@@ -1110,7 +1111,7 @@ class TextareaForm(FormworkForm):
 
 
 class NewWidgetsForm(FormworkForm):
-    """DatePicker, DateTimePicker, the range pickers, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons."""
+    """DatePicker, DateTimePicker, TimePicker, the range pickers, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons."""
 
     due_date = forms.DateField(
         widget=DatePicker,
@@ -1137,6 +1138,16 @@ class NewWidgetsForm(FormworkForm):
         widget=DateTimePicker,
         required=False,
         help_text="DateTimePicker: a day and a time, picked in one calendar.",
+    )
+    opens_at = forms.TimeField(
+        widget=TimePicker,
+        required=False,
+        help_text="TimePicker: a time of day, typed or picked from the hours and minutes.",
+    )
+    closes_at = forms.TimeField(
+        widget=TimePicker(format="H:i", minute_step=15),
+        required=False,
+        help_text='TimePicker with format="H:i" and minute_step=15.',
     )
     quantity = forms.IntegerField(
         widget=StepperNumberInput(attrs={"min": "1", "max": "99", "step": "1"}),
@@ -1636,7 +1647,7 @@ _PAGES = [
         "new-widgets",
         "/new-widgets/",
         "New Widgets",
-        "DatePicker, DateTimePicker, DateRangePicker, DateTimeRangePicker, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons",
+        "DatePicker, DateTimePicker, TimePicker, DateRangePicker, DateTimeRangePicker, StepperNumberInput, OTPInput, InputMask, and a Select with flag icons",
     ),
     (
         "complex",
@@ -2070,6 +2081,7 @@ _SIZE_SPECS = [
         ".date-picker-label",
     ),
     ("period", lambda c: DateRangeField(widget=DateRangePicker(attrs={"class": c})), "input", ".date-range-field"),
+    ("time", lambda c: forms.TimeField(widget=TimePicker(attrs={"class": c})), "input", ".date-picker-label"),
     (
         "select",
         lambda c: forms.ChoiceField(choices=_SIZE_CHOICES, widget=Select(attrs={"class": c})),

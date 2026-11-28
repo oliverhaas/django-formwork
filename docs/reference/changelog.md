@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `TimePicker` for a `TimeField`: a text input with lists of hours and minutes
+  under it, plus a list of a.m. and p.m. for a 12-hour format. It shows the
+  time in `TIME_FORMAT` or its own `format`, reads typed text, and posts
+  `HH:MM`. `minute_step` sets the minutes the list offers. See
+  [TimePicker](widgets.md#timepicker).
+
 ## 0.1.0a5 (2026-11-28)
 
 ### Added

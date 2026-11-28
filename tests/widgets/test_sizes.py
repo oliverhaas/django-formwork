@@ -88,7 +88,7 @@ def test_widgets_take_the_size_of_the_daisyui_element(sizes_page, size_field, in
             "value => document.querySelector('form').style.setProperty('--size-field', value)", size_field
         )
     cells = sizes_page.evaluate(_MEASURE)
-    assert len(cells) == 70
+    assert len(cells) == 75
     assert next(cell for cell in cells if cell["size"] == "md")["reference"][0] == input_height
     wrong = [
         (cell["widget"], cell["size"], cell["box"], cell["reference"])

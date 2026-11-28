@@ -30,6 +30,7 @@ from django_formwork.widgets.select_multiple import SelectMultiple
 from django_formwork.widgets.stepper_number import StepperNumberInput
 from django_formwork.widgets.suffix_number import SuffixNumberInput
 from django_formwork.widgets.text_input import Textarea, TextInput
+from django_formwork.widgets.time_picker import TimePicker
 from django_formwork.widgets.toggle_input import ToggleInput
 from django_formwork.widgets.validated_textarea import ValidatedTextarea
 
@@ -64,6 +65,7 @@ __all__ = [
     "SuffixNumberInput",
     "TextInput",
     "Textarea",
+    "TimePicker",
     "ToggleInput",
     "ValidatedTextarea",
 ]

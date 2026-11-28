@@ -1333,7 +1333,7 @@ loads its rows from the search, page by page.
 
 The saved rows of [editable columns](#editable-columns) render each `Select`,
 `SelectMultiple`, `ComboBox`, `ComboBoxMultiple`, `DatePicker`, `DateTimePicker`,
-`DateRangePicker` and `DateTimeRangePicker` as a stub: the closed widget with its value,
+`TimePicker`, `DateRangePicker` and `DateTimeRangePicker` as a stub: the closed widget with its value,
 and inputs that post the value as the full widget does. When the pointer rests on the
 stub, or the stub takes the focus or a press, the full widget loads and takes its place
 with the focus, the typed text and the press. After a failed save, a field with an error

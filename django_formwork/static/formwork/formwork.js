@@ -50,4 +50,5 @@ import "./widgets/input_mask.js";
 import "./widgets/password_input.js";
 import "./widgets/search_input.js";
 import "./widgets/stepper_number.js";
+import "./widgets/time_picker.js";
 import "./widgets/validated_textarea.js";

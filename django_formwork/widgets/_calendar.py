@@ -91,7 +91,7 @@ def format_date(value: Any, date_format: str) -> str:  # noqa: ANN401 (date or d
 
 
 def sizing_texts(date_format: str, *placeholders: str, strftime: bool = False) -> tuple[str, ...]:
-    """The widest texts a date input shows: a date in each month in ``date_format``, and the placeholders.
+    """The widest texts a date input shows: ``date_format`` at 23:59 in each month, at midnight and noon, and the placeholders.
 
     ``date_format`` is a Django format, or a ``strftime`` one with ``strftime``. The inputs set
     digits in tabular figures, so texts that differ only in digits count once.
@@ -104,7 +104,10 @@ def _sizing_texts(
     date_format: str, placeholders: tuple[str, ...], language: str | None, *, strftime: bool
 ) -> tuple[str, ...]:
     """Cached, as each row of a table renders its date inputs."""
-    dates = (dt.datetime(2026, month, 28, 23, 59) for month in range(1, 13))  # noqa: DTZ001 (only formatted)
+    dates = (
+        *(dt.datetime(2026, month, 28, 23, 59) for month in range(1, 13)),  # noqa: DTZ001 (only formatted)
+        *(dt.datetime(2026, 1, 28, hour) for hour in (0, 12)),  # noqa: DTZ001 (only formatted)
+    )
     with override(language):
         texts = [date.strftime(date_format) if strftime else format_date(date, date_format) for date in dates]
     return tuple(dict.fromkeys(re.sub(r"\d", "0", text) for text in (*texts, *placeholders)))
