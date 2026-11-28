@@ -115,14 +115,26 @@ Formwork requires DaisyUI 5. DaisyUI 4 and earlier use a different component API
 
 ## 5. htmx and Alpine.js
 
-The dynamic widgets (dropdowns, server-side search, password reveal, steppers, drop zones, validated textarea) need htmx 4, htmx's alpine-compat extension and Alpine.js 3. Load them yourself, in this order:
+The dynamic widgets (dropdowns, server-side search, password reveal, steppers, drop zones, validated textarea) need htmx 4, htmx's alpine-compat extension and Alpine.js 3. `{% formwork_head %}` links your stylesheets and loads all of them with formwork's scripts:
 
 ```html
 {% load formwork %}
+<head>
+  {% formwork_head "dist.css" %}
+</head>
+```
+
+Each argument is a static path or a URL. The tag loads htmx and Alpine.js from their CDNs, in the versions that formwork's tests run. A module or `defer` script of your own that registers an Alpine component goes before the tag, so that its `alpine:init` listener exists when Alpine starts.
+
+To serve htmx and Alpine.js from your own static files, or to load the widget scripts per form, write the tags out in this order:
+
+```html
+{% load formwork static %}
+<link rel="stylesheet" href="{% static 'dist.css' %}">
 <script src="https://unpkg.com/htmx.org@4.0.2/dist/htmx.min.js"></script>
 <script src="https://unpkg.com/htmx.org@4.0.2/dist/ext/hx-alpine-compat.min.js"></script>
 {% formwork_js %}
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.5/dist/cdn.min.js"></script>
 ```
 
 1. htmx comes first, because the formwork modules register htmx extensions.

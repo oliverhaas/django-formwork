@@ -9,6 +9,11 @@
   time in `TIME_FORMAT` or its own `format`, reads typed text, and posts
   `HH:MM`. `minute_step` sets the minutes the list offers. See
   [TimePicker](widgets.md#timepicker).
+- `{% formwork_head "dist.css" %}` links the stylesheets and loads htmx, its
+  alpine-compat extension, formwork's scripts and Alpine.js in the order they
+  must run, in the versions formwork's tests run. It replaces the five tags of
+  [installation step 5](../getting-started/installation.md#5-htmx-and-alpinejs),
+  which still work for a project that serves htmx and Alpine itself.
 
 ## 0.1.0a5 (2026-11-28)
 

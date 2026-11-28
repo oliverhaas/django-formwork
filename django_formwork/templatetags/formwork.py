@@ -2,7 +2,9 @@ import warnings
 
 from django import template
 from django.templatetags.static import static
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
+
+from django_formwork._cdn import ALPINE_SCRIPT, HTMX_SCRIPTS
 
 register = template.Library()
 
@@ -64,6 +66,17 @@ def formwork_core_js() -> str:
         {{ form.media }}
     """
     return format_html('<script type="module" src="{}"></script>', static("formwork/formwork-core.js"))
+
+
+@register.simple_tag
+def formwork_head(*stylesheets: str) -> str:
+    """Link the stylesheets (static paths or URLs), then load htmx, its Alpine bridge, formwork and Alpine.js."""
+    links = format_html_join(
+        "\n", '<link rel="stylesheet" href="{}">', ((href if "//" in href else static(href),) for href in stylesheets)
+    )
+    htmx = format_html_join("\n", '<script src="{}"></script>', ((src,) for src in HTMX_SCRIPTS))
+    alpine = format_html('<script defer src="{}"></script>', ALPINE_SCRIPT)
+    return format_html_join("\n", "{}", ((part,) for part in (links, htmx, formwork_js(), alpine) if part))
 
 
 @register.filter

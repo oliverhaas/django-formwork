@@ -1,4 +1,5 @@
 import json
+import re
 
 import jinja2
 import pytest
@@ -518,6 +519,19 @@ class TestTemplateTags:
         html = template.render(Context())
         assert "<script" in html
         assert "formwork/formwork.js" in html
+
+
+def test_formwork_head_links_the_stylesheets_then_loads_htmx_formwork_and_alpine_in_order():
+    """htmx and its Alpine bridge run before formwork's modules, and Alpine after them."""
+    template = Template('{% load formwork %}{% formwork_head "dist.css" "https://cdn.example.com/a.css" %}')
+
+    soup = BeautifulSoup(template.render(Context()), "html.parser")
+
+    assert [link["href"] for link in soup.find_all("link")] == ["/static/dist.css", "https://cdn.example.com/a.css"]
+    scripts = soup.find_all("script")
+    names = [re.search(r"htmx\.min|hx-alpine-compat|formwork\.js|alpinejs", script["src"])[0] for script in scripts]
+    assert names == ["htmx.min", "hx-alpine-compat", "formwork.js", "alpinejs"]
+    assert (scripts[2].get("type"), scripts[3].has_attr("defer")) == ("module", True)
 
 
 class _ChangedForm(FormworkForm):

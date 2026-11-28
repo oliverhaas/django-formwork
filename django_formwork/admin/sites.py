@@ -38,6 +38,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.common import no_append_slash
 from django.views.decorators.csrf import csrf_protect
 
+from django_formwork._cdn import ALPINE_SCRIPT, HTMX_PRELOAD_SCRIPT, HTMX_SCRIPTS
 from django_formwork.admin.actions import delete_selected
 from django_formwork.admin.history import ADD, CHANGE, DELETE, Entry, History, ModelHistory
 from django_formwork.admin.jinja import AdminTemplateResponse
@@ -153,12 +154,8 @@ class AdminSite:
     #: Static paths of the compiled CSS: formwork.css and formwork_admin/admin.css built by your Tailwind step.
     stylesheets: Sequence[str] = ("formwork/formwork-dist.css",)
     #: Scripts loaded before formwork's own: htmx, its Alpine bridge and its preload extension.
-    scripts: Sequence[str] = (
-        "https://unpkg.com/htmx.org@4.0.2/dist/htmx.min.js",
-        "https://unpkg.com/htmx.org@4.0.2/dist/ext/hx-alpine-compat.min.js",
-        "https://unpkg.com/htmx.org@4.0.2/dist/ext/hx-preload.min.js",
-    )
-    alpine_script = "https://cdn.jsdelivr.net/npm/alpinejs@3.17.5/dist/cdn.min.js"
+    scripts: Sequence[str] = (*HTMX_SCRIPTS, HTMX_PRELOAD_SCRIPT)
+    alpine_script = ALPINE_SCRIPT
     #: Static path or URL of the icon in the browser tab; ``None`` links none.
     favicon: str | None = "formwork_admin/favicon.svg"
     #: DaisyUI themes the theme switch offers; the first is the default.

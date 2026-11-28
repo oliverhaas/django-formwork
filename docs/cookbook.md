@@ -33,10 +33,9 @@ class TicketTitleForm(forms.Form):
 ![A single styled title field](img/cookbook/step-1.png)
 
 A plain text field needs no JavaScript. The richer widgets and the htmx
-integration in the later steps do, so put the scripts from
+integration in the later steps do, so put `{% formwork_head %}` from
 [installation step 5](getting-started/installation.md#5-htmx-and-alpinejs) in
-the base template's `<head>` from the start: htmx, its alpine-compat extension,
-`{% formwork_js %}`, then Alpine.
+the base template's `<head>` from the start.
 
 ## Step 2: richer widgets
 

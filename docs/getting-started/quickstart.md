@@ -216,6 +216,9 @@ The form class registers the search when Python creates it. Formwork imports the
 ```html
 {% load formwork %}
 
-<!-- JS module: core plus every widget component; load it after htmx and before Alpine -->
+<!-- your stylesheets, then htmx, its Alpine bridge, formwork's scripts and Alpine.js -->
+{% formwork_head "dist.css" %}
+
+<!-- formwork's scripts alone: core plus every widget component; load them after htmx and before Alpine -->
 {% formwork_js %}
 ```

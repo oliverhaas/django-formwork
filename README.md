@@ -23,13 +23,9 @@ FORM_RENDERER = "django_formwork.FormworkRenderer"
 The renderer brings its own Jinja2 engine for formwork's templates and Django's built-in widgets, so `TEMPLATES` needs no change. `"django.forms"` lets the widget templates of other packages include Django's.
 
 ```html
-{% load formwork static %}
+{% load formwork %}
 <head>
-  <link rel="stylesheet" href="{% static 'dist.css' %}">
-  <script src="https://unpkg.com/htmx.org@4.0.2/dist/htmx.min.js"></script>
-  <script src="https://unpkg.com/htmx.org@4.0.2/dist/ext/hx-alpine-compat.min.js"></script>
-  {% formwork_js %}
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+  {% formwork_head "dist.css" %}
 </head>
 ...
 {{ form }}
@@ -37,7 +33,7 @@ The renderer brings its own Jinja2 engine for formwork's templates and Django's 
 
 `dist.css` is your Tailwind build of formwork's `formwork.css`. The package ships only that Tailwind source, and the installation docs show the build entry point.
 
-Keep the scripts in this order. htmx's alpine-compat extension is required: without it a morph strips what Alpine wrote into the DOM. `{% formwork_js %}` must run before Alpine, so that its `alpine:init` listeners exist when Alpine starts.
+`{% formwork_head %}` loads htmx 4, its alpine-compat extension, formwork's scripts and Alpine.js in the order they must run. The installation docs show the same tags written out, for a project that serves htmx and Alpine itself.
 
 ## Widgets
 
@@ -47,7 +43,7 @@ Keep the scripts in this order. htmx's alpine-compat extension is required: with
 
 ## htmx 4 integration
 
-`{% formwork_js %}` loads `formwork.js` as an ES module. It imports `formwork-core.js` (the `formwork-morph` htmx extension, dirty-field tracking, native validation disabling) and the Alpine component of each widget. Per-form `{{ form.media }}` and bundler imports also work; the installation docs describe all three paths.
+`formwork.js` is an ES module that imports `formwork-core.js` (the `formwork-morph` htmx extension, dirty-field tracking, native validation disabling) and the Alpine component of each widget. `{% formwork_js %}` loads that module alone, for a page that loads htmx and Alpine itself. Per-form `{{ form.media }}` and bundler imports also work; the installation docs describe all three paths.
 
 ## Admin
 
